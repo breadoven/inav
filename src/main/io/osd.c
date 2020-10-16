@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with Cleanflight.  If not, see <http://www.gnu.org/licenses/>.
  */
-// test
+
 /*
  Created by Marcin Baliniak
  some functions based on MinimOSD
