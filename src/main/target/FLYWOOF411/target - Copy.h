@@ -97,12 +97,12 @@
 #define UART1_RX_PIN            PB7
 
 #define USE_UART2
-#define UART2_TX_PIN            PA2    //PA2
+#define UART2_TX_PIN            NONE    //PA2
 #define UART2_RX_PIN            PA3
 
 #define USE_SOFTSERIAL1
-#define SOFTSERIAL_1_TX_PIN     PA15     // LED Strip repurposed AWH
-#define SOFTSERIAL_1_RX_PIN     NONE
+#define SOFTSERIAL_1_TX_PIN     PA2     // Clash with TX2, possible to use as S.Port or VTX control
+#define SOFTSERIAL_1_RX_PIN     PA2
 
 #define SERIAL_PORT_COUNT       4       // VCP, USART1, USART2, SS1
 
@@ -123,7 +123,7 @@
 
 // *************** LED2812 ************************
 #define USE_LED_STRIP
-#define WS2811_PIN                      NONE
+#define WS2811_PIN                      PA15
 
 // ***************  OTHERS *************************
 #define DEFAULT_FEATURES                (FEATURE_TX_PROF_SEL | FEATURE_OSD | FEATURE_VBAT | FEATURE_TELEMETRY | FEATURE_SOFTSERIAL)
