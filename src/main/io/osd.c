@@ -784,6 +784,10 @@ static const char * navigationStateMessage(void)
             break;
         case MW_NAV_STATE_RTH_START:
             return OSD_MESSAGE_STR(OSD_MSG_STARTING_RTH);
+        // CR5 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx    
+        case MW_NAV_STATE_RTH_CLIMB:            
+            return OSD_MESSAGE_STR(OSD_MSG_RTH_CLIMB);
+        // xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
         case MW_NAV_STATE_RTH_ENROUTE:
             // TODO: Break this up between climb and head home
             return OSD_MESSAGE_STR(OSD_MSG_HEADING_HOME);
@@ -791,12 +795,15 @@ static const char * navigationStateMessage(void)
             // Used by HOLD flight modes. No information to add.
             break;
         case MW_NAV_STATE_HOLD_TIMED:
-            // TODO: Maybe we can display a count down
-            return OSD_MESSAGE_STR(OSD_MSG_HOLDING_WAYPOINT);
+            //CR5 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+            // "HOLDING WP FOR xx S" Countdown added in osdGetSystemMessage
+            //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
             break;
         case MW_NAV_STATE_WP_ENROUTE:
-            // TODO: Show WP number
-            return OSD_MESSAGE_STR(OSD_MSG_TO_WP);
+            //CR5 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+            // "TO WP" + WP countdown added in osdGetSystemMessage
+            //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+            break;
         case MW_NAV_STATE_PROCESS_NEXT:
             return OSD_MESSAGE_STR(OSD_MSG_PREPARE_NEXT_WP);
         case MW_NAV_STATE_DO_JUMP:
@@ -1637,8 +1644,10 @@ static bool osdDrawSingleElement(uint8_t item)
         {
             vtxDeviceOsdInfo_t osdInfo;
             vtxCommonGetOsdInfo(vtxCommonDevice(), &osdInfo);
-
-            tfp_sprintf(buff, "%c", osdInfo.powerIndexLetter);
+            // CR3 xxxxxxxxxxxxxxxxxxxxxxxx
+            buff[0] = SYM_HUD_SIGNAL_4;
+            tfp_sprintf(buff+1, "%c", osdInfo.powerIndexLetter);
+            // xxxxxxxxxxxxxxxxxxxxxxxxxxxxx
             if (isAdjustmentFunctionSelected(ADJUSTMENT_VTX_POWER_LEVEL)) TEXT_ATTRIBUTES_ADD_BLINK(elemAttr);
             displayWriteWithAttr(osdDisplayPort, elemPosX, elemPosY, buff, elemAttr);
             return true;
@@ -2170,7 +2179,9 @@ static bool osdDrawSingleElement(uint8_t item)
         {
             // Longest representable string is -2147483648, hence 11 characters
             for (uint8_t bufferIndex = 0; bufferIndex < DEBUG32_VALUE_COUNT; ++elemPosY, bufferIndex += 2) {
-                tfp_sprintf(buff, "[%u]=%11ld [%u]=%11ld", bufferIndex, debug[bufferIndex], bufferIndex+1, debug[bufferIndex+1]);
+                //CR1 Changed format to fit screen xxxxxxxxxxxxxxxxxxx
+                tfp_sprintf(buff, "%u=%11ld [%u=%11ld", bufferIndex, debug[bufferIndex], bufferIndex+1, debug[bufferIndex+1]);
+                //xxxxxxxxxxxxxxxxxxxxxxxxxx
                 displayWrite(osdDisplayPort, elemPosX, elemPosY, buff);
             }
             break;
@@ -3301,10 +3312,26 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
                 }
             } else {
                 if (FLIGHT_MODE(NAV_RTH_MODE) || FLIGHT_MODE(NAV_WP_MODE) || navigationIsExecutingAnEmergencyLanding()) {
-                    const char *navStateMessage = navigationStateMessage();
-                    if (navStateMessage) {
-                        messages[messageCount++] = navStateMessage;
+                    //CR5 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+                    if (NAV_Status.state == MW_NAV_STATE_WP_ENROUTE) {
+                        // Countdown display for remaining Waypoints
+                        tfp_sprintf(messageBuf, "TO WP %u/%u", posControl.activeWaypointIndex + 1, posControl.waypointCount);                            
+                        messages[messageCount++] = messageBuf;
+                    } else if (NAV_Status.state == MW_NAV_STATE_HOLD_TIMED) {
+                        // WP hold time countdown in seconds
+                        timeMs_t currentTime = millis();
+                        int holdTimeRemaining = posControl.waypointList[posControl.activeWaypointIndex].p1 - (int)((currentTime - posControl.wpReachedTime)/1000);
+                        if (holdTimeRemaining >=0) {
+                            tfp_sprintf(messageBuf, "HOLDING WP FOR %2u S", holdTimeRemaining);
+                            messages[messageCount++] = messageBuf;
+                        }
+                    } else {                            
+                        const char *navStateMessage = navigationStateMessage();                             
+                        if (navStateMessage) {
+                            messages[messageCount++] = navStateMessage;
+                        }
                     }
+                    //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
                 } else if (STATE(FIXED_WING_LEGACY) && (navGetCurrentStateFlags() & NAV_CTL_LAUNCH)) {
                         messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_AUTOLAUNCH);
                 } else {

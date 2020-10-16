@@ -176,6 +176,11 @@ typedef struct navConfig_s {
             uint8_t rth_allow_landing;          // Enable landing as last stage of RTH. Use constants in navRTHAllowLanding_e.
             uint8_t rth_climb_ignore_emerg;     // Option to ignore GPS loss on initial climb stage of RTH
             uint8_t auto_overrides_motor_stop;  // Autonomous modes override motor_stop setting and user command to stop motor
+            //CR1 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+            uint8_t rth_alt_control_override;   // Resets RTH altitude mode to Current using AltHold switch
+            //CR2 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+            uint8_t rth_fw_spiral_climb;        // Enable RTH spiral climb for FW when "climb first" selected
+            //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx            
         } flags;
 
         uint8_t  pos_failure_timeout;           // Time to wait before switching to emergency landing (0 - disable)
@@ -377,6 +382,9 @@ typedef enum {
     MW_NAV_STATE_LAND_START_DESCENT,      // Start descent
     MW_NAV_STATE_HOVER_ABOVE_HOME,        // Hover/Loitering above home
     MW_NAV_STATE_EMERGENCY_LANDING,       // Emergency landing
+    //CR5 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+    MW_NAV_STATE_RTH_CLIMB,               // RTH Climb safe altitude
+    // xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 } navSystemStatus_State_e;
 
 typedef enum {

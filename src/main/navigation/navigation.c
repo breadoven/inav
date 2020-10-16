@@ -103,6 +103,11 @@ PG_RESET_TEMPLATE(navConfig_t, navConfig,
             .disarm_on_landing = 0,
             .rth_allow_landing = NAV_RTH_ALLOW_LANDING_ALWAYS,
             .auto_overrides_motor_stop = 1,
+            //CR1 xxxxxxxxxxxxxxxxxxxxxxxxxxx
+            .rth_alt_control_override = 0,  //set using nav_rth_alt_control_override
+            //CR2 xxxxxxxxxxxxxxxxxxxxxxxxxxx
+            .rth_fw_spiral_climb = 0,  //set using nav_rth_fw_spiral_climb
+            //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
         },
 
         // General navigation parameters
@@ -220,6 +225,10 @@ static navigationFSMEvent_t nextForNonGeoStates(void);
 
 void initializeRTHSanityChecker(const fpVector3_t * pos);
 bool validateRTHSanityChecker(void);
+
+//CR1 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+static void OverRideRTHAtitudePreset(void);
+//xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 /*************************************************************************************************/
 static navigationFSMEvent_t navOnEnteringState_NAV_STATE_IDLE(navigationFSMState_t previousState);
@@ -491,7 +500,10 @@ static const navigationFSMStateDescriptor_t navFSM[NAV_STATE_COUNT] = {
         .timeoutMs = 10,
         .stateFlags = NAV_CTL_ALT | NAV_CTL_POS | NAV_CTL_YAW | NAV_REQUIRE_ANGLE | NAV_REQUIRE_MAGHOLD | NAV_REQUIRE_THRTILT | NAV_AUTO_RTH | NAV_RC_POS | NAV_RC_YAW,     // allow pos adjustment while climbind to safe alt
         .mapToFlightModes = NAV_RTH_MODE | NAV_ALTHOLD_MODE,
-        .mwState = MW_NAV_STATE_RTH_ENROUTE,
+        // CR5 xxxxxxxxxxxxxxxxxxxx
+        .mwState = MW_NAV_STATE_RTH_CLIMB,        
+        //.mwState = MW_NAV_STATE_RTH_ENROUTE,
+        // xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
         .mwError = MW_NAV_ERROR_WAIT_FOR_RTH_ALT,
         .onEvent = {
             [NAV_FSM_EVENT_TIMEOUT]                     = NAV_STATE_RTH_CLIMB_TO_SAFE_ALT,   // re-process the state
@@ -1082,6 +1094,10 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_CRUISE_3D_ADJUSTING(nav
 static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_INITIALIZE(navigationFSMState_t previousState)
 {
     navigationFSMStateFlags_t prevFlags = navGetStateFlags(previousState);
+    
+    //CR1 xxxxxxxxxxxxxxxxxxxxxxxxxxx
+    posControl.flags.CanOverRideRTHAlt = false;   //prevent unwanted override if AltHold selected at RTH initialize
+    //xxxxxxxxxxxxxxxxxxxxxxxxxxx
 
     if ((posControl.flags.estHeadingStatus == EST_NONE) || (posControl.flags.estAltStatus == EST_NONE) || (posControl.flags.estPosStatus != EST_TRUSTED) || !STATE(GPS_FIX_HOME)) {
         // Heading sensor, altitude sensor and HOME fix are mandatory for RTH. If not satisfied - switch to emergency landing
@@ -1120,7 +1136,13 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_INITIALIZE(navigati
 
             if (STATE(FIXED_WING_LEGACY)) {
                 // Airplane - climbout before turning around
-                calculateFarAwayTarget(&targetHoldPos, posControl.actualState.yaw, 100000.0f);  // 1km away
+                //CR2 Change to spiral climb/decent RTH xxxxxxxxxxxxxxxxxxxxx
+                if (navConfig()->general.flags.rth_fw_spiral_climb) {
+                    calculateInitialHoldPosition(&targetHoldPos);   //Spiral climb centered at xy of RTH activation
+                } else {
+                    calculateFarAwayTarget(&targetHoldPos, posControl.actualState.yaw, 100000.0f);  // 1km away Linear climb                
+                }
+                //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
             } else {
                 // Multicopter, hover and climb
                 calculateInitialHoldPosition(&targetHoldPos);
@@ -1145,9 +1167,38 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_INITIALIZE(navigati
     }
 }
 
+//CR1 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+static void OverRideRTHAtitudePreset(void)
+{
+    if (!navConfig()->general.flags.rth_alt_control_override) {
+        return;
+    }
+
+    if (!IS_RC_MODE_ACTIVE(BOXNAVALTHOLD)) {    //Set flag to allow RTH alt override if AltHold mode OFF after RTH initialized
+        posControl.flags.CanOverRideRTHAlt = true;
+        //DEBUG_SET(DEBUG_CRUISE, 2, 5);
+        DEBUG_SET(DEBUG_CRUISE, 3, posControl.flags.CanOverRideRTHAlt);    
+    }
+    else {
+        if (posControl.flags.CanOverRideRTHAlt && !posControl.flags.forcedRTHActivated) {   //Override inhibited during failsafe
+          //DEBUG_SET(DEBUG_CRUISE, 2, 7);            
+            posControl.rthState.rthInitialAltitude = posControl.actualState.abs.pos.z;                        
+            posControl.rthState.rthFinalAltitude = posControl.rthState.rthInitialAltitude;            
+            DEBUG_SET(DEBUG_CRUISE, 4, posControl.rthState.rthInitialAltitude);
+            posControl.flags.CanOverRideRTHAlt = false;   //Reset oberride flag
+        }
+    }
+}
+//xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
 static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_CLIMB_TO_SAFE_ALT(navigationFSMState_t previousState)
 {
     UNUSED(previousState);
+    
+    //CR1 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx    
+    OverRideRTHAtitudePreset();
+    DEBUG_SET(DEBUG_CRUISE, 6, 25);
+    //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
     if ((posControl.flags.estHeadingStatus == EST_NONE)) {
         return NAV_FSM_EVENT_SWITCH_TO_EMERGENCY_LANDING;
@@ -1195,8 +1246,15 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_CLIMB_TO_SAFE_ALT(n
 
             // Climb to safe altitude and turn to correct direction
             if (STATE(FIXED_WING_LEGACY)) {
-                tmpHomePos->z += FW_RTH_CLIMB_OVERSHOOT_CM;
-                setDesiredPosition(tmpHomePos, 0, NAV_POS_UPDATE_Z);
+                //CR2 change climb target from RTH Initial altitude z (rate set by pitch limit) to climb rate in m/s xxxxxxxxxxxxxxxxxx
+                if (navConfig()->general.flags.rth_fw_spiral_climb) {
+                    float altitudeChangeDirection = (tmpHomePos->z += FW_RTH_CLIMB_OVERSHOOT_CM) > navGetCurrentActualPositionAndVelocity()->pos.z ? 1 : -1;
+                    updateClimbRateToAltitudeController(altitudeChangeDirection * navConfig()->general.max_auto_climb_rate, ROC_TO_ALT_NORMAL);
+                } else {
+                    tmpHomePos->z += FW_RTH_CLIMB_OVERSHOOT_CM;
+                    setDesiredPosition(tmpHomePos, 0, NAV_POS_UPDATE_Z);
+                }
+                // xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
             } else {
                 // Until the initial climb phase is complete target slightly *above* the cruise altitude to ensure we actually reach
                 // it in a reasonable time. Immediately after we finish this phase - target the original altitude.
@@ -1222,6 +1280,11 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_CLIMB_TO_SAFE_ALT(n
 static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_HEAD_HOME(navigationFSMState_t previousState)
 {
     UNUSED(previousState);
+    
+    //CR1 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx    
+    OverRideRTHAtitudePreset();
+    DEBUG_SET(DEBUG_CRUISE, 6, 50);
+    //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
     if ((posControl.flags.estHeadingStatus == EST_NONE)) {
         return NAV_FSM_EVENT_SWITCH_TO_EMERGENCY_LANDING;
