@@ -227,7 +227,7 @@ void initializeRTHSanityChecker(const fpVector3_t * pos);
 bool validateRTHSanityChecker(void);
 
 //CR1 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-static void OverRideRTHAtitudePreset(void);
+static void overrideRTHAtitudePreset(void);
 //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 /*************************************************************************************************/
@@ -1096,7 +1096,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_INITIALIZE(navigati
     navigationFSMStateFlags_t prevFlags = navGetStateFlags(previousState);
     
     //CR1 xxxxxxxxxxxxxxxxxxxxxxxxxxx
-    posControl.flags.CanOverRideRTHAlt = false;   //prevent unwanted override if AltHold selected at RTH initialize
+    posControl.flags.canOverrideRTHAlt = false;   //prevent unwanted override if AltHold selected at RTH initialize
     //xxxxxxxxxxxxxxxxxxxxxxxxxxx
 
     if ((posControl.flags.estHeadingStatus == EST_NONE) || (posControl.flags.estAltStatus == EST_NONE) || (posControl.flags.estPosStatus != EST_TRUSTED) || !STATE(GPS_FIX_HOME)) {
@@ -1168,24 +1168,24 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_INITIALIZE(navigati
 }
 
 //CR1 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-static void OverRideRTHAtitudePreset(void)
+static void overrideRTHAtitudePreset(void)
 {
     if (!navConfig()->general.flags.rth_alt_control_override) {
         return;
     }
 
     if (!IS_RC_MODE_ACTIVE(BOXNAVALTHOLD)) {    //Set flag to allow RTH alt override if AltHold mode OFF after RTH initialized
-        posControl.flags.CanOverRideRTHAlt = true;
+        posControl.flags.canOverrideRTHAlt = true;
         //DEBUG_SET(DEBUG_CRUISE, 2, 5);
-        DEBUG_SET(DEBUG_CRUISE, 3, posControl.flags.CanOverRideRTHAlt);    
+        DEBUG_SET(DEBUG_CRUISE, 3, posControl.flags.canOverrideRTHAlt);    
     }
     else {
-        if (posControl.flags.CanOverRideRTHAlt && !posControl.flags.forcedRTHActivated) {   //Override inhibited during failsafe
+        if (posControl.flags.canOverrideRTHAlt && !posControl.flags.forcedRTHActivated) {   //Override inhibited during failsafe
           //DEBUG_SET(DEBUG_CRUISE, 2, 7);            
             posControl.rthState.rthInitialAltitude = posControl.actualState.abs.pos.z;                        
             posControl.rthState.rthFinalAltitude = posControl.rthState.rthInitialAltitude;            
             DEBUG_SET(DEBUG_CRUISE, 4, posControl.rthState.rthInitialAltitude);
-            posControl.flags.CanOverRideRTHAlt = false;   //Reset oberride flag
+            posControl.flags.canOverrideRTHAlt = false;   //Reset oberride flag
         }
     }
 }
@@ -1196,7 +1196,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_CLIMB_TO_SAFE_ALT(n
     UNUSED(previousState);
     
     //CR1 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx    
-    OverRideRTHAtitudePreset();
+    overrideRTHAtitudePreset();
     DEBUG_SET(DEBUG_CRUISE, 6, 25);
     //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
@@ -1282,7 +1282,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_HEAD_HOME(navigatio
     UNUSED(previousState);
     
     //CR1 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx    
-    OverRideRTHAtitudePreset();
+    overrideRTHAtitudePreset();
     DEBUG_SET(DEBUG_CRUISE, 6, 50);
     //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
