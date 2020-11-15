@@ -577,13 +577,13 @@ motorStatus_e getMotorStatus(void)
     if (failsafeRequiresMotorStop() || (!failsafeIsActive() && STATE(NAV_MOTOR_STOP_OR_IDLE))) {
         return MOTOR_STOPPED_AUTO;
     }
-
     if (calculateThrottleStatus(feature(FEATURE_REVERSIBLE_MOTORS) ? THROTTLE_STATUS_TYPE_COMMAND : THROTTLE_STATUS_TYPE_RC) == THROTTLE_LOW) {
-        if ((STATE(FIXED_WING_LEGACY) || !STATE(AIRMODE_ACTIVE)) && (!(navigationIsFlyingAutonomousMode() && navConfig()->general.flags.auto_overrides_motor_stop)) && (!failsafeIsActive())) {
+// CR6 Add NavLaunch to exceptions xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+        if ((STATE(FIXED_WING_LEGACY) || !STATE(AIRMODE_ACTIVE)) && (!(navigationIsFlyingAutonomousMode() && navConfig()->general.flags.auto_overrides_motor_stop)) && (!failsafeIsActive()) && (!isFixedWingLaunchDetected() || isFixedWingLaunchFinishedOrAborted())) {
+// CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
             return MOTOR_STOPPED_USER;
         }
     }
-
     return MOTOR_RUNNING;
 }
 

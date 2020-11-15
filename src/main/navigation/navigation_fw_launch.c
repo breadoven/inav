@@ -67,6 +67,9 @@ typedef struct FixedWingLaunchState_s {
     /* Launch progress */
     timeUs_t launchStartedTime;
     bool launchFinished;
+    // CR6 xxxxxxxxxxxxxxxxxxxxxxxxx
+    bool launchFinishedThrottleLow;
+    // CR6 xxxxxxxxxxxxxxxxxxxxxxxxxx
     bool motorControlAllowed;
 } FixedWingLaunchState_t;
 
@@ -103,6 +106,9 @@ void resetFixedWingLaunchController(timeUs_t currentTimeUs)
     launchState.launchStartedTime = 0;
     launchState.launchDetected = false;
     launchState.launchFinished = false;
+    // CR6 xxxxxxxxxxxxxxxxxxxxxxx
+    launchState.launchFinishedThrottleLow = false;
+    // CR6 xxxxxxxxxxxxxxxxxxxxxxxxx
     launchState.motorControlAllowed = false;
 }
 
@@ -181,7 +187,7 @@ static inline bool isFixedWingLaunchCompleted(float timeSinceLaunchMs)
 
 void applyFixedWingLaunchController(timeUs_t currentTimeUs)
 {
-    // Called at PID rate
+    // Called at PID rate 
 
     if (launchState.launchDetected) {
         bool applyLaunchIdleLogic = true;
@@ -189,25 +195,40 @@ void applyFixedWingLaunchController(timeUs_t currentTimeUs)
         if (launchState.motorControlAllowed) {
             // If launch detected we are in launch procedure - control airplane
             const float timeElapsedSinceLaunchMs = US2MS(currentTimeUs - launchState.launchStartedTime);
-
-            launchState.launchFinished = isFixedWingLaunchCompleted(timeElapsedSinceLaunchMs);
+            
+// CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+            if (calculateThrottleStatus(THROTTLE_STATUS_TYPE_RC) == THROTTLE_LOW) {
+                if (!launchState.launchFinishedThrottleLow) {
+                    launchState.launchFinishedThrottleLow = isFixedWingLaunchCompleted(timeElapsedSinceLaunchMs);
+                }
+            } else {
+                launchState.launchFinished = isFixedWingLaunchCompleted(timeElapsedSinceLaunchMs);
+            }
+// CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
             // Motor control enabled
             if (timeElapsedSinceLaunchMs >= navConfig()->fw.launch_motor_timer) {
                 // Don't apply idle logic anymore
                 applyLaunchIdleLogic = false;
-
-                // Increase throttle gradually over `launch_motor_spinup_time` milliseconds
-                if (navConfig()->fw.launch_motor_spinup_time > 0) {
-                    const float timeSinceMotorStartMs = constrainf(timeElapsedSinceLaunchMs - navConfig()->fw.launch_motor_timer, 0.0f, navConfig()->fw.launch_motor_spinup_time);
-                    const uint16_t minIdleThrottle = MAX(getThrottleIdleValue(), navConfig()->fw.launch_idle_throttle);
-                    rcCommand[THROTTLE] = scaleRangef(timeSinceMotorStartMs,
-                                                      0.0f, navConfig()->fw.launch_motor_spinup_time,
-                                                      minIdleThrottle, navConfig()->fw.launch_throttle);
+                
+                // CR6 xxxxxxxxxxxxxxxxxxxxxxxxxx                
+                if (!launchState.launchFinishedThrottleLow) {
+                // CR6 xxxxxxxxxxxxxxxxxxxxxxxxxx                
+                    // Increase throttle gradually over `launch_motor_spinup_time` milliseconds
+                    if (navConfig()->fw.launch_motor_spinup_time > 0) {
+                        const float timeSinceMotorStartMs = constrainf(timeElapsedSinceLaunchMs - navConfig()->fw.launch_motor_timer, 0.0f, navConfig()->fw.launch_motor_spinup_time);
+                        const uint16_t minIdleThrottle = MAX(getThrottleIdleValue(), navConfig()->fw.launch_idle_throttle);
+                        rcCommand[THROTTLE] = scaleRangef(timeSinceMotorStartMs,
+                                                          0.0f, navConfig()->fw.launch_motor_spinup_time,
+                                                          minIdleThrottle, navConfig()->fw.launch_throttle);
+                    } else {
+                        rcCommand[THROTTLE] = navConfig()->fw.launch_throttle;
+                    }
+                // CR6 xxxxxxxxxxxxxxxxxxxxxxxxxx               
+                } else {
+                    rcCommand[THROTTLE] = navConfig()->fw.cruise_throttle;
                 }
-                else {
-                    rcCommand[THROTTLE] = navConfig()->fw.launch_throttle;
-                }
+                // CR6 xxxxxxxxxxxxxxxxxxxxxxxxxx                                
             }
         }
 
@@ -225,9 +246,16 @@ void applyFixedWingLaunchController(timeUs_t currentTimeUs)
     }
 
     // Control beeper
+    // CR6 Use warning beeper if Throttle Low xxxxxxxxxxxxxxxxxxxxxxxxx
+    //if (!launchState.launchFinished) {
     if (!launchState.launchFinished) {
-        beeper(BEEPER_LAUNCH_MODE_ENABLED);
-    }
+        if (calculateThrottleStatus(THROTTLE_STATUS_TYPE_RC) != THROTTLE_LOW) {
+            beeper(BEEPER_LAUNCH_MODE_ENABLED);
+        } else {
+            beeper(BEEPER_HARDWARE_FAILURE);
+        }
+    }      
+    // CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
     // Lock out controls
     rcCommand[ROLL] = 0;
