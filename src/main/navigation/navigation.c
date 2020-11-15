@@ -111,7 +111,6 @@ PG_RESET_TEMPLATE(navConfig_t, navConfig,
             //CR2 xxxxxxxxxxxxxxxxxxxxxxxxxxx
             .rth_fw_spiral_climb = 0,  //set using nav_rth_fw_spiral_climb
             //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-			.auto_overrides_motor_stop = 1,
             .nav_overrides_motor_stop = NOMS_ALL_NAV,
 			},
 

@@ -186,7 +186,7 @@ typedef struct navConfig_s {
             //CR2 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
             uint8_t rth_fw_spiral_climb;        // Enable RTH spiral climb for FW when "climb first" selected
             //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx            
-			uint8_t nav_overrides_motor_stop;   // Autonomous modes override motor_stop setting and user command to stop motor
+            uint8_t nav_overrides_motor_stop;   // Autonomous modes override motor_stop setting and user command to stop motor
         } flags;
 
         uint8_t  pos_failure_timeout;           // Time to wait before switching to emergency landing (0 - disable)
