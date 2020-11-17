@@ -88,7 +88,7 @@ typedef struct navigationFlags_s {
 
     bool forcedRTHActivated;
     //CR1 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-    bool canOverrideRTHAlt;
+    //bool canOverrideRTHAlt;
     //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 } navigationFlags_t;
 
