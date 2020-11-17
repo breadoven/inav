@@ -572,7 +572,11 @@ static const char * navigationStateMessage(void)
     switch (NAV_Status.state) {
         case MW_NAV_STATE_NONE:
             break;
-        case MW_NAV_STATE_RTH_START:
+		// CR5 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+        case MW_NAV_STATE_RTH_CLIMB:
+            return OSD_MESSAGE_STR("ADJUSTING RTH ALTITUDE");
+		// xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+		case MW_NAV_STATE_RTH_START:
             return OSD_MESSAGE_STR("STARTING RTH");
         case MW_NAV_STATE_RTH_ENROUTE:
             // TODO: Break this up between climb and head home
