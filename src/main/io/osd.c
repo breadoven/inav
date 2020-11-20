@@ -790,7 +790,6 @@ static const char * navigationStateMessage(void)
             return OSD_MESSAGE_STR(OSD_MSG_RTH_CLIMB);
         // xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
         case MW_NAV_STATE_RTH_ENROUTE:
-            // TODO: Break this up between climb and head home
             return OSD_MESSAGE_STR(OSD_MSG_HEADING_HOME);
         case MW_NAV_STATE_HOLD_INFINIT:
             // Used by HOLD flight modes. No information to add.
@@ -2448,6 +2447,9 @@ static bool osdDrawSingleElement(uint8_t item)
 
             return true;
         }
+    case OSD_NAV_FW_CONTROL_SMOOTHNESS:
+        osdDisplayAdjustableDecimalValue(elemPosX, elemPosY, "CTL S", 0, navConfig()->fw.control_smoothness, 1, 0, ADJUSTMENT_NAV_FW_CONTROL_SMOOTHNESS);
+        return true;
     default:
         return false;
     }

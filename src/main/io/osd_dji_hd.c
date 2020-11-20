@@ -578,6 +578,8 @@ static const char * navigationStateMessage(void)
 		// xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 		case MW_NAV_STATE_RTH_START:
             return OSD_MESSAGE_STR("STARTING RTH");
+        case MW_NAV_STATE_RTH_CLIMB:
+            return OSD_MESSAGE_STR("ADJUSTING RTH ALTITUDE");
         case MW_NAV_STATE_RTH_ENROUTE:
             // TODO: Break this up between climb and head home
             return OSD_MESSAGE_STR("EN ROUTE TO HOME");
