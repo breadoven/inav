@@ -88,7 +88,7 @@ typedef struct navigationFlags_s {
 
     bool forcedRTHActivated;
     //CR1 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-    bool RTHClimbFirstOverride;
+    bool rthClimbFirstOverride;            //RTH Climb First setting override using Roll stick
     //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 } navigationFlags_t;
 

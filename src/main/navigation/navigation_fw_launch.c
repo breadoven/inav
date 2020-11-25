@@ -439,7 +439,7 @@ void applyFixedWingLaunchController(timeUs_t currentTimeUs)
 
     // Control beeper
     if (fwLaunch.currentState == FW_LAUNCH_STATE_WAIT_THROTTLE) {
-        beeper(BEEPER_LAUNCH_MODE_LOW_THROTTLE);
+        beeper(BEEPER_HARDWARE_FAILURE);
     }
     else {
         beeper(BEEPER_LAUNCH_MODE_ENABLED);
