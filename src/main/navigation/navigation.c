@@ -1192,14 +1192,15 @@ static void rthAltControlStickOverrideCheck(unsigned axis)
     }
 
     static timeMs_t rthOverrideStickHoldStartTime[2];
-    timeMs_t currentTime = millis();
 
     if (rxGetChannelValue(axis) > rxConfig()->maxcheck) {
+        
+        timeDelta_t holdTime = millis() - rthOverrideStickHoldStartTime[axis];
+        DEBUG_SET(DEBUG_CRUISE, 2, holdTime);
         if (!rthOverrideStickHoldStartTime[axis]) {
             rthOverrideStickHoldStartTime[axis] = millis();
             DEBUG_SET(DEBUG_CRUISE, 3, 55);
-        //} else if (currentTime - rthOverrideStickHoldStartTime[axis] > 2000) {
-        } else if (ABS(2500 - (currentTime - rthOverrideStickHoldStartTime[axis])) < 500) {
+        } else if (ABS(2500 - holdTime) < 500) {
             if (axis == PITCH) {    // pitch override preset altitude reset to current altitude
                 DEBUG_SET(DEBUG_CRUISE, 3, 77);
                 posControl.rthState.rthInitialAltitude = posControl.actualState.abs.pos.z;
@@ -1212,7 +1213,6 @@ static void rthAltControlStickOverrideCheck(unsigned axis)
     } else {
         rthOverrideStickHoldStartTime[axis] = 0;
     }
-    DEBUG_SET(DEBUG_CRUISE, 2, rthOverrideStickHoldStartTime[PITCH]);
     DEBUG_SET(DEBUG_CRUISE, 1, posControl.flags.rthClimbFirstOverride);
 }
 //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
