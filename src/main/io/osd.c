@@ -2929,6 +2929,11 @@ static void osdUpdateStats(void)
 /* Attention: NTSC screen only has 12 fully visible lines - it is FULL now! */
 static void osdShowStats(void)
 {
+    //CR4 xxxxxxxxxxxxxxxxxxxxxxx
+    dateTime_t dt;
+    char buf[MAX(32, FORMATTED_DATE_TIME_BUFSIZE)];
+    //xxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
     const char * disarmReasonStr[DISARM_REASON_COUNT] = { "UNKNOWN", "TIMEOUT", "STICKS", "SWITCH", "SWITCH", "KILLSW", "FAILSAFE", "NAV SYS" };
     uint8_t top = 1;    /* first fully visible line */
     const uint8_t statNameX = 1;
@@ -2937,9 +2942,15 @@ static void osdShowStats(void)
 
     displayBeginTransaction(osdDisplayPort, DISPLAY_TRANSACTION_OPT_RESET_DRAWING);
     displayClearScreen(osdDisplayPort);
-    if (osdDisplayIsPAL())
-        displayWrite(osdDisplayPort, statNameX, top++, "  --- STATS ---");
-
+    //if (osdDisplayIsPAL()) {
+        //CR4 xxxxxxxxxxxxxxxxxxxxxxx
+        if (rtcGetDateTime(&dt)) {
+            dateTimeFormatLocal(buf, &dt);
+            displayWrite(osdDisplayPort, statNameX, top, buf);
+        }
+    //  displayWrite(osdDisplayPort, statNameX, top++, "  --- STATS ---");
+    //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+    //}
     if (STATE(GPS_FIX)) {
         displayWrite(osdDisplayPort, statNameX, top, "MAX SPEED        :");
         osdFormatVelocityStr(buff, stats.max_speed, true);
