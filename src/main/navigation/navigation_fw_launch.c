@@ -43,6 +43,9 @@
 
 #include "fc/config.h"
 #include "fc/rc_controls.h"
+// CR6 xxxxxxxxxxxxxxxxxxxx
+#include "fc/rc_modes.h"
+// CR6 xxxxxxxxxxxxxxxxxxxx
 #include "fc/runtime_config.h"
 
 #include "navigation/navigation.h"
@@ -266,8 +269,11 @@ static fixedWingLaunchEvent_t fwLaunchState_FW_LAUNCH_STATE_IDLE(timeUs_t curren
 static fixedWingLaunchEvent_t fwLaunchState_FW_LAUNCH_STATE_WAIT_THROTTLE(timeUs_t currentTimeUs)
 {
     UNUSED(currentTimeUs);
+    
+    // CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+    if (!isThrottleLow() || navConfig()->fw.launch_allow_throttle_low) {
+        applyThrottleIdleLogic(true);   // Stick low, force mixer idle (motor stop or low rpm)
 
-    if (!isThrottleLow()) {
         if (isThrottleIdleEnabled()) {
             return FW_LAUNCH_EVENT_SUCCESS;
         }
@@ -275,10 +281,11 @@ static fixedWingLaunchEvent_t fwLaunchState_FW_LAUNCH_STATE_WAIT_THROTTLE(timeUs
             fwLaunch.pitchAngle = navConfig()->fw.launch_climb_angle;
             return FW_LAUNCH_EVENT_GOTO_DETECTION;
         }
-    }
-    else {
-        applyThrottleIdleLogic(true);   // Stick low, force mixer idle (motor stop or low rpm)
-    }
+     }
+     else {
+         applyThrottleIdleLogic(true);   // Stick low, force mixer idle (motor stop or low rpm)
+     }
+    // CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
     fwLaunch.pitchAngle = 0;
 
@@ -287,10 +294,12 @@ static fixedWingLaunchEvent_t fwLaunchState_FW_LAUNCH_STATE_WAIT_THROTTLE(timeUs
 
 static fixedWingLaunchEvent_t fwLaunchState_FW_LAUNCH_STATE_MOTOR_IDLE(timeUs_t currentTimeUs)
 {
-    if (isThrottleLow()) {
+    // CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+    if (isThrottleLow() && !navConfig()->fw.launch_allow_throttle_low) {
         return FW_LAUNCH_EVENT_THROTTLE_LOW; // go back to FW_LAUNCH_STATE_WAIT_THROTTLE
     }
-
+    // CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+    
     const timeMs_t elapsedTimeMs = currentStateElapsedMs(currentTimeUs);
     if (elapsedTimeMs > LAUNCH_MOTOR_IDLE_SPINUP_TIME) {
         applyThrottleIdleLogic(false);
@@ -306,9 +315,11 @@ static fixedWingLaunchEvent_t fwLaunchState_FW_LAUNCH_STATE_MOTOR_IDLE(timeUs_t 
 
 static fixedWingLaunchEvent_t fwLaunchState_FW_LAUNCH_STATE_WAIT_DETECTION(timeUs_t currentTimeUs)
 {
-    if (isThrottleLow()) {
+    // CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+    if (isThrottleLow() && !navConfig()->fw.launch_allow_throttle_low) {
         return FW_LAUNCH_EVENT_THROTTLE_LOW; // go back to FW_LAUNCH_STATE_WAIT_THROTTLE
     }
+    // CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
     const float swingVelocity = (fabsf(imuMeasuredRotationBF.z) > SWING_LAUNCH_MIN_ROTATION_RATE) ? (imuMeasuredAccelBF.y / imuMeasuredRotationBF.z) : 0;
     const bool isForwardAccelerationHigh = (imuMeasuredAccelBF.x > navConfig()->fw.launch_accel_thresh);
@@ -407,8 +418,32 @@ static fixedWingLaunchEvent_t fwLaunchState_FW_LAUNCH_STATE_FINISH(timeUs_t curr
     if (areSticksDeflectedMoreThanPosHoldDeadband()) {
         return FW_LAUNCH_EVENT_ABORT; // cancel the launch and do the FW_LAUNCH_STATE_IDLE state
     }
+    // CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx    
+    if (navConfig()->fw.launch_allow_throttle_low && isThrottleLow()) {
+        rcCommand[THROTTLE] = navConfig()->fw.cruise_throttle;
+    }
+    // CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+    
     if (elapsedTimeMs > endTimeMs) {
-        return FW_LAUNCH_EVENT_SUCCESS;
+        // CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+        if (navConfig()->fw.launch_allow_throttle_low && isThrottleLow()) {
+            rcCommand[THROTTLE] = navConfig()->fw.cruise_throttle;
+// #ifdef USE_NAV
+            const bool canActivateNavigation = (posControl.flags.estHeadingStatus >= EST_USABLE) && (posControl.flags.estAltStatus >= EST_USABLE) && (posControl.flags.estPosStatus == EST_TRUSTED) && STATE(GPS_FIX_HOME);
+            const bool canActivateWP = posControl.waypointListValid && (posControl.waypointCount > 0);
+            
+            if (canActivateNavigation) {
+                if (IS_RC_MODE_ACTIVE(BOXNAVRTH)) {
+                    return FW_LAUNCH_EVENT_SUCCESS;
+                } else if (IS_RC_MODE_ACTIVE(BOXNAVWP) && canActivateWP) {
+                    return FW_LAUNCH_EVENT_SUCCESS;
+                }
+            }            
+// #endif
+        } else {
+            return FW_LAUNCH_EVENT_SUCCESS;
+        }
+        // CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
     }
     else {
         // make a smooth transition from the launch state to the current state for throttle and the pitch angle

@@ -577,9 +577,6 @@ motorStatus_e getMotorStatus(void)
     if (failsafeRequiresMotorStop()) {
         return MOTOR_STOPPED_AUTO;
     }
-// CR6 Add NavLaunch to exceptions xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-//        if ((STATE(FIXED_WING_LEGACY) || !STATE(AIRMODE_ACTIVE)) && (!(navigationIsFlyingAutonomousMode() && navConfig()->general.flags.auto_overrides_motor_stop)) && (!failsafeIsActive()) && (!isFixedWingLaunchDetected() || isFixedWingLaunchFinishedOrAborted())) {
-// CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
     if (!failsafeIsActive() && STATE(NAV_MOTOR_STOP_OR_IDLE)) {
         return MOTOR_STOPPED_AUTO;
@@ -588,8 +585,10 @@ motorStatus_e getMotorStatus(void)
     const bool fixedWingOrAirmodeNotActive = STATE(FIXED_WING_LEGACY) || !STATE(AIRMODE_ACTIVE);
     const bool throttleStickLow =
         (calculateThrottleStatus(feature(FEATURE_REVERSIBLE_MOTORS) ? THROTTLE_STATUS_TYPE_COMMAND : THROTTLE_STATUS_TYPE_RC) == THROTTLE_LOW);
-
-    if (throttleStickLow && fixedWingOrAirmodeNotActive && !failsafeIsActive()) {
+    
+    // CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+    if (throttleStickLow && fixedWingOrAirmodeNotActive && !failsafeIsActive() && !launchAllowedWithThrottleLow()) {
+    // CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
         // If user is holding stick low, we are not in failsafe and either on a plane or on a quad with inactive
         // airmode - we need to check if we are allowing navigation to override MOTOR_STOP
 

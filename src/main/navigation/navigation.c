@@ -182,6 +182,9 @@ PG_RESET_TEMPLATE(navConfig_t, navConfig,
         .launch_max_altitude = 0,               // cm, altitude where to consider launch ended
         .launch_climb_angle = 18,               // 18 degrees
         .launch_max_angle = 45,                 // 45 deg
+         // CR6 xxxxxxxxxxxxxxxxxxxxx
+        .launch_allow_throttle_low = 0,         // allow launch with throttle low
+         // CR6 xxxxxxxxxxxxxxxxxxxxx
         .cruise_yaw_rate  = 20,                 // 20dps
         .allow_manual_thr_increase = false,
         .useFwNavYawControl = 0,
@@ -234,7 +237,7 @@ void initializeRTHSanityChecker(const fpVector3_t * pos);
 bool validateRTHSanityChecker(void);
 
 //CR1 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-static void rthAltControlStickOverrideCheck(unsigned axis);
+static bool rthAltControlStickOverrideCheck(unsigned axis);
 //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 /*************************************************************************************************/
@@ -898,7 +901,7 @@ navigationFSMStateFlags_t navGetCurrentStateFlags(void)
 	//DEBUG_SET(DEBUG_CRUISE, 0, posControl.flags.CanOverRideRTHAlt);    
     DEBUG_SET(DEBUG_CRUISE, 0, posControl.rthState.rthInitialAltitude);
 	//rthAltControlStickOverrideCheck(PITCH);
-    //rthAltControlStickOverrideCheck(ROLL);
+    //DEBUG_SET(DEBUG_CRUISE, 1, rthAltControlStickOverrideCheck(ROLL));
 	//xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 	
 	
@@ -1109,11 +1112,6 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_CRUISE_3D_ADJUSTING(nav
 static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_INITIALIZE(navigationFSMState_t previousState)
 {
     navigationFSMStateFlags_t prevFlags = navGetStateFlags(previousState);
-    
-    //CR1 xxxxxxxxxxxxxxxxxxxxxxxxxxx
-    // reset flag to override climb first setting using roll stick
-    posControl.flags.rthClimbFirstOverride = false;
-    //xxxxxxxxxxxxxxxxxxxxxxxxxxx
 
     if ((posControl.flags.estHeadingStatus == EST_NONE) || (posControl.flags.estAltStatus == EST_NONE) || (posControl.flags.estPosStatus != EST_TRUSTED) || !STATE(GPS_FIX_HOME)) {
         // Heading sensor, altitude sensor and HOME fix are mandatory for RTH. If not satisfied - switch to emergency landing
@@ -1185,10 +1183,10 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_INITIALIZE(navigati
 }
 
 //CR1 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-static void rthAltControlStickOverrideCheck(unsigned axis)
+static bool rthAltControlStickOverrideCheck(unsigned axis)
 {
     if (!navConfig()->general.flags.rth_alt_control_override || posControl.flags.forcedRTHActivated) {
-        return;
+        return false;
     }
 
     static timeMs_t rthOverrideStickHoldStartTime[2];
@@ -1201,19 +1199,22 @@ static void rthAltControlStickOverrideCheck(unsigned axis)
             rthOverrideStickHoldStartTime[axis] = millis();
             DEBUG_SET(DEBUG_CRUISE, 3, 55);
         } else if (ABS(2500 - holdTime) < 500) {
-            if (axis == PITCH) {    // pitch override preset altitude reset to current altitude
+            if (axis == PITCH) {    // PITCH override preset altitude reset to current altitude
                 DEBUG_SET(DEBUG_CRUISE, 3, 77);
                 posControl.rthState.rthInitialAltitude = posControl.actualState.abs.pos.z;
                 posControl.rthState.rthFinalAltitude = posControl.rthState.rthInitialAltitude;
-            } else {    // roll override climb first
+                return true;
+            } else if (axis == ROLL) {    // ROLL override climb first
                 DEBUG_SET(DEBUG_CRUISE, 3, 99);
-                posControl.flags.rthClimbFirstOverride = true;
+                return true;
             }
         }
     } else {
         rthOverrideStickHoldStartTime[axis] = 0;
     }
-    DEBUG_SET(DEBUG_CRUISE, 1, posControl.flags.rthClimbFirstOverride);
+    
+    return false;
+    //DEBUG_SET(DEBUG_CRUISE, 1, posControl.flags.rthClimbFirstOverride);
 }
 //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
@@ -1223,7 +1224,6 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_CLIMB_TO_SAFE_ALT(n
     
     //CR1 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
     rthAltControlStickOverrideCheck(PITCH);
-    rthAltControlStickOverrideCheck(ROLL);
     DEBUG_SET(DEBUG_CRUISE, 6, 25);
     //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
@@ -1244,7 +1244,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_CLIMB_TO_SAFE_ALT(n
         // If we reached desired initial RTH altitude or we don't want to climb first
         // CR1 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
         //if (((navGetCurrentActualPositionAndVelocity()->pos.z - posControl.rthState.rthInitialAltitude) > -rthAltitudeMargin) || (!navConfig()->general.flags.rth_climb_first)) {        
-        if (((navGetCurrentActualPositionAndVelocity()->pos.z - posControl.rthState.rthInitialAltitude) > -rthAltitudeMargin) || (!navConfig()->general.flags.rth_climb_first) || posControl.flags.rthClimbFirstOverride) {
+        if (((navGetCurrentActualPositionAndVelocity()->pos.z - posControl.rthState.rthInitialAltitude) > -rthAltitudeMargin) || (!navConfig()->general.flags.rth_climb_first) || rthAltControlStickOverrideCheck(ROLL)) {
          // CR1 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
             // Delayed initialization for RTH sanity check on airplanes - allow to finish climb first as it can take some distance
@@ -1809,7 +1809,9 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_LAUNCH_WAIT(navigationF
     }
 
     //allow to leave NAV_LAUNCH_MODE if it has being enabled as feature by moving sticks with low throttle.
-    if (feature(FEATURE_FW_LAUNCH)) {
+    // CR6 xxxxxxxxxxxxxxxxxxxxxxxx
+    if (feature(FEATURE_FW_LAUNCH) || (navConfig()->fw.launch_allow_throttle_low && IS_RC_MODE_ACTIVE(BOXNAVLAUNCH))) {
+    // CR6 xxxxxxxxxxxxxxxxxxxxxxxxx
         throttleStatus_e throttleStatus = calculateThrottleStatus(THROTTLE_STATUS_TYPE_RC);
         if ((throttleStatus == THROTTLE_LOW) && (areSticksDeflectedMoreThanPosHoldDeadband())) {
             abortFixedWingLaunch();
@@ -3740,6 +3742,14 @@ bool navigationInAutomaticThrottleMode(void)
     navigationFSMStateFlags_t stateFlags = navGetCurrentStateFlags();
     return (stateFlags & (NAV_CTL_ALT | NAV_CTL_EMERG | NAV_CTL_LAUNCH | NAV_CTL_LAND));
 }
+
+// CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+bool launchAllowedWithThrottleLow(void)
+{
+    navigationFSMStateFlags_t stateFlags = navGetCurrentStateFlags();
+    return (stateFlags & NAV_CTL_LAUNCH) && navConfig()->fw.launch_allow_throttle_low;
+}
+// CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 bool navigationIsControllingThrottle(void)
 {
