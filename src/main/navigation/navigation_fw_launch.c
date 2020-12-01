@@ -426,20 +426,18 @@ static fixedWingLaunchEvent_t fwLaunchState_FW_LAUNCH_STATE_FINISH(timeUs_t curr
     
     if (elapsedTimeMs > endTimeMs) {
         // CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-        if (navConfig()->fw.launch_allow_throttle_low && isThrottleLow()) {
-            rcCommand[THROTTLE] = navConfig()->fw.cruise_throttle;
-// #ifdef USE_NAV
+        if (navConfig()->fw.launch_allow_throttle_low && isThrottleLow()) {            
             const bool canActivateNavigation = (posControl.flags.estHeadingStatus >= EST_USABLE) && (posControl.flags.estAltStatus >= EST_USABLE) && (posControl.flags.estPosStatus == EST_TRUSTED) && STATE(GPS_FIX_HOME);
             const bool canActivateWP = posControl.waypointListValid && (posControl.waypointCount > 0);
             
+            rcCommand[THROTTLE] = navConfig()->fw.cruise_throttle;           
             if (canActivateNavigation) {
                 if (IS_RC_MODE_ACTIVE(BOXNAVRTH)) {
                     return FW_LAUNCH_EVENT_SUCCESS;
                 } else if (IS_RC_MODE_ACTIVE(BOXNAVWP) && canActivateWP) {
                     return FW_LAUNCH_EVENT_SUCCESS;
                 }
-            }            
-// #endif
+            }
         } else {
             return FW_LAUNCH_EVENT_SUCCESS;
         }
