@@ -3,8 +3,8 @@
 import optparse
 import yaml  # pyyaml / python-yaml
 
-SETTINGS_MD_PATH = "docs/Settings.md"
-SETTINGS_YAML_PATH = "src/main/fc/settings.yaml"
+SETTINGS_MD_PATH = "F:/INAVDev/inav/docs/Settings.md"
+SETTINGS_YAML_PATH = "F:/INAVDev/inav/src/main/fc/settings.yaml"
 
 def parse_settings_yaml():
     """Parse the YAML settings specs"""

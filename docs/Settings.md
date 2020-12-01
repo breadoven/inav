@@ -261,6 +261,7 @@
 | nav_fw_heading_p | 60 | P gain of Heading Hold controller (Fixedwing) |
 | nav_fw_land_dive_angle | 2 | Dive angle that airplane will use during final landing phase. During dive phase, motor is stopped or IDLE and roll control is locked to 0 degrees |
 | nav_fw_launch_accel | 1863 | Forward acceleration threshold for bungee launch of throw launch [cm/s/s], 1G = 981 cm/s/s |
+| nav_fw_launch_allow_throttle_low | OFF | Allow launch sequence with throttle maintained low throughout. Defaults to cruise throttle at end until sticks moved/throttle raised or switches to RTH/WP Nav modes if preselected |
 | nav_fw_launch_climb_angle | 18 | Climb angle for launch sequence (degrees), is also restrained by global max_angle_inclination_pit |
 | nav_fw_launch_detect_time | 40 | Time for which thresholds have to breached to consider launch happened [ms] |
 | nav_fw_launch_end_time | 2000 | Time for the transition of throttle and pitch angle, between the launch state and the subsequent flight mode [ms] |
@@ -328,10 +329,12 @@
 | nav_position_timeout | 5 | If GPS fails wait for this much seconds before switching to emergency landing mode (0 - disable) |
 | nav_rth_abort_threshold | 50000 | RTH sanity checking feature will notice if distance to home is increasing during RTH and once amount of increase exceeds the threshold defined by this parameter, instead of continuing RTH machine will enter emergency landing, self-level and go down safely. Default is 500m which is safe enough for both multirotor machines and airplanes. [cm] |
 | nav_rth_allow_landing | ALWAYS | If set to ON drone will land as a last phase of RTH. |
+| nav_rth_alt_control_override | OFF | If set to ON RTH climb will stop and maintain altitude acheived when AltHold mode is switched ON, overriding preset climb altitude |
 | nav_rth_alt_mode | AT_LEAST | Configure how the aircraft will manage altitude on the way home, see Navigation modes on wiki for more details |
 | nav_rth_altitude | 1000 | Used in EXTRA, FIXED and AT_LEAST rth alt modes [cm] (Default 1000 means 10 meters) |
 | nav_rth_climb_first | ON | If set to ON drone will climb to nav_rth_altitude first and head home afterwards. If set to OFF drone will head home instantly and climb on the way. |
 | nav_rth_climb_ignore_emerg | OFF | If set to ON, aircraft will execute initial climb regardless of position sensor (GPS) status. |
+| nav_rth_fw_spiral_climb |  |  |
 | nav_rth_home_altitude | 0 | Aircraft will climb/descend to this altitude after reaching home if landing is not enabled. Set to 0 to stay at `nav_rth_altitude` (default) [cm] |
 | nav_rth_tail_first | OFF | If set to ON drone will return tail-first. Obviously meaningless for airplanes. |
 | nav_use_fw_yaw_control | OFF | Enables or Disables the use of the heading PID controller on fixed wing. Heading PID controller is always enabled for rovers and boats |
