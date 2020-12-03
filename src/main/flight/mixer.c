@@ -585,7 +585,6 @@ motorStatus_e getMotorStatus(void)
     const bool fixedWingOrAirmodeNotActive = STATE(FIXED_WING_LEGACY) || !STATE(AIRMODE_ACTIVE);
     const bool throttleStickLow =
         (calculateThrottleStatus(feature(FEATURE_REVERSIBLE_MOTORS) ? THROTTLE_STATUS_TYPE_COMMAND : THROTTLE_STATUS_TYPE_RC) == THROTTLE_LOW);
-    
     // CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
     if (throttleStickLow && fixedWingOrAirmodeNotActive && !failsafeIsActive() && !launchAllowedWithThrottleLow()) {
     // CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx

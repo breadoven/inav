@@ -240,6 +240,10 @@ bool validateRTHSanityChecker(void);
 static bool rthAltControlStickOverrideCheck(unsigned axis);
 //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
+// CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+static navigationFSMEvent_t selectNavEventFromBoxModeInput(bool launchBypass);
+// CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
 /*************************************************************************************************/
 static navigationFSMEvent_t navOnEnteringState_NAV_STATE_IDLE(navigationFSMState_t previousState);
 static navigationFSMEvent_t navOnEnteringState_NAV_STATE_ALTHOLD_INITIALIZE(navigationFSMState_t previousState);
@@ -881,6 +885,13 @@ static const navigationFSMStateDescriptor_t navFSM[NAV_STATE_COUNT] = {
             [NAV_FSM_EVENT_SUCCESS]                     = NAV_STATE_IDLE,
             [NAV_FSM_EVENT_ERROR]                       = NAV_STATE_IDLE,
             [NAV_FSM_EVENT_SWITCH_TO_IDLE]              = NAV_STATE_IDLE,
+            // CR6 xxxxxxxxxxxxxxxxxx
+            [NAV_FSM_EVENT_SWITCH_TO_ALTHOLD]           = NAV_STATE_ALTHOLD_INITIALIZE,
+            [NAV_FSM_EVENT_SWITCH_TO_RTH]               = NAV_STATE_RTH_INITIALIZE,
+            [NAV_FSM_EVENT_SWITCH_TO_WAYPOINT]          = NAV_STATE_WAYPOINT_INITIALIZE,
+            [NAV_FSM_EVENT_SWITCH_TO_CRUISE_2D]         = NAV_STATE_CRUISE_2D_INITIALIZE,
+            [NAV_FSM_EVENT_SWITCH_TO_CRUISE_3D]         = NAV_STATE_CRUISE_3D_INITIALIZE,
+            // CR6 xxxxxxxxxxxxxxxxxx
         }
     },
 };
@@ -899,7 +910,7 @@ navigationFSMStateFlags_t navGetCurrentStateFlags(void)
 {
 	// cr1
 	//DEBUG_SET(DEBUG_CRUISE, 0, posControl.flags.CanOverRideRTHAlt);    
-    DEBUG_SET(DEBUG_CRUISE, 0, posControl.rthState.rthInitialAltitude);
+    //DEBUG_SET(DEBUG_CRUISE, 0, posControl.rthState.rthInitialAltitude);
 	//rthAltControlStickOverrideCheck(PITCH);
     //DEBUG_SET(DEBUG_CRUISE, 1, rthAltControlStickOverrideCheck(ROLL));
 	//xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
@@ -1794,6 +1805,10 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_LAUNCH_INITIALIZE(navig
     UNUSED(previousState);
 
     resetFixedWingLaunchController(currentTimeUs);
+    
+    // CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+    //posControl.flags.launchSelectOtherNavMode = false;
+    // CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
     return NAV_FSM_EVENT_SUCCESS;   // NAV_STATE_LAUNCH_WAIT
 }
@@ -1827,7 +1842,24 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_LAUNCH_IN_PROGRESS(navi
     UNUSED(previousState);
 
     if (isFixedWingLaunchFinishedOrAborted()) {
-        return NAV_FSM_EVENT_SUCCESS;
+        // CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+        if (navConfig()->fw.launch_allow_throttle_low && calculateThrottleStatus(THROTTLE_STATUS_TYPE_RC) == THROTTLE_LOW) {
+            
+            //posControl.flags.launchSelectOtherNavMode = true;
+            navigationFSMEvent_t isNavModeSelected = selectNavEventFromBoxModeInput(true);
+            //posControl.flags.launchSelectOtherNavMode = false;
+            
+            if (isNavModeSelected != NAV_FSM_EVENT_SWITCH_TO_IDLE) {
+                return isNavModeSelected;
+            }
+            
+            if (areSticksDeflectedMoreThanPosHoldDeadband()) {
+                return NAV_FSM_EVENT_SUCCESS;   // end the launch and return to NAV_STATE_IDLE state
+            }
+        } else {
+        // CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+            return NAV_FSM_EVENT_SUCCESS;
+        }
     }
 
     return NAV_FSM_EVENT_NONE;
@@ -3255,7 +3287,7 @@ static bool isWaypointMissionValid(void)
     return posControl.waypointListValid && (posControl.waypointCount > 0);
 }
 
-static navigationFSMEvent_t selectNavEventFromBoxModeInput(void)
+static navigationFSMEvent_t selectNavEventFromBoxModeInput(bool launchBypass)
 {
     static bool canActivateWaypoint = false;
     static bool canActivateLaunchMode = false;
@@ -3286,7 +3318,9 @@ static navigationFSMEvent_t selectNavEventFromBoxModeInput(void)
                     canActivateLaunchMode = false;
                     return NAV_FSM_EVENT_SWITCH_TO_LAUNCH;
                 }
-                else if FLIGHT_MODE(NAV_LAUNCH_MODE) {
+                // CR6 xxxxxxxxxxxxxxxxxxxxx
+                else if (FLIGHT_MODE(NAV_LAUNCH_MODE) && !launchBypass) {
+                // CR6 xxxxxxxxxxxxxxxxxxxxx
                     // Make sure we don't bail out to IDLE
                     return NAV_FSM_EVENT_NONE;
                 }
@@ -3544,7 +3578,7 @@ void updateWaypointsAndNavigationMode(void)
     updateFlightBehaviorModifiers();
 
     // Process switch to a different navigation mode (if needed)
-    navProcessFSMEvents(selectNavEventFromBoxModeInput());
+    navProcessFSMEvents(selectNavEventFromBoxModeInput(false));
 
     // Process pilot's RC input to adjust behaviour
     processNavigationRCAdjustments();
@@ -3705,7 +3739,7 @@ void activateForcedRTH(void)
 {
     abortFixedWingLaunch();
     posControl.flags.forcedRTHActivated = true;
-    navProcessFSMEvents(selectNavEventFromBoxModeInput());
+    navProcessFSMEvents(selectNavEventFromBoxModeInput(false));
 }
 
 void abortForcedRTH(void)

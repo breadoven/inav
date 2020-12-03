@@ -43,9 +43,6 @@
 
 #include "fc/config.h"
 #include "fc/rc_controls.h"
-// CR6 xxxxxxxxxxxxxxxxxxxx
-#include "fc/rc_modes.h"
-// CR6 xxxxxxxxxxxxxxxxxxxx
 #include "fc/runtime_config.h"
 
 #include "navigation/navigation.h"
@@ -109,6 +106,9 @@ typedef struct fixedWingLaunchData_s {
     timeUs_t currentStateTimeUs;
     fixedWingLaunchState_t currentState;
     uint8_t pitchAngle; // used to smooth the transition of the pitch angle
+    // CR6 xxxxxxxxxxxxxxxxxxxx
+    bool finishedThrottleLow;   // flags finish with throttle low
+    // CR6 xxxxxxxxxxxxxxxxxxxx
 } fixedWingLaunchData_t;
 
 static EXTENDED_FASTRAM fixedWingLaunchData_t fwLaunch;
@@ -262,14 +262,14 @@ static void updateRcCommand(void)
 static fixedWingLaunchEvent_t fwLaunchState_FW_LAUNCH_STATE_IDLE(timeUs_t currentTimeUs)
 {
     UNUSED(currentTimeUs);
-
+DEBUG_SET(DEBUG_CRUISE, 5, 51);
     return FW_LAUNCH_EVENT_NONE;
 }
 
 static fixedWingLaunchEvent_t fwLaunchState_FW_LAUNCH_STATE_WAIT_THROTTLE(timeUs_t currentTimeUs)
 {
     UNUSED(currentTimeUs);
-    
+    DEBUG_SET(DEBUG_CRUISE, 5, 52);
     // CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
     if (!isThrottleLow() || navConfig()->fw.launch_allow_throttle_low) {
         applyThrottleIdleLogic(true);   // Stick low, force mixer idle (motor stop or low rpm)
@@ -294,6 +294,7 @@ static fixedWingLaunchEvent_t fwLaunchState_FW_LAUNCH_STATE_WAIT_THROTTLE(timeUs
 
 static fixedWingLaunchEvent_t fwLaunchState_FW_LAUNCH_STATE_MOTOR_IDLE(timeUs_t currentTimeUs)
 {
+    DEBUG_SET(DEBUG_CRUISE, 5, 53);
     // CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
     if (isThrottleLow() && !navConfig()->fw.launch_allow_throttle_low) {
         return FW_LAUNCH_EVENT_THROTTLE_LOW; // go back to FW_LAUNCH_STATE_WAIT_THROTTLE
@@ -315,6 +316,7 @@ static fixedWingLaunchEvent_t fwLaunchState_FW_LAUNCH_STATE_MOTOR_IDLE(timeUs_t 
 
 static fixedWingLaunchEvent_t fwLaunchState_FW_LAUNCH_STATE_WAIT_DETECTION(timeUs_t currentTimeUs)
 {
+    DEBUG_SET(DEBUG_CRUISE, 5, 54);
     // CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
     if (isThrottleLow() && !navConfig()->fw.launch_allow_throttle_low) {
         return FW_LAUNCH_EVENT_THROTTLE_LOW; // go back to FW_LAUNCH_STATE_WAIT_THROTTLE
@@ -418,30 +420,20 @@ static fixedWingLaunchEvent_t fwLaunchState_FW_LAUNCH_STATE_FINISH(timeUs_t curr
     if (areSticksDeflectedMoreThanPosHoldDeadband()) {
         return FW_LAUNCH_EVENT_ABORT; // cancel the launch and do the FW_LAUNCH_STATE_IDLE state
     }
-    // CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx    
+    // CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
     if (navConfig()->fw.launch_allow_throttle_low && isThrottleLow()) {
         rcCommand[THROTTLE] = navConfig()->fw.cruise_throttle;
     }
     // CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
     
     if (elapsedTimeMs > endTimeMs) {
-        // CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-        if (navConfig()->fw.launch_allow_throttle_low && isThrottleLow()) {            
-            const bool canActivateNavigation = (posControl.flags.estHeadingStatus >= EST_USABLE) && (posControl.flags.estAltStatus >= EST_USABLE) && (posControl.flags.estPosStatus == EST_TRUSTED) && STATE(GPS_FIX_HOME);
-            const bool canActivateWP = posControl.waypointListValid && (posControl.waypointCount > 0);
-            
-            rcCommand[THROTTLE] = navConfig()->fw.cruise_throttle;           
-            if (canActivateNavigation) {
-                if (IS_RC_MODE_ACTIVE(BOXNAVRTH)) {
-                    return FW_LAUNCH_EVENT_SUCCESS;
-                } else if (IS_RC_MODE_ACTIVE(BOXNAVWP) && canActivateWP) {
-                    return FW_LAUNCH_EVENT_SUCCESS;
-                }
-            }
+        //CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+        if (navConfig()->fw.launch_allow_throttle_low && isThrottleLow()) {
+            fwLaunch.finishedThrottleLow = true;
         } else {
             return FW_LAUNCH_EVENT_SUCCESS;
         }
-        // CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+        //CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
     }
     else {
         // make a smooth transition from the launch state to the current state for throttle and the pitch angle
@@ -457,7 +449,6 @@ static fixedWingLaunchEvent_t fwLaunchState_FW_LAUNCH_STATE_FINISH(timeUs_t curr
 void applyFixedWingLaunchController(timeUs_t currentTimeUs)
 {
     // Called at PID rate
-
     // process the current state, set the next state or exit if FW_LAUNCH_EVENT_NONE
     while (launchStateMachine[fwLaunch.currentState].onEntry) {
         fixedWingLaunchEvent_t newEvent = launchStateMachine[fwLaunch.currentState].onEntry(currentTimeUs);
@@ -481,6 +472,9 @@ void applyFixedWingLaunchController(timeUs_t currentTimeUs)
 
 void resetFixedWingLaunchController(timeUs_t currentTimeUs)
 {
+    // CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+    fwLaunch.finishedThrottleLow = false;
+    // CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
     setCurrentState(FW_LAUNCH_STATE_WAIT_THROTTLE, currentTimeUs);
 }
 
@@ -496,7 +490,8 @@ void enableFixedWingLaunchController(timeUs_t currentTimeUs)
 
 bool isFixedWingLaunchFinishedOrAborted(void)
 {
-    return fwLaunch.currentState == FW_LAUNCH_STATE_IDLE;
+    // CR6 xxxxxxxxxxxxxxxxxxxxxxx
+    return fwLaunch.currentState == FW_LAUNCH_STATE_IDLE || fwLaunch.finishedThrottleLow;
 }
 
 void abortFixedWingLaunch(void)
