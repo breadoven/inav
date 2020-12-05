@@ -186,7 +186,7 @@ typedef struct navConfig_s {
             uint8_t rth_alt_control_override;   // Override RTH Altitude and Climb First settings using Pitch and Roll stick
             //CR2 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
             uint8_t rth_fw_spiral_climb;        // Enable RTH spiral climb for FW when "climb first" selected
-            //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx            
+            //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
             uint8_t nav_overrides_motor_stop;   // Autonomous modes override motor_stop setting and user command to stop motor
         } flags;
 
