@@ -2414,7 +2414,7 @@ groups:
         max: 45
         # CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx        
       - name: nav_fw_launch_allow_throttle_low
-        description: "Allow launch sequence with throttle maintained low throughout. Defaults to cruise throttle at end until sticks moved/throttle raised or switches to RTH/WP Nav modes if preselected"
+        description: "Allow launch sequence with throttle maintained low throughout. When main launch sequence completes control is maintained with Nav cruise throttle until sticks moved/throttle raised or control switches to other Nav mode if preselected"
         default_value: "OFF"
         field: fw.launch_allow_throttle_low
         type: bool

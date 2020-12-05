@@ -3282,8 +3282,9 @@ static bool isWaypointMissionValid(void)
 {
     return posControl.waypointListValid && (posControl.waypointCount > 0);
 }
-
+// CR6 xxxxxxxxxxxxxxxxxxxxx
 static navigationFSMEvent_t selectNavEventFromBoxModeInput(bool launchBypass)
+// CR6 xxxxxxxxxxxxxxxxxxxxx
 {
     static bool canActivateWaypoint = false;
     static bool canActivateLaunchMode = false;
