@@ -107,7 +107,7 @@ typedef struct fixedWingLaunchData_s {
     fixedWingLaunchState_t currentState;
     uint8_t pitchAngle; // used to smooth the transition of the pitch angle
     // CR6 xxxxxxxxxxxxxxxxxxxx
-    bool finishedThrottleLow;   // flags finish with throttle low
+    bool finishedThrottleLow;   // flags launch finish with throttle low
     // CR6 xxxxxxxxxxxxxxxxxxxx
 } fixedWingLaunchData_t;
 
@@ -422,6 +422,7 @@ static fixedWingLaunchEvent_t fwLaunchState_FW_LAUNCH_STATE_FINISH(timeUs_t curr
     }
     // CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
     if (navConfig()->fw.launch_allow_throttle_low && isThrottleLow()) {
+        // default to cruise throttle until switch to preselected Nav mode or pilot takes control
         rcCommand[THROTTLE] = navConfig()->fw.cruise_throttle;
     }
     // CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
@@ -490,10 +491,16 @@ void enableFixedWingLaunchController(timeUs_t currentTimeUs)
 
 bool isFixedWingLaunchFinishedOrAborted(void)
 {
-    // CR6 xxxxxxxxxxxxxxxxxxxxxxx
-    return fwLaunch.currentState == FW_LAUNCH_STATE_IDLE || fwLaunch.finishedThrottleLow;
+    return fwLaunch.currentState == FW_LAUNCH_STATE_IDLE;
 }
 
+// CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+bool isFixedWingLaunchFinishedThrottleLow(void)
+{
+    return fwLaunch.finishedThrottleLow;
+}
+// CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+    
 void abortFixedWingLaunch(void)
 {
     setCurrentState(FW_LAUNCH_STATE_IDLE, 0);

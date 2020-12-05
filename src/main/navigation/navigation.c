@@ -91,7 +91,7 @@ STATIC_ASSERT(NAV_MAX_WAYPOINTS < 254, NAV_MAX_WAYPOINTS_exceeded_allowable_rang
 PG_REGISTER_ARRAY(navWaypoint_t, NAV_MAX_WAYPOINTS, nonVolatileWaypointList, PG_WAYPOINT_MISSION_STORAGE, 0);
 #endif
 
-PG_REGISTER_WITH_RESET_TEMPLATE(navConfig_t, navConfig, PG_NAV_CONFIG, 8);
+PG_REGISTER_WITH_RESET_TEMPLATE(navConfig_t, navConfig, PG_NAV_CONFIG, 9);
 
 PG_RESET_TEMPLATE(navConfig_t, navConfig,
     .general = {
@@ -887,6 +887,7 @@ static const navigationFSMStateDescriptor_t navFSM[NAV_STATE_COUNT] = {
             [NAV_FSM_EVENT_SWITCH_TO_IDLE]              = NAV_STATE_IDLE,
             // CR6 xxxxxxxxxxxxxxxxxx
             [NAV_FSM_EVENT_SWITCH_TO_ALTHOLD]           = NAV_STATE_ALTHOLD_INITIALIZE,
+            [NAV_FSM_EVENT_SWITCH_TO_POSHOLD_3D]        = NAV_STATE_POSHOLD_3D_INITIALIZE,
             [NAV_FSM_EVENT_SWITCH_TO_RTH]               = NAV_STATE_RTH_INITIALIZE,
             [NAV_FSM_EVENT_SWITCH_TO_WAYPOINT]          = NAV_STATE_WAYPOINT_INITIALIZE,
             [NAV_FSM_EVENT_SWITCH_TO_CRUISE_2D]         = NAV_STATE_CRUISE_2D_INITIALIZE,
@@ -1805,10 +1806,6 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_LAUNCH_INITIALIZE(navig
     UNUSED(previousState);
 
     resetFixedWingLaunchController(currentTimeUs);
-    
-    // CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-    //posControl.flags.launchSelectOtherNavMode = false;
-    // CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
     return NAV_FSM_EVENT_SUCCESS;   // NAV_STATE_LAUNCH_WAIT
 }
@@ -1823,7 +1820,8 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_LAUNCH_WAIT(navigationF
         return NAV_FSM_EVENT_SUCCESS;   // NAV_STATE_LAUNCH_IN_PROGRESS
     }
 
-    //allow to leave NAV_LAUNCH_MODE if it has being enabled as feature by moving sticks with low throttle.
+    // allow to leave NAV_LAUNCH_MODE if it has being enabled as feature by moving sticks with low throttle.
+    // also allow switched launch mode to be cancelled by moving sticks if launch allowed with throttle low
     // CR6 xxxxxxxxxxxxxxxxxxxxxxxx
     if (feature(FEATURE_FW_LAUNCH) || (navConfig()->fw.launch_allow_throttle_low && IS_RC_MODE_ACTIVE(BOXNAVLAUNCH))) {
     // CR6 xxxxxxxxxxxxxxxxxxxxxxxxx
@@ -1842,25 +1840,23 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_LAUNCH_IN_PROGRESS(navi
     UNUSED(previousState);
 
     if (isFixedWingLaunchFinishedOrAborted()) {
-        // CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-        if (navConfig()->fw.launch_allow_throttle_low && calculateThrottleStatus(THROTTLE_STATUS_TYPE_RC) == THROTTLE_LOW) {
-            
-            //posControl.flags.launchSelectOtherNavMode = true;
-            navigationFSMEvent_t isNavModeSelected = selectNavEventFromBoxModeInput(true);
-            //posControl.flags.launchSelectOtherNavMode = false;
-            
-            if (isNavModeSelected != NAV_FSM_EVENT_SWITCH_TO_IDLE) {
-                return isNavModeSelected;
-            }
-            
-            if (areSticksDeflectedMoreThanPosHoldDeadband()) {
-                return NAV_FSM_EVENT_SUCCESS;   // end the launch and return to NAV_STATE_IDLE state
-            }
-        } else {
-        // CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-            return NAV_FSM_EVENT_SUCCESS;
-        }
+        return NAV_FSM_EVENT_SUCCESS;
     }
+
+// CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx      
+    if (isFixedWingLaunchFinishedThrottleLow()) {
+        // check if launch can switch to other preselected Nav mode and switch if true 
+        navigationFSMEvent_t isNavModeSelected = selectNavEventFromBoxModeInput(true);
+            
+        if (isNavModeSelected != NAV_FSM_EVENT_SWITCH_TO_IDLE) {
+            return isNavModeSelected;
+        }
+            
+        // if (areSticksDeflectedMoreThanPosHoldDeadband()) {
+            // return NAV_FSM_EVENT_SUCCESS;   // end the launch and return to NAV_STATE_IDLE
+        // }
+    }
+// CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
     return NAV_FSM_EVENT_NONE;
 }
@@ -3319,6 +3315,8 @@ static navigationFSMEvent_t selectNavEventFromBoxModeInput(bool launchBypass)
                     return NAV_FSM_EVENT_SWITCH_TO_LAUNCH;
                 }
                 // CR6 xxxxxxxxxxxxxxxxxxxxx
+                // allow launch priority bypass at launch finish with throttle low
+                // to check if possible to switch to other preselected Nav mode
                 else if (FLIGHT_MODE(NAV_LAUNCH_MODE) && !launchBypass) {
                 // CR6 xxxxxxxxxxxxxxxxxxxxx
                     // Make sure we don't bail out to IDLE

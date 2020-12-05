@@ -125,6 +125,7 @@ typedef enum {
 } navArmingBlocker_e;
 
 typedef enum {
+    NOMS_OFF_ALWAYS,
     NOMS_OFF,
     NOMS_AUTO_ONLY,
     NOMS_ALL_NAV
@@ -540,6 +541,9 @@ bool navigationRTHAllowsLanding(void);
 bool isNavLaunchEnabled(void);
 bool isFixedWingLaunchDetected(void);
 bool isFixedWingLaunchFinishedOrAborted(void);
+// CR6
+bool isFixedWingLaunchFinishedThrottleLow(void);
+// CR6
 const char * fixedWingLaunchStateMessage(void);
 
 float calculateAverageSpeed(void);

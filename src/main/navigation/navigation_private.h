@@ -475,6 +475,9 @@ void resetFixedWingLaunchController(timeUs_t currentTimeUs);
 bool isFixedWingLaunchDetected(void);
 void enableFixedWingLaunchController(timeUs_t currentTimeUs);
 bool isFixedWingLaunchFinishedOrAborted(void);
+// CR6
+bool isFixedWingLaunchFinishedThrottleLow(void);
+// CR6
 void abortFixedWingLaunch(void);
 void applyFixedWingLaunchController(timeUs_t currentTimeUs);
 
