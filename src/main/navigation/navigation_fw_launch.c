@@ -285,14 +285,14 @@ static void updateRcCommand(void)
 static fixedWingLaunchEvent_t fwLaunchState_FW_LAUNCH_STATE_IDLE(timeUs_t currentTimeUs)
 {
     UNUSED(currentTimeUs);
-DEBUG_SET(DEBUG_CRUISE, 5, 51);
+
     return FW_LAUNCH_EVENT_NONE;
 }
 
 static fixedWingLaunchEvent_t fwLaunchState_FW_LAUNCH_STATE_WAIT_THROTTLE(timeUs_t currentTimeUs)
 {
     UNUSED(currentTimeUs);
-    DEBUG_SET(DEBUG_CRUISE, 5, 52);
+
     // CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
     if (!isThrottleLow() || navConfig()->fw.launch_allow_throttle_low) {
         applyThrottleIdleLogic(true);   // Stick low, force mixer idle (motor stop or low rpm)
@@ -317,7 +317,7 @@ static fixedWingLaunchEvent_t fwLaunchState_FW_LAUNCH_STATE_WAIT_THROTTLE(timeUs
 
 static fixedWingLaunchEvent_t fwLaunchState_FW_LAUNCH_STATE_MOTOR_IDLE(timeUs_t currentTimeUs)
 {
-    DEBUG_SET(DEBUG_CRUISE, 5, 53);
+
     // CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
     if (isThrottleLow() && !navConfig()->fw.launch_allow_throttle_low) {
         return FW_LAUNCH_EVENT_THROTTLE_LOW; // go back to FW_LAUNCH_STATE_WAIT_THROTTLE
@@ -339,7 +339,7 @@ static fixedWingLaunchEvent_t fwLaunchState_FW_LAUNCH_STATE_MOTOR_IDLE(timeUs_t 
 
 static fixedWingLaunchEvent_t fwLaunchState_FW_LAUNCH_STATE_WAIT_DETECTION(timeUs_t currentTimeUs)
 {
-    DEBUG_SET(DEBUG_CRUISE, 5, 54);
+
     // CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
     if (isThrottleLow() && !navConfig()->fw.launch_allow_throttle_low) {
         return FW_LAUNCH_EVENT_THROTTLE_LOW; // go back to FW_LAUNCH_STATE_WAIT_THROTTLE
