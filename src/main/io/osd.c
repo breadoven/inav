@@ -1772,8 +1772,8 @@ static bool osdDrawSingleElement(uint8_t item)
             if (osdConfig()->hud_wp_disp > 0 && posControl.waypointListValid && posControl.waypointCount > 0) { // Display the next waypoints
                 gpsLocation_t wp2;
                 int j;
-
-                tfp_sprintf(buff, "W%u/%u", posControl.activeWaypointIndex, posControl.waypointCount);
+                bool isLastWaypointJump = (posControl.waypointList[posControl.waypointCount - 1].action == NAV_WP_ACTION_JUMP);
+                tfp_sprintf(buff, "W%u/%u", posControl.activeWaypointIndex, posControl.waypointCount - isLastWaypointJump);
                 displayWrite(osdGetDisplayPort(), 13, osdConfig()->hud_margin_v - 1, buff);
 
                 for (int i = osdConfig()->hud_wp_disp - 1; i >= 0 ; i--) { // Display in reverse order so the next WP is always written on top
@@ -3371,7 +3371,6 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
                     if (NAV_Status.state == MW_NAV_STATE_WP_ENROUTE) {
                         // Countdown display for remaining Waypoints                        
                         bool isLastWaypointJump = (posControl.waypointList[posControl.waypointCount - 1].action == NAV_WP_ACTION_JUMP);
-
                         tfp_sprintf(messageBuf, "TO WP %u/%u", posControl.activeWaypointIndex + 1, posControl.waypointCount - isLastWaypointJump);                            
                         messages[messageCount++] = messageBuf;
                     } else if (NAV_Status.state == MW_NAV_STATE_HOLD_TIMED) {
