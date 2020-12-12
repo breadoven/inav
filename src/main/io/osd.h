@@ -80,9 +80,7 @@
 #define OSD_MSG_EMERG_LANDING_FS    "(EMERGENCY LANDING)"
 #define OSD_MSG_MOVE_EXIT_FS        "!MOVE STICKS TO EXIT FS!"
 #define OSD_MSG_STARTING_RTH        "STARTING RTH"
-//CR5 xxxxxxxxxxxxxxxxxxxxxxxx
 #define OSD_MSG_RTH_CLIMB           "ADJUSTING RTH ALTITUDE"
-//xxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 #define OSD_MSG_HEADING_HOME        "EN ROUTE TO HOME"
 #define OSD_MSG_HOLDING_WAYPOINT    "HOLDING WAYPOINT"
 #define OSD_MSG_TO_WP               "TO WP"
