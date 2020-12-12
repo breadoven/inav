@@ -470,14 +470,24 @@ static fixedWingLaunchEvent_t fwLaunchState_FW_LAUNCH_STATE_FINISH(timeUs_t curr
 
 // CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 static fixedWingLaunchEvent_t fwLaunchState_FW_LAUNCH_STATE_FINISH_THR_LOW(timeUs_t currentTimeUs)
-{
-    UNUSED(currentTimeUs);
-    
-    rcCommand[THROTTLE] = navConfig()->fw.cruise_throttle;
+{    
+    static timeMs_t throttleRaisedStartTimeMs;
+    const timeMs_t elapsedTimeMs = US2MS(currentTimeUs) - throttleRaisedStartTimeMs;
+    const timeMs_t endTimeMs = 1000;
 
-    if (areSticksDeflectedMoreThanPosHoldDeadband() || !isThrottleLow()) {
-        return FW_LAUNCH_EVENT_SUCCESS; // end the launch and go to FW_LAUNCH_STATE_IDLE
+    if (areSticksDeflectedMoreThanPosHoldDeadband()) {
+        return FW_LAUNCH_EVENT_SUCCESS;     // end the launch and go to FW_LAUNCH_STATE_IDLE
     }
+    
+    if (isThrottleLow()) {
+        throttleRaisedStartTimeMs = US2MS(currentTimeUs);
+        rcCommand[THROTTLE] = navConfig()->fw.cruise_throttle;
+    } else {
+        rcCommand[THROTTLE] = scaleRangef(elapsedTimeMs, 0.0f, endTimeMs,  navConfig()->fw.cruise_throttle, rcCommand[THROTTLE]);
+        if (elapsedTimeMs > endTimeMs) {
+            return FW_LAUNCH_EVENT_SUCCESS;
+        }
+    }   
 
     return FW_LAUNCH_EVENT_NONE;
 }
