@@ -785,24 +785,18 @@ static const char * navigationStateMessage(void)
             break;
         case MW_NAV_STATE_RTH_START:
             return OSD_MESSAGE_STR(OSD_MSG_STARTING_RTH);
-        // CR5 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx    
         case MW_NAV_STATE_RTH_CLIMB:            
             return OSD_MESSAGE_STR(OSD_MSG_RTH_CLIMB);
-        // xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
         case MW_NAV_STATE_RTH_ENROUTE:
             return OSD_MESSAGE_STR(OSD_MSG_HEADING_HOME);
         case MW_NAV_STATE_HOLD_INFINIT:
             // Used by HOLD flight modes. No information to add.
             break;
         case MW_NAV_STATE_HOLD_TIMED:
-            //CR5 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
             // "HOLDING WP FOR xx S" Countdown added in osdGetSystemMessage
-            //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
             break;
         case MW_NAV_STATE_WP_ENROUTE:
-            //CR5 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
             // "TO WP" + WP countdown added in osdGetSystemMessage
-            //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
             break;
         case MW_NAV_STATE_PROCESS_NEXT:
             return OSD_MESSAGE_STR(OSD_MSG_PREPARE_NEXT_WP);
@@ -1217,6 +1211,21 @@ static void osdDisplayAdjustableDecimalValue(uint8_t elemPosX, uint8_t elemPosY,
         TEXT_ATTRIBUTES_ADD_BLINK(elemAttr);
     displayWriteWithAttr(osdDisplayPort, elemPosX + strlen(str) + 1 + valueOffset, elemPosY, buff, elemAttr);
 }
+
+// CR8
+int8_t getGeoWaypointNumber(int8_t waypointIndex)
+{
+    if (posControl.waypointList[waypointIndex].flag == NAV_WP_FLAG_LAST) {
+        if ((posControl.waypointList[waypointIndex].action == NAV_WP_ACTION_JUMP || posControl.waypointList[waypointIndex].action == NAV_WP_ACTION_SET_POI || posControl.waypointList[waypointIndex].action == NAV_WP_ACTION_SET_HEAD)) {
+            return posControl.waypointList[waypointIndex - 1].flag;
+        } else {
+            return posControl.waypointList[waypointIndex - 1].flag + 1;
+        }
+    } else {
+        return posControl.waypointList[waypointIndex].flag;
+    }
+}
+// CR8
 
 static bool osdDrawSingleElement(uint8_t item)
 {
@@ -1772,8 +1781,10 @@ static bool osdDrawSingleElement(uint8_t item)
             if (osdConfig()->hud_wp_disp > 0 && posControl.waypointListValid && posControl.waypointCount > 0) { // Display the next waypoints
                 gpsLocation_t wp2;
                 int j;
-                bool isLastWaypointJump = (posControl.waypointList[posControl.waypointCount - 1].action == NAV_WP_ACTION_JUMP);
-                tfp_sprintf(buff, "W%u/%u", posControl.activeWaypointIndex, posControl.waypointCount - isLastWaypointJump);
+                // CR8
+                tfp_sprintf(buff, "W%u/%u", getGeoWaypointNumber(posControl.activeWaypointIndex) - 1, posControl.geoWaypointCount);
+                // CR8
+                // tfp_sprintf(buff, "W%u/%u", posControl.activeWaypointIndex, posControl.waypointCount);
                 displayWrite(osdGetDisplayPort(), 13, osdConfig()->hud_margin_v - 1, buff);
 
                 for (int i = osdConfig()->hud_wp_disp - 1; i >= 0 ; i--) { // Display in reverse order so the next WP is always written on top
@@ -1784,6 +1795,9 @@ static bool osdDrawSingleElement(uint8_t item)
                         wp2.alt = posControl.waypointList[j].alt;
                         fpVector3_t poi;
                         geoConvertGeodeticToLocal(&poi, &posControl.gpsOrigin, &wp2, GEO_ALT_RELATIVE);
+                        // CR8
+                        j = getGeoWaypointNumber(j);
+                        // CR8
                         while (j > 9) j -= 10; // Only the last digit displayed if WP>=10, no room for more
                         osdHudDrawPoi(calculateDistanceToDestination(&poi) / 100, osdGetHeadingAngle(calculateBearingToDestination(&poi) / 100), (posControl.waypointList[j].alt - osdGetAltitude())/ 100, 2, SYM_WAYPOINT, 49 + j, i);
                     }
@@ -2946,7 +2960,7 @@ static void osdShowStats(void)
         //CR4 xxxxxxxxxxxxxxxxxxxxxxx
         if (rtcGetDateTime(&dt)) {
             dateTimeFormatLocal(buf, &dt);
-            displayWrite(osdDisplayPort, statNameX, top, buf);
+            displayWrite(osdDisplayPort, statNameX, top++, buf);
         }
     //  displayWrite(osdDisplayPort, statNameX, top++, "  --- STATS ---");
     //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
@@ -3367,11 +3381,13 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
                 }
             } else {
                 if (FLIGHT_MODE(NAV_RTH_MODE) || FLIGHT_MODE(NAV_WP_MODE) || navigationIsExecutingAnEmergencyLanding()) {
-                    //CR5 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+                    //CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
                     if (NAV_Status.state == MW_NAV_STATE_WP_ENROUTE) {
-                        // Countdown display for remaining Waypoints                        
-                        bool isLastWaypointJump = (posControl.waypointList[posControl.waypointCount - 1].action == NAV_WP_ACTION_JUMP);
-                        tfp_sprintf(messageBuf, "TO WP %u/%u", posControl.activeWaypointIndex + 1, posControl.waypointCount - isLastWaypointJump);                            
+                        // Countdown display for remaining Waypoints
+                        // CR8
+                        tfp_sprintf(messageBuf, "TO WP %u/%u", getGeoWaypointNumber(posControl.activeWaypointIndex), posControl.geoWaypointCount);
+                        // CR8
+                        //tfp_sprintf(messageBuf, "TO WP %u/%u", posControl.activeWaypointIndex + 1, posControl.waypointCount);
                         messages[messageCount++] = messageBuf;
                     } else if (NAV_Status.state == MW_NAV_STATE_HOLD_TIMED) {
                         // WP hold time countdown in seconds

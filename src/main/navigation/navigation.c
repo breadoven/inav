@@ -514,10 +514,7 @@ static const navigationFSMStateDescriptor_t navFSM[NAV_STATE_COUNT] = {
         .timeoutMs = 10,
         .stateFlags = NAV_CTL_ALT | NAV_CTL_POS | NAV_CTL_YAW | NAV_REQUIRE_ANGLE | NAV_REQUIRE_MAGHOLD | NAV_REQUIRE_THRTILT | NAV_AUTO_RTH | NAV_RC_POS | NAV_RC_YAW,     // allow pos adjustment while climbind to safe alt
         .mapToFlightModes = NAV_RTH_MODE | NAV_ALTHOLD_MODE,
-        // CR5 xxxxxxxxxxxxxxxxxxxx
-        .mwState = MW_NAV_STATE_RTH_CLIMB,        
-        //.mwState = MW_NAV_STATE_RTH_ENROUTE,
-        // xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+        .mwState = MW_NAV_STATE_RTH_CLIMB,
         .mwError = MW_NAV_ERROR_WAIT_FOR_RTH_ALT,
         .onEvent = {
             [NAV_FSM_EVENT_TIMEOUT]                     = NAV_STATE_RTH_CLIMB_TO_SAFE_ALT,   // re-process the state
@@ -1851,10 +1848,6 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_LAUNCH_IN_PROGRESS(navi
         if (isNavModeSelected != NAV_FSM_EVENT_SWITCH_TO_IDLE) {
             return isNavModeSelected;
         }
-            
-        // if (areSticksDeflectedMoreThanPosHoldDeadband()) {
-            // return NAV_FSM_EVENT_SUCCESS;   // end the launch and return to NAV_STATE_IDLE
-        // }
     }
 // CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
@@ -2982,13 +2975,30 @@ void setWaypoint(uint8_t wpNumber, const navWaypoint_t * wpData)
     else if ((wpNumber >= 1) && (wpNumber <= NAV_MAX_WAYPOINTS) && !ARMING_FLAG(ARMED)) {
         if (wpData->action == NAV_WP_ACTION_WAYPOINT || wpData->action == NAV_WP_ACTION_JUMP || wpData->action == NAV_WP_ACTION_RTH || wpData->action == NAV_WP_ACTION_HOLD_TIME || wpData->action == NAV_WP_ACTION_LAND || wpData->action == NAV_WP_ACTION_SET_POI || wpData->action == NAV_WP_ACTION_SET_HEAD ) {
             // Only allow upload next waypoint (continue upload mission) or first waypoint (new mission)
+            // CR8
+            static int8_t nonGeoWaypointCount = 0;            
+            // CR8            
             if (wpNumber == (posControl.waypointCount + 1) || wpNumber == 1) {
                 posControl.waypointList[wpNumber - 1] = *wpData;
                 if(wpData->action == NAV_WP_ACTION_JUMP) {
                     posControl.waypointList[wpNumber - 1].p1 -= 1; // make index (vice WP #)
+                    // CR8
+                    nonGeoWaypointCount += 1;
+                }
+                if(wpData->action == NAV_WP_ACTION_SET_POI || wpData->action == NAV_WP_ACTION_SET_HEAD) {
+                    nonGeoWaypointCount += 1;
                 }
                 posControl.waypointCount = wpNumber;
                 posControl.waypointListValid = (wpData->flag == NAV_WP_FLAG_LAST);
+                posControl.geoWaypointCount = posControl.waypointCount - nonGeoWaypointCount;
+                if (posControl.waypointListValid) {
+                    nonGeoWaypointCount = 0;
+                } else {                    
+                    posControl.waypointList[wpNumber - 1].flag = wpNumber - nonGeoWaypointCount;
+                }
+                DEBUG_SET(DEBUG_CRUISE, 0, posControl.geoWaypointCount);
+                DEBUG_SET(DEBUG_CRUISE, 1, posControl.waypointList[posControl.waypointCount - 1].flag);
+                // CR8
             }
         }
     }
@@ -3000,6 +3010,9 @@ void resetWaypointList(void)
     if (!ARMING_FLAG(ARMED)) {
         posControl.waypointCount = 0;
         posControl.waypointListValid = false;
+        // CR8
+        posControl.geoWaypointCount = 0;
+        // CR8
     }
 }
 
