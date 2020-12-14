@@ -2980,24 +2980,24 @@ void setWaypoint(uint8_t wpNumber, const navWaypoint_t * wpData)
             // CR8            
             if (wpNumber == (posControl.waypointCount + 1) || wpNumber == 1) {
                 posControl.waypointList[wpNumber - 1] = *wpData;
-                if(wpData->action == NAV_WP_ACTION_JUMP) {
-                    posControl.waypointList[wpNumber - 1].p1 -= 1; // make index (vice WP #)
-                    // CR8
+                // CR8                
+                if(wpData->action == NAV_WP_ACTION_SET_POI || wpData->action == NAV_WP_ACTION_SET_HEAD || wpData->action == NAV_WP_ACTION_JUMP) {
+                    if(wpData->action == NAV_WP_ACTION_JUMP) {
+                        posControl.waypointList[wpNumber - 1].p1 -= 1; // make index (vice WP #)
+                    }                    
                     nonGeoWaypointCount += 1;
-                }
-                if(wpData->action == NAV_WP_ACTION_SET_POI || wpData->action == NAV_WP_ACTION_SET_HEAD) {
-                    nonGeoWaypointCount += 1;
-                }
+                } else {
+                    posControl.waypointList[wpNumber - 1].p3 = wpNumber - nonGeoWaypointCount;
+                }                
+                
                 posControl.waypointCount = wpNumber;
-                posControl.waypointListValid = (wpData->flag == NAV_WP_FLAG_LAST);
+                posControl.waypointListValid = (wpData->flag == NAV_WP_FLAG_LAST);                
                 posControl.geoWaypointCount = posControl.waypointCount - nonGeoWaypointCount;
                 if (posControl.waypointListValid) {
                     nonGeoWaypointCount = 0;
-                } else {                    
-                    posControl.waypointList[wpNumber - 1].flag = wpNumber - nonGeoWaypointCount;
                 }
                 DEBUG_SET(DEBUG_CRUISE, 0, posControl.geoWaypointCount);
-                DEBUG_SET(DEBUG_CRUISE, 1, posControl.waypointList[posControl.waypointCount - 1].flag);
+                // DEBUG_SET(DEBUG_CRUISE, 1, posControl.waypointList[posControl.waypointCount - 1].p3);
                 // CR8
             }
         }
