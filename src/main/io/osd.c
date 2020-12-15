@@ -1215,7 +1215,7 @@ static void osdDisplayAdjustableDecimalValue(uint8_t elemPosX, uint8_t elemPosY,
 // CR8
 int8_t getGeoWaypointNumber(int8_t waypointIndex)
 {
-    if ((posControl.waypointList[waypointIndex].action == NAV_WP_ACTION_JUMP || posControl.waypointList[waypointIndex].action == NAV_WP_ACTION_SET_POI || posControl.waypointList[waypointIndex].action == NAV_WP_ACTION_SET_HEAD)) {
+    if (posControl.waypointList[waypointIndex].action == NAV_WP_ACTION_JUMP) {
         return posControl.waypointList[waypointIndex - 1].p3;
     } else {
         return posControl.waypointList[waypointIndex].p3;
@@ -1793,9 +1793,9 @@ static bool osdDrawSingleElement(uint8_t item)
                         geoConvertGeodeticToLocal(&poi, &posControl.gpsOrigin, &wp2, GEO_ALT_RELATIVE);
                         // CR8
                         j = getGeoWaypointNumber(j);
+                        while (j > 9) j -= 10; // Only the last digit displayed if WP>=10, no room for more (48 = ascii 0)
+                        osdHudDrawPoi(calculateDistanceToDestination(&poi) / 100, osdGetHeadingAngle(calculateBearingToDestination(&poi) / 100), (posControl.waypointList[j].alt - osdGetAltitude())/ 100, 2, SYM_WAYPOINT, 48 + j, i);
                         // CR8
-                        while (j > 9) j -= 10; // Only the last digit displayed if WP>=10, no room for more
-                        osdHudDrawPoi(calculateDistanceToDestination(&poi) / 100, osdGetHeadingAngle(calculateBearingToDestination(&poi) / 100), (posControl.waypointList[j].alt - osdGetAltitude())/ 100, 2, SYM_WAYPOINT, 49 + j, i);
                     }
                 }
             }
