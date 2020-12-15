@@ -2982,10 +2982,12 @@ void setWaypoint(uint8_t wpNumber, const navWaypoint_t * wpData)
                 posControl.waypointList[wpNumber - 1] = *wpData;
                 // CR8                
                 if(wpData->action == NAV_WP_ACTION_SET_POI || wpData->action == NAV_WP_ACTION_SET_HEAD || wpData->action == NAV_WP_ACTION_JUMP) {
+                    nonGeoWaypointCount += 1;
                     if(wpData->action == NAV_WP_ACTION_JUMP) {
                         posControl.waypointList[wpNumber - 1].p1 -= 1; // make index (vice WP #)
+                    } else {
+                        posControl.waypointList[wpNumber - 1].p3 = wpNumber - nonGeoWaypointCount;
                     }                    
-                    nonGeoWaypointCount += 1;
                 } else {
                     posControl.waypointList[wpNumber - 1].p3 = wpNumber - nonGeoWaypointCount;
                 }                
