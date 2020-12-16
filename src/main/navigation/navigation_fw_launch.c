@@ -526,7 +526,7 @@ void resetFixedWingLaunchController(timeUs_t currentTimeUs)
 
 bool isFixedWingLaunchDetected(void)
 {
-    return fwLaunch.currentState == FW_LAUNCH_STATE_DETECTED;
+    return fwLaunch.currentState == FW_LAUNCH_STATE_DETECTED || fwLaunch.currentState == FW_LAUNCH_STATE_IN_PROGRESS;   // CR6
 }
 
 void enableFixedWingLaunchController(timeUs_t currentTimeUs)
