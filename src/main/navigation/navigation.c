@@ -667,6 +667,7 @@ static const navigationFSMStateDescriptor_t navFSM[NAV_STATE_COUNT] = {
             [NAV_FSM_EVENT_SUCCESS]                     = NAV_STATE_WAYPOINT_IN_PROGRESS,
             [NAV_FSM_EVENT_ERROR]                       = NAV_STATE_IDLE,
             [NAV_FSM_EVENT_SWITCH_TO_IDLE]              = NAV_STATE_IDLE,
+            [NAV_FSM_EVENT_SWITCH_TO_RTH]               = NAV_STATE_RTH_INITIALIZE,   // CR9
             [NAV_FSM_EVENT_SWITCH_TO_WAYPOINT_FINISHED] = NAV_STATE_WAYPOINT_FINISHED,
         }
     },
@@ -1307,7 +1308,6 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_CLIMB_TO_SAFE_ALT(n
             }
 
             return NAV_FSM_EVENT_NONE;
-
         }
     }
     /* Position sensor failure timeout - land */
@@ -1377,13 +1377,25 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_HOVER_PRIOR_TO_LAND
         if (STATE(FIXED_WING_LEGACY)) {
             resetLandingDetector();
             updateClimbRateToAltitudeController(0, ROC_TO_ALT_RESET);
-            return navigationRTHAllowsLanding() ? NAV_FSM_EVENT_SUCCESS : NAV_FSM_EVENT_SWITCH_TO_RTH_HOVER_ABOVE_HOME;
+            // CR9 - add else to use WP mission landing flag P1 if WPMissionRTH active
+            if (posControl.flags.wpMiaaionRTHIsActive) {
+                return posControl.waypointList[posControl.waypointCount - 1].p1 > 0 ? NAV_FSM_EVENT_SUCCESS : NAV_FSM_EVENT_SWITCH_TO_RTH_HOVER_ABOVE_HOME;
+            } else {
+            // CR9
+                return navigationRTHAllowsLanding() ? NAV_FSM_EVENT_SUCCESS : NAV_FSM_EVENT_SWITCH_TO_RTH_HOVER_ABOVE_HOME; // success = land
+            }
         }
         else {
             if (ABS(wrap_18000(posControl.rthState.homePosition.yaw - posControl.actualState.yaw)) < DEGREES_TO_CENTIDEGREES(15)) {
                 resetLandingDetector();
                 updateClimbRateToAltitudeController(0, ROC_TO_ALT_RESET);
-                return navigationRTHAllowsLanding() ? NAV_FSM_EVENT_SUCCESS : NAV_FSM_EVENT_SWITCH_TO_RTH_HOVER_ABOVE_HOME;
+                // CR9
+                if (posControl.flags.wpMiaaionRTHIsActive) {
+                    return posControl.waypointList[posControl.waypointCount - 1].p1 > 0 ? NAV_FSM_EVENT_SUCCESS : NAV_FSM_EVENT_SWITCH_TO_RTH_HOVER_ABOVE_HOME;
+                } else {
+                // CR9
+                    return navigationRTHAllowsLanding() ? NAV_FSM_EVENT_SUCCESS : NAV_FSM_EVENT_SWITCH_TO_RTH_HOVER_ABOVE_HOME; // success = land
+                }
             }
             else if (!validateRTHSanityChecker()) {
                 // Continue to check for RTH sanity during pre-landing hover
@@ -1395,7 +1407,6 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_HOVER_PRIOR_TO_LAND
                 return NAV_FSM_EVENT_NONE;
             }
         }
-
     } else {
         return NAV_FSM_EVENT_SWITCH_TO_EMERGENCY_LANDING;
     }
@@ -1523,6 +1534,8 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_WAYPOINT_INITIALIZE(nav
         setupJumpCounters();
         posControl.activeWaypointIndex = 0;
         return NAV_FSM_EVENT_SUCCESS;   // will switch to NAV_STATE_WAYPOINT_PRE_ACTION
+
+        posControl.flags.wpMiaaionRTHIsActive = false;    // CR9
     }
 }
 
@@ -1591,6 +1604,10 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_WAYPOINT_PRE_ACTION(nav
             return nextForNonGeoStates();
 
         case NAV_WP_ACTION_RTH:
+        // CR9 -change to using normal RTH method
+            posControl.flags.wpMiaaionRTHIsActive = true;
+            return NAV_FSM_EVENT_SWITCH_TO_RTH;
+        // CR9
             posControl.rthState.rthInitialDistance = posControl.homeDistance;
             initializeRTHSanityChecker(&navGetCurrentActualPositionAndVelocity()->pos);
             calculateAndSetActiveWaypointToLocalPosition(rthGetHomeTargetPosition(RTH_HOME_ENROUTE_INITIAL));
@@ -3323,6 +3340,12 @@ static navigationFSMEvent_t selectNavEventFromBoxModeInput(bool launchBypass)
             canActivateWaypoint = false;
         }
 
+        // CR9 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+        if (!IS_RC_MODE_ACTIVE(BOXNAVWP) || IS_RC_MODE_ACTIVE(BOXNAVRTH) || posControl.flags.forcedRTHActivated) {
+            posControl.flags.wpMiaaionRTHIsActive = false;
+        }
+        // CR9 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
         // LAUNCH mode has priority over any other NAV mode
         if (STATE(FIXED_WING_LEGACY)) {
             if (isNavLaunchEnabled()) {     // FIXME: Only available for fixed wing aircrafts now
@@ -3592,7 +3615,7 @@ void updateWaypointsAndNavigationMode(void)
     updateFlightBehaviorModifiers();
 
     // Process switch to a different navigation mode (if needed)
-    navProcessFSMEvents(selectNavEventFromBoxModeInput(false));
+    navProcessFSMEvents(selectNavEventFromBoxModeInput(false));    // CR6
 
     // Process pilot's RC input to adjust behaviour
     processNavigationRCAdjustments();
@@ -3753,7 +3776,7 @@ void activateForcedRTH(void)
 {
     abortFixedWingLaunch();
     posControl.flags.forcedRTHActivated = true;
-    navProcessFSMEvents(selectNavEventFromBoxModeInput(false));
+    navProcessFSMEvents(selectNavEventFromBoxModeInput(false));    // CR6
 }
 
 void abortForcedRTH(void)
@@ -3811,14 +3834,13 @@ bool navigationIsFlyingAutonomousMode(void)
     return (stateFlags & (NAV_AUTO_RTH | NAV_AUTO_WP));
 }
 
-bool navigationRTHAllowsLanding(void)
+bool navigationRTHAllowsLanding(void) // CR9
 {
     if (posControl.waypointList[posControl.activeWaypointIndex].action == NAV_WP_ACTION_LAND)
         return true;
 
     navRTHAllowLanding_e allow = navConfig()->general.flags.rth_allow_landing;
-    return allow == NAV_RTH_ALLOW_LANDING_ALWAYS ||
-        (allow == NAV_RTH_ALLOW_LANDING_FS_ONLY && FLIGHT_MODE(FAILSAFE_MODE));
+    return allow == NAV_RTH_ALLOW_LANDING_ALWAYS || (allow == NAV_RTH_ALLOW_LANDING_FS_ONLY && FLIGHT_MODE(FAILSAFE_MODE));
 }
 
 bool isNavLaunchEnabled(void)
