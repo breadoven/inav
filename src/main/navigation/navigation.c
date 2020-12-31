@@ -3834,7 +3834,7 @@ bool navigationIsFlyingAutonomousMode(void)
     return (stateFlags & (NAV_AUTO_RTH | NAV_AUTO_WP));
 }
 
-bool navigationRTHAllowsLanding(void) // CR9
+bool navigationRTHAllowsLanding(void)
 {
     if (posControl.waypointList[posControl.activeWaypointIndex].action == NAV_WP_ACTION_LAND)
         return true;

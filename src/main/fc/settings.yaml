@@ -2138,14 +2138,16 @@ groups:
         table: nav_rth_alt_mode
         # CR1 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
       - name: nav_rth_alt_control_override
-        description: "If set to ON RTH climb will stop and maintain altitude acheived when AltHold mode is switched ON, overriding preset climb altitude"
+        description: "If set to ON RTH altitude and CLIMB FIRST settings can be overridden during the RTH climb phase using full pitch or roll stick held for > 2 seconds. RTH altitude is reset to the current altitude using pitch down stick. RTH CLIMB FIRST is overridden using right roll stick so craft turns and heads directly to home."
         default_value: "OFF"
-        field: general.flags.rth_alt_control_override   
+        field: general.flags.rth_alt_control_override
         type: bool
         # xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
         # CR2 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
       - name: nav_rth_fw_spiral_climb
-        field: general.flags.rth_fw_spiral_climb   
+        description: "Performs RTH loiter climb rather than a linear climb when RTH set to Climb First. Climb rate set by max_auto_climb_rate, turn rate set by nav_fw_loiter_radius."
+        default_value: "OFF"
+        field: general.flags.rth_fw_spiral_climb
         type: bool
         # xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
       - name: nav_rth_abort_threshold
