@@ -45,6 +45,9 @@
 #include "fc/runtime_config.h"
 #endif
 
+// CR10
+#include "sensors/diagnostics.h"
+// CR10
 #include "sensors/sensors.h"
 #include "sensors/compass.h"
 
@@ -397,11 +400,19 @@ bool gpsUpdate(void)
             DISABLE_STATE(GPS_FIX);
             gpsSol.fixType = GPS_NO_FIX;
             gpsSetState(GPS_LOST_COMMUNICATION);
+            // CR10
+            // gpsSol.numSat = 0;
+            // CR10
         }
         break;
 
     case GPS_LOST_COMMUNICATION:
         gpsStats.timeouts++;
+        // CR10
+        if (getHwGPSStatus() == HW_SENSOR_UNAVAILABLE) {
+            gpsSol.numSat = 0;
+        }
+        // CR10
         gpsSetState(GPS_INITIALIZING);
         break;
     }

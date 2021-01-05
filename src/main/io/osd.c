@@ -1316,10 +1316,15 @@ static bool osdDrawSingleElement(uint8_t item)
     case OSD_GPS_SATS:
         buff[0] = SYM_SAT_L;
         buff[1] = SYM_SAT_R;
+        // CR10
         tfp_sprintf(buff + 2, "%2d", gpsSol.numSat);
         if (!STATE(GPS_FIX)) {
+            if (getHwGPSStatus() == HW_SENSOR_UNAVAILABLE || getHwGPSStatus() == HW_SENSOR_UNHEALTHY) {
+                strcpy(buff + 2, "X!");
+            }
             TEXT_ATTRIBUTES_ADD_BLINK(elemAttr);
         }
+        // CR10
         break;
 
     case OSD_GPS_SPEED:
