@@ -239,9 +239,9 @@ float calculateRemainingDistanceBeforeRTH(bool takeWindIntoAccount) {
     const bool batterySettingsAreOK = feature(FEATURE_VBAT) && feature(FEATURE_CURRENT_METER) && batteryWasFullWhenPluggedIn();
     const bool rthEstimatorSettingsAreOK = batteryMetersConfig()->cruise_power > 0 && currentBatteryProfile->capacity.unit == BAT_CAPACITY_UNIT_MWH &&currentBatteryProfile->capacity.value > 0 && navConfig()->fw.cruise_speed > 0; 
     const bool navigationIsOK = navigationPositionEstimateIsHealthy() && isImuHeadingValid();
-    const bool launchIsInactiveOrDetected = !isNavLaunchEnabled() || (isFixedWingLaunchDetected() || isFixedWingLaunchFinishedOrAborted());
+    // const bool launchIsInactiveOrDetected = !isNavLaunchEnabled() || (isFixedWingLaunchDetected() || isFixedWingLaunchFinishedOrAborted());
     
-    if (!(batterySettingsAreOK && rthEstimatorSettingsAreOK && navigationIsOK && launchIsInactiveOrDetected)) {
+    if (!(batterySettingsAreOK && rthEstimatorSettingsAreOK && navigationIsOK)) {
         return -1;
     }
     // xxxxxxxxxxxxxxxx
