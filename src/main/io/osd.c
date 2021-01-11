@@ -1601,7 +1601,13 @@ static bool osdDrawSingleElement(uint8_t item)
             else if (FLIGHT_MODE(MANUAL_MODE))
                 p = "MANU";
             else if (FLIGHT_MODE(NAV_RTH_MODE))
-                p = "RTH ";
+                // CR9
+                if (IS_RC_MODE_ACTIVE(BOXNAVWP) && !(IS_RC_MODE_ACTIVE(BOXNAVRTH) || posControl.flags.forcedRTHActivated)) {
+                    p = "WRTH";
+                } else {
+                    p = "RTH ";
+                }
+                // CR9
             else if (FLIGHT_MODE(NAV_POSHOLD_MODE))
                 p = "HOLD";
             else if (FLIGHT_MODE(NAV_CRUISE_MODE) && FLIGHT_MODE(NAV_ALTHOLD_MODE))
@@ -3382,11 +3388,13 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
                 }
             } else {
                 if (FLIGHT_MODE(NAV_RTH_MODE) || FLIGHT_MODE(NAV_WP_MODE) || navigationIsExecutingAnEmergencyLanding()) {
-                    //CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
                     if (NAV_Status.state == MW_NAV_STATE_WP_ENROUTE) {
                         // Countdown display for remaining Waypoints
+                        // CR11
+                        tfp_sprintf(messageBuf, "TO WP %u/%u (%u m)", getGeoWaypointNumber(posControl.activeWaypointIndex), posControl.geoWaypointCount, (int)(posControl.wpDistance / 100));
+                        // CR11
                         // CR8
-                        tfp_sprintf(messageBuf, "TO WP %u/%u", getGeoWaypointNumber(posControl.activeWaypointIndex), posControl.geoWaypointCount);
+                        // tfp_sprintf(messageBuf, "TO WP %u/%u", getGeoWaypointNumber(posControl.activeWaypointIndex), posControl.geoWaypointCount);
                         // CR8
                         //tfp_sprintf(messageBuf, "TO WP %u/%u", posControl.activeWaypointIndex + 1, posControl.waypointCount);
                         messages[messageCount++] = messageBuf;
@@ -3404,7 +3412,6 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
                             messages[messageCount++] = navStateMessage;
                         }
                     }
-                    //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
                 } else if (STATE(FIXED_WING_LEGACY) && (navGetCurrentStateFlags() & NAV_CTL_LAUNCH)) {
                         messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_AUTOLAUNCH);
                         const char *launchStateMessage = fixedWingLaunchStateMessage();
