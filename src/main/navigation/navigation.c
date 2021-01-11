@@ -3295,7 +3295,7 @@ static bool canActivateNavigationModes(void)
     return (posControl.flags.estPosStatus == EST_TRUSTED) && (posControl.flags.estVelStatus == EST_TRUSTED) && (posControl.flags.estHeadingStatus >= EST_USABLE);
 }
 
-static bool isWaypointMissionValid(void)
+bool isWaypointMissionValid(void)   // CR9
 {
     return posControl.waypointListValid && (posControl.waypointCount > 0);
 }
