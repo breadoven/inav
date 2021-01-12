@@ -3391,7 +3391,7 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
                     if (NAV_Status.state == MW_NAV_STATE_WP_ENROUTE) {
                         // Countdown display for remaining Waypoints
                         // CR11
-                        tfp_sprintf(messageBuf, "TO WP %u/%u (%u m)", getGeoWaypointNumber(posControl.activeWaypointIndex), posControl.geoWaypointCount, (int)(posControl.wpDistance / 100));
+                        tfp_sprintf(messageBuf, "TO WP %u/%u (%3u M)", getGeoWaypointNumber(posControl.activeWaypointIndex), posControl.geoWaypointCount, (int)(posControl.wpDistance / 100));
                         // CR11
                         // CR8
                         // tfp_sprintf(messageBuf, "TO WP %u/%u", getGeoWaypointNumber(posControl.activeWaypointIndex), posControl.geoWaypointCount);

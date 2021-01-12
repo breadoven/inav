@@ -909,8 +909,7 @@ navigationFSMStateFlags_t navGetCurrentStateFlags(void)
 	//rthAltControlStickOverrideCheck(PITCH);
     //DEBUG_SET(DEBUG_CRUISE, 1, rthAltControlStickOverrideCheck(ROLL));
 	//xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-	
-	
+
     return navGetStateFlags(posControl.navState);
 }
 
@@ -1037,9 +1036,6 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_CRUISE_2D_IN_PROGRESS(n
 
     if (checkForPositionSensorTimeout()) { return NAV_FSM_EVENT_SWITCH_TO_IDLE; } // Switch to IDLE if we do not have an healty position. Do the CRUISE init the next iteration.
 
-    DEBUG_SET(DEBUG_CRUISE, 0, 2);
-    DEBUG_SET(DEBUG_CRUISE, 2, 0);
-
     if (posControl.flags.isAdjustingPosition) {
         return NAV_FSM_EVENT_SWITCH_TO_CRUISE_ADJ;
     }
@@ -1051,7 +1047,6 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_CRUISE_2D_IN_PROGRESS(n
         float rateTarget = scaleRangef((float)rcCommand[YAW], -500.0f, 500.0f, -DEGREES_TO_CENTIDEGREES(navConfig()->fw.cruise_yaw_rate), DEGREES_TO_CENTIDEGREES(navConfig()->fw.cruise_yaw_rate));
         float centidegsPerIteration = rateTarget * timeDifference / 1000.0f;
         posControl.cruise.yaw = wrap_36000(posControl.cruise.yaw - centidegsPerIteration);
-        DEBUG_SET(DEBUG_CRUISE, 1, CENTIDEGREES_TO_DEGREES(posControl.cruise.yaw));
         posControl.cruise.lastYawAdjustmentTime = currentTimeMs;
     }
 
@@ -1064,10 +1059,8 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_CRUISE_2D_IN_PROGRESS(n
             || (previousState == NAV_STATE_CRUISE_3D_INITIALIZE) || (previousState == NAV_STATE_CRUISE_3D_ADJUSTING)
             || posControl.flags.isAdjustingHeading) {
         calculateFarAwayTarget(&posControl.cruise.targetPos, posControl.cruise.yaw, distance);
-        DEBUG_SET(DEBUG_CRUISE, 2, 1);
     } else if (calculateDistanceToDestination(&posControl.cruise.targetPos) <= (navConfig()->fw.loiter_radius * 1.10f)) { //10% margin
         calculateNewCruiseTarget(&posControl.cruise.targetPos, posControl.cruise.yaw, distance);
-        DEBUG_SET(DEBUG_CRUISE, 2, 2);
     }
 
     setDesiredPosition(&posControl.cruise.targetPos, posControl.cruise.yaw, NAV_POS_UPDATE_XY);
@@ -1078,7 +1071,6 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_CRUISE_2D_IN_PROGRESS(n
 static navigationFSMEvent_t navOnEnteringState_NAV_STATE_CRUISE_2D_ADJUSTING(navigationFSMState_t previousState)
 {
     UNUSED(previousState);
-    DEBUG_SET(DEBUG_CRUISE, 0, 3);
 
     // User is rolling, changing manually direction. Wait until it is done and then restore CRUISE
     if (posControl.flags.isAdjustingPosition) {
@@ -1197,21 +1189,16 @@ static bool rthAltControlStickOverrideCheck(unsigned axis)
 
     static timeMs_t rthOverrideStickHoldStartTime[2];
 
-    if (rxGetChannelValue(axis) > rxConfig()->maxcheck) {
-        
+    if (rxGetChannelValue(axis) > rxConfig()->maxcheck) {        
         timeDelta_t holdTime = millis() - rthOverrideStickHoldStartTime[axis];
-        DEBUG_SET(DEBUG_CRUISE, 2, holdTime);
         if (!rthOverrideStickHoldStartTime[axis]) {
             rthOverrideStickHoldStartTime[axis] = millis();
-            DEBUG_SET(DEBUG_CRUISE, 3, 55);
         } else if (ABS(2500 - holdTime) < 500) {
             if (axis == PITCH) {    // PITCH override preset altitude reset to current altitude
-                DEBUG_SET(DEBUG_CRUISE, 3, 77);
                 posControl.rthState.rthInitialAltitude = posControl.actualState.abs.pos.z;
                 posControl.rthState.rthFinalAltitude = posControl.rthState.rthInitialAltitude;
                 return true;
             } else if (axis == ROLL) {    // ROLL override climb first
-                DEBUG_SET(DEBUG_CRUISE, 3, 99);
                 return true;
             }
         }
@@ -1220,7 +1207,6 @@ static bool rthAltControlStickOverrideCheck(unsigned axis)
     }
     
     return false;
-    //DEBUG_SET(DEBUG_CRUISE, 1, posControl.flags.rthClimbFirstOverride);
 }
 //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
@@ -1230,7 +1216,6 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_CLIMB_TO_SAFE_ALT(n
     
     //CR1 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
     rthAltControlStickOverrideCheck(PITCH);
-    DEBUG_SET(DEBUG_CRUISE, 6, 25);
     //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
     if ((posControl.flags.estHeadingStatus == EST_NONE)) {
@@ -1318,7 +1303,6 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_HEAD_HOME(navigatio
     
     //CR1 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
     rthAltControlStickOverrideCheck(PITCH);
-    DEBUG_SET(DEBUG_CRUISE, 6, 50);
     //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
     if ((posControl.flags.estHeadingStatus == EST_NONE)) {
@@ -1372,9 +1356,13 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_HOVER_PRIOR_TO_LAND
         if ((ABS(wrap_18000(posControl.rthState.homePosition.yaw - posControl.actualState.yaw)) < DEGREES_TO_CENTIDEGREES(15)) || STATE(FIXED_WING_LEGACY)) {
             resetLandingDetector();
             updateClimbRateToAltitudeController(0, ROC_TO_ALT_RESET);
+            DEBUG_SET(DEBUG_CRUISE, 2, isWaypointMissionValid());
             if (IS_RC_MODE_ACTIVE(BOXNAVWP) && isWaypointMissionValid() && !(IS_RC_MODE_ACTIVE(BOXNAVRTH) || posControl.flags.forcedRTHActivated)) {
+                DEBUG_SET(DEBUG_CRUISE, 0, 55);
+                DEBUG_SET(DEBUG_CRUISE, 1, 100 + posControl.waypointList[posControl.waypointCount - 1].p1);                
                 return posControl.waypointList[posControl.waypointCount - 1].p1 > 0 ? NAV_FSM_EVENT_SUCCESS : NAV_FSM_EVENT_SWITCH_TO_RTH_HOVER_ABOVE_HOME;
             } else {
+                DEBUG_SET(DEBUG_CRUISE, 0, 77);
         // CR9
                 return navigationRTHAllowsLanding() ? NAV_FSM_EVENT_SUCCESS : NAV_FSM_EVENT_SWITCH_TO_RTH_HOVER_ABOVE_HOME; // success = land
             }
@@ -1839,7 +1827,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_LAUNCH_IN_PROGRESS(navi
 
 // CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx      
     if (isFixedWingLaunchFinishedThrottleLow()) {
-        // check if launch can switch to other preselected Nav mode and switch if true 
+        // check if launch can switch to other preselected Nav mode
         navigationFSMEvent_t isNavModeSelected = selectNavEventFromBoxModeInput(true);
             
         if (isNavModeSelected != NAV_FSM_EVENT_SWITCH_TO_IDLE) {
@@ -2995,7 +2983,7 @@ void setWaypoint(uint8_t wpNumber, const navWaypoint_t * wpData)
                 if (posControl.waypointListValid) {
                     nonGeoWaypointCount = 0;
                 }
-                DEBUG_SET(DEBUG_CRUISE, 0, posControl.geoWaypointCount);
+                //DEBUG_SET(DEBUG_CRUISE, 0, posControl.geoWaypointCount);
                 // DEBUG_SET(DEBUG_CRUISE, 1, posControl.waypointList[posControl.waypointCount - 1].p3);
                 // CR8
             }
