@@ -421,7 +421,6 @@ bool isWaypointReached(const navWaypointPosition_t * waypoint, const bool isWayp
 bool isWaypointMissed(const navWaypointPosition_t * waypoint);
 bool isWaypointWait(void);
 bool isApproachingLastWaypoint(void);
-bool isWaypointMissionValid(void);        // CR9
 float getActiveWaypointSpeed(void);
 
 void updateActualHeading(bool headingValid, int32_t newHeading);

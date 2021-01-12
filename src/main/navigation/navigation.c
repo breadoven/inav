@@ -232,17 +232,13 @@ void calculateNewCruiseTarget(fpVector3_t * origin, int32_t yaw, int32_t distanc
 static bool isWaypointPositionReached(const fpVector3_t * pos, const bool isWaypointHome);
 static void mapWaypointToLocalPosition(fpVector3_t * localPos, const navWaypoint_t * waypoint);
 static navigationFSMEvent_t nextForNonGeoStates(void);
+static bool isWaypointMissionValid(void);   // CR9
 
 void initializeRTHSanityChecker(const fpVector3_t * pos);
 bool validateRTHSanityChecker(void);
+static bool rthAltControlStickOverrideCheck(unsigned axis);     //CR1 
 
-//CR1 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-static bool rthAltControlStickOverrideCheck(unsigned axis);
-//xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-
-// CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-static navigationFSMEvent_t selectNavEventFromBoxModeInput(bool launchBypass);
-// CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+static navigationFSMEvent_t selectNavEventFromBoxModeInput(bool launchBypass);  //CR6
 
 /*************************************************************************************************/
 static navigationFSMEvent_t navOnEnteringState_NAV_STATE_IDLE(navigationFSMState_t previousState);
@@ -1392,7 +1388,6 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_HOVER_PRIOR_TO_LAND
             setDesiredPosition(tmpHomePos, posControl.rthState.homePosition.yaw, NAV_POS_UPDATE_XY | NAV_POS_UPDATE_Z | NAV_POS_UPDATE_HEADING);
             return NAV_FSM_EVENT_NONE;
         }
-        // }
     } else {
         return NAV_FSM_EVENT_SWITCH_TO_EMERGENCY_LANDING;
     }
@@ -3295,7 +3290,7 @@ static bool canActivateNavigationModes(void)
     return (posControl.flags.estPosStatus == EST_TRUSTED) && (posControl.flags.estVelStatus == EST_TRUSTED) && (posControl.flags.estHeadingStatus >= EST_USABLE);
 }
 
-bool isWaypointMissionValid(void)   // CR9
+static bool isWaypointMissionValid(void)
 {
     return posControl.waypointListValid && (posControl.waypointCount > 0);
 }
