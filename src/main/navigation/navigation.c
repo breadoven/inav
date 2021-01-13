@@ -1623,9 +1623,10 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_WAYPOINT_IN_PROGRESS(na
             case NAV_WP_ACTION_JUMP:
             case NAV_WP_ACTION_SET_HEAD:
             case NAV_WP_ACTION_SET_POI:
-                 UNREACHABLE();
-            // CR9
             case NAV_WP_ACTION_RTH:
+                UNREACHABLE();
+            // CR9
+            // case NAV_WP_ACTION_RTH:
                 // if (isWaypointReached(&posControl.activeWaypoint, true) || isWaypointMissed(&posControl.activeWaypoint)) {
                     // return NAV_FSM_EVENT_SUCCESS;   // will switch to NAV_STATE_WAYPOINT_REACHED
                 // }
@@ -1638,7 +1639,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_WAYPOINT_IN_PROGRESS(na
                     // return NAV_FSM_EVENT_NONE;      // will re-process state in >10ms
                 // }
                 // CR9
-                break;
+                // break;
         }
     }
     /* No pos sensor available for NAV_WAIT_FOR_GPS_TIMEOUT_MS - land */
@@ -1663,16 +1664,17 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_WAYPOINT_REACHED(naviga
         case NAV_WP_ACTION_JUMP:
         case NAV_WP_ACTION_SET_HEAD:
         case NAV_WP_ACTION_SET_POI:
+        case NAV_WP_ACTION_RTH:
             UNREACHABLE();
         // CR9
-        case NAV_WP_ACTION_RTH:
+        // case NAV_WP_ACTION_RTH:
             // if (posControl.waypointList[posControl.activeWaypointIndex].p1 != 0) {
                 // return NAV_FSM_EVENT_SWITCH_TO_WAYPOINT_RTH_LAND;
             // }
             // else {
                 // return NAV_FSM_EVENT_SUCCESS;   // NAV_STATE_WAYPOINT_NEXT
             // }
-            break;
+            // break;
         // CR9
         case NAV_WP_ACTION_LAND:
             return NAV_FSM_EVENT_SWITCH_TO_WAYPOINT_RTH_LAND;
