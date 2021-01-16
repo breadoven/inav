@@ -101,7 +101,7 @@ PG_RESET_TEMPLATE(navConfig_t, navConfig,
             .extra_arming_safety = NAV_EXTRA_ARMING_SAFETY_ON,
             .user_control_mode = NAV_GPS_ATTI,
             .rth_alt_control_mode = NAV_RTH_AT_LEAST_ALT,
-            .rth_climb_first = 1,               // Climb first, turn after reaching safe altitude
+            .rth_climb_first = ON,              // Climb first, turn after reaching safe altitude CR2
             .rth_climb_ignore_emerg = 0,        // Ignore GPS loss on initial climb
             .rth_tail_first = 0,
             .disarm_on_landing = 0,
@@ -109,7 +109,7 @@ PG_RESET_TEMPLATE(navConfig_t, navConfig,
             //CR1 xxxxxxxxxxxxxxxxxxxxxxxxxxx
             .rth_alt_control_override = 0,      // Override RTH Altitude and rth_climb_first settings using Pitch and Roll stick
             //CR2 xxxxxxxxxxxxxxxxxxxxxxxxxxx
-            .rth_fw_spiral_climb = 0,           // Loiter climb for FW
+            // .rth_fw_spiral_climb = 0,           // Loiter climb for FW
             //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
             .nav_overrides_motor_stop = NOMS_ALL_NAV,
 			},
@@ -1016,7 +1016,6 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_CRUISE_2D_INITIALIZE(na
 
     if (!STATE(FIXED_WING_LEGACY)) { return NAV_FSM_EVENT_ERROR; } // Only on FW for now
 
-    DEBUG_SET(DEBUG_CRUISE, 0, 1);
     if (checkForPositionSensorTimeout()) { return NAV_FSM_EVENT_SWITCH_TO_IDLE; }  // Switch to IDLE if we do not have an healty position. Try the next iteration.
 
     if (!(prevFlags & NAV_CTL_POS)) {
@@ -1149,7 +1148,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_INITIALIZE(navigati
             if (STATE(FIXED_WING_LEGACY)) {
                 // Airplane - climbout before turning around
                 //CR2 Change to spiral climb/decent RTH xxxxxxxxxxxxxxxxxxxxx
-                if (navConfig()->general.flags.rth_fw_spiral_climb) {
+                if (navConfig()->general.flags.rth_climb_first == SPIRAL) {
                     // Spiral climb centered at xy of RTH activation
                     calculateInitialHoldPosition(&targetHoldPos);
                 } else {
@@ -1233,9 +1232,9 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_CLIMB_TO_SAFE_ALT(n
         const float rthAltitudeMargin = MAX(FW_RTH_CLIMB_MARGIN_MIN_CM, (rthClimbMarginPercent/100.0) * fabsf(posControl.rthState.rthInitialAltitude - posControl.rthState.homePosition.pos.z));
 
         // If we reached desired initial RTH altitude or we don't want to climb first
-        // CR1 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-        //if (((navGetCurrentActualPositionAndVelocity()->pos.z - posControl.rthState.rthInitialAltitude) > -rthAltitudeMargin) || (!navConfig()->general.flags.rth_climb_first)) {        
-        if (((navGetCurrentActualPositionAndVelocity()->pos.z - posControl.rthState.rthInitialAltitude) > -rthAltitudeMargin) || (!navConfig()->general.flags.rth_climb_first) || rthAltControlStickOverrideCheck(ROLL)) {
+        // CR1 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx        
+        // if (((navGetCurrentActualPositionAndVelocity()->pos.z - posControl.rthState.rthInitialAltitude) > -rthAltitudeMargin) || (!navConfig()->general.flags.rth_climb_first) || rthAltControlStickOverrideCheck(ROLL)) {       CR2 change below
+        if (((navGetCurrentActualPositionAndVelocity()->pos.z - posControl.rthState.rthInitialAltitude) > -rthAltitudeMargin) || (navConfig()->general.flags.rth_climb_first == OFF) || rthAltControlStickOverrideCheck(ROLL)) {
          // CR1 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
             // Delayed initialization for RTH sanity check on airplanes - allow to finish climb first as it can take some distance
@@ -1268,7 +1267,8 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_CLIMB_TO_SAFE_ALT(n
             // Climb to safe altitude and turn to correct direction
             if (STATE(FIXED_WING_LEGACY)) {
                 //CR2 change climb target from RTH Initial altitude z (rate set by pitch limit) to climb rate in m/s xxxxxxxxxxxxxxxxxx
-                if (navConfig()->general.flags.rth_fw_spiral_climb) {
+                // if (navConfig()->general.flags.rth_fw_spiral_climb) {
+                if (navConfig()->general.flags.rth_climb_first == SPIRAL) {
                     float altitudeChangeDirection = (tmpHomePos->z += FW_RTH_CLIMB_OVERSHOOT_CM) > navGetCurrentActualPositionAndVelocity()->pos.z ? 1 : -1;
                     updateClimbRateToAltitudeController(altitudeChangeDirection * navConfig()->general.max_auto_climb_rate, ROC_TO_ALT_NORMAL);
                 } else {

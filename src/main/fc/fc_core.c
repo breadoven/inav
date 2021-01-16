@@ -795,7 +795,7 @@ void taskMainPidLoop(timeUs_t currentTimeUs)
     imuUpdateAccelerometer();
     imuUpdateAttitude(currentTimeUs);
 
-    annexCode();
+    annexCode();    // resets throttle AWH
 
     if (rxConfig()->rcFilterFrequency) {
         rcInterpolationApply(isRXDataNew);
