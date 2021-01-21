@@ -135,7 +135,7 @@ typedef enum {
 typedef enum {
     OFF,
     ON,
-    SPIRAL,
+    ON_FW_SPIRAL,
 } navRTHClimbFirst_e;
 // CR2
 

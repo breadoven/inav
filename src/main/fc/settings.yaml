@@ -158,7 +158,7 @@ tables:
     # CR2
   - name: nav_rth_climb_first
     enum: navRTHClimbFirst_e
-    values: ["OFF", "ON", "SPIRAL"]
+    values: ["OFF", "ON", "ON_FW_SPIRAL"]
     # CR2
 
 groups:
@@ -2118,7 +2118,7 @@ groups:
         table: nav_overrides_motor_stop
         # CR2
       - name: nav_rth_climb_first
-        description: "If set to ON or SPIRAL craft will climb to nav_rth_altitude first before turning to head home. If set to OFF craft will turn and head home immediately climbing on the way. For a fixed wing ON will use a linear climb, SPIRAL will use a loiter turning climb with climb rate set by nav_auto_climb_rate, turn rate set by nav_fw_loiter_radius (SPIRAL is a fixed wing setting and behaves the same as ON for a multirotor)"
+        description: "If set to ON or ON_FW_SPIRAL craft will climb to nav_rth_altitude first before turning to head home. If set to OFF craft will turn and head home immediately climbing on the way. For a fixed wing ON will use a linear climb, ON_FW_SPIRAL will use a loiter turning climb with climb rate set by nav_auto_climb_rate, turn rate set by nav_fw_loiter_radius (ON_FW_SPIRAL is a fixed wing setting and behaves the same as ON for a multirotor)"
         default_value: "ON"
         field: general.flags.rth_climb_first
         table: nav_rth_climb_first

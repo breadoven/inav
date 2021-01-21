@@ -101,7 +101,7 @@ PG_RESET_TEMPLATE(navConfig_t, navConfig,
             .extra_arming_safety = NAV_EXTRA_ARMING_SAFETY_ON,
             .user_control_mode = NAV_GPS_ATTI,
             .rth_alt_control_mode = NAV_RTH_AT_LEAST_ALT,
-            .rth_climb_first = ON,              // Climb first, turn after reaching safe altitude CR2
+            .rth_climb_first = 1,               // Climb first, turn after reaching safe altitude CR2
             .rth_climb_ignore_emerg = 0,        // Ignore GPS loss on initial climb
             .rth_tail_first = 0,
             .disarm_on_landing = 0,
@@ -1148,7 +1148,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_INITIALIZE(navigati
             if (STATE(FIXED_WING_LEGACY)) {
                 // Airplane - climbout before turning around
                 //CR2 Change to spiral climb/decent RTH xxxxxxxxxxxxxxxxxxxxx
-                if (navConfig()->general.flags.rth_climb_first == SPIRAL) {
+                if (navConfig()->general.flags.rth_climb_first == ON_FW_SPIRAL) {
                     // Spiral climb centered at xy of RTH activation
                     calculateInitialHoldPosition(&targetHoldPos);
                 } else {
@@ -1268,7 +1268,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_CLIMB_TO_SAFE_ALT(n
             if (STATE(FIXED_WING_LEGACY)) {
                 //CR2 change climb target from RTH Initial altitude z (rate set by pitch limit) to climb rate in m/s xxxxxxxxxxxxxxxxxx
                 // if (navConfig()->general.flags.rth_fw_spiral_climb) {
-                if (navConfig()->general.flags.rth_climb_first == SPIRAL) {
+                if (navConfig()->general.flags.rth_climb_first == ON_FW_SPIRAL) {
                     float altitudeChangeDirection = (tmpHomePos->z += FW_RTH_CLIMB_OVERSHOOT_CM) > navGetCurrentActualPositionAndVelocity()->pos.z ? 1 : -1;
                     updateClimbRateToAltitudeController(altitudeChangeDirection * navConfig()->general.max_auto_climb_rate, ROC_TO_ALT_NORMAL);
                 } else {
