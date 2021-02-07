@@ -341,7 +341,7 @@ typedef struct {
     uint32_t                    lastValidPositionTimeMs;
     uint32_t                    lastValidAltitudeTimeMs;
 
-    /* INAV GPS origin (position where GPS fix was first acquired) */
+    /* INAV GPS origin (position where GPS fix acquired based on arming settings) */
     gpsOrigin_t                 gpsOrigin;
 
     /* Home parameters (NEU coordinated), geodetic position of home (LLH) is stores in GPS_home variable */
@@ -360,15 +360,15 @@ typedef struct {
     bool                        waypointListValid;
     int8_t                      waypointCount;
     // CR8
-    int8_t                      geoWaypointCount;    // total geospatial WPs in mission
+    int8_t                      geoWaypointCount;       // total geospatial WPs in mission
     // CR8
 
-    navWaypointPosition_t       activeWaypoint;     // Local position and initial bearing, filled on waypoint activation
+    navWaypointPosition_t       activeWaypoint;         // Local position and initial bearing, filled on waypoint activation
     int8_t                      activeWaypointIndex;
-    float                       wpInitialAltitude; // Altitude at start of WP
-    float                       wpInitialDistance; // Distance when starting flight to WP
-    float                       wpDistance;        // Distance to active WP
-    timeMs_t                    wpReachedTime;     // Time the waypoint was reached
+    float                       wpInitialAltitude;      // Altitude at start of WP
+    float                       wpInitialDistance;      // Distance when starting flight to WP
+    float                       wpDistance;             // Distance to active WP
+    timeMs_t                    wpReachedTime;          // Time the waypoint was reached
 
     /* Internals & statistics */
     int16_t                     rcAdjustment[4];

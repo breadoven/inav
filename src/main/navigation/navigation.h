@@ -297,6 +297,10 @@ typedef enum {
 } navWaypointHeadings_e;
 
 typedef enum {
+    // CR12
+    // NAV_WP_DATUM_RELATIVE = 0x00,
+    // NAV_WP_DATUM_ABSOLUTE = 0x01,
+    // CR12
     NAV_WP_FLAG_LAST = 0xA5
 } navWaypointFlags_e;
 

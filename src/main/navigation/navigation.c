@@ -909,6 +909,9 @@ navigationFSMStateFlags_t navGetCurrentStateFlags(void)
     //DEBUG_SET(DEBUG_CRUISE, 0, posControl.rthState.rthInitialAltitude);
 	//rthAltControlStickOverrideCheck(PITCH);
     //DEBUG_SET(DEBUG_CRUISE, 1, rthAltControlStickOverrideCheck(ROLL));
+    // if (posControl.waypointCount > 0) {     // CR12
+        // calculateAndSetActiveWaypoint(&posControl.waypointList[3]);
+    // }    
 	//xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
     return navGetStateFlags(posControl.navState);
@@ -1534,6 +1537,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_WAYPOINT_PRE_ACTION(nav
             calculateAndSetActiveWaypoint(&posControl.waypointList[posControl.activeWaypointIndex]);
             posControl.wpInitialDistance = calculateDistanceToDestination(&posControl.activeWaypoint.pos);
             posControl.wpInitialAltitude = posControl.actualState.abs.pos.z;
+            DEBUG_SET(DEBUG_CRUISE, 3, posControl.wpInitialAltitude);
             return NAV_FSM_EVENT_SUCCESS;       // will switch to NAV_STATE_WAYPOINT_IN_PROGRESS
 
                 // We use p3 as the volatile jump counter (p2 is the static value)
@@ -3091,14 +3095,18 @@ static void mapWaypointToLocalPosition(fpVector3_t * localPos, const navWaypoint
     wpLLH.lat = waypoint->lat;
     wpLLH.lon = waypoint->lon;
     wpLLH.alt = waypoint->alt;
-
-    geoConvertGeodeticToLocal(localPos, &posControl.gpsOrigin, &wpLLH, GEO_ALT_RELATIVE);
+    // CR12
+    geoAltitudeConversionMode_e missionAltitudeDatum = posControl.waypointList[0].flag == 0 ? GEO_ALT_RELATIVE : GEO_ALT_ABSOLUTE;
+    DEBUG_SET(DEBUG_CRUISE, 0, wpLLH.alt);
+    DEBUG_SET(DEBUG_CRUISE, 1, missionAltitudeDatum);
+    // CR12
+    geoConvertGeodeticToLocal(localPos, &posControl.gpsOrigin, &wpLLH, missionAltitudeDatum);   // CR12
 }
 
 static void calculateAndSetActiveWaypointToLocalPosition(const fpVector3_t * pos)
 {
     posControl.activeWaypoint.pos = *pos;
-
+    DEBUG_SET(DEBUG_CRUISE, 2, posControl.activeWaypoint.pos.z);        // CR12
     // Calculate initial bearing towards waypoint and store it in waypoint yaw parameter (this will further be used to detect missed waypoints)
     posControl.activeWaypoint.yaw = calculateBearingToDestination(pos);
 
