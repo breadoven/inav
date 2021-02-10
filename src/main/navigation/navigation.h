@@ -526,6 +526,7 @@ bool geoConvertGeodeticToLocalOrigin(fpVector3_t * pos, const gpsLocation_t *llh
 // the provided origin is valid and the conversion could be performed.
 bool geoConvertLocalToGeodetic(gpsLocation_t *llh, const gpsOrigin_t *origin, const fpVector3_t *pos);
 float geoCalculateMagDeclination(const gpsLocation_t * llh); // degrees units
+geoAltitudeConversionMode_e waypointMissionAltConvMode(void);     // CR12
 
 /* Distance/bearing calculation */
 bool navCalculatePathToDestination(navDestinationPath_t *result, const fpVector3_t * destinationPos);
