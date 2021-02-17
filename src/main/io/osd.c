@@ -785,7 +785,7 @@ static const char * navigationStateMessage(void)
             break;
         case MW_NAV_STATE_RTH_START:
             return OSD_MESSAGE_STR(OSD_MSG_STARTING_RTH);
-        case MW_NAV_STATE_RTH_CLIMB:            
+        case MW_NAV_STATE_RTH_CLIMB:
             return OSD_MESSAGE_STR(OSD_MSG_RTH_CLIMB);
         case MW_NAV_STATE_RTH_ENROUTE:
             return OSD_MESSAGE_STR(OSD_MSG_HEADING_HOME);
@@ -1325,6 +1325,15 @@ static bool osdDrawSingleElement(uint8_t item)
             TEXT_ATTRIBUTES_ADD_BLINK(elemAttr);
         }
         // CR10
+        // CR13 Add M to indicate Mission loaded
+        if (posControl.waypointListValid && posControl.waypointCount > 0) {
+            buff[4] = 'M';
+        } else {
+            buff[4] = ' ';
+        }
+        buff[5] = '\0';
+        // CR13
+
         break;
 
     case OSD_GPS_SPEED:
@@ -3109,8 +3118,9 @@ static void osdShowArmed(void)
     char *date;
     char *time;
     // We need 12 visible rows
-    uint8_t y = MIN((osdDisplayPort->rows / 2) - 1, osdDisplayPort->rows - 12 - 1);
-
+    uint8_t y = MIN((osdDisplayPort->rows / 2) - 1, osdDisplayPort->rows - 12 - 1);     // rows = 13 NTSC, 16 PAL MAX7456
+// DEBUG_SET(DEBUG_CRUISE, 0, osdDisplayPort->rows);
+// DEBUG_SET(DEBUG_CRUISE, 1, y);
     displayClearScreen(osdDisplayPort);
     displayWrite(osdDisplayPort, 12, y, "ARMED");
     y += 2;
@@ -3118,11 +3128,17 @@ static void osdShowArmed(void)
     if (strlen(systemConfig()->name) > 0) {
         osdFormatCraftName(craftNameBuf);
         displayWrite(osdDisplayPort, (osdDisplayPort->cols - strlen(systemConfig() -> name)) / 2, y, craftNameBuf );
-        y += 2;
+        // y += 2;
+        y += 1;
     }
 
 #if defined(USE_GPS)
     if (feature(FEATURE_GPS)) {
+        if (posControl.waypointListValid && posControl.waypointCount > 0) {
+            displayWrite(osdDisplayPort, 7, y, "(MISSION LOADED)");
+        }
+        y += 1;
+
         if (STATE(GPS_FIX_HOME)) {
             if (osdConfig()->osd_home_position_arm_screen){
                 osdFormatCoordinate(buf, SYM_LAT, GPS_home.lat);

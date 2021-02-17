@@ -237,7 +237,7 @@ static bool isWaypointMissionValid(void);   // CR9
 
 void initializeRTHSanityChecker(const fpVector3_t * pos);
 bool validateRTHSanityChecker(void);
-static bool rthAltControlStickOverrideCheck(unsigned axis);     //CR1 
+static bool rthAltControlStickOverrideCheck(unsigned axis);     //CR1
 
 static navigationFSMEvent_t selectNavEventFromBoxModeInput(bool launchBypass);  //CR6
 
@@ -905,13 +905,13 @@ static flightModeFlags_e navGetMappedFlightModes(navigationFSMState_t state)
 navigationFSMStateFlags_t navGetCurrentStateFlags(void)
 {
 	// cr1
-	//DEBUG_SET(DEBUG_CRUISE, 0, posControl.flags.CanOverRideRTHAlt);    
+	//DEBUG_SET(DEBUG_CRUISE, 0, posControl.flags.CanOverRideRTHAlt);
     //DEBUG_SET(DEBUG_CRUISE, 0, posControl.rthState.rthInitialAltitude);
 	//rthAltControlStickOverrideCheck(PITCH);
     //DEBUG_SET(DEBUG_CRUISE, 1, rthAltControlStickOverrideCheck(ROLL));
     // if (posControl.waypointCount > 0) {     // CR12
         // calculateAndSetActiveWaypoint(&posControl.waypointList[3]);
-    // }    
+    // }
 	//xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
     return navGetStateFlags(posControl.navState);
@@ -1156,7 +1156,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_INITIALIZE(navigati
                     // Spiral climb centered at xy of RTH activation
                     calculateInitialHoldPosition(&targetHoldPos);
                 } else {
-                    calculateFarAwayTarget(&targetHoldPos, posControl.actualState.yaw, 100000.0f);  // 1km away Linear climb                
+                    calculateFarAwayTarget(&targetHoldPos, posControl.actualState.yaw, 100000.0f);  // 1km away Linear climb
                 }
                 //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
             } else {
@@ -1192,7 +1192,7 @@ static bool rthAltControlStickOverrideCheck(unsigned axis)
 
     static timeMs_t rthOverrideStickHoldStartTime[2];
 
-    if (rxGetChannelValue(axis) > rxConfig()->maxcheck) {        
+    if (rxGetChannelValue(axis) > rxConfig()->maxcheck) {
         timeDelta_t holdTime = millis() - rthOverrideStickHoldStartTime[axis];
         if (!rthOverrideStickHoldStartTime[axis]) {
             rthOverrideStickHoldStartTime[axis] = millis();
@@ -1208,7 +1208,7 @@ static bool rthAltControlStickOverrideCheck(unsigned axis)
     } else {
         rthOverrideStickHoldStartTime[axis] = 0;
     }
-    
+
     return false;
 }
 //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
@@ -1216,7 +1216,7 @@ static bool rthAltControlStickOverrideCheck(unsigned axis)
 static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_CLIMB_TO_SAFE_ALT(navigationFSMState_t previousState)
 {
     UNUSED(previousState);
-    
+
     //CR1 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
     rthAltControlStickOverrideCheck(PITCH);
     //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
@@ -1236,7 +1236,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_CLIMB_TO_SAFE_ALT(n
         const float rthAltitudeMargin = MAX(FW_RTH_CLIMB_MARGIN_MIN_CM, (rthClimbMarginPercent/100.0) * fabsf(posControl.rthState.rthInitialAltitude - posControl.rthState.homePosition.pos.z));
 
         // If we reached desired initial RTH altitude or we don't want to climb first
-        // CR1 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx        
+        // CR1 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
         // if (((navGetCurrentActualPositionAndVelocity()->pos.z - posControl.rthState.rthInitialAltitude) > -rthAltitudeMargin) || (!navConfig()->general.flags.rth_climb_first) || rthAltControlStickOverrideCheck(ROLL)) {       CR2 change below
         if (((navGetCurrentActualPositionAndVelocity()->pos.z - posControl.rthState.rthInitialAltitude) > -rthAltitudeMargin) || (navConfig()->general.flags.rth_climb_first == OFF) || rthAltControlStickOverrideCheck(ROLL)) {
          // CR1 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
@@ -1304,7 +1304,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_CLIMB_TO_SAFE_ALT(n
 static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_HEAD_HOME(navigationFSMState_t previousState)
 {
     UNUSED(previousState);
-    
+
     //CR1 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
     rthAltControlStickOverrideCheck(PITCH);
     //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
@@ -1363,7 +1363,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_HOVER_PRIOR_TO_LAND
             DEBUG_SET(DEBUG_CRUISE, 2, isWaypointMissionValid());
             if (IS_RC_MODE_ACTIVE(BOXNAVWP) && isWaypointMissionValid() && !(IS_RC_MODE_ACTIVE(BOXNAVRTH) || posControl.flags.forcedRTHActivated)) {
                 DEBUG_SET(DEBUG_CRUISE, 0, 55);
-                DEBUG_SET(DEBUG_CRUISE, 1, 100 + posControl.waypointList[posControl.waypointCount - 1].p1);                
+                DEBUG_SET(DEBUG_CRUISE, 1, 100 + posControl.waypointList[posControl.waypointCount - 1].p1);
                 return posControl.waypointList[posControl.waypointCount - 1].p1 > 0 ? NAV_FSM_EVENT_SUCCESS : NAV_FSM_EVENT_SWITCH_TO_RTH_HOVER_ABOVE_HOME;
             } else {
                 DEBUG_SET(DEBUG_CRUISE, 0, 77);
@@ -1833,11 +1833,11 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_LAUNCH_IN_PROGRESS(navi
         return NAV_FSM_EVENT_SUCCESS;
     }
 
-// CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx      
+// CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
     if (isFixedWingLaunchFinishedThrottleLow()) {
         // check if launch can switch to other preselected Nav mode
         navigationFSMEvent_t isNavModeSelected = selectNavEventFromBoxModeInput(true);
-            
+
         if (isNavModeSelected != NAV_FSM_EVENT_SWITCH_TO_IDLE) {
             return isNavModeSelected;
         }
@@ -2063,10 +2063,10 @@ float navPidApply3(
             pid->integrator = newIntegrator;
         }
     }
-    
+
     if (pidFlags & PID_LIMIT_INTEGRATOR) {
         pid->integrator = constrainf(pid->integrator, outMin, outMax);
-    } 
+    }
 
     return outValConstrained;
 }
@@ -2988,24 +2988,24 @@ void setWaypoint(uint8_t wpNumber, const navWaypoint_t * wpData)
         if (wpData->action == NAV_WP_ACTION_WAYPOINT || wpData->action == NAV_WP_ACTION_JUMP || wpData->action == NAV_WP_ACTION_RTH || wpData->action == NAV_WP_ACTION_HOLD_TIME || wpData->action == NAV_WP_ACTION_LAND || wpData->action == NAV_WP_ACTION_SET_POI || wpData->action == NAV_WP_ACTION_SET_HEAD ) {
             // Only allow upload next waypoint (continue upload mission) or first waypoint (new mission)
             // CR8
-            static int8_t nonGeoWaypointCount = 0;            
-            // CR8            
+            static int8_t nonGeoWaypointCount = 0;
+            // CR8
             if (wpNumber == (posControl.waypointCount + 1) || wpNumber == 1) {
                 posControl.waypointList[wpNumber - 1] = *wpData;
-                // CR8                
+                // CR8
                 if(wpData->action == NAV_WP_ACTION_SET_POI || wpData->action == NAV_WP_ACTION_SET_HEAD || wpData->action == NAV_WP_ACTION_JUMP) {
                     nonGeoWaypointCount += 1;
                     if(wpData->action == NAV_WP_ACTION_JUMP) {
                         posControl.waypointList[wpNumber - 1].p1 -= 1; // make index (vice WP #)
                     } else {
                         posControl.waypointList[wpNumber - 1].p3 = wpNumber - nonGeoWaypointCount;
-                    }                    
+                    }
                 } else {
                     posControl.waypointList[wpNumber - 1].p3 = wpNumber - nonGeoWaypointCount;
-                }                
-                
+                }
+
                 posControl.waypointCount = wpNumber;
-                posControl.waypointListValid = (wpData->flag == NAV_WP_FLAG_LAST);                
+                posControl.waypointListValid = (wpData->flag == NAV_WP_FLAG_LAST);
                 posControl.geoWaypointCount = posControl.waypointCount - nonGeoWaypointCount;
                 if (posControl.waypointListValid) {
                     nonGeoWaypointCount = 0;
@@ -3045,6 +3045,13 @@ bool loadNonVolatileWaypointList(void)
 {
     if (ARMING_FLAG(ARMED))
         return false;
+
+    // CR13 if waypoints are already loaded, just unload them.
+    if (posControl.waypointCount > 0) {
+        resetWaypointList();
+        return false;
+    }
+    // CR13
 
     resetWaypointList();
 
@@ -3122,7 +3129,7 @@ geoAltitudeConversionMode_e waypointMissionAltConvMode(void)
 
 static void calculateAndSetActiveWaypoint(const navWaypoint_t * waypoint)
 {
-    fpVector3_t localPos;    
+    fpVector3_t localPos;
     mapWaypointToLocalPosition(&localPos, waypoint, waypointMissionAltConvMode());      // CR12
     calculateAndSetActiveWaypointToLocalPosition(&localPos);
 }
