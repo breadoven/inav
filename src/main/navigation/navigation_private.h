@@ -202,7 +202,7 @@ typedef enum {
     NAV_PERSISTENT_ID_CRUISE_3D_ADJUSTING                       = 34,
 
     NAV_PERSISTENT_ID_WAYPOINT_HOLD_TIME                        = 35,
-    NAV_PERSISTENT_ID_RTH_HOVER_ABOVE_HOME                      = 36,  
+    NAV_PERSISTENT_ID_RTH_HOVER_ABOVE_HOME                      = 36,
 
 } navigationPersistentId_e;
 
@@ -341,7 +341,7 @@ typedef struct {
     uint32_t                    lastValidPositionTimeMs;
     uint32_t                    lastValidAltitudeTimeMs;
 
-    /* INAV GPS origin (position where GPS fix acquired based on arming settings) */
+    /* INAV GPS origin (position where GPS fix first acquired) */
     gpsOrigin_t                 gpsOrigin;
 
     /* Home parameters (NEU coordinated), geodetic position of home (LLH) is stores in GPS_home variable */

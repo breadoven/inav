@@ -3760,6 +3760,11 @@ void navigationInit(void)
     } else {
         DISABLE_STATE(FW_HEADING_USE_YAW);
     }
+// CR13
+#if defined(NAV_NON_VOLATILE_WAYPOINT_STORAGE)
+    loadNonVolatileWaypointList();
+#endif
+// CR13
 }
 
 /*-----------------------------------------------------------
