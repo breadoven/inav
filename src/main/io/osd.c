@@ -1326,11 +1326,7 @@ static bool osdDrawSingleElement(uint8_t item)
         }
         // CR10
         // CR13 Add M to indicate Mission loaded
-        if (posControl.waypointListValid && posControl.waypointCount > 0) {
-            buff[4] = 'M';
-        } else {
-            buff[4] = ' ';
-        }
+        buff[4] = (posControl.waypointListValid && posControl.waypointCount > 0) ? 'M' : ' ';
         buff[5] = '\0';
         // CR13
 
@@ -1816,8 +1812,8 @@ static bool osdDrawSingleElement(uint8_t item)
                         j = getGeoWaypointNumber(j);
                         while (j > 9) j -= 10; // Only the last digit displayed if WP>=10, no room for more (48 = ascii 0)
                         // CR12
-                        int32_t altConvModeCAltitude = waypointMissionAltConvMode() == GEO_ALT_ABSOLUTE ? osdGetAltitudeMsl() : osdGetAltitude();
-                        osdHudDrawPoi(calculateDistanceToDestination(&poi) / 100, osdGetHeadingAngle(calculateBearingToDestination(&poi) / 100), (posControl.waypointList[j].alt - altConvModeCAltitude)/ 100, 2, SYM_WAYPOINT, 48 + j, i);
+                        int32_t altConvModeAltitude = waypointMissionAltConvMode() == GEO_ALT_ABSOLUTE ? osdGetAltitudeMsl() : osdGetAltitude();
+                        osdHudDrawPoi(calculateDistanceToDestination(&poi) / 100, osdGetHeadingAngle(calculateBearingToDestination(&poi) / 100), (posControl.waypointList[j].alt - altConvModeAltitude)/ 100, 2, SYM_WAYPOINT, 48 + j, i);
                         // CR12
                         // CR8
                     }
@@ -3129,16 +3125,17 @@ static void osdShowArmed(void)
         osdFormatCraftName(craftNameBuf);
         displayWrite(osdDisplayPort, (osdDisplayPort->cols - strlen(systemConfig() -> name)) / 2, y, craftNameBuf );
         // y += 2;
-        y += 1;
+        y += 1;     //CR13
     }
 
 #if defined(USE_GPS)
     if (feature(FEATURE_GPS)) {
+        // CR13
         if (posControl.waypointListValid && posControl.waypointCount > 0) {
-            displayWrite(osdDisplayPort, 7, y, "(MISSION LOADED)");
+            displayWrite(osdDisplayPort, 7, y, "*MISSION LOADED*");
         }
         y += 1;
-
+        // CR13
         if (STATE(GPS_FIX_HOME)) {
             if (osdConfig()->osd_home_position_arm_screen){
                 osdFormatCoordinate(buf, SYM_LAT, GPS_home.lat);
