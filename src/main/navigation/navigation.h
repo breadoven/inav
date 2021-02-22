@@ -299,9 +299,8 @@ typedef enum {
 
 typedef enum {
     // CR12
-    // NAV_WP_ARM_DATUM = 0x00,
-    // NAV_WP_MSL_DATUM = 0x01,
-    // NAV_WP_MISSION_MSL_DATUM = 0x02,
+    NAV_WP_MISSION_ARM_DATUM = 0x00,
+    NAV_WP_MISSION_MSL_DATUM = 0x01,
     // CR12
     NAV_WP_FLAG_LAST = 0xA5
 } navWaypointFlags_e;
