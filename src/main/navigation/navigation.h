@@ -52,6 +52,7 @@ typedef struct {
 PG_DECLARE_ARRAY(navSafeHome_t, MAX_SAFE_HOMES, safeHomeConfig);
 
 extern int8_t safehome_used;                     // -1 if no safehome, 0 to MAX_SAFEHOMES -1 otherwise
+extern fpVector3_t nearestSafeHome;              // CR14
 extern uint32_t safehome_distance;               // distance to the selected safehome
 
 void resetSafeHomes(void);                       // remove all safehomes
@@ -298,8 +299,9 @@ typedef enum {
 
 typedef enum {
     // CR12
-    // NAV_WP_DATUM_RELATIVE = 0x00,
-    // NAV_WP_DATUM_ABSOLUTE = 0x01,
+    // NAV_WP_ARM_DATUM = 0x00,
+    // NAV_WP_MSL_DATUM = 0x01,
+    // NAV_WP_MISSION_MSL_DATUM = 0x02,
     // CR12
     NAV_WP_FLAG_LAST = 0xA5
 } navWaypointFlags_e;

@@ -76,6 +76,7 @@ int16_t       GPS_directionToHome;       // direction to home point in degrees
 radar_pois_t radar_pois[RADAR_MAX_POIS];
 #if defined(USE_SAFE_HOME)
 int8_t safehome_used;                     // -1 if no safehome, 0 to MAX_SAFEHOMES -1 otherwise
+fpVector3_t nearestSafeHome;              // CR14
 uint32_t safehome_distance;               // distance to the selected safehome
 
 PG_REGISTER_ARRAY(navSafeHome_t, MAX_SAFE_HOMES, safeHomeConfig, PG_SAFE_HOME_CONFIG , 0);
@@ -2542,7 +2543,6 @@ bool foundNearbySafeHome(void)
     uint32_t nearest_safehome_distance = navConfig()->general.safehome_max_distance + 1;
     uint32_t distance_to_current;
     fpVector3_t currentSafeHome;
-    fpVector3_t nearestSafeHome;
     gpsLocation_t shLLH;
     shLLH.alt = 0;
     for (uint8_t i = 0; i < MAX_SAFE_HOMES; i++) {
@@ -2564,7 +2564,6 @@ bool foundNearbySafeHome(void)
     }
     if (safehome_used >= 0) {
 		safehome_distance = nearest_safehome_distance;
-        setHomePosition(&nearestSafeHome, 0, NAV_POS_UPDATE_XY | NAV_POS_UPDATE_Z | NAV_POS_UPDATE_HEADING, navigationActualStateHomeValidity());
         return true;
     }
     safehome_distance = 0;
@@ -2594,9 +2593,13 @@ void updateHomePosition(void)
             }
             if (setHome) {
 #if defined(USE_SAFE_HOME)
-                if (!foundNearbySafeHome())
+                // CR14
+                foundNearbySafeHome();
 #endif
-                    setHomePosition(&posControl.actualState.abs.pos, posControl.actualState.yaw, NAV_POS_UPDATE_XY | NAV_POS_UPDATE_Z | NAV_POS_UPDATE_HEADING, navigationActualStateHomeValidity());
+                setHomePosition(&posControl.actualState.abs.pos, posControl.actualState.yaw, NAV_POS_UPDATE_XY | NAV_POS_UPDATE_Z | NAV_POS_UPDATE_HEADING, navigationActualStateHomeValidity());
+                posControl.armingHomePosition.pos = posControl.actualState.abs.pos;
+                posControl.armingHomePosition.yaw = posControl.actualState.yaw;
+                // CR14
             }
         }
     }
@@ -2614,6 +2617,20 @@ void updateHomePosition(void)
         else {
             isHomeResetAllowed = true;
         }
+
+        // CR14
+        static bool safehomeWasActive = false;
+
+        if (safehome_used != -1 && posControl.flags.forcedRTHActivated && navigationRTHAllowsLanding()) {
+            // Use safehome for failsafe RTH if available
+            setHomePosition(&nearestSafeHome, 0, NAV_POS_UPDATE_XY | NAV_POS_UPDATE_Z | NAV_POS_UPDATE_HEADING, navigationActualStateHomeValidity());
+            safehomeWasActive = true;
+        } else if (safehomeWasActive) {
+            // reset to arming home if failsafe RTH cancelled
+            setHomePosition(&posControl.armingHomePosition.pos, posControl.armingHomePosition.yaw, NAV_POS_UPDATE_XY | NAV_POS_UPDATE_Z | NAV_POS_UPDATE_HEADING, navigationActualStateHomeValidity());
+            safehomeWasActive = false;
+        }
+        // CR14
 
         // Update distance and direction to home if armed (home is not updated when armed)
         if (STATE(GPS_FIX_HOME)) {
@@ -3123,7 +3140,8 @@ static void calculateAndSetActiveWaypointToLocalPosition(const fpVector3_t * pos
 // CR12
 geoAltitudeConversionMode_e waypointMissionAltConvMode(void)
 {
-    return posControl.waypointList[0].flag == 1 ? GEO_ALT_ABSOLUTE : GEO_ALT_RELATIVE;
+    return (posControl.waypointList[0].flag == 2) ? GEO_ALT_ABSOLUTE : GEO_ALT_RELATIVE;
+    // return (posControl.waypointList[0].flag == 2 || posControl.waypointList[posControl.activeWaypointIndex].flag == 1) ? GEO_ALT_ABSOLUTE : GEO_ALT_RELATIVE;
 }
 // CR12
 
@@ -3847,7 +3865,7 @@ bool navigationIsFlyingAutonomousMode(void)
 
 bool navigationRTHAllowsLanding(void)
 {
-    if (posControl.waypointList[posControl.activeWaypointIndex].action == NAV_WP_ACTION_LAND)
+    if (posControl.waypointList[posControl.activeWaypointIndex].action == NAV_WP_ACTION_LAND)       // Defunt code ? not called from WP mission
         return true;
 
     navRTHAllowLanding_e allow = navConfig()->general.flags.rth_allow_landing;
