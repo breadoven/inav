@@ -298,10 +298,6 @@ typedef enum {
 } navWaypointHeadings_e;
 
 typedef enum {
-    // CR12
-    NAV_WP_MISSION_ARM_DATUM = 0x00,
-    NAV_WP_MISSION_MSL_DATUM = 0x01,
-    // CR12
     NAV_WP_FLAG_LAST = 0xA5
 } navWaypointFlags_e;
 
@@ -507,6 +503,13 @@ typedef enum {
     GEO_ORIGIN_RESET_ALTITUDE
 } geoOriginResetMode_e;
 
+// CR12
+typedef enum {
+    NAV_WP_TAKEOFF_DATUM,
+    NAV_WP_MSL_DATUM
+} geoAltitudeDatumFlag_e;
+// CR12
+
 // geoSetOrigin stores the location provided in llh as a GPS origin in the
 // provided origin parameter. resetMode indicates wether all origin coordinates
 // should be overwritten by llh (GEO_ORIGIN_SET) or just the altitude, leaving
@@ -527,7 +530,7 @@ bool geoConvertGeodeticToLocalOrigin(fpVector3_t * pos, const gpsLocation_t *llh
 // the provided origin is valid and the conversion could be performed.
 bool geoConvertLocalToGeodetic(gpsLocation_t *llh, const gpsOrigin_t *origin, const fpVector3_t *pos);
 float geoCalculateMagDeclination(const gpsLocation_t * llh); // degrees units
-geoAltitudeConversionMode_e waypointMissionAltConvMode(void);     // CR12
+geoAltitudeConversionMode_e waypointMissionAltConvMode(uint8_t datumFlag);     // CR12
 
 /* Distance/bearing calculation */
 bool navCalculatePathToDestination(navDestinationPath_t *result, const fpVector3_t * destinationPos);

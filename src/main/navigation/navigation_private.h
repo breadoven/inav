@@ -362,6 +362,7 @@ typedef struct {
     int8_t                      waypointCount;
     // CR8
     int8_t                      geoWaypointCount;       // total geospatial WPs in mission
+    int8_t                      geoWaypointList[NAV_MAX_WAYPOINTS];     // to store realigned geoWP numbering index
     // CR8
 
     navWaypointPosition_t       activeWaypoint;         // Local position and initial bearing, filled on waypoint activation

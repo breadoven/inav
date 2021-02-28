@@ -1978,6 +1978,7 @@ static fpVector3_t * rthGetHomeTargetPosition(rthTargetMode_e mode)
             break;
 
         case RTH_HOME_FINAL_LAND:
+            // Add z setting for WP Landing altitude CR12
             break;
     }
 
@@ -3004,9 +3005,8 @@ void setWaypoint(uint8_t wpNumber, const navWaypoint_t * wpData)
     else if ((wpNumber >= 1) && (wpNumber <= NAV_MAX_WAYPOINTS) && !ARMING_FLAG(ARMED)) {
         if (wpData->action == NAV_WP_ACTION_WAYPOINT || wpData->action == NAV_WP_ACTION_JUMP || wpData->action == NAV_WP_ACTION_RTH || wpData->action == NAV_WP_ACTION_HOLD_TIME || wpData->action == NAV_WP_ACTION_LAND || wpData->action == NAV_WP_ACTION_SET_POI || wpData->action == NAV_WP_ACTION_SET_HEAD ) {
             // Only allow upload next waypoint (continue upload mission) or first waypoint (new mission)
-            // CR8
-            static int8_t nonGeoWaypointCount = 0;
-            // CR8
+            static int8_t nonGeoWaypointCount = 0;    // CR8
+
             if (wpNumber == (posControl.waypointCount + 1) || wpNumber == 1) {
                 posControl.waypointList[wpNumber - 1] = *wpData;
                 // CR8
@@ -3014,12 +3014,9 @@ void setWaypoint(uint8_t wpNumber, const navWaypoint_t * wpData)
                     nonGeoWaypointCount += 1;
                     if(wpData->action == NAV_WP_ACTION_JUMP) {
                         posControl.waypointList[wpNumber - 1].p1 -= 1; // make index (vice WP #)
-                    } else {
-                        posControl.waypointList[wpNumber - 1].p3 = wpNumber - nonGeoWaypointCount;
                     }
-                } else {
-                    posControl.waypointList[wpNumber - 1].p3 = wpNumber - nonGeoWaypointCount;
                 }
+                posControl.geoWaypointList[wpNumber - 1] = wpNumber - nonGeoWaypointCount;
 
                 posControl.waypointCount = wpNumber;
                 posControl.waypointListValid = (wpData->flag == NAV_WP_FLAG_LAST);
@@ -3027,8 +3024,7 @@ void setWaypoint(uint8_t wpNumber, const navWaypoint_t * wpData)
                 if (posControl.waypointListValid) {
                     nonGeoWaypointCount = 0;
                 }
-                //DEBUG_SET(DEBUG_CRUISE, 0, posControl.geoWaypointCount);
-                // DEBUG_SET(DEBUG_CRUISE, 1, posControl.waypointList[posControl.waypointCount - 1].p3);
+                // DEBUG_SET(DEBUG_CRUISE, 0, posControl.geoWaypointCount);
                 // CR8
             }
         }
@@ -3138,16 +3134,16 @@ static void calculateAndSetActiveWaypointToLocalPosition(const fpVector3_t * pos
 }
 
 // CR12
-geoAltitudeConversionMode_e waypointMissionAltConvMode(void)
+geoAltitudeConversionMode_e waypointMissionAltConvMode(uint8_t datumFlag)
 {
-    return (posControl.waypointList[0].flag == NAV_WP_MISSION_MSL_DATUM) ? GEO_ALT_ABSOLUTE : GEO_ALT_RELATIVE;
+    return datumFlag == NAV_WP_MSL_DATUM ? GEO_ALT_ABSOLUTE : GEO_ALT_RELATIVE;
 }
 // CR12
 
 static void calculateAndSetActiveWaypoint(const navWaypoint_t * waypoint)
 {
     fpVector3_t localPos;
-    mapWaypointToLocalPosition(&localPos, waypoint, waypointMissionAltConvMode());      // CR12
+    mapWaypointToLocalPosition(&localPos, waypoint, waypointMissionAltConvMode(waypoint->p3));      // CR12
     calculateAndSetActiveWaypointToLocalPosition(&localPos);
 }
 

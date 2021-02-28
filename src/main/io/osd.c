@@ -1215,11 +1215,7 @@ static void osdDisplayAdjustableDecimalValue(uint8_t elemPosX, uint8_t elemPosY,
 // CR8
 int8_t getGeoWaypointNumber(int8_t waypointIndex)
 {
-    if (posControl.waypointList[waypointIndex].action == NAV_WP_ACTION_JUMP) {
-        return posControl.waypointList[waypointIndex - 1].p3;
-    } else {
-        return posControl.waypointList[waypointIndex].p3;
-    }
+    return posControl.geoWaypointList[waypointIndex];
 }
 // CR8
 
@@ -1793,11 +1789,6 @@ static bool osdDrawSingleElement(uint8_t item)
             if (osdConfig()->hud_wp_disp > 0 && posControl.waypointListValid && posControl.waypointCount > 0) { // Display the next waypoints
                 gpsLocation_t wp2;
                 int j;
-                // CR8
-                tfp_sprintf(buff, "W%u/%u", getGeoWaypointNumber(posControl.activeWaypointIndex) - 1, posControl.geoWaypointCount);
-                // CR8
-                // tfp_sprintf(buff, "W%u/%u", posControl.activeWaypointIndex, posControl.waypointCount);
-                displayWrite(osdGetDisplayPort(), 13, osdConfig()->hud_margin_v - 1, buff);
 
                 for (int i = osdConfig()->hud_wp_disp - 1; i >= 0 ; i--) { // Display in reverse order so the next WP is always written on top
                     j = posControl.activeWaypointIndex + i;
@@ -1807,12 +1798,12 @@ static bool osdDrawSingleElement(uint8_t item)
                         wp2.alt = posControl.waypointList[j].alt;
 
                         fpVector3_t poi;
-                        geoConvertGeodeticToLocal(&poi, &posControl.gpsOrigin, &wp2, waypointMissionAltConvMode());     // CR12
+                        geoConvertGeodeticToLocal(&poi, &posControl.gpsOrigin, &wp2, waypointMissionAltConvMode(posControl.waypointList[j].p3));     // CR12
+                        int32_t altConvModeAltitude = waypointMissionAltConvMode(posControl.waypointList[j].p3) == GEO_ALT_ABSOLUTE ? osdGetAltitudeMsl() : osdGetAltitude();      // CR12
                         // CR8
                         j = getGeoWaypointNumber(j);
                         while (j > 9) j -= 10; // Only the last digit displayed if WP>=10, no room for more (48 = ascii 0)
                         // CR12
-                        int32_t altConvModeAltitude = waypointMissionAltConvMode() == GEO_ALT_ABSOLUTE ? osdGetAltitudeMsl() : osdGetAltitude();
                         osdHudDrawPoi(calculateDistanceToDestination(&poi) / 100, osdGetHeadingAngle(calculateBearingToDestination(&poi) / 100), (posControl.waypointList[j].alt - altConvModeAltitude)/ 100, 2, SYM_WAYPOINT, 48 + j, i);
                         // CR12
                         // CR8
@@ -3147,6 +3138,7 @@ static void osdShowArmed(void)
                 displayWrite(osdDisplayPort, (osdDisplayPort->cols - strlen(buf)) / 2, y + 2, buf);
             }
             y += 4;
+            // CR14
 #if defined (USE_SAFE_HOME)
             if (isSafeHomeInUse()) {
                 textAttributes_t elemAttr = _TEXT_ATTRIBUTES_BLINK_BIT;
@@ -3157,6 +3149,7 @@ static void osdShowArmed(void)
                 displayWriteWithAttr(osdDisplayPort, (osdDisplayPort->cols - strlen(buf)) / 2, y - 8, buf, elemAttr);
             }
 #endif
+            // CR14
         } else {
             strcpy(buf, "!NO HOME POSITION!");
             displayWrite(osdDisplayPort, (osdDisplayPort->cols - strlen(buf)) / 2, y, buf);
