@@ -57,7 +57,7 @@ extern uint32_t safehome_distance;               // distance to the selected saf
 
 void resetSafeHomes(void);                       // remove all safehomes
 bool isSafeHomeInUse(void);                      // Are we using a safehome instead of the arming point?
-bool foundNearbySafeHome(void);                  // Did we find a safehome nearby?
+bool checkNearbySafeHome(void);                  // Did we find a safehome nearby?  CR14
 
 #endif // defined(USE_SAFE_HOME)
 
@@ -530,7 +530,7 @@ bool geoConvertGeodeticToLocalOrigin(fpVector3_t * pos, const gpsLocation_t *llh
 // the provided origin is valid and the conversion could be performed.
 bool geoConvertLocalToGeodetic(gpsLocation_t *llh, const gpsOrigin_t *origin, const fpVector3_t *pos);
 float geoCalculateMagDeclination(const gpsLocation_t * llh); // degrees units
-geoAltitudeConversionMode_e waypointMissionAltConvMode(uint8_t datumFlag);     // CR12
+geoAltitudeConversionMode_e waypointMissionAltConvMode(geoAltitudeDatumFlag_e datumFlag);     // CR12
 
 /* Distance/bearing calculation */
 bool navCalculatePathToDestination(navDestinationPath_t *result, const fpVector3_t * destinationPos);

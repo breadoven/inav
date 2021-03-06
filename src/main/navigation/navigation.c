@@ -1361,16 +1361,8 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_HOVER_PRIOR_TO_LAND
         if ((ABS(wrap_18000(posControl.rthState.homePosition.yaw - posControl.actualState.yaw)) < DEGREES_TO_CENTIDEGREES(15)) || STATE(FIXED_WING_LEGACY)) {
             resetLandingDetector();
             updateClimbRateToAltitudeController(0, ROC_TO_ALT_RESET);
-            DEBUG_SET(DEBUG_CRUISE, 2, isWaypointMissionValid());
-            if (IS_RC_MODE_ACTIVE(BOXNAVWP) && isWaypointMissionValid() && !(IS_RC_MODE_ACTIVE(BOXNAVRTH) || posControl.flags.forcedRTHActivated)) {
-                DEBUG_SET(DEBUG_CRUISE, 0, 55);
-                DEBUG_SET(DEBUG_CRUISE, 1, 100 + posControl.waypointList[posControl.waypointCount - 1].p1);
-                return posControl.waypointList[posControl.waypointCount - 1].p1 > 0 ? NAV_FSM_EVENT_SUCCESS : NAV_FSM_EVENT_SWITCH_TO_RTH_HOVER_ABOVE_HOME;
-            } else {
-                DEBUG_SET(DEBUG_CRUISE, 0, 77);
         // CR9
-                return navigationRTHAllowsLanding() ? NAV_FSM_EVENT_SUCCESS : NAV_FSM_EVENT_SWITCH_TO_RTH_HOVER_ABOVE_HOME; // success = land
-            }
+            return navigationRTHAllowsLanding() ? NAV_FSM_EVENT_SUCCESS : NAV_FSM_EVENT_SWITCH_TO_RTH_HOVER_ABOVE_HOME; // success = land
         }
         else if (!validateRTHSanityChecker()) {
             // Continue to check for RTH sanity during pre-landing hover
@@ -1604,11 +1596,22 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_WAYPOINT_IN_PROGRESS(na
                 }
                 else {
                     fpVector3_t tmpWaypoint;
+                    // CR12
+                    uint16_t landingInitialDescentAltitude = 0;
+                    if (posControl.waypointList[posControl.activeWaypointIndex].action == NAV_WP_ACTION_LAND && posControl.waypointList[posControl.activeWaypointIndex].p1 != 0) {  // Landing WP altitude defined as ground elevation so arrive higher at slowdown_maxalt altitude
+                        landingInitialDescentAltitude = navConfig()->general.land_slowdown_maxalt;
+                    }
+                    // CR12
                     tmpWaypoint.x = posControl.activeWaypoint.pos.x;
                     tmpWaypoint.y = posControl.activeWaypoint.pos.y;
+                    // tmpWaypoint.z = scaleRangef(constrainf(posControl.wpDistance, posControl.wpInitialDistance / 10.0f, posControl.wpInitialDistance),
+                        // posControl.wpInitialDistance, posControl.wpInitialDistance / 10.0f,
+                        // posControl.wpInitialAltitude, posControl.activeWaypoint.pos.z);
+                    // CR12
                     tmpWaypoint.z = scaleRangef(constrainf(posControl.wpDistance, posControl.wpInitialDistance / 10.0f, posControl.wpInitialDistance),
                         posControl.wpInitialDistance, posControl.wpInitialDistance / 10.0f,
-                        posControl.wpInitialAltitude, posControl.activeWaypoint.pos.z);
+                        posControl.wpInitialAltitude, posControl.activeWaypoint.pos.z + landingInitialDescentAltitude);
+                    // CR12
                     setDesiredPosition(&tmpWaypoint, 0, NAV_POS_UPDATE_XY | NAV_POS_UPDATE_Z | NAV_POS_UPDATE_BEARING);
                     if(STATE(MULTIROTOR)) {
                         switch (wpHeadingControl.mode) {
@@ -1978,7 +1981,12 @@ static fpVector3_t * rthGetHomeTargetPosition(rthTargetMode_e mode)
             break;
 
         case RTH_HOME_FINAL_LAND:
-            // Add z setting for WP Landing altitude CR12
+            // CR12
+            // Use WP Mission Landing WP altitude as ground elevation if p1 > 0 otherwise use takeoff home altitude
+            if (FLIGHT_MODE(NAV_WP_MODE) && posControl.waypointList[posControl.activeWaypointIndex].action == NAV_WP_ACTION_LAND && posControl.waypointList[posControl.activeWaypointIndex].p1 != 0) {
+                posControl.rthState.homeTmpWaypoint.z = posControl.activeWaypoint.pos.z;
+            }
+            // CR12
             break;
     }
 
@@ -2538,7 +2546,7 @@ bool isSafeHomeInUse(void)
  *  If so, use it instead of the arming point for home.
  *  Select the nearest safehome
  **********************************************************/
-bool foundNearbySafeHome(void)
+bool checkNearbySafeHome(void) // CR14
 {
     safehome_used = -1;
     uint32_t nearest_safehome_distance = navConfig()->general.safehome_max_distance + 1;
@@ -2595,7 +2603,7 @@ void updateHomePosition(void)
             if (setHome) {
 #if defined(USE_SAFE_HOME)
                 // CR14
-                foundNearbySafeHome();
+                checkNearbySafeHome();
 #endif
                 setHomePosition(&posControl.actualState.abs.pos, posControl.actualState.yaw, NAV_POS_UPDATE_XY | NAV_POS_UPDATE_Z | NAV_POS_UPDATE_HEADING, navigationActualStateHomeValidity());
                 posControl.armingHomePosition.pos = posControl.actualState.abs.pos;
@@ -2622,7 +2630,7 @@ void updateHomePosition(void)
         // CR14
         static bool safehomeWasActive = false;
 
-        if (safehome_used != -1 && posControl.flags.forcedRTHActivated && navigationRTHAllowsLanding()) {
+        if (safehome_used != -1 && posControl.flags.forcedRTHActivated) {
             // Use safehome for failsafe RTH if available
             setHomePosition(&nearestSafeHome, 0, NAV_POS_UPDATE_XY | NAV_POS_UPDATE_Z | NAV_POS_UPDATE_HEADING, navigationActualStateHomeValidity());
             safehomeWasActive = true;
@@ -3134,7 +3142,7 @@ static void calculateAndSetActiveWaypointToLocalPosition(const fpVector3_t * pos
 }
 
 // CR12
-geoAltitudeConversionMode_e waypointMissionAltConvMode(uint8_t datumFlag)
+geoAltitudeConversionMode_e waypointMissionAltConvMode(geoAltitudeDatumFlag_e datumFlag)
 {
     return datumFlag == NAV_WP_MSL_DATUM ? GEO_ALT_ABSOLUTE : GEO_ALT_RELATIVE;
 }
@@ -3862,7 +3870,14 @@ bool navigationRTHAllowsLanding(void)
 {
     if (posControl.waypointList[posControl.activeWaypointIndex].action == NAV_WP_ACTION_LAND)       // Defunt code ? not called from WP mission
         return true;
-
+    // CR9
+    if (IS_RC_MODE_ACTIVE(BOXNAVWP) && isWaypointMissionValid() && !(IS_RC_MODE_ACTIVE(BOXNAVRTH) || posControl.flags.forcedRTHActivated)) {
+        DEBUG_SET(DEBUG_CRUISE, 0, 55);
+        DEBUG_SET(DEBUG_CRUISE, 1, 100 + posControl.waypointList[posControl.waypointCount - 1].p1);
+        return posControl.waypointList[posControl.waypointCount - 1].p1 > 0;
+    }
+    DEBUG_SET(DEBUG_CRUISE, 0, 77);
+    // CR9
     navRTHAllowLanding_e allow = navConfig()->general.flags.rth_allow_landing;
     return allow == NAV_RTH_ALLOW_LANDING_ALWAYS || (allow == NAV_RTH_ALLOW_LANDING_FS_ONLY && FLIGHT_MODE(FAILSAFE_MODE));
 }

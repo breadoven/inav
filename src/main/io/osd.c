@@ -778,6 +778,18 @@ static const char * osdFailsafeInfoMessage(void)
     return OSD_MESSAGE_STR(OSD_MSG_RC_RX_LINK_LOST);
 }
 
+// CR14
+#if defined(USE_SAFE_HOME)
+static const char * divertingToSafehomeMessage(void)
+{
+	if (isSafeHomeInUse() && posControl.flags.forcedRTHActivated) {
+	    return OSD_MESSAGE_STR(OSD_MSG_DIVERT_SAFEHOME);
+	}
+	return NULL;
+}
+#endif
+// CR14
+
 static const char * navigationStateMessage(void)
 {
     switch (NAV_Status.state) {
@@ -3418,6 +3430,14 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
                 if (navStateFSMessage) {
                     messages[messageCount++] = navStateFSMessage;
                 }
+// CR14
+#if defined(USE_SAFE_HOME)
+                const char *safehomeMessage = divertingToSafehomeMessage();
+				if (safehomeMessage) {
+					messages[messageCount++] = safehomeMessage;
+				}
+#endif
+// CR14
                 if (messageCount > 0) {
                     message = messages[OSD_ALTERNATING_CHOICES(1000, messageCount)];
                     if (message == failsafeInfoMessage) {
