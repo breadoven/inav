@@ -1615,11 +1615,7 @@ static bool osdDrawSingleElement(uint8_t item)
                 p = "MANU";
             else if (FLIGHT_MODE(NAV_RTH_MODE))
                 // CR9
-                if (IS_RC_MODE_ACTIVE(BOXNAVWP) && !(IS_RC_MODE_ACTIVE(BOXNAVRTH) || posControl.flags.forcedRTHActivated)) {
-                    p = "WRTH";
-                } else {
-                    p = "RTH ";
-                }
+                p = (IS_RC_MODE_ACTIVE(BOXNAVWP) && !(IS_RC_MODE_ACTIVE(BOXNAVRTH) || posControl.flags.forcedRTHActivated)) ? "WRTH" : "RTH ";
                 // CR9
             else if (FLIGHT_MODE(NAV_POSHOLD_MODE))
                 p = "HOLD";
