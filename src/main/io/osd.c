@@ -3468,6 +3468,10 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
                             tfp_sprintf(messageBuf, "HOLDING WP FOR %2u S", holdTimeRemaining);
                             messages[messageCount++] = messageBuf;
                         }
+                    // CR16
+                    } else if (FLIGHT_MODE(NAV_RTH_MODE) && IS_RC_MODE_ACTIVE(BOXNAVWP) && !(IS_RC_MODE_ACTIVE(BOXNAVRTH) || posControl.flags.forcedRTHActivated)) {
+                        messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_WP_RTH_CANCEL);
+                    // CR16
                     } else {
                         const char *navStateMessage = navigationStateMessage();
                         if (navStateMessage) {

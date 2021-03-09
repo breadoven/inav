@@ -102,6 +102,7 @@
 #define OSD_MSG_DIVERT_SAFEHOME     "DIVERTING TO SAFEHOME"
 #endif
 // CR14
+#define OSD_MSG_WP_RTH_CANCEL       "CANCEL WP MODE TO END RTH"     // CR16
 
 typedef enum {
     OSD_RSSI_VALUE,
