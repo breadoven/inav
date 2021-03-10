@@ -24,6 +24,8 @@ main_sources(COMMON_SRC
     common/encoding.h
     common/filter.c
     common/filter.h
+    common/fp_pid.c
+    common/fp_pid.h
     common/gps_conversion.c
     common/gps_conversion.h
     common/log.c
@@ -71,6 +73,8 @@ main_sources(COMMON_SRC
     drivers/accgyro/accgyro_adxl345.h
     drivers/accgyro/accgyro_bma280.c
     drivers/accgyro/accgyro_bma280.h
+    drivers/accgyro/accgyro_bmi088.c
+    drivers/accgyro/accgyro_bmi088.h
     drivers/accgyro/accgyro_bmi160.c
     drivers/accgyro/accgyro_bmi160.h
     drivers/accgyro/accgyro_fake.c

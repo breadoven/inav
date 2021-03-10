@@ -76,6 +76,7 @@
 #define OSD_MSG_INVALID_SETTING     "INVALID SETTING"
 #define OSD_MSG_CLI_ACTIVE          "CLI IS ACTIVE"
 #define OSD_MSG_PWM_INIT_ERROR      "PWM INIT ERROR"
+#define OSD_MSG_NO_PREARM           "NO PREARM"
 #define OSD_MSG_RTH_FS              "(RTH)"
 #define OSD_MSG_EMERG_LANDING_FS    "(EMERGENCY LANDING)"
 #define OSD_MSG_MOVE_EXIT_FS        "!MOVE STICKS TO EXIT FS!"
@@ -298,7 +299,7 @@ typedef struct osdConfig_s {
     float gforce_axis_alarm_min;
     float gforce_axis_alarm_max;
 #ifdef USE_SERIALRX_CRSF
-    int16_t snr_alarm; //CRSF SNR alarm in dB
+    int8_t snr_alarm; //CRSF SNR alarm in dB
     int8_t link_quality_alarm;
 #endif
 #ifdef USE_BARO
@@ -354,7 +355,8 @@ typedef struct osdConfig_s {
     uint8_t left_sidebar_scroll_step;   // How many units each sidebar step represents. 0 means the default value for the scroll type.
     uint8_t right_sidebar_scroll_step;  // Same as left_sidebar_scroll_step, but for the right sidebar.
     bool osd_home_position_arm_screen;
-
+    uint8_t pan_servo_index;            // Index of the pan servo used for home direction offset
+    int8_t pan_servo_pwm2centideg;      // Centidegrees of servo rotation per us pwm
     uint8_t crsf_lq_format;
 
 } osdConfig_t;

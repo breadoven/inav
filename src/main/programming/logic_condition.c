@@ -44,6 +44,7 @@
 #include "flight/imu.h"
 #include "flight/pid.h"
 #include "drivers/io_port_expander.h"
+#include "io/osd_common.h"
 
 #include "navigation/navigation.h"
 #include "navigation/navigation_private.h"
@@ -55,6 +56,7 @@ PG_REGISTER_ARRAY_WITH_RESET_FN(logicCondition_t, MAX_LOGIC_CONDITIONS, logicCon
 
 EXTENDED_FASTRAM uint64_t logicConditionsGlobalFlags;
 EXTENDED_FASTRAM int logicConditionValuesByType[LOGIC_CONDITION_LAST];
+EXTENDED_FASTRAM rcChannelOverride_t rcChannelOverrides[MAX_SUPPORTED_RC_CHANNEL_COUNT];
 
 void pgResetFn_logicConditions(logicCondition_t *instance)
 {
@@ -308,6 +310,20 @@ static int logicConditionCompute(
             return scaleRange(constrain(operandA, 0, 1000), 0, 1000, 0, operandB);
         break;
 
+        case LOGIC_CONDITION_RC_CHANNEL_OVERRIDE:
+            temporaryValue = constrain(operandA - 1, 0, MAX_SUPPORTED_RC_CHANNEL_COUNT - 1);
+            rcChannelOverrides[temporaryValue].active = true;
+            rcChannelOverrides[temporaryValue].value = constrain(operandB, PWM_RANGE_MIN, PWM_RANGE_MAX);
+            LOGIC_CONDITION_GLOBAL_FLAG_ENABLE(LOGIC_CONDITION_GLOBAL_FLAG_OVERRIDE_RC_CHANNEL);
+            return true;
+        break;
+
+        case LOGIC_CONDITION_SET_HEADING_TARGET:
+            temporaryValue = CENTIDEGREES_TO_DEGREES(wrap_36000(DEGREES_TO_CENTIDEGREES(operandA)));
+            updateHeadingHoldTarget(temporaryValue);
+            return temporaryValue;
+        break;
+
         default:
             return false;
             break; 
@@ -368,7 +384,7 @@ static int logicConditionGetFlightOperandValue(int operand) {
             return constrain(getRSSI() * 100 / RSSI_MAX_VALUE, 0, 99);
             break;
         
-        case LOGIC_CONDITION_OPERAND_FLIGHT_VBAT: // V / 10
+        case LOGIC_CONDITION_OPERAND_FLIGHT_VBAT: // V / 100
             return getBatteryVoltage();
             break;
 
@@ -393,7 +409,7 @@ static int logicConditionGetFlightOperandValue(int operand) {
 
         //FIXME align with osdGet3DSpeed
         case LOGIC_CONDITION_OPERAND_FLIGHT_3D_SPEED: // cm/s
-            return (int) sqrtf(sq(gpsSol.groundSpeed) + sq((int)getEstimatedActualVelocity(Z)));
+            return osdGet3DSpeed();
             break;
 
         case LOGIC_CONDITION_OPERAND_FLIGHT_AIR_SPEED: // cm/s
@@ -409,7 +425,7 @@ static int logicConditionGetFlightOperandValue(int operand) {
             break;
 
         case LOGIC_CONDITION_OPERAND_FLIGHT_VERTICAL_SPEED: // cm/s
-            return constrain(getEstimatedActualVelocity(Z), 0, INT16_MAX);
+            return constrain(getEstimatedActualVelocity(Z), INT16_MIN, INT16_MAX);
             break;
 
         case LOGIC_CONDITION_OPERAND_FLIGHT_TROTTLE_POS: // %
@@ -626,9 +642,14 @@ void logicConditionUpdateTask(timeUs_t currentTimeUs) {
     //Disable all flags
     logicConditionsGlobalFlags = 0;
 
+    for (uint8_t i = 0; i < MAX_SUPPORTED_RC_CHANNEL_COUNT; i++) {
+        rcChannelOverrides[i].active = false;
+    }
+
     for (uint8_t i = 0; i < MAX_LOGIC_CONDITIONS; i++) {
         logicConditionProcess(i);
     }
+
 #ifdef USE_I2C_IO_EXPANDER
     ioPortExpanderSync();
 #endif
@@ -669,4 +690,12 @@ int16_t getRcCommandOverride(int16_t command[], uint8_t axis) {
     }
 
     return outputValue;
+}
+
+int16_t getRcChannelOverride(uint8_t channel, int16_t originalValue) {
+    if (rcChannelOverrides[channel].active) {
+        return rcChannelOverrides[channel].value;
+    } else {
+        return originalValue;
+    }
 }
