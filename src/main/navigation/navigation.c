@@ -3834,7 +3834,12 @@ rthState_e getStateOfForcedRTH(void)
         return RTH_IDLE;
     }
 }
-
+// CR16
+bool isWaypointMissionRTHActive(void)
+{
+    return FLIGHT_MODE(NAV_RTH_MODE) && IS_RC_MODE_ACTIVE(BOXNAVWP) && !(IS_RC_MODE_ACTIVE(BOXNAVRTH) || posControl.flags.forcedRTHActivated);
+}
+// CR16
 bool navigationIsExecutingAnEmergencyLanding(void)
 {
     return navGetCurrentStateFlags() & NAV_CTL_EMERG;
@@ -3868,10 +3873,10 @@ bool navigationIsFlyingAutonomousMode(void)
 
 bool navigationRTHAllowsLanding(void)
 {
-    if (posControl.waypointList[posControl.activeWaypointIndex].action == NAV_WP_ACTION_LAND)       // Defunt code ? not called from WP mission
-        return true;
+    // if (posControl.waypointList[posControl.activeWaypointIndex].action == NAV_WP_ACTION_LAND)       // Defunt code ? not called from WP mission
+        // return true;
     // CR9
-    if (IS_RC_MODE_ACTIVE(BOXNAVWP) && isWaypointMissionValid() && !(IS_RC_MODE_ACTIVE(BOXNAVRTH) || posControl.flags.forcedRTHActivated)) {
+    if (isWaypointMissionRTHActive() && isWaypointMissionValid()) {
         DEBUG_SET(DEBUG_CRUISE, 0, 55);
         DEBUG_SET(DEBUG_CRUISE, 1, 100 + posControl.waypointList[posControl.waypointCount - 1].p1);
         return posControl.waypointList[posControl.waypointCount - 1].p1 > 0;
