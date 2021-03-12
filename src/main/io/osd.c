@@ -3169,7 +3169,9 @@ static void osdShowArmed(void)
     char *date;
     char *time;
     // We need 12 visible rows
-    uint8_t y = MIN((osdDisplayPort->rows / 2) - 1, osdDisplayPort->rows - 12 - 1);     // rows = 13 NTSC, 16 PAL MAX7456
+    // uint8_t y = MIN((osdDisplayPort->rows / 2) - 1, osdDisplayPort->rows - 12 - 1);   // - 1);  rows = 13 NTSC, 16 PAL MAX7456
+    uint8_t y = osdDisplayPort->rows > 13 ? (osdDisplayPort->rows - 12) / 2 : 1;    // CR17
+
 // DEBUG_SET(DEBUG_CRUISE, 0, osdDisplayPort->rows);
 // DEBUG_SET(DEBUG_CRUISE, 1, y);
     displayClearScreen(osdDisplayPort);
