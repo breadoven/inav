@@ -3035,7 +3035,7 @@ static void osdShowStats(void)
     char buf[MAX(32, FORMATTED_DATE_TIME_BUFSIZE)];
     //xxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
-    const char * disarmReasonStr[DISARM_REASON_COUNT] = { "UNKNOWN", "TIMEOUT", "STICKS", "SWITCH", "SWITCH", "KILLSW", "FAILSAFE", "NAV SYS" };
+    const char * disarmReasonStr[DISARM_REASON_COUNT] = { "UNKNOWN", "TIMEOUT", "STICKS", "SWITCH", "SWITCH", "KILLSW", "FAILSAFE", "NAV SYS"};  // CR15
     uint8_t top = 1;    /* first fully visible line */
     const uint8_t statNameX = 1;
     const uint8_t statValuesX = 20;
@@ -3184,15 +3184,14 @@ static void osdShowArmed(void)
         // y += 2;
         y += 1;     //CR13
     }
-
+    // CR13
+    if (posControl.waypointListValid && posControl.waypointCount > 0) {
+        displayWrite(osdDisplayPort, 7, y, "*MISSION LOADED*");
+    }
+    y += 1;
+    // CR13
 #if defined(USE_GPS)
     if (feature(FEATURE_GPS)) {
-        // CR13
-        if (posControl.waypointListValid && posControl.waypointCount > 0) {
-            displayWrite(osdDisplayPort, 7, y, "*MISSION LOADED*");
-        }
-        y += 1;
-        // CR13
         if (STATE(GPS_FIX_HOME)) {
             if (osdConfig()->osd_home_position_arm_screen){
                 osdFormatCoordinate(buf, SYM_LAT, GPS_home.lat);
@@ -3207,12 +3206,13 @@ static void osdShowArmed(void)
             // CR14
 #if defined (USE_SAFE_HOME)
             if (isSafeHomeInUse()) {
-                textAttributes_t elemAttr = _TEXT_ATTRIBUTES_BLINK_BIT;
+                // textAttributes_t elemAttr = _TEXT_ATTRIBUTES_BLINK_BIT;      CR13
                 char buf2[12]; // format the distance first
                 osdFormatDistanceStr(buf2, safehome_distance);
                 tfp_sprintf(buf, "%c - %s -> SAFEHOME %u", SYM_HOME, buf2, safehome_used);
                 // write this message above the ARMED message to make it obvious
-                displayWriteWithAttr(osdDisplayPort, (osdDisplayPort->cols - strlen(buf)) / 2, y - 8, buf, elemAttr);
+                // displayWriteWithAttr(osdDisplayPort, (osdDisplayPort->cols - strlen(buf)) / 2, y - 8, buf, elemAttr);
+                displayWrite(osdDisplayPort, (osdDisplayPort->cols - strlen(buf)) / 2, y - 8, buf);   // CR13
             }
 #endif
             // CR14
