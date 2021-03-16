@@ -73,6 +73,7 @@ FILE_COMPILE_FOR_SPEED
 #include "msp/msp_serial.h"
 
 #include "navigation/navigation.h"
+#include "navigation/navigation_private.h"  // CR17
 
 #include "rx/rx.h"
 #include "rx/msp.h"
@@ -210,14 +211,14 @@ static void updateArmingStatus(void)
             }
         }
 
-	/* CHECK: pitch / roll sticks centered when NAV_LAUNCH_MODE enabled */
-	if (isNavLaunchEnabled()) {
-	  if (areSticksDeflectedMoreThanPosHoldDeadband()) {
-	    ENABLE_ARMING_FLAG(ARMING_DISABLED_ROLLPITCH_NOT_CENTERED);
-	  } else {
-	    DISABLE_ARMING_FLAG(ARMING_DISABLED_ROLLPITCH_NOT_CENTERED);
-	  }
-	}
+        /* CHECK: pitch / roll sticks centered when NAV_LAUNCH_MODE enabled */
+        if (isNavLaunchEnabled()) {
+            if (areSticksDeflectedMoreThanPosHoldDeadband()) {
+                ENABLE_ARMING_FLAG(ARMING_DISABLED_ROLLPITCH_NOT_CENTERED);
+            } else {
+                DISABLE_ARMING_FLAG(ARMING_DISABLED_ROLLPITCH_NOT_CENTERED);
+            }
+        }
 
         /* CHECK: Angle */
         if (!STATE(SMALL_ANGLE)) {
@@ -309,7 +310,7 @@ static void updateArmingStatus(void)
         // If arming is disabled and the ARM switch is on
         // Note that this should be last check so all other blockers could be cleared correctly
         // if blocking modes are linked to the same RC channel
-        if (isArmingDisabled() && IS_RC_MODE_ACTIVE(BOXARM)) {
+        if ((isArmingDisabled() || posControl.flags.landingDetected) && IS_RC_MODE_ACTIVE(BOXARM)) {  // CR15
             ENABLE_ARMING_FLAG(ARMING_DISABLED_ARM_SWITCH);
         } else if (!IS_RC_MODE_ACTIVE(BOXARM)) {
             DISABLE_ARMING_FLAG(ARMING_DISABLED_ARM_SWITCH);
@@ -401,9 +402,9 @@ void disarm(disarmReason_t disarmReason)
 
         statsOnDisarm();
         logicConditionReset();
-#ifdef USE_PROGRAMMING_FRAMEWORK	    
+#ifdef USE_PROGRAMMING_FRAMEWORK
         programmingPidReset();
-#endif	    
+#endif
         beeper(BEEPER_DISARMING);      // emit disarm tone
     }
 }
@@ -461,13 +462,13 @@ void tryArm(void)
     updateArmingStatus();
 #ifdef USE_PROGRAMMING_FRAMEWORK
     if (
-        !isArmingDisabled() || 
-        emergencyArmingIsEnabled() || 
+        !isArmingDisabled() ||
+        emergencyArmingIsEnabled() ||
         LOGIC_CONDITION_GLOBAL_FLAG(LOGIC_CONDITION_GLOBAL_FLAG_OVERRIDE_ARMING_SAFETY)
     ) {
-#else 
+#else
     if (
-        !isArmingDisabled() || 
+        !isArmingDisabled() ||
         emergencyArmingIsEnabled()
     ) {
 #endif
@@ -494,10 +495,10 @@ void tryArm(void)
         //It is required to inform the mixer that arming was executed and it has to switch to the FORWARD direction
         ENABLE_STATE(SET_REVERSIBLE_MOTORS_FORWARD);
         logicConditionReset();
-	    
-#ifdef USE_PROGRAMMING_FRAMEWORK	    
+
+#ifdef USE_PROGRAMMING_FRAMEWORK
         programmingPidReset();
-#endif	    
+#endif
         headFreeModeHold = DECIDEGREES_TO_DEGREES(attitude.values.yaw);
 
         resetHeadingHoldTarget(DECIDEGREES_TO_DEGREES(attitude.values.yaw));
@@ -682,52 +683,75 @@ void processRx(timeUs_t currentTimeUs)
     }
     else if (rcControlsConfig()->airmodeHandlingType == STICK_CENTER) {
         if (throttleStatus == THROTTLE_LOW) {
-             if (STATE(AIRMODE_ACTIVE) && !failsafeIsActive()) {
-                 if ((rollPitchStatus == CENTERED) || (feature(FEATURE_MOTOR_STOP) && !STATE(FIXED_WING_LEGACY))) {
-                     ENABLE_STATE(ANTI_WINDUP);
-                 }
-                 else {
-                     DISABLE_STATE(ANTI_WINDUP);
-                 }
-             }
-             else {
-                 DISABLE_STATE(ANTI_WINDUP);
-                 pidResetErrorAccumulators();
-             }
-         }
-         else {
-             DISABLE_STATE(ANTI_WINDUP);
-         }
+            if (STATE(AIRMODE_ACTIVE) && !failsafeIsActive()) {
+                if ((rollPitchStatus == CENTERED) || (feature(FEATURE_MOTOR_STOP) && !STATE(FIXED_WING_LEGACY))) {
+                    ENABLE_STATE(ANTI_WINDUP);
+                }
+                else {
+                    DISABLE_STATE(ANTI_WINDUP);
+                }
+            }
+            else {
+                DISABLE_STATE(ANTI_WINDUP);
+                pidResetErrorAccumulators();
+            }
+        }
+        else {
+            DISABLE_STATE(ANTI_WINDUP);
+        }
     }
     else if (rcControlsConfig()->airmodeHandlingType == STICK_CENTER_ONCE) {
         if (throttleStatus == THROTTLE_LOW) {
-             if (STATE(AIRMODE_ACTIVE) && !failsafeIsActive()) {
-                 if ((rollPitchStatus == CENTERED) && !STATE(ANTI_WINDUP_DEACTIVATED)) {
-                     ENABLE_STATE(ANTI_WINDUP);
-                 }
-                 else {
-                     DISABLE_STATE(ANTI_WINDUP);
-                 }
-             }
-             else {
-                 DISABLE_STATE(ANTI_WINDUP);
-                 pidResetErrorAccumulators();
-             }
-         }
-         else {
-             DISABLE_STATE(ANTI_WINDUP);
-             if (rollPitchStatus != CENTERED) {
-                 ENABLE_STATE(ANTI_WINDUP_DEACTIVATED);
-             }
-         }
+            if (STATE(AIRMODE_ACTIVE) && !failsafeIsActive()) {
+                if ((rollPitchStatus == CENTERED) && !STATE(ANTI_WINDUP_DEACTIVATED)) {
+                    ENABLE_STATE(ANTI_WINDUP);
+                }
+                else {
+                    DISABLE_STATE(ANTI_WINDUP);
+                }
+            }
+            else {
+                DISABLE_STATE(ANTI_WINDUP);
+                pidResetErrorAccumulators();
+            }
+        }
+        else {
+            DISABLE_STATE(ANTI_WINDUP);
+            if (rollPitchStatus != CENTERED) {
+                ENABLE_STATE(ANTI_WINDUP_DEACTIVATED);
+            }
+        }
     }
     else if (rcControlsConfig()->airmodeHandlingType == THROTTLE_THRESHOLD) {
-         DISABLE_STATE(ANTI_WINDUP);
-         //This case applies only to MR when Airmode management is throttle threshold activated
-         if (throttleStatus == THROTTLE_LOW && !STATE(AIRMODE_ACTIVE)) {
-             pidResetErrorAccumulators();
-         }
-     }
+        // DISABLE_STATE(ANTI_WINDUP); // CR17
+        //This case applies only to MR when Airmode management is throttle threshold activated
+        if (throttleStatus == THROTTLE_LOW && !STATE(AIRMODE_ACTIVE)) {
+            pidResetErrorAccumulators();
+        // CR17
+        } else {
+            static timeUs_t airmodeLandCheckTimerStart;
+            if (throttleStatus == THROTTLE_LOW) {
+                DEBUG_SET(DEBUG_CRUISE, 0, posControl.actualState.velXY);
+                DEBUG_SET(DEBUG_CRUISE, 1, posControl.actualState.abs.vel.z);
+                DEBUG_SET(DEBUG_CRUISE, 2, (micros() - airmodeLandCheckTimerStart) / 100000);
+                if (posControl.actualState.velXY > 20 || fabsf(posControl.actualState.abs.vel.z) > 20) {
+                    airmodeLandCheckTimerStart = micros();
+                }
+                if (micros() - airmodeLandCheckTimerStart > 2000000 && !navigationIsFlyingAutonomousMode()) {
+                    ENABLE_STATE(ANTI_WINDUP);
+                    pidResetErrorAccumulators();
+                    // DISABLE_STATE(AIRMODE_ACTIVE);
+                    DEBUG_SET(DEBUG_CRUISE, 3, 100);
+                }
+            } else {
+                airmodeLandCheckTimerStart = micros();
+                DISABLE_STATE(ANTI_WINDUP);
+                // ENABLE_STATE(AIRMODE_ACTIVE);
+                DEBUG_SET(DEBUG_CRUISE, 3, 200);
+            }
+        }
+        // CR17
+    }
 //---------------------------------------------------------
     if (mixerConfig()->platformType == PLATFORM_AIRPLANE) {
         DISABLE_FLIGHT_MODE(HEADFREE_MODE);
@@ -886,6 +910,10 @@ void taskMainPidLoop(timeUs_t currentTimeUs)
         blackboxUpdate(micros());
     }
 #endif
+    // CR15
+    // Check if landed, FW and MC
+     updateLandingStatus();
+    // CR15
 }
 
 // This function is called in a busy-loop, everything called from here should do it's own

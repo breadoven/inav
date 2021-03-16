@@ -3035,7 +3035,7 @@ static void osdShowStats(void)
     char buf[MAX(32, FORMATTED_DATE_TIME_BUFSIZE)];
     //xxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
-    const char * disarmReasonStr[DISARM_REASON_COUNT] = { "UNKNOWN", "TIMEOUT", "STICKS", "SWITCH", "SWITCH", "KILLSW", "FAILSAFE", "NAV SYS"};  // CR15
+    const char * disarmReasonStr[DISARM_REASON_COUNT] = { "UNKNOWN", "TIMEOUT", "STICKS", "SWITCH", "SWITCH", "KILLSW", "FAILSAFE", "NAV SYS", "LANDING"};  // CR15
     uint8_t top = 1;    /* first fully visible line */
     const uint8_t statNameX = 1;
     const uint8_t statValuesX = 20;

@@ -1418,7 +1418,8 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_LANDING(navigationF
     if (!ARMING_FLAG(ARMED)) {
         return NAV_FSM_EVENT_SUCCESS;
     }
-    else if (isLandingDetected()) {
+    // else if (isLandingDetected()) {
+    else if (posControl.flags.landingDetected) {    // CR15
         return NAV_FSM_EVENT_SUCCESS;
     }
     else {
@@ -2622,13 +2623,44 @@ bool isLandingDetected(void)
 
     if (STATE(FIXED_WING_LEGACY)) { // FIXED_WING_LEGACY
         landingDetected = isFixedWingLandingDetected();
-    }
-    else {
+    } else {
         landingDetected = isMulticopterLandingDetected();
     }
 
     return landingDetected;
 }
+
+// CR15
+void updateLandingStatus(void)
+{
+    static bool landingDetectorIsActive = false;
+    throttleStatus_e throttleStatus = calculateThrottleStatus(THROTTLE_STATUS_TYPE_RC);
+
+    // if (posControl.flags.landingDetected) {
+        // return;
+    // }
+
+    if (!landingDetectorIsActive) {
+        DEBUG_SET(DEBUG_CRUISE, 5, 0);
+        if (STATE(AIRPLANE)) {
+            landingDetectorIsActive = isImuHeadingValid() && throttleStatus != THROTTLE_LOW;
+            // landingDetectorIsActive = throttleStatus != THROTTLE_LOW;
+        } else if (STATE(MULTIROTOR)) {
+            landingDetectorIsActive = rcCommand[THROTTLE] > navConfig()->mc.hover_throttle;
+        }
+    } else if (isLandingDetected()) {
+        landingDetectorIsActive = false;
+        posControl.flags.landingDetected = true;
+        DEBUG_SET(DEBUG_CRUISE, 5, 77);
+        if (navConfig()->general.flags.disarm_on_landing) {
+            disarm(DISARM_LANDING);
+        // } else {
+            // pidResetErrorAccumulators();
+        }
+    }
+}
+// CR15
+
 
 /*-----------------------------------------------------------
  * Z-position controller
@@ -3152,6 +3184,7 @@ void applyWaypointNavigationAndAltitudeHold(void)
     if (!ARMING_FLAG(ARMED)) {
         // If we are disarmed, abort forced RTH
         posControl.flags.forcedRTHActivated = false;
+        posControl.flags.landingDetected = false;   // CR15
         return;
     }
 

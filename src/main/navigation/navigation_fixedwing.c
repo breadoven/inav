@@ -35,6 +35,7 @@
 #include "sensors/sensors.h"
 #include "sensors/acceleration.h"
 #include "sensors/boardalignment.h"
+#include "sensors/gyro.h"   // CR15
 
 #include "flight/pid.h"
 #include "flight/imu.h"
@@ -586,8 +587,50 @@ void resetFixedWingLandingDetector(void)
 bool isFixedWingLandingDetected(void)
 {
     timeUs_t currentTimeUs = micros();
+    // CR15
+    static timeUs_t fwLandCheckTimerStart;
+    static int16_t fwLandSetRollDatum;
+    static int16_t fwLandSetPitchDatum;
+    static bool fixAxisCheck = false;
 
-    landingTimerUs = currentTimeUs;
+    if (ARMING_FLAG(ARMED) && (calculateThrottleStatus(THROTTLE_STATUS_TYPE_RC) == THROTTLE_LOW || posControl.flags.forcedRTHActivated)) {
+        DEBUG_SET(DEBUG_CRUISE, 0, posControl.actualState.velXY);
+        DEBUG_SET(DEBUG_CRUISE, 1, posControl.actualState.abs.vel.z);
+        DEBUG_SET(DEBUG_CRUISE, 2, (currentTimeUs - fwLandCheckTimerStart) / 100000);
+        // Check horizontal and vertical volocities low enough
+        if (posControl.actualState.velXY > 100 || fabsf(posControl.actualState.abs.vel.z) > 20) {   // cm/s
+            fwLandCheckTimerStart = currentTimeUs;
+        } else if ((gyro.gyroADCf[ROLL] + gyro.gyroADCf[PITCH] + gyro.gyroADCf[YAW]) / 3 < 1) {     // gyro in degs/s
+        // check angular rates low enough. If so capture roll and pitch angles to be used as datums to check for absolute change
+            DEBUG_SET(DEBUG_CRUISE, 4, (gyro.gyroADCf[PITCH] + gyro.gyroADCf[YAW] + gyro.gyroADCf[ROLL]) / 3);
+            if (!fixAxisCheck) {
+                fwLandSetRollDatum = attitude.values.roll;  //0.1 deg increments
+                fwLandSetPitchDatum = attitude.values.pitch;
+                fixAxisCheck = true;
+                DEBUG_SET(DEBUG_CRUISE, 3, 100);
+            } else {
+                DEBUG_SET(DEBUG_CRUISE, 3, 200);
+                bool isRollAxisStatic = ABS(fwLandSetRollDatum - attitude.values.roll) < 2;
+                bool isPitchAxisStatic = ABS(fwLandSetPitchDatum - attitude.values.pitch) < 2;
+                DEBUG_SET(DEBUG_CRUISE, 6, ABS(fwLandSetRollDatum - attitude.values.roll));
+                DEBUG_SET(DEBUG_CRUISE, 7, ABS(fwLandSetPitchDatum - attitude.values.pitch));
+                if (isRollAxisStatic && isPitchAxisStatic) {
+                    if (currentTimeUs - fwLandCheckTimerStart > (3000000)) {        // check conditions stable for > 3 seconds
+                        // Must have landed, low horizontal and vertical velocities and no axis rotation in Roll and Pitch
+                        landingTimerUs = currentTimeUs;
+                        return true;
+                    }
+                } else {
+                    fixAxisCheck = false;
+                    fwLandCheckTimerStart = currentTimeUs;
+                    DEBUG_SET(DEBUG_CRUISE, 3, 300);
+                }
+            }
+        }
+    } else {
+        fwLandCheckTimerStart = currentTimeUs;
+    }
+    // CR15
     return false;
 }
 

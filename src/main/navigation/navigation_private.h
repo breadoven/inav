@@ -89,6 +89,7 @@ typedef struct navigationFlags_s {
     bool isTerrainFollowEnabled;            // Does iNav use rangefinder for terrain following (adjusting baro altitude target according to rangefinders readings)
 
     bool forcedRTHActivated;
+    bool landingDetected;   // CR15
 } navigationFlags_t;
 
 typedef struct {
@@ -393,6 +394,7 @@ uint32_t calculateDistanceToDestination(const fpVector3_t * destinationPos);
 int32_t calculateBearingToDestination(const fpVector3_t * destinationPos);
 void resetLandingDetector(void);
 bool isLandingDetected(void);
+void updateLandingStatus(void);  // CR15
 
 navigationFSMStateFlags_t navGetCurrentStateFlags(void);
 
