@@ -410,6 +410,7 @@
 | osd_sidebar_scroll_arrows |  |  |
 | osd_snr_alarm | 4 | Value below which Crossfire SNR Alarm pops-up. (dB) |
 | osd_stats_energy_unit | MAH | Unit used for the drawn energy in the OSD stats [MAH/WH] (milliAmpere hour/ Watt hour) |
+| osd_system_msg_display_time | 1000 | Time each system messages is displayed for when multiple messages are present (milliseconds). |
 | osd_temp_label_align | LEFT | Allows to chose between left and right alignment for the OSD temperature sensor labels. Valid values are `LEFT` and `RIGHT` |
 | osd_time_alarm | 10 | Value above which to make the OSD flight time indicator blink (minutes) |
 | osd_units | METRIC | IMPERIAL, METRIC, UK |
