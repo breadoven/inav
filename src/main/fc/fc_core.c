@@ -730,14 +730,14 @@ void processRx(timeUs_t currentTimeUs)
         // CR17
         } else {
             static timeUs_t airmodeLandCheckTimerStart;
-            if (throttleStatus == THROTTLE_LOW) {
+            if (throttleStatus == THROTTLE_LOW && !navigationIsFlyingAutonomousMode()) {
                 DEBUG_SET(DEBUG_CRUISE, 0, posControl.actualState.velXY);
                 DEBUG_SET(DEBUG_CRUISE, 1, posControl.actualState.abs.vel.z);
                 DEBUG_SET(DEBUG_CRUISE, 2, (micros() - airmodeLandCheckTimerStart) / 100000);
-                if (posControl.actualState.velXY > 20 || fabsf(posControl.actualState.abs.vel.z) > 20) {
+                if (posControl.actualState.velXY > 100 || fabsf(posControl.actualState.abs.vel.z) > 50) {
                     airmodeLandCheckTimerStart = micros();
                 }
-                if (micros() - airmodeLandCheckTimerStart > 2000000 && !navigationIsFlyingAutonomousMode()) {
+                if (micros() - airmodeLandCheckTimerStart > 2000000) {
                     ENABLE_STATE(ANTI_WINDUP);
                     pidResetErrorAccumulators();
                     // DISABLE_STATE(AIRMODE_ACTIVE);
