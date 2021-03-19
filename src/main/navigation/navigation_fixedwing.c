@@ -598,18 +598,17 @@ bool isFixedWingLandingDetected(void)
         DEBUG_SET(DEBUG_CRUISE, 1, posControl.actualState.abs.vel.z);
         DEBUG_SET(DEBUG_CRUISE, 2, (currentTimeUs - fwLandCheckTimerStart) / 100000);
         // Check horizontal and vertical volocities low enough
-        if (posControl.actualState.velXY > 100 || fabsf(posControl.actualState.abs.vel.z) > 20) {   // cm/s
+        if (posControl.actualState.velXY > 100 || fabsf(posControl.actualState.abs.vel.z) > 50) {   // cm/s
             fwLandCheckTimerStart = currentTimeUs;
-        } else if ((gyro.gyroADCf[ROLL] + gyro.gyroADCf[PITCH] + gyro.gyroADCf[YAW]) / 3 < 1) {     // gyro in degs/s
+        } else if ((fabsf(gyro.gyroADCf[ROLL]) + fabsf(gyro.gyroADCf[PITCH]) + fabsf(gyro.gyroADCf[YAW])) / 3 < 1) {     // gyro in degs/s
         // check angular rates low enough. If so capture roll and pitch angles to be used as datums to check for absolute change
             DEBUG_SET(DEBUG_CRUISE, 4, (gyro.gyroADCf[PITCH] + gyro.gyroADCf[YAW] + gyro.gyroADCf[ROLL]) / 3);
             if (!fixAxisCheck) {
                 fwLandSetRollDatum = attitude.values.roll;  //0.1 deg increments
                 fwLandSetPitchDatum = attitude.values.pitch;
                 fixAxisCheck = true;
-                DEBUG_SET(DEBUG_CRUISE, 3, 100);
             } else {
-                DEBUG_SET(DEBUG_CRUISE, 3, 200);
+                DEBUG_SET(DEBUG_CRUISE, 3, 100);
                 bool isRollAxisStatic = ABS(fwLandSetRollDatum - attitude.values.roll) < 2;
                 bool isPitchAxisStatic = ABS(fwLandSetPitchDatum - attitude.values.pitch) < 2;
                 DEBUG_SET(DEBUG_CRUISE, 6, ABS(fwLandSetRollDatum - attitude.values.roll));
@@ -623,7 +622,6 @@ bool isFixedWingLandingDetected(void)
                 } else {
                     fixAxisCheck = false;
                     fwLandCheckTimerStart = currentTimeUs;
-                    DEBUG_SET(DEBUG_CRUISE, 3, 300);
                 }
             }
         }
