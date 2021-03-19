@@ -2691,6 +2691,7 @@ PG_RESET_TEMPLATE(osdConfig_t, osdConfig,
     .osd_home_position_arm_screen = true,
     .pan_servo_index = 0,
     .pan_servo_pwm2centideg = 0,
+    .system_msg_display_time = 1000,    // CR18
 
     .units = OSD_UNIT_METRIC,
     .main_voltage_decimals = 1,
@@ -3493,7 +3494,7 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
 #endif
 // CR14
                 if (messageCount > 0) {
-                    message = messages[OSD_ALTERNATING_CHOICES(1000, messageCount)];
+                    message = messages[OSD_ALTERNATING_CHOICES(osdConfig()->system_msg_display_time, messageCount)];    // CR18
                     if (message == failsafeInfoMessage) {
                         // failsafeInfoMessage is not useful for recovering
                         // a lost model, but might help avoiding a crash.
@@ -3565,14 +3566,14 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
                 // Pick one of the available messages. Each message lasts
                 // a second.
                 if (messageCount > 0) {
-                    message = messages[OSD_ALTERNATING_CHOICES(1000, messageCount)];
+                    message = messages[OSD_ALTERNATING_CHOICES(osdConfig()->system_msg_display_time, messageCount)];   // CR18
                 }
             }
         } else if (ARMING_FLAG(ARMING_DISABLED_ALL_FLAGS)) {
             unsigned invalidIndex;
             // Check if we're unable to arm for some reason
             if (ARMING_FLAG(ARMING_DISABLED_INVALID_SETTING) && !settingsValidate(&invalidIndex)) {
-                if (OSD_ALTERNATING_CHOICES(1000, 2) == 0) {
+                if (OSD_ALTERNATING_CHOICES(osdConfig()->system_msg_display_time, 2) == 0) {    // CR18
                     const setting_t *setting = settingGet(invalidIndex);
                     settingGetName(setting, messageBuf);
                     for (int ii = 0; messageBuf[ii]; ii++) {
@@ -3584,7 +3585,7 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
                     TEXT_ATTRIBUTES_ADD_INVERTED(elemAttr);
                 }
             } else {
-                if (OSD_ALTERNATING_CHOICES(1000, 2) == 0) {
+                if (OSD_ALTERNATING_CHOICES(osdConfig()->system_msg_display_time, 2) == 0) {    // CR18
                     message = OSD_MESSAGE_STR(OSD_MSG_UNABLE_ARM);
                     TEXT_ATTRIBUTES_ADD_INVERTED(elemAttr);
                 } else {

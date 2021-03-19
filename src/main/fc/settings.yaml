@@ -2495,7 +2495,7 @@ groups:
         field: fw.launch_climb_angle
         min: 5
         max: 45
-        # CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx        
+        # CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
       - name: nav_fw_launch_allow_throttle_low
         description: "Allow launch sequence with throttle maintained low throughout. When main launch sequence completes control is maintained with Nav cruise throttle until sticks moved/throttle raised or control switches to other Nav mode if preselected"
         default_value: "OFF"
@@ -3099,6 +3099,14 @@ groups:
         min: -36
         max: 36
 
+        # CR18
+      - name: osd_system_msg_display_time
+        description: Time each system messages is displayed for when multiple messages are present (milliseconds).
+        field: system_msg_display_time
+        default_value: 1000
+        min: 1000
+        max: 5000
+        # CR18
 
   - name: PG_SYSTEM_CONFIG
     type: systemConfig_t
