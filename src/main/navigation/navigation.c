@@ -906,15 +906,9 @@ static flightModeFlags_e navGetMappedFlightModes(navigationFSMState_t state)
 
 navigationFSMStateFlags_t navGetCurrentStateFlags(void)
 {
-	// cr1
+	// CR1
 	//DEBUG_SET(DEBUG_CRUISE, 0, posControl.flags.CanOverRideRTHAlt);
-    //DEBUG_SET(DEBUG_CRUISE, 0, posControl.rthState.rthInitialAltitude);
-	//rthAltControlStickOverrideCheck(PITCH);
-    //DEBUG_SET(DEBUG_CRUISE, 1, rthAltControlStickOverrideCheck(ROLL));
-    // if (posControl.waypointCount > 0) {     // CR12
-        // calculateAndSetActiveWaypoint(&posControl.waypointList[3]);
-    // }
-	//xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+	// CR1
 
     return navGetStateFlags(posControl.navState);
 }
@@ -1532,7 +1526,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_WAYPOINT_PRE_ACTION(nav
             calculateAndSetActiveWaypoint(&posControl.waypointList[posControl.activeWaypointIndex]);
             posControl.wpInitialDistance = calculateDistanceToDestination(&posControl.activeWaypoint.pos);
             posControl.wpInitialAltitude = posControl.actualState.abs.pos.z;
-            DEBUG_SET(DEBUG_CRUISE, 3, posControl.wpInitialAltitude);
+            // DEBUG_SET(DEBUG_CRUISE, 3, posControl.wpInitialAltitude);
             return NAV_FSM_EVENT_SUCCESS;       // will switch to NAV_STATE_WAYPOINT_IN_PROGRESS
 
                 // We use p3 as the volatile jump counter (p2 is the static value)
@@ -2641,7 +2635,7 @@ void updateLandingStatus(void)
     // }
 
     if (!landingDetectorIsActive) {
-        DEBUG_SET(DEBUG_CRUISE, 5, 0);
+        DEBUG_SET(DEBUG_CRUISE, 5, 55);
         if (STATE(AIRPLANE)) {
             landingDetectorIsActive = isImuHeadingValid() && throttleStatus != THROTTLE_LOW;
             // landingDetectorIsActive = throttleStatus != THROTTLE_LOW;
@@ -2939,7 +2933,6 @@ void setWaypoint(uint8_t wpNumber, const navWaypoint_t * wpData)
                 if (posControl.waypointListValid) {
                     nonGeoWaypointCount = 0;
                 }
-                // DEBUG_SET(DEBUG_CRUISE, 0, posControl.geoWaypointCount);
                 // CR8
             }
         }
@@ -3031,8 +3024,8 @@ static void mapWaypointToLocalPosition(fpVector3_t * localPos, const navWaypoint
     wpLLH.lon = waypoint->lon;
     wpLLH.alt = waypoint->alt;
     // CR12
-    DEBUG_SET(DEBUG_CRUISE, 0, wpLLH.alt);
-    DEBUG_SET(DEBUG_CRUISE, 1, altConv);
+    // DEBUG_SET(DEBUG_CRUISE, 0, wpLLH.alt);
+    // DEBUG_SET(DEBUG_CRUISE, 1, altConv);
     // CR12
     geoConvertGeodeticToLocal(localPos, &posControl.gpsOrigin, &wpLLH, altConv);   // CR12
 }
@@ -3040,7 +3033,7 @@ static void mapWaypointToLocalPosition(fpVector3_t * localPos, const navWaypoint
 static void calculateAndSetActiveWaypointToLocalPosition(const fpVector3_t * pos)
 {
     posControl.activeWaypoint.pos = *pos;
-    DEBUG_SET(DEBUG_CRUISE, 2, posControl.activeWaypoint.pos.z);        // CR12
+    // DEBUG_SET(DEBUG_CRUISE, 2, posControl.activeWaypoint.pos.z);        // CR12
     // Calculate initial bearing towards waypoint and store it in waypoint yaw parameter (this will further be used to detect missed waypoints)
     posControl.activeWaypoint.yaw = calculateBearingToDestination(pos);
 
@@ -3309,14 +3302,15 @@ static navigationFSMEvent_t selectNavEventFromBoxModeInput(bool launchBypass)
             }
         }
 
-        // RTH/Failsafe_RTH can override MANUAL
+        // Failsafe_RTH (overrides MANUAL)
         if (posControl.flags.forcedRTHActivated) {
             // If we request forced RTH - attempt to activate it no matter what
             // This might switch to emergency landing controller if GPS is unavailable
             return NAV_FSM_EVENT_SWITCH_TO_RTH;
         }
 
-        // Pilot-triggered RTH, also fall-back for WP if there is no mission loaded
+        // Pilot-triggered RTH (overrides MANUAL), also fall-back for WP if there is no mission loaded
+        // Prevent MANUAL falling back to RTH if selected during active mission (canActivateWaypoint is set false on MANUAL selection)
         if (IS_RC_MODE_ACTIVE(BOXNAVRTH) || (IS_RC_MODE_ACTIVE(BOXNAVWP) && !canActivateWaypoint && !IS_RC_MODE_ACTIVE(BOXMANUAL))) { // CR16
             // Check for isExecutingRTH to prevent switching our from RTH in case of a brief GPS loss
             // If don't keep this, loss of any of the canActivatePosHold && canActivateNavigation && canActivateAltHold
@@ -3785,11 +3779,11 @@ bool navigationRTHAllowsLanding(void)
         // return true;
     // CR9
     if (isWaypointMissionRTHActive() && isWaypointMissionValid()) {
-        DEBUG_SET(DEBUG_CRUISE, 0, 55);
-        DEBUG_SET(DEBUG_CRUISE, 1, 100 + posControl.waypointList[posControl.waypointCount - 1].p1);
+        // DEBUG_SET(DEBUG_CRUISE, 0, 55);
+        // DEBUG_SET(DEBUG_CRUISE, 1, 100 + posControl.waypointList[posControl.waypointCount - 1].p1);
         return posControl.waypointList[posControl.waypointCount - 1].p1 > 0;
     }
-    DEBUG_SET(DEBUG_CRUISE, 0, 77);
+    // DEBUG_SET(DEBUG_CRUISE, 0, 77);
     // CR9
     navRTHAllowLanding_e allow = navConfig()->general.flags.rth_allow_landing;
     return allow == NAV_RTH_ALLOW_LANDING_ALWAYS || (allow == NAV_RTH_ALLOW_LANDING_FS_ONLY && FLIGHT_MODE(FAILSAFE_MODE));

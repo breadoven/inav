@@ -474,8 +474,7 @@ void currentMeterUpdate(timeUs_t timeDelta)
                 bool allNav = navConfig()->general.flags.nav_overrides_motor_stop == NOMS_ALL_NAV && posControl.navState != NAV_STATE_IDLE;
                 bool autoNav = navConfig()->general.flags.nav_overrides_motor_stop == NOMS_AUTO_ONLY && (stateFlags & (NAV_AUTO_RTH | NAV_AUTO_WP));
                 int32_t throttleOffset;
-                
-                // DEBUG_SET(DEBUG_CRUISE, 0, rcCommand[THROTTLE]);
+
                 if (allNav || autoNav) {
                     throttleOffset = (int32_t)rcCommand[THROTTLE] - 1000;
                 } else {
