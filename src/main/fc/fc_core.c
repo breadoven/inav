@@ -297,9 +297,18 @@ static void updateArmingStatus(void)
 	    }
 
         if (isModeActivationConditionPresent(BOXPREARM)) {
-            if (IS_RC_MODE_ACTIVE(BOXPREARM)) {
+            static timeMs_t prearmTimer = 0;    // CR20
+
+            if (IS_RC_MODE_ACTIVE(BOXPREARM) && millis() - prearmTimer < 5000) {    // CR20
+            DEBUG_SET(DEBUG_CRUISE, 6, prearmTimer);
+            DEBUG_SET(DEBUG_CRUISE, 7, millis() - prearmTimer);
                 DISABLE_ARMING_FLAG(ARMING_DISABLED_NO_PREARM);
             } else {
+                // CR20
+                if (!IS_RC_MODE_ACTIVE(BOXPREARM)) {
+                   prearmTimer = millis();
+                }
+                // CR20
                 ENABLE_ARMING_FLAG(ARMING_DISABLED_NO_PREARM);
             }
         } else {
@@ -731,9 +740,9 @@ void processRx(timeUs_t currentTimeUs)
         } else {
             static timeUs_t airmodeLandCheckTimerStart;
             if (throttleStatus == THROTTLE_LOW && !navigationIsFlyingAutonomousMode()) {
-                DEBUG_SET(DEBUG_CRUISE, 0, posControl.actualState.velXY);
-                DEBUG_SET(DEBUG_CRUISE, 1, posControl.actualState.abs.vel.z);
-                DEBUG_SET(DEBUG_CRUISE, 2, (micros() - airmodeLandCheckTimerStart) / 100000);
+                // DEBUG_SET(DEBUG_CRUISE, 0, posControl.actualState.velXY);
+                // DEBUG_SET(DEBUG_CRUISE, 1, posControl.actualState.abs.vel.z);
+                // DEBUG_SET(DEBUG_CRUISE, 2, (micros() - airmodeLandCheckTimerStart) / 100000);
                 if (posControl.actualState.velXY > 100 || fabsf(posControl.actualState.abs.vel.z) > 50) {
                     airmodeLandCheckTimerStart = micros();
                 }
@@ -741,13 +750,13 @@ void processRx(timeUs_t currentTimeUs)
                     ENABLE_STATE(ANTI_WINDUP);
                     pidResetErrorAccumulators();
                     // DISABLE_STATE(AIRMODE_ACTIVE);
-                    DEBUG_SET(DEBUG_CRUISE, 3, 100);
+                    // DEBUG_SET(DEBUG_CRUISE, 3, 100);
                 }
             } else {
                 airmodeLandCheckTimerStart = micros();
                 DISABLE_STATE(ANTI_WINDUP);
                 // ENABLE_STATE(AIRMODE_ACTIVE);
-                DEBUG_SET(DEBUG_CRUISE, 3, 200);
+                // DEBUG_SET(DEBUG_CRUISE, 3, 200);
             }
         }
         // CR17

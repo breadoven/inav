@@ -2601,8 +2601,49 @@ void calculateNewCruiseTarget(fpVector3_t * origin, int32_t yaw, int32_t distanc
 /*-----------------------------------------------------------
  * NAV land detector
  *-----------------------------------------------------------*/
+ // CR15
+static bool landingDetectorIsActive = false;
+
+void updateLandingStatus(void)
+{
+    throttleStatus_e throttleStatus = calculateThrottleStatus(THROTTLE_STATUS_TYPE_RC);
+
+    if (!ARMING_FLAG(ARMED)) {
+        posControl.flags.landingDetected = false;
+        landingDetectorIsActive = false;
+    }
+
+    // if (posControl.flags.landingDetected) {
+        // return;
+    // }
+
+    if (!landingDetectorIsActive) {
+        DEBUG_SET(DEBUG_CRUISE, 6, 55);
+        if (STATE(AIRPLANE)) {
+            landingDetectorIsActive = isImuHeadingValid() && throttleStatus != THROTTLE_LOW;
+            // landingDetectorIsActive = throttleStatus != THROTTLE_LOW;
+        } else if (STATE(MULTIROTOR)) {
+            landingDetectorIsActive = rcCommand[THROTTLE] > navConfig()->mc.hover_throttle;
+        }
+    } else if (isLandingDetected()) {
+        landingDetectorIsActive = false;
+        posControl.flags.landingDetected = true;
+        DEBUG_SET(DEBUG_CRUISE, 7, 77);
+        if (navConfig()->general.flags.disarm_on_landing && !FLIGHT_MODE(NAV_RTH_MODE)) {
+            disarm(DISARM_LANDING);
+        // } else {
+            // pidResetErrorAccumulators();
+        }
+    }
+}
+// CR15
+
 void resetLandingDetector(void)
 {
+    // CR15
+    landingDetectorIsActive = true;
+    posControl.flags.landingDetected = false;
+    // CR15
     if (STATE(FIXED_WING_LEGACY)) { // FIXED_WING_LEGACY
         resetFixedWingLandingDetector();
     }
@@ -2614,7 +2655,7 @@ void resetLandingDetector(void)
 bool isLandingDetected(void)
 {
     bool landingDetected;
-
+    DEBUG_SET(DEBUG_CRUISE, 6, 66);
     if (STATE(FIXED_WING_LEGACY)) { // FIXED_WING_LEGACY
         landingDetected = isFixedWingLandingDetected();
     } else {
@@ -2623,38 +2664,6 @@ bool isLandingDetected(void)
 
     return landingDetected;
 }
-
-// CR15
-void updateLandingStatus(void)
-{
-    static bool landingDetectorIsActive = false;
-    throttleStatus_e throttleStatus = calculateThrottleStatus(THROTTLE_STATUS_TYPE_RC);
-
-    // if (posControl.flags.landingDetected) {
-        // return;
-    // }
-
-    if (!landingDetectorIsActive) {
-        DEBUG_SET(DEBUG_CRUISE, 5, 55);
-        if (STATE(AIRPLANE)) {
-            landingDetectorIsActive = isImuHeadingValid() && throttleStatus != THROTTLE_LOW;
-            // landingDetectorIsActive = throttleStatus != THROTTLE_LOW;
-        } else if (STATE(MULTIROTOR)) {
-            landingDetectorIsActive = rcCommand[THROTTLE] > navConfig()->mc.hover_throttle;
-        }
-    } else if (isLandingDetected()) {
-        landingDetectorIsActive = false;
-        posControl.flags.landingDetected = true;
-        DEBUG_SET(DEBUG_CRUISE, 5, 77);
-        if (navConfig()->general.flags.disarm_on_landing) {
-            disarm(DISARM_LANDING);
-        // } else {
-            // pidResetErrorAccumulators();
-        }
-    }
-}
-// CR15
-
 
 /*-----------------------------------------------------------
  * Z-position controller
@@ -3177,7 +3186,6 @@ void applyWaypointNavigationAndAltitudeHold(void)
     if (!ARMING_FLAG(ARMED)) {
         // If we are disarmed, abort forced RTH
         posControl.flags.forcedRTHActivated = false;
-        posControl.flags.landingDetected = false;   // CR15
         return;
     }
 
