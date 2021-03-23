@@ -300,8 +300,6 @@ static void updateArmingStatus(void)
             static timeMs_t prearmTimer = 0;    // CR20
 
             if (IS_RC_MODE_ACTIVE(BOXPREARM) && millis() - prearmTimer < 5000) {    // CR20
-            DEBUG_SET(DEBUG_CRUISE, 6, prearmTimer);
-            DEBUG_SET(DEBUG_CRUISE, 7, millis() - prearmTimer);
                 DISABLE_ARMING_FLAG(ARMING_DISABLED_NO_PREARM);
             } else {
                 // CR20
