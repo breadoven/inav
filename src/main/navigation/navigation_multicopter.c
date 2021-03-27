@@ -36,6 +36,7 @@
 #include "sensors/sensors.h"
 #include "sensors/acceleration.h"
 #include "sensors/boardalignment.h"
+#include "sensors/gyro.h"   // CR15
 
 #include "fc/config.h"
 #include "fc/rc_controls.h"
@@ -681,6 +682,7 @@ void resetMulticopterLandingDetector(void)
 bool isMulticopterLandingDetected(void)
 {
     const timeUs_t currentTimeUs = micros();
+    const bool throttleIsLow = calculateThrottleStatus(THROTTLE_STATUS_TYPE_RC) == THROTTLE_LOW;   // CR15
 
     // FIXME: Remove delay between resetMulticopterLandingDetector and first run of this function so this code isn't needed.
     if (landingDetectorStartedAt == 0) {
@@ -688,26 +690,42 @@ bool isMulticopterLandingDetected(void)
     }
 
     // Average climb rate should be low enough
-    bool verticalMovement = fabsf(navGetCurrentActualPositionAndVelocity()->vel.z) > 25.0f;
+    bool lowVerticalMovement = fabsf(navGetCurrentActualPositionAndVelocity()->vel.z) < 25.0f;     // CR15
 
     // check if we are moving horizontally
-    bool horizontalMovement = posControl.actualState.velXY > 100.0f;
+    bool lowHorizontalMovement = posControl.actualState.velXY < 100.0f;        // CR15
+
+    // check if gyro rates are low  CR15
+    bool lowGyroRates = (fabsf(gyro.gyroADCf[ROLL]) + fabsf(gyro.gyroADCf[PITCH]) + fabsf(gyro.gyroADCf[YAW])) / 3 < 2;
+    // CR15
 
     // We have likely landed if throttle is 40 units below average descend throttle
     // We use rcCommandAdjustedThrottle to keep track of NAV corrected throttle (isLandingDetected is executed
     // from processRx() and rcCommand at that moment holds rc input, not adjusted values from NAV core)
     // Wait for 1 second so throttle has stabilized.
     bool isAtMinimalThrust = false;
-    if (currentTimeUs - landingDetectorStartedAt > 1000 * 1000) {
-        landingThrSamples += 1;
-        landingThrSum += rcCommandAdjustedThrottle;
-        isAtMinimalThrust = rcCommandAdjustedThrottle < (landingThrSum / landingThrSamples - 40);
+    // CR15
+    bool possibleLandingDetected = false;
+    DEBUG_SET(DEBUG_CRUISE, 3, currentTimeUs - landingDetectorStartedAt);
+    if (navigationIsFlyingAutonomousMode()) {
+        if (currentTimeUs - landingDetectorStartedAt > 1000 * 1000) {
+            landingThrSamples += 1;
+            landingThrSum += rcCommandAdjustedThrottle;
+            isAtMinimalThrust = rcCommandAdjustedThrottle < (landingThrSum / landingThrSamples - 40);
+        }
+        possibleLandingDetected = isAtMinimalThrust && lowVerticalMovement && lowHorizontalMovement;
+    } else {
+        if (lowHorizontalMovement && lowVerticalMovement && lowGyroRates && throttleIsLow) {
+            possibleLandingDetected = (currentTimeUs - landingDetectorStartedAt > 3000000);
+        } else {
+            landingDetectorStartedAt = currentTimeUs;
+            return false;
+        }
     }
+    // CR15
     DEBUG_SET(DEBUG_CRUISE, 0, rcCommandAdjustedThrottle);
-    DEBUG_SET(DEBUG_CRUISE, 1, landingThrSum / landingThrSamples - 40);
-    DEBUG_SET(DEBUG_CRUISE, 2, verticalMovement);
-    DEBUG_SET(DEBUG_CRUISE, 3, horizontalMovement);
-    bool possibleLandingDetected = isAtMinimalThrust && !verticalMovement && !horizontalMovement;
+    DEBUG_SET(DEBUG_CRUISE, 1, (fabsf(gyro.gyroADCf[ROLL]) + fabsf(gyro.gyroADCf[PITCH]) + fabsf(gyro.gyroADCf[YAW])) / 3);
+    DEBUG_SET(DEBUG_CRUISE, 2, lowVerticalMovement);
 
     // If we have surface sensor (for example sonar) - use it to detect touchdown
     if ((posControl.flags.estAglStatus == EST_TRUSTED) && (posControl.actualState.agl.pos.z >= 0)) {

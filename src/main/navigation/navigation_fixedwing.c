@@ -612,12 +612,10 @@ bool isFixedWingLandingDetected(void)
                 bool isPitchAxisStatic = ABS(fwLandSetPitchDatum - attitude.values.pitch) < 2;
                 DEBUG_SET(DEBUG_CRUISE, 4, ABS(fwLandSetRollDatum - attitude.values.roll));
                 DEBUG_SET(DEBUG_CRUISE, 5, ABS(fwLandSetPitchDatum - attitude.values.pitch));
-                if (isRollAxisStatic && isPitchAxisStatic) {
-                    if (currentTimeUs - fwLandCheckTimerStart > (3000000)) {        // check conditions stable for > 3 seconds
+                if (isRollAxisStatic && isPitchAxisStatic && (currentTimeUs - fwLandCheckTimerStart > 3000000)) {  // check conditions stable for > 3s
                         // Must have landed, low horizontal and vertical velocities and no axis rotation in Roll and Pitch
                         landingTimerUs = currentTimeUs;
                         return true;
-                    }
                 } else {
                     fixAxisCheck = false;
                     fwLandCheckTimerStart = currentTimeUs;
