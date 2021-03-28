@@ -187,6 +187,7 @@ static const OSD_Entry cmsx_menuNavigationEntries[] =
     OSD_SUBMENU_ENTRY("BASIC SETTINGS", &cmsx_menuNavSettings),
     OSD_SUBMENU_ENTRY("RTH", &cmsx_menuRTH),
     OSD_SUBMENU_ENTRY("FIXED WING", &cmsx_menuFWSettings),
+    OSD_SETTING_ENTRY("MULTI MISSION NO", SETTING_NAV_MULTI_MISSION_INDEX),     // CR21
 
     OSD_BACK_AND_END_ENTRY,
 };

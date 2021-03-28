@@ -1376,9 +1376,10 @@ static bool osdDrawSingleElement(uint8_t item)
             TEXT_ATTRIBUTES_ADD_BLINK(elemAttr);
         }
         // CR10
-        // CR13 Add M to indicate Mission loaded
-        buff[4] = (posControl.waypointListValid && posControl.waypointCount > 0) ? 'M' : ' ';
-        buff[5] = '\0';
+        // CR13 Add M to indicate Mission loaded + Multi mission index CR21
+        if (posControl.waypointListValid && posControl.waypointCount > 0) {
+            tfp_sprintf(buff + 4, "M%u", navConfig()->general.multi_mission_index);
+        }
         // CR13
 
         break;
@@ -3187,9 +3188,12 @@ static void osdShowArmed(void)
         // y += 2;
         y += 1;     //CR13
     }
-    // CR13
+    // CR13 + CR21
     if (posControl.waypointListValid && posControl.waypointCount > 0) {
-        displayWrite(osdDisplayPort, 7, y, "*MISSION LOADED*");
+        tfp_sprintf(buf, "MISSION %u/%u (%u WP)", navConfig()->general.multi_mission_index, posControl.multiMissionCount, posControl.waypointCount);
+        displayWrite(osdDisplayPort, 6, y, buf);
+    } else if (navConfig()->general.multi_mission_index > posControl.multiMissionCount) {
+        displayWrite(osdDisplayPort, 3, y, "MISSION INDEX OUT RANGE");
     }
     y += 1;
     // CR13
@@ -3564,6 +3568,11 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
                     if (FLIGHT_MODE(HEADFREE_MODE)) {
                         messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_HEADFREE);
                     }
+                    // CR15
+                    if (posControl.flags.landingDetected) {
+                        messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_LANDED);
+                    }
+                    // CR15
                 }
                 // Pick one of the available messages. Each message lasts
                 // a second.

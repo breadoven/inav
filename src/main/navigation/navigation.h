@@ -203,6 +203,7 @@ typedef struct navConfig_s {
         uint8_t  pos_failure_timeout;           // Time to wait before switching to emergency landing (0 - disable)
         uint16_t waypoint_radius;               // if we are within this distance to a waypoint then we consider it reached (distance is in cm)
         uint16_t waypoint_safe_distance;        // Waypoint mission sanity check distance
+        uint8_t  multi_mission_index;           // CR21
         uint16_t max_auto_speed;                // autonomous navigation speed cm/sec
         uint16_t max_auto_climb_rate;           // max vertical speed limitation cm/sec
         uint16_t max_manual_speed;              // manual velocity control max horizontal speed
@@ -300,7 +301,8 @@ typedef enum {
 } navWaypointHeadings_e;
 
 typedef enum {
-    NAV_WP_FLAG_LAST = 0xA5
+    NAV_WP_FLAG_LAST = 0xA5,
+    NAV_WP_FLAG_MULTI_LAST = 0xA0   // CR21
 } navWaypointFlags_e;
 
 typedef struct {

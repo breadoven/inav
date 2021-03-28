@@ -119,6 +119,7 @@ PG_RESET_TEMPLATE(navConfig_t, navConfig,
         .pos_failure_timeout = 5,               // 5 sec
         .waypoint_radius = 100,                 // 2m diameter
         .waypoint_safe_distance = 10000,        // centimeters - first waypoint should be closer than this
+        .multi_mission_index = 1,               // mission index selected from multi mission WP file CR21
         .max_auto_speed = 300,                  // 3 m/s = 10.8 km/h
         .max_auto_climb_rate = 500,             // 5 m/s
         .max_manual_speed = 500,
@@ -907,7 +908,14 @@ static flightModeFlags_e navGetMappedFlightModes(navigationFSMState_t state)
 navigationFSMStateFlags_t navGetCurrentStateFlags(void)
 {
 	// CR1
-	//DEBUG_SET(DEBUG_CRUISE, 0, posControl.flags.CanOverRideRTHAlt);
+	// DEBUG_SET(DEBUG_CRUISE, 0, posControl.waypointList[0].lat);
+    // DEBUG_SET(DEBUG_CRUISE, 1, posControl.waypointList[1].lat);
+    // DEBUG_SET(DEBUG_CRUISE, 2, posControl.waypointList[2].lat);
+    // DEBUG_SET(DEBUG_CRUISE, 3, posControl.waypointList[3].lat);
+    // DEBUG_SET(DEBUG_CRUISE, 4, posControl.waypointList[4].lat);
+    // DEBUG_SET(DEBUG_CRUISE, 5, posControl.waypointList[5].lat);
+    // DEBUG_SET(DEBUG_CRUISE, 6, posControl.waypointList[6].lat);
+    // DEBUG_SET(DEBUG_CRUISE, 7, posControl.waypointList[7].lat);
 	// CR1
 
     return navGetStateFlags(posControl.navState);
@@ -2611,6 +2619,7 @@ void updateLandingStatus(void)
     if (!ARMING_FLAG(ARMED)) {
         posControl.flags.landingDetected = false;
         landingDetectorIsActive = false;
+        DEBUG_SET(DEBUG_CRUISE, 7, 0);
     }
 
     // if (posControl.flags.landingDetected) {
@@ -2629,7 +2638,7 @@ void updateLandingStatus(void)
         landingDetectorIsActive = false;
         posControl.flags.landingDetected = true;
         DEBUG_SET(DEBUG_CRUISE, 7, 77);
-        if (navConfig()->general.flags.disarm_on_landing && !FLIGHT_MODE(NAV_RTH_MODE)) {
+        if (navConfig()->general.flags.disarm_on_landing && !navigationIsFlyingAutonomousMode()) {
             disarm(DISARM_LANDING);
         // } else {
             // pidResetErrorAccumulators();
@@ -2937,7 +2946,12 @@ void setWaypoint(uint8_t wpNumber, const navWaypoint_t * wpData)
                 posControl.geoWaypointList[wpNumber - 1] = wpNumber - nonGeoWaypointCount;
 
                 posControl.waypointCount = wpNumber;
-                posControl.waypointListValid = (wpData->flag == NAV_WP_FLAG_LAST);
+                // CR21
+                if (wpData->flag == NAV_WP_FLAG_MULTI_LAST) {   // set correct end flag of selected multi mission file entry
+                    posControl.waypointList[wpNumber - 1].flag = NAV_WP_FLAG_LAST;
+                }
+                posControl.waypointListValid = posControl.waypointList[wpNumber - 1].flag == NAV_WP_FLAG_LAST;
+                // CR21
                 posControl.geoWaypointCount = posControl.waypointCount - nonGeoWaypointCount;
                 if (posControl.waypointListValid) {
                     nonGeoWaypointCount = 0;
@@ -2985,13 +2999,25 @@ bool loadNonVolatileWaypointList(void)
 
     resetWaypointList();
 
+    // CR21
+    posControl.multiMissionCount = 1;
+    int8_t WPCounter = 0;
+
     for (int i = 0; i < NAV_MAX_WAYPOINTS; i++) {
-        // Load waypoint
-        setWaypoint(i + 1, nonVolatileWaypointList(i));
+        if (posControl.multiMissionCount == navConfig()->general.multi_mission_index) {
+            // Load waypoints
+            setWaypoint(i + 1 - WPCounter, nonVolatileWaypointList(i));
+        } else {
+            WPCounter = i + 1;  // keep track of WPs not in selected multi mission file
+        }
 
         // Check if this is the last waypoint
-        if (nonVolatileWaypointList(i)->flag == NAV_WP_FLAG_LAST)
+        if (nonVolatileWaypointList(i)->flag == NAV_WP_FLAG_LAST) {
             break;
+        } else if (nonVolatileWaypointList(i)->flag == NAV_WP_FLAG_MULTI_LAST) {
+            posControl.multiMissionCount += 1;  // count up no missions in multi mission WP file
+    // CR21
+        }
     }
 
     // Mission sanity check failed - reset the list

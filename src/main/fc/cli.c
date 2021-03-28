@@ -1381,6 +1381,8 @@ static void printWaypoints(uint8_t dumpMask, const navWaypoint_t *navWaypoint, c
 
 static void cliWaypoints(char *cmdline)
 {
+    static int8_t multiMissionWPCounter = 0;      // CR21
+
     if (isEmpty(cmdline)) {
         printWaypoints(DUMP_MASTER, posControl.waypointList, NULL);
     } else if (sl_strcasecmp(cmdline, "reset") == 0) {
@@ -1394,6 +1396,7 @@ static void cliWaypoints(char *cmdline)
             if (posControl.waypointList[i].flag == NAV_WP_FLAG_LAST) {
                 posControl.waypointCount = i + 1;
                 posControl.waypointListValid = true;
+                multiMissionWPCounter = 0;    // CR21
                 break;
             }
         }
@@ -1459,17 +1462,29 @@ static void cliWaypoints(char *cmdline)
 
             if (!(validArgumentCount == 6 || validArgumentCount == 8)) {
                 cliShowParseError();
-            } else if (!(action == 0 || action == NAV_WP_ACTION_WAYPOINT || action == NAV_WP_ACTION_RTH || action == NAV_WP_ACTION_JUMP || action == NAV_WP_ACTION_HOLD_TIME || action == NAV_WP_ACTION_LAND || action == NAV_WP_ACTION_SET_POI || action == NAV_WP_ACTION_SET_HEAD) || !(flag == 0 || flag == NAV_WP_FLAG_LAST)) {
+            } else if (!(action == 0 || action == NAV_WP_ACTION_WAYPOINT || action == NAV_WP_ACTION_RTH || action == NAV_WP_ACTION_JUMP || action == NAV_WP_ACTION_HOLD_TIME || action == NAV_WP_ACTION_LAND || action == NAV_WP_ACTION_SET_POI || action == NAV_WP_ACTION_SET_HEAD) || !(flag == 0 || flag == NAV_WP_FLAG_LAST || flag == NAV_WP_FLAG_MULTI_LAST)) {  // CR21
                 cliShowParseError();
             } else {
-                posControl.waypointList[i].action = action;
-                posControl.waypointList[i].lat = lat;
-                posControl.waypointList[i].lon = lon;
-                posControl.waypointList[i].alt = alt;
-                posControl.waypointList[i].p1 = p1;
-                posControl.waypointList[i].p2 = p2;
-                posControl.waypointList[i].p3 = p3;
-                posControl.waypointList[i].flag = flag;
+                // CR21
+                posControl.waypointList[i + multiMissionWPCounter].action = action;
+                posControl.waypointList[i + multiMissionWPCounter].lat = lat;
+                posControl.waypointList[i + multiMissionWPCounter].lon = lon;
+                posControl.waypointList[i + multiMissionWPCounter].alt = alt;
+                posControl.waypointList[i + multiMissionWPCounter].p1 = p1;
+                posControl.waypointList[i + multiMissionWPCounter].p2 = p2;
+                posControl.waypointList[i + multiMissionWPCounter].p3 = p3;
+                posControl.waypointList[i + multiMissionWPCounter].flag = flag;
+
+                // Process WP file made up of multiple WP missions with end of each intermediate mission
+                // flagged with NAV_WP_FLAG_MULTI_LAST (160). Individial missions extracted and formatted
+                // when loaded at runtime.
+                if (flag == NAV_WP_FLAG_MULTI_LAST) {
+                    multiMissionWPCounter += i + 1;
+                } else if(flag == NAV_WP_FLAG_LAST) {
+                    multiMissionWPCounter = 0;
+                    navConfigMutable()->general.multi_mission_index = 1;    // reset selected mission to 1 when new file loaded
+                }
+                // CR21
             }
         } else {
             cliShowArgumentRangeError("wp index", 0, NAV_MAX_WAYPOINTS - 1);
