@@ -1375,12 +1375,6 @@ static bool osdDrawSingleElement(uint8_t item)
             }
             TEXT_ATTRIBUTES_ADD_BLINK(elemAttr);
         }
-        // CR10
-        // CR13 Add M to indicate Mission loaded + Multi mission index CR21
-        if (posControl.waypointListValid && posControl.waypointCount > 0) {
-            tfp_sprintf(buff + 4, "M%u", navConfig()->general.multi_mission_index);
-        }
-        // CR13
 
         break;
 
@@ -2550,6 +2544,29 @@ static bool osdDrawSingleElement(uint8_t item)
     case OSD_NAV_FW_CONTROL_SMOOTHNESS:
         osdDisplayAdjustableDecimalValue(elemPosX, elemPosY, "CTL S", 0, navConfig()->fw.control_smoothness, 1, 0, ADJUSTMENT_NAV_FW_CONTROL_SMOOTHNESS);
         return true;
+    // CR22
+    case OSD_INFO:
+        {
+            if (OSD_ALTERNATING_CHOICES(osdConfig()->system_msg_display_time, 2) == 1) {
+                uint16_t osdRssi = osdConvertRSSI();
+                // buff[0] = SYM_RSSI;
+                tfp_sprintf(buff, "RSSI %2d", osdRssi);
+                if (osdRssi < osdConfig()->rssi_alarm) {
+                    TEXT_ATTRIBUTES_ADD_BLINK(elemAttr);
+                }
+                // break;
+            } else {
+                if (posControl.waypointListValid && posControl.waypointCount > 0) {
+                    tfp_sprintf(buff, "M%u/%u>%uWP", navConfig()->general.multi_mission_index, posControl.multiMissionCount, posControl.waypointCount);
+                } else {
+                    tfp_sprintf(buff, "M0/%u>0WP", posControl.multiMissionCount);
+                }
+                // displayWrite(osdDisplayPort, elemPosX, elemPosY, buff);
+                // return true;
+            }
+            break;
+        }
+    // CR22
     default:
         return false;
     }
@@ -2771,6 +2788,7 @@ void pgResetFn_osdLayoutsConfig(osdLayoutsConfig_t *osdLayoutsConfig)
     osdLayoutsConfig->item_pos[0][OSD_REMAINING_FLIGHT_TIME_BEFORE_RTH] = OSD_POS(23, 7);
     osdLayoutsConfig->item_pos[0][OSD_REMAINING_DISTANCE_BEFORE_RTH] = OSD_POS(23, 6);
 
+    osdLayoutsConfig->item_pos[0][OSD_INFO] = OSD_POS(0, 10) | OSD_VISIBLE_FLAG;    // CR22
     osdLayoutsConfig->item_pos[0][OSD_GPS_SATS] = OSD_POS(0, 11) | OSD_VISIBLE_FLAG;
     osdLayoutsConfig->item_pos[0][OSD_GPS_HDOP] = OSD_POS(0, 10);
 

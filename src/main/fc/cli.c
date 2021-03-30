@@ -1488,9 +1488,8 @@ static void cliWaypoints(char *cmdline)
                 posControl.waypointList[i + multiMissionWPCounter].p3 = p3;
                 posControl.waypointList[i + multiMissionWPCounter].flag = flag;
 
-                // Process WP file made up of multiple WP missions with end of each intermediate mission
-                // flagged with NAV_WP_FLAG_MULTI_LAST (160). Individial missions extracted and formatted
-                // when loaded at runtime.
+                // Process WP entries made up of multiple successive WP missions (multiple EOF flags NAV_WP_FLAG_LAST).
+                // Individial missions extracted when loaded at runtime, number defined by setting nav_multi_mission_index
                 if (flag == NAV_WP_FLAG_LAST) {
                     multiMissionWPCounter += i + 1;
                     posControl.multiMissionCount += 1;

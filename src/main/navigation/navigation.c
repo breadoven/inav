@@ -3011,7 +3011,7 @@ bool loadNonVolatileWaypointList(void)
             posControl.multiMissionCount += 1;  // count up no missions in multi mission WP file
             if (i != NAV_MAX_WAYPOINTS - 1) {
                 if (nonVolatileWaypointList(i + 1)->flag == NAV_WP_FLAG_LAST) {
-                    break;      // end of multi mission file if double NAV_WP_FLAG_LAST
+                    break;      // end of multi mission file if successive NAV_WP_FLAG_LAST
                 }
             }
         }
