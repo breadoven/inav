@@ -2946,12 +2946,7 @@ void setWaypoint(uint8_t wpNumber, const navWaypoint_t * wpData)
                 posControl.geoWaypointList[wpNumber - 1] = wpNumber - nonGeoWaypointCount;
 
                 posControl.waypointCount = wpNumber;
-                // CR21
-                if (wpData->flag == NAV_WP_FLAG_MULTI_LAST) {   // set correct end flag of selected multi mission file entry
-                    posControl.waypointList[wpNumber - 1].flag = NAV_WP_FLAG_LAST;
-                }
-                posControl.waypointListValid = posControl.waypointList[wpNumber - 1].flag == NAV_WP_FLAG_LAST;
-                // CR21
+                posControl.waypointListValid = wpData->flag == NAV_WP_FLAG_LAST;
                 posControl.geoWaypointCount = posControl.waypointCount - nonGeoWaypointCount;
                 if (posControl.waypointListValid) {
                     nonGeoWaypointCount = 0;
@@ -3000,11 +2995,11 @@ bool loadNonVolatileWaypointList(void)
     resetWaypointList();
 
     // CR21
-    posControl.multiMissionCount = 1;
+    posControl.multiMissionCount = 0;
     int8_t WPCounter = 0;
 
     for (int i = 0; i < NAV_MAX_WAYPOINTS; i++) {
-        if (posControl.multiMissionCount == navConfig()->general.multi_mission_index) {
+        if (posControl.multiMissionCount + 1 == navConfig()->general.multi_mission_index) {
             // Load waypoints
             setWaypoint(i + 1 - WPCounter, nonVolatileWaypointList(i));
         } else {
@@ -3013,11 +3008,14 @@ bool loadNonVolatileWaypointList(void)
 
         // Check if this is the last waypoint
         if (nonVolatileWaypointList(i)->flag == NAV_WP_FLAG_LAST) {
-            break;
-        } else if (nonVolatileWaypointList(i)->flag == NAV_WP_FLAG_MULTI_LAST) {
             posControl.multiMissionCount += 1;  // count up no missions in multi mission WP file
-    // CR21
+            if (i != NAV_MAX_WAYPOINTS - 1) {
+                if (nonVolatileWaypointList(i + 1)->flag == NAV_WP_FLAG_LAST) {
+                    break;      // end of multi mission file if double NAV_WP_FLAG_LAST
+                }
+            }
         }
+        // CR21
     }
 
     // Mission sanity check failed - reset the list

@@ -1394,10 +1394,19 @@ static void cliWaypoints(char *cmdline)
         for (int i = 0; i < NAV_MAX_WAYPOINTS; i++) {
             if (!(posControl.waypointList[i].action == NAV_WP_ACTION_WAYPOINT || posControl.waypointList[i].action == NAV_WP_ACTION_JUMP || posControl.waypointList[i].action == NAV_WP_ACTION_RTH || posControl.waypointList[i].action == NAV_WP_ACTION_HOLD_TIME || posControl.waypointList[i].action == NAV_WP_ACTION_LAND || posControl.waypointList[i].action == NAV_WP_ACTION_SET_POI || posControl.waypointList[i].action == NAV_WP_ACTION_SET_HEAD)) break;
             if (posControl.waypointList[i].flag == NAV_WP_FLAG_LAST) {
-                posControl.waypointCount = i + 1;
-                posControl.waypointListValid = true;
-                multiMissionWPCounter = 0;    // CR21
-                break;
+                DEBUG_SET(DEBUG_CRUISE, 0, posControl.multiMissionCount);
+                if (posControl.multiMissionCount == 1) {  // CR21
+                    posControl.waypointCount = i + 1;
+                    posControl.waypointListValid = true;
+                // CR21
+                    multiMissionWPCounter = 0;
+                    posControl.multiMissionCount = 0;
+                    navConfigMutable()->general.multi_mission_index = 1;    // reset selected mission to 1 when new file loaded
+                    break;
+                } else {
+                    posControl.multiMissionCount -= 1;
+                // CR21
+                }
             }
         }
         if (posControl.waypointListValid) {
@@ -1412,7 +1421,7 @@ static void cliWaypoints(char *cmdline)
         uint8_t validArgumentCount = 0;
         const char *ptr = cmdline;
         i = fastA2I(ptr);
-        if (i >= 0 && i < NAV_MAX_WAYPOINTS) {
+        if (i + multiMissionWPCounter >= 0 && i + multiMissionWPCounter < NAV_MAX_WAYPOINTS) {  // CR21
             ptr = nextArg(ptr);
             if (ptr) {
                 action = fastA2I(ptr);
@@ -1462,10 +1471,14 @@ static void cliWaypoints(char *cmdline)
 
             if (!(validArgumentCount == 6 || validArgumentCount == 8)) {
                 cliShowParseError();
-            } else if (!(action == 0 || action == NAV_WP_ACTION_WAYPOINT || action == NAV_WP_ACTION_RTH || action == NAV_WP_ACTION_JUMP || action == NAV_WP_ACTION_HOLD_TIME || action == NAV_WP_ACTION_LAND || action == NAV_WP_ACTION_SET_POI || action == NAV_WP_ACTION_SET_HEAD) || !(flag == 0 || flag == NAV_WP_FLAG_LAST || flag == NAV_WP_FLAG_MULTI_LAST)) {  // CR21
+            } else if (!(action == 0 || action == NAV_WP_ACTION_WAYPOINT || action == NAV_WP_ACTION_RTH || action == NAV_WP_ACTION_JUMP || action == NAV_WP_ACTION_HOLD_TIME || action == NAV_WP_ACTION_LAND || action == NAV_WP_ACTION_SET_POI || action == NAV_WP_ACTION_SET_HEAD) || !(flag == 0 || flag == NAV_WP_FLAG_LAST)) {
                 cliShowParseError();
             } else {
                 // CR21
+                if (i + multiMissionWPCounter == 0) {
+                    posControl.multiMissionCount = 0;
+                }
+
                 posControl.waypointList[i + multiMissionWPCounter].action = action;
                 posControl.waypointList[i + multiMissionWPCounter].lat = lat;
                 posControl.waypointList[i + multiMissionWPCounter].lon = lon;
@@ -1478,12 +1491,11 @@ static void cliWaypoints(char *cmdline)
                 // Process WP file made up of multiple WP missions with end of each intermediate mission
                 // flagged with NAV_WP_FLAG_MULTI_LAST (160). Individial missions extracted and formatted
                 // when loaded at runtime.
-                if (flag == NAV_WP_FLAG_MULTI_LAST) {
+                if (flag == NAV_WP_FLAG_LAST) {
                     multiMissionWPCounter += i + 1;
-                } else if(flag == NAV_WP_FLAG_LAST) {
-                    multiMissionWPCounter = 0;
-                    navConfigMutable()->general.multi_mission_index = 1;    // reset selected mission to 1 when new file loaded
+                    posControl.multiMissionCount += 1;
                 }
+                DEBUG_SET(DEBUG_CRUISE, 1, posControl.multiMissionCount);
                 // CR21
             }
         } else {
