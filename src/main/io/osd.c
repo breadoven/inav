@@ -2557,7 +2557,7 @@ static bool osdDrawSingleElement(uint8_t item)
                 // break;
             } else {
                 if (posControl.waypointListValid && posControl.waypointCount > 0) {
-                    tfp_sprintf(buff, "M%u/%u>%uWP", navConfig()->general.multi_mission_index, posControl.multiMissionCount, posControl.waypointCount);
+                    tfp_sprintf(buff, "M%u/%u>%uWP", navConfig()->general.multi_waypoint_mission_index, posControl.multiMissionCount, posControl.waypointCount);
                 } else {
                     tfp_sprintf(buff, "M0/%u>0WP", posControl.multiMissionCount);
                 }
@@ -3208,9 +3208,9 @@ static void osdShowArmed(void)
     }
     // CR13 + CR21
     if (posControl.waypointListValid && posControl.waypointCount > 0) {
-        tfp_sprintf(buf, "MISSION %u/%u (%u WP)", navConfig()->general.multi_mission_index, posControl.multiMissionCount, posControl.waypointCount);
+        tfp_sprintf(buf, "MISSION %u/%u (%u WP)", navConfig()->general.multi_waypoint_mission_index, posControl.multiMissionCount, posControl.waypointCount);
         displayWrite(osdDisplayPort, 6, y, buf);
-    } else if (navConfig()->general.multi_mission_index > posControl.multiMissionCount) {
+    } else if (navConfig()->general.multi_waypoint_mission_index > posControl.multiMissionCount) {
         displayWrite(osdDisplayPort, 3, y, "MISSION INDEX OUT RANGE");
     }
     y += 1;

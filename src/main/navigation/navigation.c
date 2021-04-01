@@ -39,6 +39,7 @@
 #include "fc/rc_controls.h"
 #include "fc/rc_modes.h"
 #include "fc/runtime_config.h"
+#include "fc/cli.h"     // CR21
 
 #include "flight/imu.h"
 #include "flight/mixer.h"
@@ -119,7 +120,7 @@ PG_RESET_TEMPLATE(navConfig_t, navConfig,
         .pos_failure_timeout = 5,               // 5 sec
         .waypoint_radius = 100,                 // 2m diameter
         .waypoint_safe_distance = 10000,        // centimeters - first waypoint should be closer than this
-        .multi_mission_index = 1,               // mission index selected from multi mission WP file CR21
+        .multi_waypoint_mission_index = 1,               // mission index selected from multi mission WP file CR21
         .max_auto_speed = 300,                  // 3 m/s = 10.8 km/h
         .max_auto_climb_rate = 500,             // 5 m/s
         .max_manual_speed = 500,
@@ -2998,8 +2999,9 @@ bool loadNonVolatileWaypointList(void)
     posControl.multiMissionCount = 0;
     int8_t WPCounter = 0;
 
+    // if in CLI mode load all WPs in NVM so all multi mission WP entries are visible using "WP" command
     for (int i = 0; i < NAV_MAX_WAYPOINTS; i++) {
-        if (posControl.multiMissionCount + 1 == navConfig()->general.multi_mission_index) {
+        if ((posControl.multiMissionCount + 1 == navConfig()->general.multi_waypoint_mission_index) || cliMode) {
             // Load waypoints
             setWaypoint(i + 1 - WPCounter, nonVolatileWaypointList(i));
         } else {

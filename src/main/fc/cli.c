@@ -1394,14 +1394,14 @@ static void cliWaypoints(char *cmdline)
         for (int i = 0; i < NAV_MAX_WAYPOINTS; i++) {
             if (!(posControl.waypointList[i].action == NAV_WP_ACTION_WAYPOINT || posControl.waypointList[i].action == NAV_WP_ACTION_JUMP || posControl.waypointList[i].action == NAV_WP_ACTION_RTH || posControl.waypointList[i].action == NAV_WP_ACTION_HOLD_TIME || posControl.waypointList[i].action == NAV_WP_ACTION_LAND || posControl.waypointList[i].action == NAV_WP_ACTION_SET_POI || posControl.waypointList[i].action == NAV_WP_ACTION_SET_HEAD)) break;
             if (posControl.waypointList[i].flag == NAV_WP_FLAG_LAST) {
-                DEBUG_SET(DEBUG_CRUISE, 0, posControl.multiMissionCount);
+                // DEBUG_SET(DEBUG_CRUISE, 0, posControl.multiMissionCount);
                 if (posControl.multiMissionCount == 1) {  // CR21
                     posControl.waypointCount = i + 1;
                     posControl.waypointListValid = true;
                 // CR21
                     multiMissionWPCounter = 0;
                     posControl.multiMissionCount = 0;
-                    navConfigMutable()->general.multi_mission_index = 1;    // reset selected mission to 1 when new file loaded
+                    navConfigMutable()->general.multi_waypoint_mission_index = 1;    // reset selected mission to 1 when new file loaded
                     break;
                 } else {
                     posControl.multiMissionCount -= 1;
@@ -1489,7 +1489,7 @@ static void cliWaypoints(char *cmdline)
                 posControl.waypointList[i + multiMissionWPCounter].flag = flag;
 
                 // Process WP entries made up of multiple successive WP missions (multiple EOF flags NAV_WP_FLAG_LAST).
-                // Individial missions extracted when loaded at runtime, number defined by setting nav_multi_mission_index
+                // Individial missions extracted when loaded at runtime, number defined by setting nav_multi_waypoint_mission_index
                 if (flag == NAV_WP_FLAG_LAST) {
                     multiMissionWPCounter += i + 1;
                     posControl.multiMissionCount += 1;
