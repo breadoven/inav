@@ -309,7 +309,8 @@ typedef struct {
     int32_t lat;
     int32_t lon;
     int32_t alt;
-    int16_t p1, p2, p3;
+    int32_t p1;     // CR19
+    int16_t p2, p3; // CR19
     uint8_t flag;
 } navWaypoint_t;
 

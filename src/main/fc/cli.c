@@ -1494,7 +1494,7 @@ static void cliWaypoints(char *cmdline)
                     multiMissionWPCounter += i + 1;
                     posControl.multiMissionCount += 1;
                 }
-                DEBUG_SET(DEBUG_CRUISE, 1, posControl.multiMissionCount);
+                // DEBUG_SET(DEBUG_CRUISE, 1, posControl.multiMissionCount);
                 // CR21
             }
         } else {

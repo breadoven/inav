@@ -1601,22 +1601,18 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_WAYPOINT_IN_PROGRESS(na
                 }
                 else {
                     fpVector3_t tmpWaypoint;
-                    // CR19
-                    uint16_t landingInitialDescentAltitude = 0;
-                    if (posControl.waypointList[posControl.activeWaypointIndex].action == NAV_WP_ACTION_LAND && posControl.waypointList[posControl.activeWaypointIndex].p1 != 0) {  // Landing WP altitude defined as ground elevation so arrive higher at slowdown_maxalt altitude
-                        landingInitialDescentAltitude = posControl.waypointList[posControl.activeWaypointIndex].p1;     // limited to < 327m
-                    }
-                    // CR19
+                    // // CR19
+                    // uint16_t landingInitialDescentAltitude = 0;
+                    // if (posControl.waypointList[posControl.activeWaypointIndex].action == NAV_WP_ACTION_LAND && posControl.waypointList[posControl.activeWaypointIndex].p1 != 0) {  // Landing WP P1 defined as landing ground elevation so arrive higher at altitude defined by P1
+                        // landingInitialDescentAltitude = posControl.waypointList[posControl.activeWaypointIndex].p1;     // limited to < 327m
+                    // }
+                    // // CR19
                     tmpWaypoint.x = posControl.activeWaypoint.pos.x;
                     tmpWaypoint.y = posControl.activeWaypoint.pos.y;
-                    // tmpWaypoint.z = scaleRangef(constrainf(posControl.wpDistance, posControl.wpInitialDistance / 10.0f, posControl.wpInitialDistance),
-                        // posControl.wpInitialDistance, posControl.wpInitialDistance / 10.0f,
-                        // posControl.wpInitialAltitude, posControl.activeWaypoint.pos.z);
-                    // CR19
                     tmpWaypoint.z = scaleRangef(constrainf(posControl.wpDistance, posControl.wpInitialDistance / 10.0f, posControl.wpInitialDistance),
-                        posControl.wpInitialDistance, posControl.wpInitialDistance / 10.0f,
-                        posControl.wpInitialAltitude, posControl.activeWaypoint.pos.z + landingInitialDescentAltitude);
-                    // CR19
+                                    posControl.wpInitialDistance, posControl.wpInitialDistance / 10.0f,
+                                    posControl.wpInitialAltitude, posControl.activeWaypoint.pos.z);
+
                     setDesiredPosition(&tmpWaypoint, 0, NAV_POS_UPDATE_XY | NAV_POS_UPDATE_Z | NAV_POS_UPDATE_BEARING);
                     if(STATE(MULTIROTOR)) {
                         switch (wpHeadingControl.mode) {
@@ -1987,9 +1983,14 @@ static fpVector3_t * rthGetHomeTargetPosition(rthTargetMode_e mode)
 
         case RTH_HOME_FINAL_LAND:
             // CR19
-            // Use WP Mission Landing WP altitude as ground elevation if p1 > 0 otherwise use takeoff home altitude
+            // if p1 > 0 for WP mission use P1 value as landing elevation (cm) otherwise use takeoff home elevation
             if (FLIGHT_MODE(NAV_WP_MODE) && posControl.waypointList[posControl.activeWaypointIndex].action == NAV_WP_ACTION_LAND && posControl.waypointList[posControl.activeWaypointIndex].p1 != 0) {
-                posControl.rthState.homeTmpWaypoint.z = posControl.activeWaypoint.pos.z;
+                posControl.rthState.homeTmpWaypoint.z = posControl.waypointList[posControl.activeWaypointIndex].p1;
+                // CR12
+                if (waypointMissionAltConvMode(posControl.waypointList[posControl.activeWaypointIndex].p3) == GEO_ALT_ABSOLUTE) {
+                    posControl.rthState.homeTmpWaypoint.z -= posControl.gpsOrigin.alt;  // correct to relative if altitude datum used is absolute
+                }
+                // CR12
             }
             // CR19
             break;

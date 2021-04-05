@@ -1277,11 +1277,60 @@ int8_t getGeoWaypointNumber(int8_t waypointIndex)
 static bool osdDrawSingleElement(uint8_t item)
 {
     uint16_t pos = osdLayoutsConfig()->item_pos[currentLayout][item];
-    if (!OSD_VISIBLE(pos)) {
-        return false;
-    }
+
+    // if (!OSD_VISIBLE(pos)) { // CR22
+        // return false;
+    // }
     uint8_t elemPosX = OSD_X(pos);
     uint8_t elemPosY = OSD_Y(pos);
+
+    // CR22
+    uint16_t scrollpos = osdLayoutsConfig()->item_pos[currentLayout][OSD_INFO_CYCLE];
+
+    if (OSD_VISIBLE(scrollpos)) {
+        static uint8_t oldItem;
+        static uint8_t numItems = 0;
+        uint8_t selectedItem;
+        static uint8_t lockedItem;
+        static uint8_t itemCounter;
+        static uint8_t iterCount = 0;
+
+        if (iterCount < 1 && item != 0) {
+            return false;
+        } else if (iterCount < 2 && item == 0) {
+            iterCount += 1;
+        }
+
+        if (item == 0) {
+            itemCounter = 0;
+        }
+
+        if (item == OSD_RSSI_VALUE || item == OSD_VTX_POWER || item == OSD_GPS_SATS || item == OSD_MISSION) {
+            itemCounter += 1;
+            if (iterCount == 1) {
+                 numItems += 1;
+                 return false;
+            }
+            selectedItem = IS_RC_MODE_ACTIVE(BOXUSER1) ? lockedItem : OSD_ALTERNATING_CHOICES(osdConfig()->system_msg_display_time, numItems) + 1;
+            if (itemCounter == selectedItem) {
+                lockedItem = selectedItem;
+                elemPosX = OSD_X(scrollpos);
+                elemPosY = OSD_Y(scrollpos);
+                if (oldItem != item) {
+                    oldItem = item;
+                    displayWrite(osdDisplayPort, elemPosX, elemPosY, "          ");
+                }
+            } else {
+                return false;
+            }
+        } else if (!OSD_VISIBLE(pos)) {
+            return false;
+        }
+    } else if (!OSD_VISIBLE(pos)) {
+        return false;
+    }
+    // CR22
+
     textAttributes_t elemAttr = TEXT_ATTRIBUTES_NONE;
     char buff[32] = {0};
 
@@ -1375,7 +1424,6 @@ static bool osdDrawSingleElement(uint8_t item)
             }
             TEXT_ATTRIBUTES_ADD_BLINK(elemAttr);
         }
-
         break;
 
     case OSD_GPS_SPEED:
@@ -2545,26 +2593,20 @@ static bool osdDrawSingleElement(uint8_t item)
         osdDisplayAdjustableDecimalValue(elemPosX, elemPosY, "CTL S", 0, navConfig()->fw.control_smoothness, 1, 0, ADJUSTMENT_NAV_FW_CONTROL_SMOOTHNESS);
         return true;
     // CR22
-    case OSD_INFO:
+    case OSD_MISSION:
         {
-            if (OSD_ALTERNATING_CHOICES(osdConfig()->system_msg_display_time, 2) == 1) {
-                uint16_t osdRssi = osdConvertRSSI();
-                // buff[0] = SYM_RSSI;
-                tfp_sprintf(buff, "RSSI %2d", osdRssi);
-                if (osdRssi < osdConfig()->rssi_alarm) {
-                    TEXT_ATTRIBUTES_ADD_BLINK(elemAttr);
-                }
-                // break;
+            if (posControl.waypointListValid && posControl.waypointCount > 0) {
+                tfp_sprintf(buff, "M%u/%u>%uWP", navConfig()->general.multi_waypoint_mission_index, posControl.multiMissionCount, posControl.waypointCount);
             } else {
-                if (posControl.waypointListValid && posControl.waypointCount > 0) {
-                    tfp_sprintf(buff, "M%u/%u>%uWP", navConfig()->general.multi_waypoint_mission_index, posControl.multiMissionCount, posControl.waypointCount);
-                } else {
-                    tfp_sprintf(buff, "M0/%u>0WP", posControl.multiMissionCount);
-                }
-                // displayWrite(osdDisplayPort, elemPosX, elemPosY, buff);
-                // return true;
+                tfp_sprintf(buff, "M0/%u>0WP", posControl.multiMissionCount);
             }
-            break;
+            displayWrite(osdDisplayPort, elemPosX, elemPosY, buff);
+            return true;
+        }
+
+    case OSD_INFO_CYCLE:
+        {
+            // deliberately left blank
         }
     // CR22
     default:
@@ -2788,7 +2830,7 @@ void pgResetFn_osdLayoutsConfig(osdLayoutsConfig_t *osdLayoutsConfig)
     osdLayoutsConfig->item_pos[0][OSD_REMAINING_FLIGHT_TIME_BEFORE_RTH] = OSD_POS(23, 7);
     osdLayoutsConfig->item_pos[0][OSD_REMAINING_DISTANCE_BEFORE_RTH] = OSD_POS(23, 6);
 
-    osdLayoutsConfig->item_pos[0][OSD_INFO] = OSD_POS(0, 10) | OSD_VISIBLE_FLAG;    // CR22
+    osdLayoutsConfig->item_pos[0][OSD_MISSION] = OSD_POS(0, 10) | OSD_VISIBLE_FLAG;    // CR22
     osdLayoutsConfig->item_pos[0][OSD_GPS_SATS] = OSD_POS(0, 11) | OSD_VISIBLE_FLAG;
     osdLayoutsConfig->item_pos[0][OSD_GPS_HDOP] = OSD_POS(0, 10);
 
@@ -2861,6 +2903,8 @@ void pgResetFn_osdLayoutsConfig(osdLayoutsConfig_t *osdLayoutsConfig)
     osdLayoutsConfig->item_pos[0][OSD_GVAR_1] = OSD_POS(1, 2);
     osdLayoutsConfig->item_pos[0][OSD_GVAR_2] = OSD_POS(1, 3);
     osdLayoutsConfig->item_pos[0][OSD_GVAR_3] = OSD_POS(1, 4);
+
+    osdLayoutsConfig->item_pos[0][OSD_INFO_CYCLE] = OSD_POS(0, 1) | OSD_VISIBLE_FLAG;    // CR22
 
 #if defined(USE_ESC_SENSOR)
     osdLayoutsConfig->item_pos[0][OSD_ESC_RPM] = OSD_POS(1, 2);
@@ -3542,7 +3586,9 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
                     if (NAV_Status.state == MW_NAV_STATE_WP_ENROUTE) {
                         // Countdown display for remaining Waypoints
                         // CR11
-                        tfp_sprintf(messageBuf, "TO WP %u/%u (%3u M)", getGeoWaypointNumber(posControl.activeWaypointIndex), posControl.geoWaypointCount, (int)(posControl.wpDistance / 100));
+                        char buf[6];
+                        osdFormatDistanceSymbol(buf, posControl.wpDistance);
+                        tfp_sprintf(messageBuf, "TO WP %u/%u (%s)", getGeoWaypointNumber(posControl.activeWaypointIndex), posControl.geoWaypointCount, buf);
                         // CR11
                         // CR8
                         // tfp_sprintf(messageBuf, "TO WP %u/%u", getGeoWaypointNumber(posControl.activeWaypointIndex), posControl.geoWaypointCount);
