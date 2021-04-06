@@ -1278,56 +1278,58 @@ static bool osdDrawSingleElement(uint8_t item)
 {
     uint16_t pos = osdLayoutsConfig()->item_pos[currentLayout][item];
 
-    // if (!OSD_VISIBLE(pos)) { // CR22
-        // return false;
-    // }
+    if (!OSD_VISIBLE(pos)) {
+        return false;
+    }
     uint8_t elemPosX = OSD_X(pos);
     uint8_t elemPosY = OSD_Y(pos);
 
     // CR22
+    /* routine to direct selected OSD items to Info Cycle field on OSD.
+    Items cycled in field unless BOXINFOCYCLE mode selected in which case current item is locked in display*/
     uint16_t scrollpos = osdLayoutsConfig()->item_pos[currentLayout][OSD_INFO_CYCLE];
+    static uint8_t iterCount = 0;
+    static uint8_t numItems = 0;
+    static bool infocycleActive = true;
 
-    if (OSD_VISIBLE(scrollpos)) {
-        static uint8_t oldItem;
-        static uint8_t numItems = 0;
+    if (OSD_VISIBLE(scrollpos) && infocycleActive) {
+        static uint8_t previousItem;
         uint8_t selectedItem;
         static uint8_t lockedItem;
         static uint8_t itemCounter;
-        static uint8_t iterCount = 0;
 
         if (iterCount < 1 && item != 0) {
             return false;
         } else if (iterCount < 2 && item == 0) {
             iterCount += 1;
+            if (iterCount == 2 && numItems == 0) {
+                infocycleActive = false;
+            }
         }
 
         if (item == 0) {
             itemCounter = 0;
         }
 
-        if (item == OSD_RSSI_VALUE || item == OSD_VTX_POWER || item == OSD_GPS_SATS || item == OSD_MISSION) {
+        if (OSD_INFOCYCLE(pos)) {
             itemCounter += 1;
             if (iterCount == 1) {
                  numItems += 1;
                  return false;
             }
-            selectedItem = IS_RC_MODE_ACTIVE(BOXUSER1) ? lockedItem : OSD_ALTERNATING_CHOICES(osdConfig()->system_msg_display_time, numItems) + 1;
+            selectedItem = IS_RC_MODE_ACTIVE(BOXINFOCYCLE) ? lockedItem : OSD_ALTERNATING_CHOICES(osdConfig()->system_msg_display_time, numItems) + 1;
             if (itemCounter == selectedItem) {
                 lockedItem = selectedItem;
                 elemPosX = OSD_X(scrollpos);
                 elemPosY = OSD_Y(scrollpos);
-                if (oldItem != item) {
-                    oldItem = item;
+                if (previousItem != item) {
+                    previousItem = item;
                     displayWrite(osdDisplayPort, elemPosX, elemPosY, "          ");
                 }
             } else {
                 return false;
             }
-        } else if (!OSD_VISIBLE(pos)) {
-            return false;
         }
-    } else if (!OSD_VISIBLE(pos)) {
-        return false;
     }
     // CR22
 
@@ -3235,11 +3237,8 @@ static void osdShowArmed(void)
     char *date;
     char *time;
     // We need 12 visible rows
-    // uint8_t y = MIN((osdDisplayPort->rows / 2) - 1, osdDisplayPort->rows - 12 - 1);   // - 1);  rows = 13 NTSC, 16 PAL MAX7456
-    uint8_t y = osdDisplayPort->rows > 13 ? (osdDisplayPort->rows - 12) / 2 : 1;    // CR17
+    uint8_t y = osdDisplayPort->rows > 13 ? (osdDisplayPort->rows - 12) / 2 : 1;    // CR13  rows = 13 NTSC, 16 PAL MAX7456
 
-// DEBUG_SET(DEBUG_CRUISE, 0, osdDisplayPort->rows);
-// DEBUG_SET(DEBUG_CRUISE, 1, y);
     displayClearScreen(osdDisplayPort);
     displayWrite(osdDisplayPort, 12, y, "ARMED");
     y += 2;

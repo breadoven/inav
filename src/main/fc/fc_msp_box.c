@@ -90,6 +90,7 @@ static const box_t boxes[CHECKBOX_ITEM_COUNT + 1] = {
     { BOXMSPRCOVERRIDE, "MSP RC OVERRIDE", 50 },
     { BOXPREARM, "PREARM", 51 },
     { BOXFLIPOVERAFTERCRASH, "TURTLE", 52 },
+    { BOXINFOCYCLE, "INFO CYCLE", 53 },    // CR22
     { CHECKBOX_ITEM_COUNT, NULL, 0xFF }
 };
 
@@ -295,6 +296,7 @@ void initActiveBoxIds(void)
 #endif
 
 #if defined(USE_OSD) && defined(OSD_LAYOUT_COUNT)
+    activeBoxIds[activeBoxIdCount++] = BOXINFOCYCLE;    // CR22
 #if OSD_LAYOUT_COUNT > 0
     activeBoxIds[activeBoxIdCount++] = BOXOSDALT1;
 #if OSD_LAYOUT_COUNT > 1

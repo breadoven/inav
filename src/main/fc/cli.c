@@ -1471,7 +1471,7 @@ static void cliWaypoints(char *cmdline)
 
             if (!(validArgumentCount == 6 || validArgumentCount == 8)) {
                 cliShowParseError();
-            } else if (!(action == 0 || action == NAV_WP_ACTION_WAYPOINT || action == NAV_WP_ACTION_RTH || action == NAV_WP_ACTION_JUMP || action == NAV_WP_ACTION_HOLD_TIME || action == NAV_WP_ACTION_LAND || action == NAV_WP_ACTION_SET_POI || action == NAV_WP_ACTION_SET_HEAD) || !(flag == 0 || flag == NAV_WP_FLAG_LAST)) {
+            } else if (!(action == 0 || action == NAV_WP_ACTION_WAYPOINT || (action == NAV_WP_ACTION_RTH && i > 0) || action == NAV_WP_ACTION_JUMP || action == NAV_WP_ACTION_HOLD_TIME || action == NAV_WP_ACTION_LAND || action == NAV_WP_ACTION_SET_POI || action == NAV_WP_ACTION_SET_HEAD) || !(flag == 0 || flag == NAV_WP_FLAG_LAST)) {     // CR21
                 cliShowParseError();
             } else {
                 // CR21
@@ -2315,8 +2315,8 @@ static void cliFlashRead(char *cmdline)
 #ifdef USE_OSD
 static void printOsdLayout(uint8_t dumpMask, const osdLayoutsConfig_t *config, const osdLayoutsConfig_t *configDefault, int layout, int item)
 {
-    // "<layout> <item> <col> <row> <visible>"
-    const char *format = "osd_layout %d %d %d %d %c";
+    // "<layout> <item> <col> <row> <visible> <infocycle>"  // CR22
+    const char *format = "osd_layout %d %d %d %d %c %c";    // CR22
     for (int ii = 0; ii < OSD_LAYOUT_COUNT; ii++) {
         if (layout >= 0 && layout != ii) {
             continue;
@@ -2332,13 +2332,15 @@ static void printOsdLayout(uint8_t dumpMask, const osdLayoutsConfig_t *config, c
                 ii, jj,
                 OSD_X(defaultLayoutItems[jj]),
                 OSD_Y(defaultLayoutItems[jj]),
-                OSD_VISIBLE(defaultLayoutItems[jj]) ? 'V' : 'H');
+                OSD_VISIBLE(defaultLayoutItems[jj]) ? 'V' : 'H',       // CR22
+                OSD_INFOCYCLE(defaultLayoutItems[jj]) ? 'O' : 'A');     // CR22
 
             cliDumpPrintLinef(dumpMask, equalsDefault, format,
                 ii, jj,
                 OSD_X(layoutItems[jj]),
                 OSD_Y(layoutItems[jj]),
-                OSD_VISIBLE(layoutItems[jj]) ? 'V' : 'H');
+                OSD_VISIBLE(layoutItems[jj]) ? 'V' : 'H',          // CR22
+                OSD_INFOCYCLE(layoutItems[jj]) ? 'A' : 'O');        // CR22
         }
     }
 }
@@ -2352,6 +2354,7 @@ static void cliOsdLayout(char *cmdline)
     int col = 0;
     int row = 0;
     bool visible = false;
+    bool infocycle = false; // CR22
     char *tok = strtok_r(cmdline, " ", &saveptr);
 
     int ii;
@@ -2399,6 +2402,21 @@ static void cliOsdLayout(char *cmdline)
                         return;
                 }
                 break;
+            // CR22
+            case 5:
+                switch (*tok) {
+                    case 'O':
+                        infocycle = false;
+                        break;
+                    case 'A':
+                        infocycle = true;
+                        break;
+                    default:
+                        cliShowParseError();
+                        return;
+                }
+                break;
+            // CR22
             default:
                 cliShowParseError();
                 return;
@@ -2420,9 +2438,18 @@ static void cliOsdLayout(char *cmdline)
             // No visibility provided. Keep the previous one.
             visible = OSD_VISIBLE(osdLayoutsConfig()->item_pos[layout][item]);
             FALLTHROUGH;
+        // CR22
         case 5:
-            // Layout, item, pos and visibility. Set the item.
-            osdLayoutsConfigMutable()->item_pos[layout][item] = OSD_POS(col, row) | (visible ? OSD_VISIBLE_FLAG : 0);
+            // No infocycle provided. Keep the previous one.
+            infocycle = OSD_INFOCYCLE(osdLayoutsConfig()->item_pos[layout][item]);
+            FALLTHROUGH;
+        case 6:
+            // Layout, item, pos, visibility and infocycle. Set the item.
+            if (item == OSD_INFO_CYCLE) {
+                infocycle = false;      // always exclude Infocycle field, for obvious reasons
+            }
+            osdLayoutsConfigMutable()->item_pos[layout][item] = OSD_POS(col, row) | (visible ? OSD_VISIBLE_FLAG : 0) | (infocycle ? OSD_INFOCYCLE_FLAG : 0);
+        // CR22
             break;
         default:
             // Unhandled
@@ -3733,7 +3760,7 @@ const clicmd_t cmdTable[] = {
     CLI_COMMAND_DEF("wp", "waypoint list", NULL, cliWaypoints),
 #endif
 #ifdef USE_OSD
-    CLI_COMMAND_DEF("osd_layout", "get or set the layout of OSD items", "[<layout> [<item> [<col> <row> [<visible>]]]]", cliOsdLayout),
+    CLI_COMMAND_DEF("osd_layout", "get or set the layout of OSD items", "[<layout> [<item> [<col> <row> [<visible>] [<infocycle>]]]]", cliOsdLayout),   // CR22
 #endif
 };
 
