@@ -38,6 +38,7 @@ FILE_COMPILE_FOR_SPEED
 #include "drivers/time.h"
 #include "drivers/system.h"
 #include "drivers/pwm_output.h"
+#include "drivers/accgyro/accgyro_bno055.h"
 
 #include "sensors/sensors.h"
 #include "sensors/diagnostics.h"
@@ -90,6 +91,7 @@ FILE_COMPILE_FOR_SPEED
 #include "flight/failsafe.h"
 
 #include "config/feature.h"
+#include "common/vector.h"
 #include "programming/pid.h"
 
 // June 2013     V2.2-dev
@@ -131,6 +133,9 @@ static bool isRXDataNew;
 static uint32_t gyroSyncFailureCount;
 static disarmReason_t lastDisarmReason = DISARM_NONE;
 static emergencyArmingState_t emergencyArming;
+
+static bool prearmWasReset = false; // Prearm must be reset (RC Mode not active) before arming is possible
+static timeMs_t prearmActivationTime = 0;
 
 bool isCalibrating(void)
 {
@@ -297,16 +302,15 @@ static void updateArmingStatus(void)
 	    }
 
         if (isModeActivationConditionPresent(BOXPREARM)) {
-            static timeMs_t prearmTimer = 0;    // CR20
-
-            if (IS_RC_MODE_ACTIVE(BOXPREARM) && millis() - prearmTimer < 5000) {    // CR20
-                DISABLE_ARMING_FLAG(ARMING_DISABLED_NO_PREARM);
-            } else {
-                // CR20
-                if (!IS_RC_MODE_ACTIVE(BOXPREARM)) {
-                   prearmTimer = millis();
+            if (IS_RC_MODE_ACTIVE(BOXPREARM)) {
+                if (prearmWasReset && (armingConfig()->prearmTimeoutMs == 0 || millis() - prearmActivationTime < armingConfig()->prearmTimeoutMs)) {
+                    DISABLE_ARMING_FLAG(ARMING_DISABLED_NO_PREARM);
+                } else {
+                    ENABLE_ARMING_FLAG(ARMING_DISABLED_NO_PREARM);
                 }
-                // CR20
+            } else {
+                prearmWasReset = true;
+                prearmActivationTime = millis();
                 ENABLE_ARMING_FLAG(ARMING_DISABLED_NO_PREARM);
             }
         } else {
@@ -414,10 +418,14 @@ void disarm(disarmReason_t disarmReason)
 #endif
         statsOnDisarm();
         logicConditionReset();
+
 #ifdef USE_PROGRAMMING_FRAMEWORK
         programmingPidReset();
 #endif
+
         beeper(BEEPER_DISARMING);      // emit disarm tone
+
+        prearmWasReset = false;
     }
 }
 
@@ -526,6 +534,7 @@ void tryArm(void)
 #ifdef USE_PROGRAMMING_FRAMEWORK
         programmingPidReset();
 #endif
+
         headFreeModeHold = DECIDEGREES_TO_DEGREES(attitude.values.yaw);
 
         resetHeadingHoldTarget(DECIDEGREES_TO_DEGREES(attitude.values.yaw));

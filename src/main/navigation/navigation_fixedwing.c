@@ -260,7 +260,7 @@ static void calculateVirtualPositionTarget_FW(float trackingPeriod)
     bool needToCalculateCircularLoiter = (isApproachingLastWaypoint() || isWaypointWait())
                                             && (distanceToActualTarget <= (navConfig()->fw.loiter_radius / TAN_15DEG))
                                             && (distanceToActualTarget > 50.0f)
-                                            && !FLIGHT_MODE(NAV_CRUISE_MODE);
+                                            && !FLIGHT_MODE(NAV_COURSE_HOLD_MODE);
 
     // Calculate virtual position for straight movement
     if (needToCalculateCircularLoiter) {
@@ -687,7 +687,7 @@ void applyFixedWingNavigationController(navigationFSMStateFlags_t navStateFlags,
             posControl.rcAdjustment[ROLL] = 0;
         }
 
-        if (FLIGHT_MODE(NAV_CRUISE_MODE) && posControl.flags.isAdjustingPosition)
+        if (FLIGHT_MODE(NAV_COURSE_HOLD_MODE) && posControl.flags.isAdjustingPosition)
             rcCommand[ROLL] = applyDeadband(rcCommand[ROLL], rcControlsConfig()->pos_hold_deadband);
 
         //if (navStateFlags & NAV_CTL_YAW)
