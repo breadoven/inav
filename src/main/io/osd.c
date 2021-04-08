@@ -1291,6 +1291,14 @@ static bool osdDrawSingleElement(uint8_t item)
     static uint8_t iterCount = 0;
     static uint8_t numItems = 0;
     static bool infocycleActive = true;
+    bool modeSetting = IS_RC_MODE_ACTIVE(BOXHORIZON);
+
+    if (modeSetting && !IS_RC_MODE_ACTIVE(BOXINFOCYCLE)) {
+        if (!infocycleActive && numItems > 0) {
+            infocycleActive = true;
+            displayClearScreen(osdDisplayPort);
+        }
+    }
 
     if (OSD_VISIBLE(scrollpos) && infocycleActive) {
         static uint8_t previousItem;
@@ -1298,9 +1306,9 @@ static bool osdDrawSingleElement(uint8_t item)
         static uint8_t lockedItem;
         static uint8_t itemCounter;
 
-        if (iterCount < 1 && item != 0) {
+        if (iterCount < 1 && item != 0) {   // ignore first loop after boot
             return false;
-        } else if (iterCount < 2 && item == 0) {
+        } else if (iterCount < 2 && item == 0) {    // mark second loop starting at item 0
             iterCount += 1;
             if (iterCount == 2 && numItems == 0) {
                 infocycleActive = false;
@@ -1313,16 +1321,24 @@ static bool osdDrawSingleElement(uint8_t item)
 
         if (OSD_INFOCYCLE(pos)) {
             itemCounter += 1;
-            if (iterCount == 1) {
+            if (iterCount == 1) {   // count number infocycle items only on second loop starting at item 0
                  numItems += 1;
+                 lockedItem = 1;
                  return false;
             }
+
+            if (IS_RC_MODE_ACTIVE(BOXINFOCYCLE) && modeSetting) {
+                infocycleActive = false;
+                displayClearScreen(osdDisplayPort);
+                return false;
+            }
+
             selectedItem = IS_RC_MODE_ACTIVE(BOXINFOCYCLE) ? lockedItem : OSD_ALTERNATING_CHOICES(osdConfig()->system_msg_display_time, numItems) + 1;
             if (itemCounter == selectedItem) {
                 lockedItem = selectedItem;
                 elemPosX = OSD_X(scrollpos);
                 elemPosY = OSD_Y(scrollpos);
-                if (previousItem != item) {
+                if (previousItem != item) {     // clear infocycle field before displaying new item
                     previousItem = item;
                     displayWrite(osdDisplayPort, elemPosX, elemPosY, "          ");
                 }
@@ -1748,7 +1764,6 @@ static bool osdDrawSingleElement(uint8_t item)
         {
             vtxDeviceOsdInfo_t osdInfo;
             vtxCommonGetOsdInfo(vtxCommonDevice(), &osdInfo);
-
             tfp_sprintf(buff, "CH:%c%s:", osdInfo.bandLetter, osdInfo.channelName);
             displayWrite(osdDisplayPort, elemPosX, elemPosY, buff);
 
@@ -3642,7 +3657,14 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
                 // Pick one of the available messages. Each message lasts
                 // a second.
                 if (messageCount > 0) {
-                    message = messages[OSD_ALTERNATING_CHOICES(osdConfig()->system_msg_display_time, messageCount)];   // CR18
+                    // CR18
+                    bool longMessage = false;
+                    unsigned i = 0;
+                    while (i < messageCount && !longMessage) {
+                        longMessage = strlen(messages[i]) > 20;
+                        i++;
+                    }
+                    message = messages[OSD_ALTERNATING_CHOICES((1 + longMessage) * osdConfig()->system_msg_display_time, messageCount)];   // CR18
                 }
             }
         } else if (ARMING_FLAG(ARMING_DISABLED_ALL_FLAGS)) {
