@@ -2261,7 +2261,7 @@ groups:
         # CR21
       - name: nav_multi_waypoint_mission_index
         description: "Index of mission selected from multi mission WP file. 1 is the first WP mission in the file. If index exceeds number of missions in file then no mission is loaded."
-        default_value: "1"
+        default_value: 1
         field: general.multi_waypoint_mission_index
         max: 9
         # CR21
@@ -2355,16 +2355,9 @@ groups:
         # CR1 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
       - name: nav_rth_alt_control_override
         description: "If set to ON RTH altitude and CLIMB FIRST settings can be overridden during the RTH climb phase using full pitch or roll stick held for > 2 seconds. RTH altitude is reset to the current altitude using pitch down stick. RTH CLIMB FIRST is overridden using right roll stick so craft turns and heads directly to home."
-        default_value: "OFF"
+        default_value: OFF
         field: general.flags.rth_alt_control_override
         type: bool
-        # xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-        # CR2 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-     # - name: nav_rth_fw_spiral_climb
-        #description: "Performs RTH loiter climb rather than a linear climb when RTH set to Climb First. Climb rate set by nav_auto_climb_rate, turn rate set by nav_fw_loiter_radius."
-        #default_value: "OFF"
-        #field: general.flags.rth_fw_spiral_climb
-        #type: bool
         # xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
       - name: nav_rth_abort_threshold
         description: "RTH sanity checking feature will notice if distance to home is increasing during RTH and once amount of increase exceeds the threshold defined by this parameter, instead of continuing RTH machine will enter emergency landing, self-level and go down safely. Default is 500m which is safe enough for both multirotor machines and airplanes. [cm]"
@@ -2647,7 +2640,7 @@ groups:
         # CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
       - name: nav_fw_launch_allow_throttle_low
         description: "Allow launch sequence with throttle maintained low throughout. When main launch sequence completes control is maintained with Nav cruise throttle until sticks moved/throttle raised or control switches to other Nav mode if preselected"
-        default_value: "OFF"
+        default_value: OFF
         field: fw.launch_allow_throttle_low
         type: bool
         # CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
