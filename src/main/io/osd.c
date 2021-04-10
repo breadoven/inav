@@ -1313,6 +1313,12 @@ int8_t getGeoWaypointNumber(int8_t waypointIndex)
 
 static bool osdDrawSingleElement(uint8_t item)
 {
+    // CR22
+    static uint8_t itemCounter;
+    if (item == 0) {
+        itemCounter = 0;
+    }
+    // CR22
     uint16_t pos = osdLayoutsConfig()->item_pos[currentLayout][item];
 
     if (!OSD_VISIBLE(pos)) {
@@ -1325,62 +1331,60 @@ static bool osdDrawSingleElement(uint8_t item)
     /* routine to direct selected OSD items to Info Cycle field on OSD.
     Items cycled in field unless BOXINFOCYCLE mode selected in which case current item is locked in display*/
     uint16_t scrollpos = osdLayoutsConfig()->item_pos[currentLayout][OSD_INFO_CYCLE];
-    static uint8_t iterCount = 0;
-    static uint8_t numItems = 0;
-    static bool infocycleActive = true;
+
     bool modeSetting = IS_RC_MODE_ACTIVE(BOXHORIZON);
 
-    if (modeSetting && !IS_RC_MODE_ACTIVE(BOXINFOCYCLE)) {
-        if (!infocycleActive && numItems > 0) {
-            infocycleActive = true;
-            displayClearScreen(osdDisplayPort);
-        }
-    }
-
-    if (OSD_VISIBLE(scrollpos) && infocycleActive) {
-        static uint8_t previousItem;
-        uint8_t selectedItem;
+    if (OSD_VISIBLE(scrollpos)) {
+        // CR22
+        static uint8_t numItems;
+        static bool infocycleActive = true;
         static uint8_t lockedItem;
-        static uint8_t itemCounter;
+        static uint8_t prevLayout = 10;
 
-        if (iterCount < 1 && item != 0) {   // ignore first loop after boot
-            return false;
-        } else if (iterCount < 2 && item == 0) {    // mark second loop starting at item 0
-            iterCount += 1;
-            if (iterCount == 2 && numItems == 0) {
-                infocycleActive = false;
-            }
-        }
-
-        if (item == 0) {
-            itemCounter = 0;
-        }
-
-        if (OSD_INFOCYCLE(pos)) {
-            itemCounter += 1;
-            if (iterCount == 1) {   // count number infocycle items only on second loop starting at item 0
-                 numItems += 1;
-                 lockedItem = 1;
-                 return false;
-            }
-
-            if (IS_RC_MODE_ACTIVE(BOXINFOCYCLE) && modeSetting) {
-                infocycleActive = false;
-                displayClearScreen(osdDisplayPort);
-                return false;
-            }
-
-            selectedItem = IS_RC_MODE_ACTIVE(BOXINFOCYCLE) ? lockedItem : OSD_ALTERNATING_CHOICES(osdConfig()->system_msg_display_time, numItems) + 1;
-            if (itemCounter == selectedItem) {
-                lockedItem = selectedItem;
-                elemPosX = OSD_X(scrollpos);
-                elemPosY = OSD_Y(scrollpos);
-                if (previousItem != item) {     // clear infocycle field before displaying new item
-                    previousItem = item;
-                    displayWrite(osdDisplayPort, elemPosX, elemPosY, "          ");
+        if (currentLayout != prevLayout) {
+            numItems = 0;
+            for (uint8_t i = 0; i < OSD_ITEM_COUNT; i++) {
+                if (OSD_INFOCYCLE(osdLayoutsConfig()->item_pos[currentLayout][i])) {   // count number infocycle items
+                    numItems += 1;
                 }
-            } else {
-                return false;
+            }
+            infocycleActive = numItems > 0;
+            lockedItem = 1;
+            prevLayout = currentLayout;
+        }
+
+        if (modeSetting && !IS_RC_MODE_ACTIVE(BOXINFOCYCLE) && numItems > 0) {
+            if (!infocycleActive) {
+                infocycleActive = true;
+                displayClearScreen(osdDisplayPort);
+            }
+        }
+
+        if (infocycleActive) {
+            static uint8_t previousItem;
+            uint8_t selectedItem;
+
+            if (OSD_INFOCYCLE(pos)) {
+                itemCounter += 1;
+
+                if (IS_RC_MODE_ACTIVE(BOXINFOCYCLE) && modeSetting) {
+                    infocycleActive = false;
+                    displayClearScreen(osdDisplayPort);
+                    return false;
+                }
+                selectedItem = IS_RC_MODE_ACTIVE(BOXINFOCYCLE) ? lockedItem : OSD_ALTERNATING_CHOICES(osdConfig()->system_msg_display_time, numItems) + 1;
+                if (itemCounter == selectedItem) {
+                    DEBUG_SET(DEBUG_CRUISE, 2, 77);
+                    lockedItem = selectedItem;
+                    elemPosX = OSD_X(scrollpos);
+                    elemPosY = OSD_Y(scrollpos);
+                    if (previousItem != item) {     // clear infocycle field before displaying new item
+                        previousItem = item;
+                        displayWrite(osdDisplayPort, elemPosX, elemPosY, "          ");
+                    }
+                } else {
+                    return false;
+                }
             }
         }
     }
@@ -2995,7 +2999,7 @@ void pgResetFn_osdLayoutsConfig(osdLayoutsConfig_t *osdLayoutsConfig)
     osdLayoutsConfig->item_pos[0][OSD_GVAR_2] = OSD_POS(1, 3);
     osdLayoutsConfig->item_pos[0][OSD_GVAR_3] = OSD_POS(1, 4);
 
-    osdLayoutsConfig->item_pos[0][OSD_INFO_CYCLE] = OSD_POS(0, 1) | OSD_VISIBLE_FLAG;    // CR22
+    osdLayoutsConfig->item_pos[0][OSD_INFO_CYCLE] = OSD_POS(1, 1);    // CR22
 
 #if defined(USE_ESC_SENSOR)
     osdLayoutsConfig->item_pos[0][OSD_ESC_RPM] = OSD_POS(1, 2);
