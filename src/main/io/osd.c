@@ -1334,11 +1334,11 @@ static bool osdDrawSingleElement(uint8_t item)
     uint16_t scrollpos = osdLayoutsConfig()->item_pos[currentLayout][OSD_INFO_CYCLE];
 
     if (OSD_VISIBLE(scrollpos)) {
-        // CR22
         static uint8_t infocycleNumItems;
         static bool infocycleActive = true;
         static uint8_t infocycleLockedItem;
         static uint8_t infocyclePrevLayout = 10;
+        static bool infocycleSuspended = false;
 
         if (currentLayout != infocyclePrevLayout) {
             infocycleNumItems = 0;
@@ -1350,60 +1350,50 @@ static bool osdDrawSingleElement(uint8_t item)
             infocycleActive = infocycleNumItems > 0;
             infocycleLockedItem = 1;
             infocyclePrevLayout = currentLayout;
-        }
-
-        static bool nonInfocycleMode = false;
-        static timeMs_t infocycleModeTimer;
-        static bool infocycleToggle;
-        if (IS_RC_MODE_ACTIVE(BOXINFOCYCLE)) {
-            if (!infocycleToggle) {
-                infocycleToggle = true;
-            } else if (nonInfocycleMode) {
-                infocycleToggle = false;
-                nonInfocycleMode = false;
-            }
-        } else {
-            if (infocycleToggle && millis() - infocycleModeTimer < 2000) {
-                nonInfocycleMode = true;
-            } else {
-                infocycleToggle = false;
-            }
-            if (!nonInfocycleMode && !infocycleToggle) {
-                infocycleModeTimer = millis();
-            }
-        }
-        // DEBUG_SET(DEBUG_CRUISE, 0, millis() - infocycleModeTimer);
-
-        if (!nonInfocycleMode && infocycleNumItems > 0) {
-            if (!infocycleActive) {
-                infocycleActive = true;
-                displayClearScreen(osdDisplayPort);
-            }
+            infocycleSuspended = false;
         }
 
         if (infocycleActive) {
-            static uint8_t infocyclePreviousItem;
-            uint8_t selectedItem;
+            // CR22
+            static timeMs_t infocycleModeTimer;
+            static bool infocycleToggle;
 
-            if (OSD_INFOCYCLE(pos)) {
-                infocycleItemCounter += 1;
-
-                if (nonInfocycleMode) {
-                    infocycleActive = false;
+            if (IS_RC_MODE_ACTIVE(BOXINFOCYCLE)) {
+                if (!infocycleToggle) {
+                    infocycleToggle = true;
+                } else if (infocycleSuspended) {
+                    infocycleSuspended = false;
                     displayClearScreen(osdDisplayPort);
-                    return false;
                 }
-                selectedItem = IS_RC_MODE_ACTIVE(BOXINFOCYCLE) ? infocycleLockedItem : OSD_ALTERNATING_CHOICES(osdConfig()->system_msg_display_time, infocycleNumItems) + 1;
-                if (infocycleItemCounter == selectedItem) {
-                    infocycleLockedItem = selectedItem;
-                    elemPosX = OSD_X(scrollpos);
-                    elemPosY = OSD_Y(scrollpos);
-                    if (infocyclePreviousItem != item) {     // clear infocycle field before displaying new item
-                        infocyclePreviousItem = item;
-                        displayWrite(osdDisplayPort, elemPosX, elemPosY, "          ");
+            } else {
+                if (infocycleToggle && millis() - infocycleModeTimer < 2000) {
+                    infocycleSuspended = true;
+                    displayClearScreen(osdDisplayPort);
+                }
+                infocycleToggle = false;
+                if (!infocycleSuspended) {
+                    infocycleModeTimer = millis();
+                }
+            }
+
+            if (!infocycleSuspended) {
+                static uint8_t infocyclePreviousItem;
+                uint8_t selectedItem;
+
+                if (OSD_INFOCYCLE(pos)) {
+                    infocycleItemCounter += 1;
+                    selectedItem = IS_RC_MODE_ACTIVE(BOXINFOCYCLE) ? infocycleLockedItem : OSD_ALTERNATING_CHOICES(osdConfig()->system_msg_display_time, infocycleNumItems) + 1;
+                    if (infocycleItemCounter == selectedItem) {
+                        infocycleLockedItem = selectedItem;
+                        elemPosX = OSD_X(scrollpos);
+                        elemPosY = OSD_Y(scrollpos);
+                        if (infocyclePreviousItem != item) {     // clear infocycle field before displaying new item
+                            infocyclePreviousItem = item;
+                            displayWrite(osdDisplayPort, elemPosX, elemPosY, "            ");   // 12 characters long
+                        }
+                    } else {
+                        return false;
                     }
-                } else {
-                    return false;
                 }
             }
         }
@@ -3220,11 +3210,6 @@ static void osdUpdateStats(void)
 
 static void osdShowStatsPage1(void)
 {
-    //CR4 xxxxxxxxxxxxxxxxxxxxxxx
-    dateTime_t dt;
-    char buf[MAX(32, FORMATTED_DATE_TIME_BUFSIZE)];
-    //xxxxxxxxxxxxxxxxxxxxxxxxxxxx
-
     const char * disarmReasonStr[DISARM_REASON_COUNT] = { "UNKNOWN", "TIMEOUT", "STICKS", "SWITCH", "SWITCH", "KILLSW", "FAILSAFE", "NAV SYS", "LANDING"};  // CR15
     uint8_t top = 1;    /* first fully visible line */
     const uint8_t statNameX = 1;
@@ -3234,21 +3219,20 @@ static void osdShowStatsPage1(void)
 
     displayBeginTransaction(osdDisplayPort, DISPLAY_TRANSACTION_OPT_RESET_DRAWING);
     displayClearScreen(osdDisplayPort);
-// <<<<<<< HEAD
-    //if (osdDisplayIsPAL()) {
-        //CR4 xxxxxxxxxxxxxxxxxxxxxxx
-        if (rtcGetDateTime(&dt)) {
-            dateTimeFormatLocal(buf, &dt);
-            displayWrite(osdDisplayPort, statNameX, top++, buf);
-        }
-    //  displayWrite(osdDisplayPort, statNameX, top++, "  --- STATS ---");
-    //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-    //}
-// =======
-
-    // displayWrite(osdDisplayPort, statNameX, top++, "--- STATS ---      1/2");
-
-// >>>>>>> upstream/master
+    //CR4 xxxxxxxxxxxxxxxxxxxxxxx
+    dateTime_t dt;
+    char buf[MAX(32, FORMATTED_DATE_TIME_BUFSIZE)];
+    char *date;
+    char *time;
+    if (rtcGetDateTime(&dt)) {
+        dateTimeFormatLocal(buf, &dt);
+        dateTimeSplitFormatted(buf, &date, &time);
+        tfp_sprintf(buff, "-STATS-(%s) 1/2", date);
+        displayWrite(osdDisplayPort, statNameX, top++, buff);
+    } else {
+        displayWrite(osdDisplayPort, statNameX, top++, "--- STATS ---      1/2");
+    }
+    //CR4 xxxxxxxxxxxxxxxxxxxxxxx
     if (feature(FEATURE_GPS)) {
         displayWrite(osdDisplayPort, statNameX, top, "MAX SPEED        :");
         osdFormatVelocityStr(buff, stats.max_speed, true);
@@ -3268,22 +3252,22 @@ static void osdShowStatsPage1(void)
     osdFormatAltitudeStr(buff, stats.max_altitude);
     displayWrite(osdDisplayPort, statValuesX, top++, buff);
 
-#if defined(USE_SERIALRX_CRSF)
-    displayWrite(osdDisplayPort, statNameX, top, "MIN LQ           :");
-    itoa(stats.min_lq, buff, 10);
-    strcat(buff, "%");
-    displayWrite(osdDisplayPort, statValuesX, top++, buff);
+// #if defined(USE_SERIALRX_CRSF)
+    // displayWrite(osdDisplayPort, statNameX, top, "MIN LQ           :");
+    // itoa(stats.min_lq, buff, 10);
+    // strcat(buff, "%");
+    // displayWrite(osdDisplayPort, statValuesX, top++, buff);
 
-    displayWrite(osdDisplayPort, statNameX, top, "MIN RSSI         :");
-    itoa(stats.min_rssi_dbm, buff, 10);
-    tfp_sprintf(buff, "%s%c", buff, SYM_DBM);
-    displayWrite(osdDisplayPort, statValuesX, top++, buff);
-#else
+    // displayWrite(osdDisplayPort, statNameX, top, "MIN RSSI         :");
+    // itoa(stats.min_rssi_dbm, buff, 10);
+    // tfp_sprintf(buff, "%s%c", buff, SYM_DBM);
+    // displayWrite(osdDisplayPort, statValuesX, top++, buff);
+// #else
     displayWrite(osdDisplayPort, statNameX, top, "MIN RSSI         :");
     itoa(stats.min_rssi, buff, 10);
     strcat(buff, "%");
     displayWrite(osdDisplayPort, statValuesX, top++, buff);
-#endif
+// #endif
 
     displayWrite(osdDisplayPort, statNameX, top, "FLY TIME         :");
     uint16_t flySeconds = getFlightTime();
