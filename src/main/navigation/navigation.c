@@ -57,7 +57,8 @@
 #include "sensors/sensors.h"
 #include "sensors/acceleration.h"
 #include "sensors/boardalignment.h"
-
+#include "sensors/gyro.h"   // CR15
+#include "sensors/pitotmeter.h"     // CR15
 
 // Multirotors:
 #define MR_RTH_CLIMB_OVERSHOOT_CM   100  // target this amount of cm *above* the target altitude to ensure it is actually reached (Vz > 0 at target alt)
@@ -2621,7 +2622,9 @@ void updateLandingStatus(void)
     if (!ARMING_FLAG(ARMED)) {
         posControl.flags.landingDetected = false;
         landingDetectorIsActive = false;
+        DEBUG_SET(DEBUG_CRUISE, 6, 45);
         DEBUG_SET(DEBUG_CRUISE, 7, 0);
+        return;
     }
 
     // if (posControl.flags.landingDetected) {
@@ -2630,11 +2633,16 @@ void updateLandingStatus(void)
 
     if (!landingDetectorIsActive) {
         DEBUG_SET(DEBUG_CRUISE, 6, 55);
+        DEBUG_SET(DEBUG_CRUISE, 1, averageGyroRates());
         if (STATE(AIRPLANE)) {
-            landingDetectorIsActive = isImuHeadingValid() && throttleStatus != THROTTLE_LOW;
+            float airspeed = 0;
+#ifdef USE_PITOT
+            airspeed = pitot.airSpeed;
+#endif
+            landingDetectorIsActive = isImuHeadingValid() && throttleStatus != THROTTLE_LOW && (gpsSol.groundSpeed > 250 || airspeed > 250);
             // landingDetectorIsActive = throttleStatus != THROTTLE_LOW;
         } else if (STATE(MULTIROTOR)) {
-            landingDetectorIsActive = rcCommand[THROTTLE] > navConfig()->mc.hover_throttle;
+            landingDetectorIsActive = rcCommand[THROTTLE] > navConfig()->mc.hover_throttle && averageGyroRates() > 7.0f;
         }
     } else if (isLandingDetected()) {
         landingDetectorIsActive = false;
@@ -2675,6 +2683,13 @@ bool isLandingDetected(void)
 
     return landingDetected;
 }
+
+// CR15
+float averageGyroRates(void)
+{
+    return (fabsf(gyro.gyroADCf[ROLL]) + fabsf(gyro.gyroADCf[PITCH]) + fabsf(gyro.gyroADCf[YAW])) / 3;
+}
+// CR15
 
 /*-----------------------------------------------------------
  * Z-position controller

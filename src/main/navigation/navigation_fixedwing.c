@@ -35,7 +35,6 @@
 #include "sensors/sensors.h"
 #include "sensors/acceleration.h"
 #include "sensors/boardalignment.h"
-#include "sensors/gyro.h"   // CR15
 
 #include "flight/pid.h"
 #include "flight/imu.h"
@@ -600,9 +599,9 @@ bool isFixedWingLandingDetected(void)
         // Check horizontal and vertical volocities low enough
         if (posControl.actualState.velXY > 100 || fabsf(posControl.actualState.abs.vel.z) > 50) {   // cm/s
             fwLandCheckTimerStart = currentTimeUs;
-        } else if ((fabsf(gyro.gyroADCf[ROLL]) + fabsf(gyro.gyroADCf[PITCH]) + fabsf(gyro.gyroADCf[YAW])) / 3 < 1) {     // gyro in degs/s
+        } else if (averageGyroRates() < 2) {     // gyro in degs/s
         // check angular rates low enough. If so capture roll and pitch angles to be used as datums to check for absolute change
-            DEBUG_SET(DEBUG_CRUISE, 3, (gyro.gyroADCf[PITCH] + gyro.gyroADCf[YAW] + gyro.gyroADCf[ROLL]) / 3);
+            DEBUG_SET(DEBUG_CRUISE, 3, averageGyroRates());
             if (!fixAxisCheck) {
                 fwLandSetRollDatum = attitude.values.roll;  //0.1 deg increments
                 fwLandSetPitchDatum = attitude.values.pitch;

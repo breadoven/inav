@@ -36,7 +36,6 @@
 #include "sensors/sensors.h"
 #include "sensors/acceleration.h"
 #include "sensors/boardalignment.h"
-#include "sensors/gyro.h"   // CR15
 
 #include "fc/config.h"
 #include "fc/rc_controls.h"
@@ -444,11 +443,11 @@ static void updatePositionVelocityController_MC(const float maxSpeed)
      * We override computed speed with max speed in following cases:
      * 1 - computed velocity is > maxSpeed
      * 2 - in WP mission when: slowDownForTurning is OFF, we do not fly towards na last waypoint and computed speed is < maxSpeed
-     */    
+     */
     if (
-        (navGetCurrentStateFlags() & NAV_AUTO_WP && 
-        !isApproachingLastWaypoint() && 
-        newVelTotal < maxSpeed && 
+        (navGetCurrentStateFlags() & NAV_AUTO_WP &&
+        !isApproachingLastWaypoint() &&
+        newVelTotal < maxSpeed &&
         !navConfig()->mc.slowDownForTurning
         ) || newVelTotal > maxSpeed
     ) {
@@ -708,7 +707,7 @@ bool isMulticopterLandingDetected(void)
     bool lowHorizontalMovement = posControl.actualState.velXY < 100.0f;        // CR15
 
     // check if gyro rates are low  CR15
-    bool lowGyroRates = (fabsf(gyro.gyroADCf[ROLL]) + fabsf(gyro.gyroADCf[PITCH]) + fabsf(gyro.gyroADCf[YAW])) / 3 < 2;
+    bool lowGyroRates = averageGyroRates() < 2;
     // CR15
 
     // We have likely landed if throttle is 40 units below average descend throttle
@@ -736,7 +735,7 @@ bool isMulticopterLandingDetected(void)
     }
     // CR15
     DEBUG_SET(DEBUG_CRUISE, 0, rcCommandAdjustedThrottle);
-    DEBUG_SET(DEBUG_CRUISE, 1, (fabsf(gyro.gyroADCf[ROLL]) + fabsf(gyro.gyroADCf[PITCH]) + fabsf(gyro.gyroADCf[YAW])) / 3);
+    DEBUG_SET(DEBUG_CRUISE, 1, averageGyroRates());
     DEBUG_SET(DEBUG_CRUISE, 2, lowVerticalMovement);
 
     // If we have surface sensor (for example sonar) - use it to detect touchdown
