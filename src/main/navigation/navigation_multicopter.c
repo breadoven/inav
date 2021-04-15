@@ -717,7 +717,7 @@ bool isMulticopterLandingDetected(void)
     bool isAtMinimalThrust = false;
     // CR15
     bool possibleLandingDetected = false;
-    DEBUG_SET(DEBUG_CRUISE, 3, currentTimeUs - landingDetectorStartedAt);
+    // DEBUG_SET(DEBUG_CRUISE, 3, currentTimeUs - landingDetectorStartedAt);
     if (navigationIsFlyingAutonomousMode()) {
         if (currentTimeUs - landingDetectorStartedAt > 1000 * 1000) {
             landingThrSamples += 1;
@@ -734,9 +734,9 @@ bool isMulticopterLandingDetected(void)
         }
     }
     // CR15
-    DEBUG_SET(DEBUG_CRUISE, 0, rcCommandAdjustedThrottle);
-    DEBUG_SET(DEBUG_CRUISE, 1, averageGyroRates());
-    DEBUG_SET(DEBUG_CRUISE, 2, lowVerticalMovement);
+    // DEBUG_SET(DEBUG_CRUISE, 0, rcCommandAdjustedThrottle);
+    // DEBUG_SET(DEBUG_CRUISE, 1, averageGyroRates());
+    // DEBUG_SET(DEBUG_CRUISE, 2, lowVerticalMovement);
 
     // If we have surface sensor (for example sonar) - use it to detect touchdown
     if ((posControl.flags.estAglStatus == EST_TRUSTED) && (posControl.actualState.agl.pos.z >= 0)) {
