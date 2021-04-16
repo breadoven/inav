@@ -1331,22 +1331,23 @@ static bool osdDrawSingleElement(uint8_t item)
 
     // CR22
     /* routine to direct selected OSD items to Info Cycle field on OSD.
-    Items cycled in field unless BOXINFOCYCLE mode selected in which case current item is locked in display
-    If BOXINFOCYCLE is toggled on and off within 2 secs OSD items are displayed in normal positions, Infocycle is suspended*/
+    Items cycled in field unless BOXOSD mode selected for < 2s in which case items are displayed in normal positions
+    and Infocycle is suspended. Infocycle starts again by selecting BOXOSD again for < 2s.
+    BOXOSD switches off OSD if selected for > 2s*/
     uint16_t infocyclePos = osdLayoutsConfig()->item_pos[currentLayout][OSD_INFO_CYCLE];
 
     if (OSD_VISIBLE(infocyclePos)) {
         static uint8_t infocycleNumItems;
-        static uint8_t infocyclePrevLayout = 5;
+        static uint8_t infocycleLastLayout = 5;
 
-        if (currentLayout != infocyclePrevLayout) {
+        if (currentLayout != infocycleLastLayout) {
             infocycleNumItems = 0;
             for (uint8_t i = 0; i < OSD_ITEM_COUNT; i++) {
                 if (OSD_INFOCYCLE(osdLayoutsConfig()->item_pos[currentLayout][i])) {   // count number infocycle items
                     infocycleNumItems += 1;
                 }
             }
-            infocyclePrevLayout = currentLayout;
+            infocycleLastLayout = currentLayout;
             infocycleSuspended = false;
         }
 
