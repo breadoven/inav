@@ -1457,7 +1457,6 @@ static bool osdDrawSingleElement(uint8_t item)
     case OSD_GPS_SATS:
         buff[0] = SYM_SAT_L;
         buff[1] = SYM_SAT_R;
-        // CR10
         tfp_sprintf(buff + 2, "%2d", gpsSol.numSat);
         if (!STATE(GPS_FIX)) {
             if (getHwGPSStatus() == HW_SENSOR_UNAVAILABLE || getHwGPSStatus() == HW_SENSOR_UNHEALTHY) {
@@ -3350,7 +3349,7 @@ static void osdShowArmed(void)
     char *date;
     char *time;
     // We need 12 visible rows
-    uint8_t y = osdDisplayPort->rows > 13 ? (osdDisplayPort->rows - 12) / 2 : 1;    // CR13  rows = 13 NTSC, 16 PAL MAX7456
+    uint8_t y = osdDisplayPort->rows > 13 ? (osdDisplayPort->rows - 12) / 2 : 1;    // rows = 13 NTSC, 16 PAL MAX7456
 
     displayClearScreen(osdDisplayPort);
     displayWrite(osdDisplayPort, 12, y, "ARMED");
@@ -3360,7 +3359,7 @@ static void osdShowArmed(void)
         osdFormatCraftName(craftNameBuf);
         displayWrite(osdDisplayPort, (osdDisplayPort->cols - strlen(systemConfig() -> name)) / 2, y, craftNameBuf );
         // y += 2;
-        y += 1;     //CR13
+        y += 1;
     }
     // CR13 + CR21
     if (posControl.waypointListValid && posControl.waypointCount > 0) {
@@ -3372,7 +3371,6 @@ static void osdShowArmed(void)
         }
     }
     y += 1;
-    // CR13
 #if defined(USE_GPS)
     if (feature(FEATURE_GPS)) {
         if (STATE(GPS_FIX_HOME)) {

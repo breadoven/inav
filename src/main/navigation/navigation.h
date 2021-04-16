@@ -133,13 +133,11 @@ typedef enum {
     NOMS_ALL_NAV
 } navOverridesMotorStop_e;
 
-// CR2
 typedef enum {
     OFF,
     ON,
     ON_FW_SPIRAL,
 } navRTHClimbFirst_e;
-// CR2
 
 typedef struct positionEstimationConfig_s {
     uint8_t automatic_mag_declination;
@@ -192,11 +190,7 @@ typedef struct navConfig_s {
             uint8_t disarm_on_landing;          //
             uint8_t rth_allow_landing;          // Enable landing as last stage of RTH. Use constants in navRTHAllowLanding_e.
             uint8_t rth_climb_ignore_emerg;     // Option to ignore GPS loss on initial climb stage of RTH
-            //CR1 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
             uint8_t rth_alt_control_override;   // Override RTH Altitude and Climb First settings using Pitch and Roll stick
-            //CR2 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-            // uint8_t rth_fw_spiral_climb;        // Enable RTH spiral climb for FW when "climb first" selected
-            //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
             uint8_t nav_overrides_motor_stop;   // Autonomous modes override motor_stop setting and user command to stop motor
         } flags;
 

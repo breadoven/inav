@@ -110,7 +110,7 @@ PG_RESET_TEMPLATE(navConfig_t, navConfig,
             .rth_tail_first = SETTING_NAV_RTH_TAIL_FIRST_DEFAULT,
             .disarm_on_landing = SETTING_NAV_DISARM_ON_LANDING_DEFAULT,
             .rth_allow_landing = SETTING_NAV_RTH_ALLOW_LANDING_DEFAULT,
-            .rth_alt_control_override = SETTING_NAV_RTH_ALT_CONTROL_OVERRIDE_DEFAULT,      // CR1 Override RTH Altitude and rth_climb_first settings using Pitch and Roll stick
+            .rth_alt_control_override = SETTING_NAV_RTH_ALT_CONTROL_OVERRIDE_DEFAULT, // Override RTH Altitude and rth_climb_first settings using Pitch and Roll stick
             .nav_overrides_motor_stop = SETTING_NAV_OVERRIDES_MOTOR_STOP_DEFAULT,
         },
 
@@ -241,7 +241,7 @@ static bool isWaypointMissionValid(void);   // CR9
 
 void initializeRTHSanityChecker(const fpVector3_t * pos);
 bool validateRTHSanityChecker(void);
-static bool rthAltControlStickOverrideCheck(unsigned axis);     //CR1
+static bool rthAltControlStickOverrideCheck(unsigned axis);
 
 static navigationFSMEvent_t selectNavEventFromBoxModeInput(bool launchBypass);  //CR6
 
@@ -908,16 +908,9 @@ static flightModeFlags_e navGetMappedFlightModes(navigationFSMState_t state)
 
 navigationFSMStateFlags_t navGetCurrentStateFlags(void)
 {
-	// CR1
+	// CR
 	// DEBUG_SET(DEBUG_CRUISE, 0, posControl.waypointList[0].lat);
-    // DEBUG_SET(DEBUG_CRUISE, 1, posControl.waypointList[1].lat);
-    // DEBUG_SET(DEBUG_CRUISE, 2, posControl.waypointList[2].lat);
-    // DEBUG_SET(DEBUG_CRUISE, 3, posControl.waypointList[3].lat);
-    // DEBUG_SET(DEBUG_CRUISE, 4, posControl.waypointList[4].lat);
-    // DEBUG_SET(DEBUG_CRUISE, 5, posControl.waypointList[5].lat);
-    // DEBUG_SET(DEBUG_CRUISE, 6, posControl.waypointList[6].lat);
-    // DEBUG_SET(DEBUG_CRUISE, 7, posControl.waypointList[7].lat);
-	// CR1
+
 
     return navGetStateFlags(posControl.navState);
 }
@@ -1156,14 +1149,12 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_INITIALIZE(navigati
 
             if (STATE(FIXED_WING_LEGACY)) {
                 // Airplane - climbout before turning around
-                //CR2 Change to spiral climb/decent RTH xxxxxxxxxxxxxxxxxxxxx
                 if (navConfig()->general.flags.rth_climb_first == ON_FW_SPIRAL) {
                     // Spiral climb centered at xy of RTH activation
                     calculateInitialHoldPosition(&targetHoldPos);
                 } else {
                     calculateFarAwayTarget(&targetHoldPos, posControl.actualState.yaw, 100000.0f);  // 1km away Linear climb
                 }
-                //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
             } else {
                 // Multicopter, hover and climb
                 calculateInitialHoldPosition(&targetHoldPos);
@@ -1188,44 +1179,11 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_INITIALIZE(navigati
     }
 }
 
-//CR1 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-static bool rthAltControlStickOverrideCheck(unsigned axis)
-{
-    // inhibit Climb First override for multirotors
-    if (!navConfig()->general.flags.rth_alt_control_override || posControl.flags.forcedRTHActivated || (axis == ROLL && STATE(MULTIROTOR))) {
-        return false;
-    }
-
-    static timeMs_t rthOverrideStickHoldStartTime[2];
-
-    if (rxGetChannelValue(axis) > rxConfig()->maxcheck) {
-        timeDelta_t holdTime = millis() - rthOverrideStickHoldStartTime[axis];
-        if (!rthOverrideStickHoldStartTime[axis]) {
-            rthOverrideStickHoldStartTime[axis] = millis();
-        } else if (ABS(2500 - holdTime) < 500) {
-            if (axis == PITCH) {    // PITCH override preset altitude reset to current altitude
-                posControl.rthState.rthInitialAltitude = posControl.actualState.abs.pos.z;
-                posControl.rthState.rthFinalAltitude = posControl.rthState.rthInitialAltitude;
-                return true;
-            } else if (axis == ROLL) {    // ROLL override climb first
-                return true;
-            }
-        }
-    } else {
-        rthOverrideStickHoldStartTime[axis] = 0;
-    }
-
-    return false;
-}
-//xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-
 static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_CLIMB_TO_SAFE_ALT(navigationFSMState_t previousState)
 {
     UNUSED(previousState);
 
-    //CR1 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
     rthAltControlStickOverrideCheck(PITCH);
-    //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
     if ((posControl.flags.estHeadingStatus == EST_NONE)) {
         return NAV_FSM_EVENT_SWITCH_TO_EMERGENCY_LANDING;
@@ -1242,10 +1200,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_CLIMB_TO_SAFE_ALT(n
         const float rthAltitudeMargin = MAX(FW_RTH_CLIMB_MARGIN_MIN_CM, (rthClimbMarginPercent/100.0) * fabsf(posControl.rthState.rthInitialAltitude - posControl.rthState.homePosition.pos.z));
 
         // If we reached desired initial RTH altitude or we don't want to climb first
-        // CR1 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-        // if (((navGetCurrentActualPositionAndVelocity()->pos.z - posControl.rthState.rthInitialAltitude) > -rthAltitudeMargin) || (!navConfig()->general.flags.rth_climb_first) || rthAltControlStickOverrideCheck(ROLL)) {       CR2 change below
         if (((navGetCurrentActualPositionAndVelocity()->pos.z - posControl.rthState.rthInitialAltitude) > -rthAltitudeMargin) || (navConfig()->general.flags.rth_climb_first == OFF) || rthAltControlStickOverrideCheck(ROLL)) {
-         // CR1 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
             // Delayed initialization for RTH sanity check on airplanes - allow to finish climb first as it can take some distance
             if (STATE(FIXED_WING_LEGACY)) {
@@ -1276,8 +1231,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_CLIMB_TO_SAFE_ALT(n
 
             // Climb to safe altitude and turn to correct direction
             if (STATE(FIXED_WING_LEGACY)) {
-                //CR2 change climb target from RTH Initial altitude z (rate set by pitch limit) to climb rate in m/s xxxxxxxxxxxxxxxxxx
-                // if (navConfig()->general.flags.rth_fw_spiral_climb) {
+                // change climb target from RTH Initial altitude z (rate set by pitch limit) to climb rate in m/s
                 if (navConfig()->general.flags.rth_climb_first == ON_FW_SPIRAL) {
                     float altitudeChangeDirection = (tmpHomePos->z += FW_RTH_CLIMB_OVERSHOOT_CM) > navGetCurrentActualPositionAndVelocity()->pos.z ? 1 : -1;
                     updateClimbRateToAltitudeController(altitudeChangeDirection * navConfig()->general.max_auto_climb_rate, ROC_TO_ALT_NORMAL);
@@ -1285,7 +1239,6 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_CLIMB_TO_SAFE_ALT(n
                     tmpHomePos->z += FW_RTH_CLIMB_OVERSHOOT_CM;
                     setDesiredPosition(tmpHomePos, 0, NAV_POS_UPDATE_Z);
                 }
-                // xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
             } else {
                 // Until the initial climb phase is complete target slightly *above* the cruise altitude to ensure we actually reach
                 // it in a reasonable time. Immediately after we finish this phase - target the original altitude.
@@ -1311,9 +1264,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_HEAD_HOME(navigatio
 {
     UNUSED(previousState);
 
-    //CR1 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
     rthAltControlStickOverrideCheck(PITCH);
-    //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
     if ((posControl.flags.estHeadingStatus == EST_NONE)) {
         return NAV_FSM_EVENT_SWITCH_TO_EMERGENCY_LANDING;
@@ -2530,6 +2481,40 @@ void updateHomePosition(void)
             updateHomePositionCompatibility();
         }
     }
+}
+
+/* -----------------------------------------------------------
+ * Override RTH preset altitude and Climb First option
+ * using Pitch/Roll stick held for > 1 seconds
+ * Climb First override limited to Fixed Wing only
+ *-----------------------------------------------------------*/
+static bool rthAltControlStickOverrideCheck(unsigned axis)
+{
+    // inhibit Climb First override for multirotors
+    if (!navConfig()->general.flags.rth_alt_control_override || posControl.flags.forcedRTHActivated || (axis == ROLL && STATE(MULTIROTOR))) {
+        return false;
+    }
+
+    static timeMs_t rthOverrideStickHoldStartTime[2];
+
+    if (rxGetChannelValue(axis) > rxConfig()->maxcheck) {
+        timeDelta_t holdTime = millis() - rthOverrideStickHoldStartTime[axis];
+        if (!rthOverrideStickHoldStartTime[axis]) {
+            rthOverrideStickHoldStartTime[axis] = millis();
+        } else if (ABS(1500 - holdTime) < 500) {    // 1s delay to activate, activation duration limited to 1 sec
+            if (axis == PITCH) {    // PITCH override preset altitude reset to current altitude
+                posControl.rthState.rthInitialAltitude = posControl.actualState.abs.pos.z;
+                posControl.rthState.rthFinalAltitude = posControl.rthState.rthInitialAltitude;
+                return true;
+            } else if (axis == ROLL) {    // ROLL override climb first
+                return true;
+            }
+        }
+    } else {
+        rthOverrideStickHoldStartTime[axis] = 0;
+    }
+
+    return false;
 }
 
 /*-----------------------------------------------------------
