@@ -3743,7 +3743,7 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
                         // Countdown display for remaining Waypoints
                         // CR11
                         char buf[6];
-                        osdFormatDistanceSymbol(buf, posControl.wpDistance);
+                        osdFormatDistanceSymbol(buf, posControl.wpDistance, 0);
                         tfp_sprintf(messageBuf, "TO WP %u/%u (%s)", getGeoWaypointNumber(posControl.activeWaypointIndex), posControl.geoWaypointCount, buf);
                         // CR11
                         // CR8

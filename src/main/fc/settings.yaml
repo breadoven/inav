@@ -161,9 +161,6 @@ tables:
   - name: nav_overrides_motor_stop
     enum: navOverridesMotorStop_e
     values: ["OFF_ALWAYS", "OFF", "AUTO_ONLY", "ALL_NAV"]
-  - name: nav_rth_climb_first
-    enum: navRTHClimbFirst_e
-    values: ["OFF", "ON", "ON_FW_SPIRAL"]
   - name: osd_plus_code_short
     values: ["0", "2", "4", "6"]
   - name: nav_rth_climb_first
