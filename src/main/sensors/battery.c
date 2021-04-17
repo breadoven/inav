@@ -46,6 +46,7 @@
 
 #include "navigation/navigation.h"
 #include "navigation/navigation_private.h"
+
 #include "config/feature.h"
 
 #include "sensors/battery.h"
@@ -274,8 +275,10 @@ void batteryUpdate(timeUs_t timeDelta)
             batteryCellCount = currentBatteryProfile->cells;
         else {
             batteryCellCount = (vbat / currentBatteryProfile->voltage.cellDetect) + 1;
-            // Assume there are no 7S, 9S and 11S batteries so round up to 8S, 10S and 12S
-            batteryCellCount = ((batteryCellCount > 6) && (batteryCellCount & 2) == 0) ? batteryCellCount : batteryCellCount + 1;
+            // Assume there are no 7S, 9S and 11S batteries so round up to 8S, 10S and 12S respectively
+            if (batteryCellCount == 7 || batteryCellCount == 9 || batteryCellCount == 11) {
+                batteryCellCount += 1;
+            }
             batteryCellCount = MIN(batteryCellCount, 12);
         }
 
@@ -483,7 +486,7 @@ void currentMeterUpdate(timeUs_t timeDelta)
                 bool autoNav = navConfig()->general.flags.nav_overrides_motor_stop == NOMS_AUTO_ONLY && (stateFlags & (NAV_AUTO_RTH | NAV_AUTO_WP));
                 int32_t throttleOffset;
 
-                if (allNav || autoNav) {
+                if (allNav || autoNav) {    // account for motors running in Nav modes with throttle low + motor stop
                     throttleOffset = (int32_t)rcCommand[THROTTLE] - 1000;
                 } else {
                     throttleOffset = ((throttleStatus == THROTTLE_LOW) && feature(FEATURE_MOTOR_STOP)) ? 0 : (int32_t)rcCommand[THROTTLE] - 1000;

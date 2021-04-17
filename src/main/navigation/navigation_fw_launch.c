@@ -68,7 +68,7 @@ typedef enum {
     FW_LAUNCH_MESSAGE_TYPE_FINISHING,
     // CR6
     FW_LAUNCH_MESSAGE_TYPE_FINISHING_THR_LOW
-    // CR6    
+    // CR6
 } fixedWingLaunchMessage_t;
 
 typedef enum {
@@ -213,7 +213,7 @@ static const fixedWingLaunchStateDescriptor_t launchStateMachine[FW_LAUNCH_STATE
         [FW_LAUNCH_STATE_FINISH_THR_LOW] = {
         .onEntry                                    = fwLaunchState_FW_LAUNCH_STATE_FINISH_THR_LOW,
         .onEvent = {
-            [FW_LAUNCH_EVENT_SUCCESS]               = FW_LAUNCH_STATE_IDLE            
+            [FW_LAUNCH_EVENT_SUCCESS]               = FW_LAUNCH_STATE_IDLE
         },
         .messageType                                = FW_LAUNCH_MESSAGE_TYPE_FINISHING_THR_LOW
     }
@@ -325,7 +325,7 @@ static fixedWingLaunchEvent_t fwLaunchState_FW_LAUNCH_STATE_MOTOR_IDLE(timeUs_t 
         return FW_LAUNCH_EVENT_THROTTLE_LOW; // go back to FW_LAUNCH_STATE_WAIT_THROTTLE
     }
     // CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-    
+
     const timeMs_t elapsedTimeMs = currentStateElapsedMs(currentTimeUs);
     if (elapsedTimeMs > LAUNCH_MOTOR_IDLE_SPINUP_TIME) {
         applyThrottleIdleLogic(false);
@@ -427,10 +427,6 @@ static fixedWingLaunchEvent_t fwLaunchState_FW_LAUNCH_STATE_IN_PROGRESS(timeUs_t
         return FW_LAUNCH_EVENT_ABORT; // cancel the launch and do the FW_LAUNCH_STATE_IDLE state
     }
 
-    if (isLaunchMaxAltitudeReached()) {
-        return FW_LAUNCH_EVENT_SUCCESS; // cancel the launch and do the FW_LAUNCH_STATE_FINISH state
-    }
-
     if (currentStateElapsedMs(currentTimeUs) > navConfig()->fw.launch_timeout) {
         return FW_LAUNCH_EVENT_SUCCESS; // launch timeout. go to FW_LAUNCH_STATE_FINISH
     }
@@ -452,7 +448,7 @@ static fixedWingLaunchEvent_t fwLaunchState_FW_LAUNCH_STATE_FINISH(timeUs_t curr
         rcCommand[THROTTLE] = navConfig()->fw.cruise_throttle;
     }
     // CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-    
+
     if (elapsedTimeMs > endTimeMs) {
         //CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
         if (navConfig()->fw.launch_allow_throttle_low && isThrottleLow()) {
@@ -473,7 +469,7 @@ static fixedWingLaunchEvent_t fwLaunchState_FW_LAUNCH_STATE_FINISH(timeUs_t curr
 
 // CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 static fixedWingLaunchEvent_t fwLaunchState_FW_LAUNCH_STATE_FINISH_THR_LOW(timeUs_t currentTimeUs)
-{    
+{
     static timeMs_t throttleRaisedStartTimeMs;
     const timeMs_t elapsedTimeMs = US2MS(currentTimeUs) - throttleRaisedStartTimeMs;
     const timeMs_t endTimeMs = 1000;
@@ -481,7 +477,7 @@ static fixedWingLaunchEvent_t fwLaunchState_FW_LAUNCH_STATE_FINISH_THR_LOW(timeU
     if (areSticksDeflectedMoreThanPosHoldDeadband()) {
         return FW_LAUNCH_EVENT_SUCCESS;     // end the launch and go to FW_LAUNCH_STATE_IDLE
     }
-    
+
     if (isThrottleLow()) {
         throttleRaisedStartTimeMs = US2MS(currentTimeUs);
         rcCommand[THROTTLE] = navConfig()->fw.cruise_throttle;
@@ -490,7 +486,7 @@ static fixedWingLaunchEvent_t fwLaunchState_FW_LAUNCH_STATE_FINISH_THR_LOW(timeU
         if (elapsedTimeMs > endTimeMs) {
             return FW_LAUNCH_EVENT_SUCCESS;
         }
-    }   
+    }
 
     return FW_LAUNCH_EVENT_NONE;
 }
@@ -529,7 +525,7 @@ void resetFixedWingLaunchController(timeUs_t currentTimeUs)
 
 bool isFixedWingLaunchDetected(void)
 {
-    return fwLaunch.currentState >= FW_LAUNCH_STATE_DETECTED;  // CR6
+    return fwLaunch.currentState >= FW_LAUNCH_STATE_DETECTED;
 }
 
 void enableFixedWingLaunchController(timeUs_t currentTimeUs)
@@ -548,7 +544,7 @@ bool isFixedWingLaunchFinishedThrottleLow(void)
     return fwLaunch.currentState == FW_LAUNCH_STATE_FINISH_THR_LOW;
 }
 // CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-    
+
 void abortFixedWingLaunch(void)
 {
     setCurrentState(FW_LAUNCH_STATE_IDLE, 0);
@@ -571,7 +567,7 @@ const char * fixedWingLaunchStateMessage(void)
         // CR6
         case FW_LAUNCH_MESSAGE_TYPE_FINISHING_THR_LOW:
             return FW_LAUNCH_MESSAGE_TEXT_FINISHING_THR_LOW;
-        // CR6    
+        // CR6
         default:
             return NULL;
     }

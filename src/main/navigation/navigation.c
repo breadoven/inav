@@ -110,7 +110,7 @@ PG_RESET_TEMPLATE(navConfig_t, navConfig,
             .rth_tail_first = SETTING_NAV_RTH_TAIL_FIRST_DEFAULT,
             .disarm_on_landing = SETTING_NAV_DISARM_ON_LANDING_DEFAULT,
             .rth_allow_landing = SETTING_NAV_RTH_ALLOW_LANDING_DEFAULT,
-            .rth_alt_control_override = SETTING_NAV_RTH_ALT_CONTROL_OVERRIDE_DEFAULT, // Override RTH Altitude and rth_climb_first settings using Pitch and Roll stick
+            .rth_alt_control_override = SETTING_NAV_RTH_ALT_CONTROL_OVERRIDE_DEFAULT, // Override RTH Altitude and Climb First using Pitch and Roll stick
             .nav_overrides_motor_stop = SETTING_NAV_OVERRIDES_MOTOR_STOP_DEFAULT,
         },
 
@@ -244,6 +244,8 @@ bool validateRTHSanityChecker(void);
 static bool rthAltControlStickOverrideCheck(unsigned axis);
 
 static navigationFSMEvent_t selectNavEventFromBoxModeInput(bool launchBypass);  //CR6
+
+static bool rthAltControlStickOverrideCheck(unsigned axis);
 
 /*************************************************************************************************/
 static navigationFSMEvent_t navOnEnteringState_NAV_STATE_IDLE(navigationFSMState_t previousState);
@@ -1148,7 +1150,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_INITIALIZE(navigati
             fpVector3_t targetHoldPos;
 
             if (STATE(FIXED_WING_LEGACY)) {
-                // Airplane - climbout before turning around
+                // Airplane - climbout before heading home
                 if (navConfig()->general.flags.rth_climb_first == ON_FW_SPIRAL) {
                     // Spiral climb centered at xy of RTH activation
                     calculateInitialHoldPosition(&targetHoldPos);
@@ -2490,23 +2492,22 @@ void updateHomePosition(void)
  *-----------------------------------------------------------*/
 static bool rthAltControlStickOverrideCheck(unsigned axis)
 {
-    // inhibit Climb First override for multirotors
     if (!navConfig()->general.flags.rth_alt_control_override || posControl.flags.forcedRTHActivated || (axis == ROLL && STATE(MULTIROTOR))) {
         return false;
     }
-
     static timeMs_t rthOverrideStickHoldStartTime[2];
 
     if (rxGetChannelValue(axis) > rxConfig()->maxcheck) {
         timeDelta_t holdTime = millis() - rthOverrideStickHoldStartTime[axis];
+
         if (!rthOverrideStickHoldStartTime[axis]) {
             rthOverrideStickHoldStartTime[axis] = millis();
         } else if (ABS(1500 - holdTime) < 500) {    // 1s delay to activate, activation duration limited to 1 sec
-            if (axis == PITCH) {    // PITCH override preset altitude reset to current altitude
+            if (axis == PITCH) {           // PITCH down to override preset altitude reset to current altitude
                 posControl.rthState.rthInitialAltitude = posControl.actualState.abs.pos.z;
                 posControl.rthState.rthFinalAltitude = posControl.rthState.rthInitialAltitude;
                 return true;
-            } else if (axis == ROLL) {    // ROLL override climb first
+            } else if (axis == ROLL) {     // ROLL right to override climb first
                 return true;
             }
         }

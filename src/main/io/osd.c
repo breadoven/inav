@@ -104,6 +104,7 @@ FILE_COMPILE_FOR_SPEED
 #include "sensors/pitotmeter.h"
 #include "sensors/temperature.h"
 #include "sensors/esc_sensor.h"
+#include "sensors/rangefinder.h"
 
 #include "programming/logic_condition.h"
 #include "programming/global_variables.h"
@@ -314,11 +315,11 @@ static void osdLeftAlignString(char *buff)
  * prefixed by a a symbol to indicate the unit used.
  * @param dist Distance in centimeters
  */
-static void osdFormatDistanceSymbol(char *buff, int32_t dist)
+static void osdFormatDistanceSymbol(char *buff, int32_t dist, uint8_t decimals)
 {
     switch ((osd_unit_e)osdConfig()->units) {
     case OSD_UNIT_IMPERIAL:
-        if (osdFormatCentiNumber(buff, CENTIMETERS_TO_CENTIFEET(dist), FEET_PER_MILE, 0, 3, 3)) {
+        if (osdFormatCentiNumber(buff, CENTIMETERS_TO_CENTIFEET(dist), FEET_PER_MILE, decimals, 3, 3)) {
             buff[3] = SYM_DIST_MI;
         } else {
             buff[3] = SYM_DIST_FT;
@@ -328,7 +329,7 @@ static void osdFormatDistanceSymbol(char *buff, int32_t dist)
     case OSD_UNIT_UK:
         FALLTHROUGH;
     case OSD_UNIT_METRIC:
-        if (osdFormatCentiNumber(buff, dist, METERS_PER_KILOMETER, 0, 3, 3)) {
+        if (osdFormatCentiNumber(buff, dist, METERS_PER_KILOMETER, decimals, 3, 3)) {
             buff[3] = SYM_DIST_KM;
         } else {
             buff[3] = SYM_DIST_M;
@@ -738,6 +739,8 @@ static const char * osdArmingDisabledReasonMessage(void)
             return OSD_MESSAGE_STR(OSD_MSG_PWM_INIT_ERROR);
         case ARMING_DISABLED_NO_PREARM:
             return OSD_MESSAGE_STR(OSD_MSG_NO_PREARM);
+        case ARMING_DISABLED_DSHOT_BEEPER:
+            return OSD_MESSAGE_STR(OSD_MSG_DSHOT_BEEPER);
             // Cases without message
         case ARMING_DISABLED_CMS_MENU:
             FALLTHROUGH;
@@ -1531,7 +1534,7 @@ static bool osdDrawSingleElement(uint8_t item)
     case OSD_HOME_DIST:
         {
             buff[0] = SYM_HOME;
-            osdFormatDistanceSymbol(&buff[1], GPS_distanceToHome * 100);
+            osdFormatDistanceSymbol(&buff[1], GPS_distanceToHome * 100, 0);
             uint16_t dist_alarm = osdConfig()->dist_alarm;
             if (dist_alarm > 0 && GPS_distanceToHome > dist_alarm) {
                 TEXT_ATTRIBUTES_ADD_BLINK(elemAttr);
@@ -1541,7 +1544,7 @@ static bool osdDrawSingleElement(uint8_t item)
 
     case OSD_TRIP_DIST:
         buff[0] = SYM_TOTAL;
-        osdFormatDistanceSymbol(buff + 1, getTotalTravelDistance());
+        osdFormatDistanceSymbol(buff + 1, getTotalTravelDistance(), 0);
         break;
 
     case OSD_HEADING:
@@ -1659,6 +1662,19 @@ static bool osdDrawSingleElement(uint8_t item)
             break;
         }
 
+#ifdef USE_RANGEFINDER
+    case OSD_RANGEFINDER:
+        {
+            int32_t range = rangefinderGetLatestRawAltitude();
+            if (range < 0) {
+                buff[0] = '-';
+            } else {
+                osdFormatDistanceSymbol(buff, range, 1);
+            }
+        }
+        break;
+#endif
+
     case OSD_ONTIME:
         {
             osdFormatOnTime(buff);
@@ -1738,7 +1754,7 @@ static bool osdDrawSingleElement(uint8_t item)
             buff[5] = '\0';
             TEXT_ATTRIBUTES_ADD_BLINK(elemAttr);
         } else {
-            osdFormatDistanceSymbol(buff + 1, distanceMeters * 100);
+            osdFormatDistanceSymbol(buff + 1, distanceMeters * 100, 0);
             if (distanceMeters == 0)
                 TEXT_ATTRIBUTES_ADD_BLINK(elemAttr);
         }
@@ -2000,7 +2016,7 @@ static bool osdDrawSingleElement(uint8_t item)
             rollAngle = DECIDEGREES_TO_RADIANS(attitude.values.roll);
             pitchAngle = DECIDEGREES_TO_RADIANS(attitude.values.pitch);
 #endif
-
+            pitchAngle -= DEGREES_TO_RADIANS(osdConfig()->camera_uptilt);
             if (osdConfig()->ahi_reverse_roll) {
                 rollAngle = -rollAngle;
             }
