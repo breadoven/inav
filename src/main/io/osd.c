@@ -1356,12 +1356,10 @@ static bool osdDrawSingleElement(uint8_t item)
 
         if (infocycleNumItems > 0 && !infocycleSuspended) {
             static uint8_t infocyclePreviousItem;
-            uint8_t selectedItem;
 
             if (OSD_INFOCYCLE(pos)) {
                 infocycleItemCounter += 1;
-                selectedItem = OSD_ALTERNATING_CHOICES(osdConfig()->infocycle_interval_time, infocycleNumItems) + 1;
-                if (infocycleItemCounter == selectedItem) {
+                if (infocycleItemCounter == OSD_ALTERNATING_CHOICES(osdConfig()->infocycle_interval_time, infocycleNumItems) + 1) {
                     elemPosX = OSD_X(infocyclePos);
                     elemPosY = OSD_Y(infocyclePos);
                     if (infocyclePreviousItem != item) {     // clear infocycle field before displaying new item
@@ -2925,7 +2923,7 @@ void pgResetFn_osdLayoutsConfig(osdLayoutsConfig_t *osdLayoutsConfig)
     osdLayoutsConfig->item_pos[0][OSD_REMAINING_FLIGHT_TIME_BEFORE_RTH] = OSD_POS(23, 7);
     osdLayoutsConfig->item_pos[0][OSD_REMAINING_DISTANCE_BEFORE_RTH] = OSD_POS(23, 6);
 
-    osdLayoutsConfig->item_pos[0][OSD_MISSION] = OSD_POS(0, 10) | OSD_VISIBLE_FLAG;    // CR22
+    osdLayoutsConfig->item_pos[0][OSD_MISSION] = OSD_POS(0, 10);    // CR21
     osdLayoutsConfig->item_pos[0][OSD_GPS_SATS] = OSD_POS(0, 11) | OSD_VISIBLE_FLAG;
     osdLayoutsConfig->item_pos[0][OSD_GPS_HDOP] = OSD_POS(0, 10);
 
@@ -3465,7 +3463,7 @@ static void osdRefresh(timeUs_t currentTimeUs)
     // CR22
     bool boxOsdClearDisplay = false;
     static timeMs_t boxOsdTimer = 0;
-    const uint16_t boxOsdTimeDelay_Ms = 2000;
+    const uint16_t boxOsdTimeDelay_Ms = 1000;
 
     if (IS_RC_MODE_ACTIVE(BOXOSD)) {
         if (boxOsdTimer == 0) {
@@ -3683,8 +3681,8 @@ displayCanvas_t *osdGetDisplayPortCanvas(void)
     return NULL;
 }
 // CR18
-timeMs_t sysMessageDisplayTime(unsigned messageCount, const char **messages){
-    unsigned i = 0;
+timeMs_t systemMessageCycleTime(unsigned messageCount, const char **messages){
+    uint8_t i = 0;
     float factor = 1.0f;
     while (i < messageCount) {
         if ((float)strlen(messages[i]) / 15.0f > factor) {
@@ -3731,7 +3729,7 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
 #endif
 // CR14
                 if (messageCount > 0) {
-                    message = messages[OSD_ALTERNATING_CHOICES(sysMessageDisplayTime(messageCount, messages), messageCount)];    // CR18
+                    message = messages[OSD_ALTERNATING_CHOICES(systemMessageCycleTime(messageCount, messages), messageCount)];    // CR18
                     if (message == failsafeInfoMessage) {
                         // failsafeInfoMessage is not useful for recovering
                         // a lost model, but might help avoiding a crash.
@@ -3817,7 +3815,7 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
                         // longMessage = strlen(messages[i]) > 17;
                         // i++;
                     // }
-                    message = messages[OSD_ALTERNATING_CHOICES(sysMessageDisplayTime(messageCount, messages), messageCount)];   // CR18
+                    message = messages[OSD_ALTERNATING_CHOICES(systemMessageCycleTime(messageCount, messages), messageCount)];   // CR18
                 }
             }
         } else if (ARMING_FLAG(ARMING_DISABLED_ALL_FLAGS)) {
