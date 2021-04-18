@@ -93,7 +93,7 @@
 #define OSD_MSG_LANDING             "LANDING"
 #define OSD_MSG_LOITERING_HOME      "LOITERING AROUND HOME"
 #define OSD_MSG_HOVERING            "HOVERING"
-#define OSD_MSG_LANDED              "LANDED"
+#define OSD_MSG_LANDED              "! LANDED !"
 #define OSD_MSG_PREPARING_LAND      "PREPARING TO LAND"
 #define OSD_MSG_AUTOLAUNCH          "AUTOLAUNCH"
 #define OSD_MSG_ALTITUDE_HOLD       "(ALTITUDE HOLD)"
@@ -368,6 +368,7 @@ typedef struct osdConfig_s {
     int8_t pan_servo_pwm2centideg;      // Centidegrees of servo rotation per us pwm
     uint8_t crsf_lq_format;
     uint16_t system_msg_display_time;   // system message display time for multiple messages (ms)   CR18
+    uint16_t infocycle_interval_time;   // Info Cycle field item display time interval (ms)   CR22
 
 } osdConfig_t;
 

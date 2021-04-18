@@ -3265,6 +3265,14 @@ groups:
         min: 1000
         max: 5000
         # CR18
+        # CR22
+      - name: osd_infocycle_interval_time
+        description: Time each item is displayed for in the OSD Info Cycle field (milliseconds).
+        field: infocycle_interval_time
+        default_value: 2000
+        min: 1000
+        max: 5000
+        # CR22
 
   - name: PG_SYSTEM_CONFIG
     type: systemConfig_t
