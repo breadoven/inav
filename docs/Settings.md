@@ -355,7 +355,7 @@
 | nav_mc_vel_z_p | 100 | P gain of velocity PID controller |
 | nav_mc_wp_slowdown | ON | When ON, NAV engine will slow down when switching to the next waypoint. This prioritizes turning over forward movement. When OFF, NAV engine will continue to the next waypoint and turn as it goes. |
 | nav_min_rth_distance | 500 | Minimum distance from homepoint when RTH full procedure will be activated [cm]. Below this distance, the mode will activate at the current location and the final phase is executed (loiter / land). Above this distance, the full procedure is activated, which may include initial climb and flying directly to the homepoint before entering the loiter / land phase. |
-| nav_multi_mission_index | 1 | Index of mission selected from multi mission WP file. 1 is the first WP mission in the file. If index exceeds number of missions in file then no mission is loaded. |
+| nav_multi_waypoint_mission_index | 1 | Index of mission selected from multi mission WP file. 1 is the first WP mission in the file. If index exceeds number of missions in file then no mission is loaded. |
 | nav_overrides_motor_stop | ALL_NAV | When set to OFF the navigation system will not take over the control of the motor if the throttle is low (motor will stop). When set to OFF_ALWAYS the navigation system will not take over the control of the motor if the throttle was low even when failsafe is triggered. When set to AUTO_ONLY the navigation system will only take over the control of the throttle in autonomous navigation modes (NAV WP and NAV RTH). When set to ALL_NAV (default) the navigation system will take over the control of the motor completely and never allow the motor to stop even when the throttle is low. This setting only has an effect on NAV modes which take control of the throttle when combined with MOTOR_STOP and is likely to cause a stall if fw_min_throttle_down_pitch isn't set correctly or the pitch estimation is wrong for fixed wing models when not set to ALL_NAV |
 | nav_position_timeout | 5 | If GPS fails wait for this much seconds before switching to emergency landing mode (0 - disable) |
 | nav_rth_abort_threshold | 50000 | RTH sanity checking feature will notice if distance to home is increasing during RTH and once amount of increase exceeds the threshold defined by this parameter, instead of continuing RTH machine will enter emergency landing, self-level and go down safely. Default is 500m which is safe enough for both multirotor machines and airplanes. [cm] |
@@ -413,6 +413,7 @@
 | osd_hud_wp_disp | 0 | How many navigation waypoints are displayed, set to 0 (zero) to disable. As sample, if set to 2, and you just passed the 3rd waypoint of the mission, you'll see markers for the 4th waypoint (marked 1) and the 5th waypoint (marked 2) |
 | osd_imu_temp_alarm_max | 600 | Temperature above which the IMU temperature OSD element will start blinking (decidegrees centigrade) |
 | osd_imu_temp_alarm_min | -200 | Temperature under which the IMU temperature OSD element will start blinking (decidegrees centigrade) |
+| osd_infocycle_interval_time | 2000 | Info Cycle field item display time (milliseconds). |
 | osd_left_sidebar_scroll | NONE |  |
 | osd_left_sidebar_scroll_step | 0 | How many units each sidebar step represents. 0 means the default value for the scroll type. |
 | osd_link_quality_alarm | 70 | LQ % indicator blinks below this value. For Crossfire use 70%, for Tracer use 50% |
@@ -430,7 +431,7 @@
 | osd_sidebar_scroll_arrows | OFF |  |
 | osd_snr_alarm | 4 | Value below which Crossfire SNR Alarm pops-up. (dB) |
 | osd_stats_energy_unit | MAH | Unit used for the drawn energy in the OSD stats [MAH/WH] (milliAmpere hour/ Watt hour) |
-| osd_system_msg_display_time | 1000 | Time each system messages is displayed for when multiple messages are present (milliseconds). |
+| osd_system_msg_display_time | 1000 | System message display cycle time for multiple messages (milliseconds). |
 | osd_temp_label_align | LEFT | Allows to chose between left and right alignment for the OSD temperature sensor labels. Valid values are `LEFT` and `RIGHT` |
 | osd_time_alarm | 10 | Value above which to make the OSD flight time indicator blink (minutes) |
 | osd_units | METRIC | IMPERIAL, METRIC, UK |

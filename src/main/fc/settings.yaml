@@ -3259,15 +3259,15 @@ groups:
 
         # CR18
       - name: osd_system_msg_display_time
-        description: Time each system messages is displayed for when multiple messages are present (milliseconds).
+        description: System message display cycle time for multiple messages (milliseconds).
         field: system_msg_display_time
         default_value: 1000
-        min: 1000
+        min: 500
         max: 5000
         # CR18
         # CR22
       - name: osd_infocycle_interval_time
-        description: Time each item is displayed for in the OSD Info Cycle field (milliseconds).
+        description: Info Cycle field item display time (milliseconds).
         field: infocycle_interval_time
         default_value: 2000
         min: 1000
