@@ -1458,6 +1458,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_WAYPOINT_INITIALIZE(nav
 */
         setupJumpCounters();
         posControl.activeWaypointIndex = 0;
+        wpHeadingControl.mode = NAV_WP_HEAD_MODE_NONE;  // CR23
         return NAV_FSM_EVENT_SUCCESS;   // will switch to NAV_STATE_WAYPOINT_PRE_ACTION
     }
 }
@@ -1555,12 +1556,6 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_WAYPOINT_IN_PROGRESS(na
                 }
                 else {
                     fpVector3_t tmpWaypoint;
-                    // // CR19
-                    // uint16_t landingInitialDescentAltitude = 0;
-                    // if (posControl.waypointList[posControl.activeWaypointIndex].action == NAV_WP_ACTION_LAND && posControl.waypointList[posControl.activeWaypointIndex].p1 != 0) {  // Landing WP P1 defined as landing ground elevation so arrive higher at altitude defined by P1
-                        // landingInitialDescentAltitude = posControl.waypointList[posControl.activeWaypointIndex].p1;     // limited to < 327m
-                    // }
-                    // // CR19
                     tmpWaypoint.x = posControl.activeWaypoint.pos.x;
                     tmpWaypoint.y = posControl.activeWaypoint.pos.y;
                     tmpWaypoint.z = scaleRangef(constrainf(posControl.wpDistance, posControl.wpInitialDistance / 10.0f, posControl.wpInitialDistance),
@@ -2630,6 +2625,9 @@ void updateLandingStatus(void)
         } else if (STATE(MULTIROTOR)) {
             landingDetectorIsActive = rcCommand[THROTTLE] > navConfig()->mc.hover_throttle && averageGyroRates() > 7.0f;
         }
+        if (landingDetectorIsActive) {
+            posControl.flags.landingDetected = false;
+        }
     } else if (isLandingDetected()) {
         landingDetectorIsActive = false;
         posControl.flags.landingDetected = true;
@@ -2946,7 +2944,6 @@ void setWaypoint(uint8_t wpNumber, const navWaypoint_t * wpData)
                         posControl.waypointList[wpNumber - 1].p1 -= 1; // make index (vice WP #)
                     }
                 }
-                posControl.geoWaypointList[wpNumber - 1] = wpNumber - nonGeoWaypointCount;
 
                 posControl.waypointCount = wpNumber;
                 posControl.waypointListValid = wpData->flag == NAV_WP_FLAG_LAST;

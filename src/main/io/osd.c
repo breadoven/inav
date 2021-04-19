@@ -1312,7 +1312,22 @@ static void osdDisplayAdjustableDecimalValue(uint8_t elemPosX, uint8_t elemPosY,
 // CR8
 int8_t getGeoWaypointNumber(int8_t waypointIndex)
 {
-    return posControl.geoWaypointList[waypointIndex];
+    static int8_t lastWaypointIndex = 1;
+    static int8_t lastGeoWaypointIndex;
+
+    if (waypointIndex != lastWaypointIndex) {
+        lastGeoWaypointIndex = waypointIndex;
+        for (uint8_t i = 0; i <= waypointIndex; i++) {
+            if (posControl.waypointList[i].action == NAV_WP_ACTION_SET_POI ||
+                posControl.waypointList[i].action == NAV_WP_ACTION_SET_HEAD ||
+                posControl.waypointList[i].action == NAV_WP_ACTION_JUMP) {
+                    lastGeoWaypointIndex -= 1;
+                }
+        }
+        lastWaypointIndex = waypointIndex;
+    }
+
+    return lastGeoWaypointIndex + 1;
 }
 // CR8
 

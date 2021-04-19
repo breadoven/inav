@@ -355,10 +355,8 @@ typedef struct {
     navWaypoint_t               waypointList[NAV_MAX_WAYPOINTS];
     bool                        waypointListValid;
     int8_t                      waypointCount;
-    // CR8
-    int8_t                      geoWaypointCount;           // total geospatial WPs in mission
-    int8_t                      geoWaypointList[NAV_MAX_WAYPOINTS];     // to store realigned geoWP numbering index
-    // CR8
+    int8_t                      geoWaypointCount;           // total geospatial WPs in mission // CR8
+
     int8_t                      multiMissionCount;          // CR21 number of missions in multi mission file
     int8_t                      multiMissionTotalWPCount;   // CR21 total number of WPs in multi mission file
 
