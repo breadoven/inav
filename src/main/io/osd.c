@@ -1316,15 +1316,15 @@ int8_t getGeoWaypointNumber(int8_t waypointIndex)
     static int8_t lastGeoWaypointIndex;
 
     if (waypointIndex != lastWaypointIndex) {
+        lastWaypointIndex = waypointIndex;
         lastGeoWaypointIndex = waypointIndex;
         for (uint8_t i = 0; i <= waypointIndex; i++) {
             if (posControl.waypointList[i].action == NAV_WP_ACTION_SET_POI ||
                 posControl.waypointList[i].action == NAV_WP_ACTION_SET_HEAD ||
                 posControl.waypointList[i].action == NAV_WP_ACTION_JUMP) {
                     lastGeoWaypointIndex -= 1;
-                }
+            }
         }
-        lastWaypointIndex = waypointIndex;
     }
 
     return lastGeoWaypointIndex + 1;
@@ -3254,6 +3254,7 @@ static void osdShowStatsPage1(void)
     displayWrite(osdDisplayPort, statNameX, top, "MAX ALTITUDE     :");
     osdFormatAltitudeStr(buff, stats.max_altitude);
     displayWrite(osdDisplayPort, statValuesX, top++, buff);
+
     switch (rxConfig()->serialrx_provider) {
         case SERIALRX_CRSF:
             displayWrite(osdDisplayPort, statNameX, top, "MIN LQ           :");
@@ -3705,7 +3706,7 @@ timeMs_t systemMessageCycleTime(unsigned messageCount, const char **messages){
         }
         i++;
     }
-    DEBUG_SET(DEBUG_CRUISE, 0, osdConfig()->system_msg_display_time * factor);
+    // DEBUG_SET(DEBUG_CRUISE, 0, osdConfig()->system_msg_display_time * factor);
     return osdConfig()->system_msg_display_time * factor;
 }
 // CR18
