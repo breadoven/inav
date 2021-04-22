@@ -150,6 +150,8 @@ typedef struct failsafeState_s {
     int16_t lastGoodRcCommand[4];
 } failsafeState_t;
 
+extern timeUs_t fstest1;     // CR24
+
 void failsafeInit(void);
 void failsafeReset(void);
 

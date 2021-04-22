@@ -200,7 +200,7 @@ static void updateArmingStatus(void)
         }
 
         /* CHECK: RX signal */
-        if (!failsafeIsReceivingRxData() || failsafeBlockChangeArmState()) {    // CR24
+        if (!failsafeIsReceivingRxData()) {
             ENABLE_ARMING_FLAG(ARMING_DISABLED_RC_LINK);
         }
         else {
