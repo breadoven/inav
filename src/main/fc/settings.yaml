@@ -1355,7 +1355,7 @@ groups:
         max: 1000
       - name: switch_arm_delay
         description: "Delay before arming when set by switch (ms) [0-1000]"
-        default_value: 400
+        default_value: 250
         field: switchArmDelayMs
         min: 0
         max: 1000
@@ -3278,7 +3278,7 @@ groups:
         description: Info Cycle field item display time (milliseconds).
         field: infocycle_interval_time
         default_value: 2000
-        min: 1000
+        min: 500
         max: 5000
         # CR22
 

@@ -1331,28 +1331,37 @@ int8_t getGeoWaypointNumber(int8_t waypointIndex)
 }
 // CR8
 
-static bool osdDrawSingleElement(uint8_t item)
+bool hiddenInfocycleItem(uint8_t item)
 {
-    // CR22
-    static uint8_t infocycleItemCounter;
-    if (item == 0) {
-        infocycleItemCounter = 0;
+    if (item == OSD_ARTIFICIAL_HORIZON) {
+        return true;
     }
-    // CR22
-    uint16_t pos = osdLayoutsConfig()->item_pos[currentLayout][item];
+    return false;
+}
 
-    if (!OSD_VISIBLE(pos)) {
-        return false;
-    }
-    uint8_t elemPosX = OSD_X(pos);
-    uint8_t elemPosY = OSD_Y(pos);
 
-    // CR22
+// CR22
+bool checkInfocycle(uint8_t *elemPosX, uint8_t *elemPosY, uint8_t item)
+{
     /* routine to direct selected OSD items to Info Cycle field on OSD.
     Items cycled in field unless BOXOSD mode selected for < 2s in which case items are displayed in normal positions
     and Infocycle is suspended. Infocycle starts again by selecting BOXOSD again for < 2s.
     BOXOSD switches off OSD if selected for > 2s*/
+
+    static uint8_t infocycleItemCounter;
+    if (item == 0) {
+        infocycleItemCounter = 0;
+    }
+
+    uint16_t pos = osdLayoutsConfig()->item_pos[currentLayout][item];
     uint16_t infocyclePos = osdLayoutsConfig()->item_pos[currentLayout][OSD_INFO_CYCLE];
+
+    if (!OSD_VISIBLE(pos)) {
+        return false;
+    }
+    // normal position of item if not active in Infocycle field
+    *elemPosX = OSD_X(pos);
+    *elemPosY = OSD_Y(pos);
 
     if (OSD_VISIBLE(infocyclePos)) {
         static uint8_t infocycleNumItems;
@@ -1375,17 +1384,34 @@ static bool osdDrawSingleElement(uint8_t item)
             if (OSD_INFOCYCLE(pos)) {
                 infocycleItemCounter += 1;
                 if (infocycleItemCounter == OSD_ALTERNATING_CHOICES(osdConfig()->infocycle_interval_time, infocycleNumItems) + 1) {
-                    elemPosX = OSD_X(infocyclePos);
-                    elemPosY = OSD_Y(infocyclePos);
+                    if (hiddenInfocycleItem(item)) {
+                        return false;
+                    }
+                    *elemPosX = OSD_X(infocyclePos);
+                    *elemPosY = OSD_Y(infocyclePos);
                     if (infocyclePreviousItem != item) {     // clear infocycle field before displaying new item
                         infocyclePreviousItem = item;
-                        displayWrite(osdDisplayPort, elemPosX, elemPosY, "            ");   // 12 characters long
+                        displayWrite(osdDisplayPort, *elemPosX, *elemPosY, "            ");   // 12 characters long
                     }
                 } else {
                     return false;
                 }
             }
         }
+    }
+
+    return true;
+}
+// CR22
+
+static bool osdDrawSingleElement(uint8_t item)
+{
+    // CR22
+    uint8_t elemPosX;
+    uint8_t elemPosY;
+
+    if (!checkInfocycle(&elemPosX, &elemPosY, item)) {
+        return false;
     }
     // CR22
 
@@ -3488,7 +3514,7 @@ static void osdRefresh(timeUs_t currentTimeUs)
         boxOsdClearDisplay = millis() - boxOsdTimer > boxOsdTimeDelay_Ms;
     } else {
         if (millis() - boxOsdTimer < boxOsdTimeDelay_Ms) {
-            infocycleSuspended = infocycleSuspended == false ? true : false;
+            infocycleSuspended = !infocycleSuspended;
             displayClearScreen(osdDisplayPort);
         }
         boxOsdTimer = 0;
