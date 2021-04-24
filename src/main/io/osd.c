@@ -1341,13 +1341,8 @@ bool hiddenInfocycleItem(uint8_t item)
 
 
 // CR22
-bool checkInfocycle(uint8_t *elemPosX, uint8_t *elemPosY, uint8_t item)
+bool isItemSelectedForDisplay(uint8_t *elemPosX, uint8_t *elemPosY, uint8_t item)
 {
-    /* routine to direct selected OSD items to Info Cycle field on OSD.
-    Items cycled in field unless BOXOSD mode selected for < 2s in which case items are displayed in normal positions
-    and Infocycle is suspended. Infocycle starts again by selecting BOXOSD again for < 2s.
-    BOXOSD switches off OSD if selected for > 2s*/
-
     static uint8_t infocycleItemCounter;
     if (item == 0) {
         infocycleItemCounter = 0;
@@ -1362,6 +1357,11 @@ bool checkInfocycle(uint8_t *elemPosX, uint8_t *elemPosY, uint8_t item)
     // normal position of item if not active in Infocycle field
     *elemPosX = OSD_X(pos);
     *elemPosY = OSD_Y(pos);
+
+    /* Infocycle routine to direct selected OSD items to Info Cycle field on OSD.
+    Items cycled in field unless BOXOSD mode selected for < 2s in which case items are displayed in normal positions
+    and Infocycle is suspended. Infocycle starts again by selecting BOXOSD again for < 2s.
+    BOXOSD switches off OSD if selected for > 2s*/
 
     if (OSD_VISIBLE(infocyclePos)) {
         static uint8_t infocycleNumItems;
@@ -1410,7 +1410,7 @@ static bool osdDrawSingleElement(uint8_t item)
     uint8_t elemPosX;
     uint8_t elemPosY;
 
-    if (!checkInfocycle(&elemPosX, &elemPosY, item)) {
+    if (!isItemSelectedForDisplay(&elemPosX, &elemPosY, item)) {
         return false;
     }
     // CR22
