@@ -3531,11 +3531,11 @@ static void osdRefresh(timeUs_t currentTimeUs)
     }
 
     // detect arm/disarm
-    static uint8_t statsScreenSwapToggle = 2;   // CR25
+    static bool statsScreenAutoSwapToggle = false;   // CR25
     if (armState != ARMING_FLAG(ARMED)) {
         if (ARMING_FLAG(ARMED)) {
             osdResetStats();
-            statsScreenSwapToggle = 2;  // CR25
+            statsScreenAutoSwapToggle = false;  // CR25
             osdShowArmed(); // reset statistic etc
             uint32_t delay = ARMED_SCREEN_DISPLAY_TIME;
             statsPagesCheck = 0;
@@ -3545,9 +3545,9 @@ static void osdRefresh(timeUs_t currentTimeUs)
 #endif
             osdSetNextRefreshIn(delay);
         } else {
-            osdShowStatsPage1(); // show first page of statistic
+            osdShowStatsPage2(); // show second page of statistic    // CR25
             osdSetNextRefreshIn(STATS_SCREEN_DISPLAY_TIME);
-            statsScreenSwapToggle = 0;  // CR25
+            statsScreenAutoSwapToggle = true;  // CR25
         }
 
         armState = ARMING_FLAG(ARMED);
@@ -3559,16 +3559,13 @@ static void osdRefresh(timeUs_t currentTimeUs)
         // Clear the screen first to erase other elements which
         // might have been drawn while the OSD wasn't refreshing.
         // CR25
-        if (statsScreenSwapToggle != 2) {
+        if (statsScreenAutoSwapToggle) {
             timeMs_t elapsedTime = millis() - ((resumeRefreshAt / 1000) - STATS_SCREEN_DISPLAY_TIME);
             if (STATS_PAGE1 || STATS_PAGE2) {
-                statsScreenSwapToggle = 2;
-            } else if (elapsedTime > 4000 && statsScreenSwapToggle == 1) {
+                statsScreenAutoSwapToggle = false;
+            } else if (elapsedTime > 2000) {
                 osdShowStatsPage1();
-                statsScreenSwapToggle = 2;
-            } else if (elapsedTime > 2000 && statsScreenSwapToggle == 0) {
-                osdShowStatsPage2();
-                statsScreenSwapToggle = 1;
+                statsScreenAutoSwapToggle = false;
             }
         }
         // CR25
