@@ -3531,11 +3531,11 @@ static void osdRefresh(timeUs_t currentTimeUs)
     }
 
     // detect arm/disarm
-    static uint8_t statsScreenAutoSwap = 2;   // CR25
+    static uint8_t statsPageAutoSwapCntl = 2;   // CR25
     if (armState != ARMING_FLAG(ARMED)) {
         if (ARMING_FLAG(ARMED)) {
             osdResetStats();
-            statsScreenAutoSwap = 2;  // CR25
+            statsPageAutoSwapCntl = 2;  // CR25
             osdShowArmed(); // reset statistic etc
             uint32_t delay = ARMED_SCREEN_DISPLAY_TIME;
             statsPagesCheck = 0;
@@ -3547,7 +3547,7 @@ static void osdRefresh(timeUs_t currentTimeUs)
         } else {
             osdShowStatsPage2(); // show second page of statistic    // CR25
             osdSetNextRefreshIn(STATS_SCREEN_DISPLAY_TIME);
-            statsScreenAutoSwap = 0;  // CR25
+            statsPageAutoSwapCntl = 0;  // CR25
         }
 
         armState = ARMING_FLAG(ARMED);
@@ -3559,21 +3559,19 @@ static void osdRefresh(timeUs_t currentTimeUs)
         // Clear the screen first to erase other elements which
         // might have been drawn while the OSD wasn't refreshing.
         // CR25
-        if (statsScreenAutoSwap != 2) {
-            // timeMs_t elapsedTime = millis() - ((resumeRefreshAt / 1000) - STATS_SCREEN_DISPLAY_TIME);
+        if (statsPageAutoSwapCntl != 2) {
             if (STATS_PAGE1 || STATS_PAGE2) {
-                statsScreenAutoSwap = 2;
-                osdShowStatsPage1();
+                statsPageAutoSwapCntl = 2;
             } else {
                 if (OSD_ALTERNATING_CHOICES(2000, 2)) {
-                    if (statsScreenAutoSwap == 0) {
+                    if (statsPageAutoSwapCntl == 0) {
                         osdShowStatsPage1();
-                        statsScreenAutoSwap = 1;
+                        statsPageAutoSwapCntl = 1;
                     }
                 } else {
-                    if (statsScreenAutoSwap == 1) {
+                    if (statsPageAutoSwapCntl == 1) {
                         osdShowStatsPage2();
-                        statsScreenAutoSwap = 0;
+                        statsPageAutoSwapCntl = 0;
                     }
                 }
             }
