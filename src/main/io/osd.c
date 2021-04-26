@@ -1339,7 +1339,6 @@ bool hiddenInfocycleItem(uint8_t item)
     return false;
 }
 
-
 // CR22
 bool isItemSelectedForDisplay(uint8_t *elemPosX, uint8_t *elemPosY, uint8_t item)
 {
@@ -1349,7 +1348,6 @@ bool isItemSelectedForDisplay(uint8_t *elemPosX, uint8_t *elemPosY, uint8_t item
     }
 
     uint16_t pos = osdLayoutsConfig()->item_pos[currentLayout][item];
-    uint16_t infocyclePos = osdLayoutsConfig()->item_pos[currentLayout][OSD_INFO_CYCLE];
 
     if (!OSD_VISIBLE(pos)) {
         return false;
@@ -1362,6 +1360,8 @@ bool isItemSelectedForDisplay(uint8_t *elemPosX, uint8_t *elemPosY, uint8_t item
     Items cycled in field unless BOXOSD mode selected for < 2s in which case items are displayed in normal positions
     and Infocycle is suspended. Infocycle starts again by selecting BOXOSD again for < 2s.
     BOXOSD switches off OSD if selected for > 2s*/
+
+    uint16_t infocyclePos = osdLayoutsConfig()->item_pos[currentLayout][OSD_INFO_CYCLE];
 
     if (OSD_VISIBLE(infocyclePos)) {
         static uint8_t infocycleNumItems;
@@ -3531,6 +3531,7 @@ static void osdRefresh(timeUs_t currentTimeUs)
     }
 
     // detect arm/disarm
+    static timeMs_t osdStatsAutoScreenSwapStartAt = 0;  // CR25
     if (armState != ARMING_FLAG(ARMED)) {
         if (ARMING_FLAG(ARMED)) {
             osdResetStats();
@@ -3545,6 +3546,7 @@ static void osdRefresh(timeUs_t currentTimeUs)
         } else {
             osdShowStatsPage1(); // show first page of statistic
             osdSetNextRefreshIn(STATS_SCREEN_DISPLAY_TIME);
+            osdStatsAutoScreenSwapStartAt = millis();   // CR25
         }
 
         armState = ARMING_FLAG(ARMED);
@@ -3555,6 +3557,17 @@ static void osdRefresh(timeUs_t currentTimeUs)
         // or THR is high or PITCH is high, resume refreshing.
         // Clear the screen first to erase other elements which
         // might have been drawn while the OSD wasn't refreshing.
+        // CR25
+        timeDelta_t elapsedTime = millis() - osdStatsAutoScreenSwapStartAt;
+        if (STATS_PAGE1 || STATS_PAGE2 || osdStatsAutoScreenSwapStartAt == 0) {
+            osdStatsAutoScreenSwapStartAt = 0;
+        } else if (ABS(4050 - elapsedTime) < 50) {
+            osdShowStatsPage1();
+            osdStatsAutoScreenSwapStartAt = 0;
+        } else if (ABS(2050 - elapsedTime) < 50) {
+            osdShowStatsPage2();
+        }
+        // CR25
 
         if (!DELAYED_REFRESH_RESUME_COMMAND)
             refreshWaitForResumeCmdRelease = false;
