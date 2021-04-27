@@ -369,6 +369,7 @@ typedef struct osdConfig_s {
     uint8_t crsf_lq_format;
     uint16_t system_msg_display_time;   // system message display time for multiple messages (ms)   CR18
     uint16_t infocycle_interval_time;   // Info Cycle field item display time interval (ms)   CR22
+    uint8_t sidebar_height;             // sidebar height in characters, 0 turns off sidebars leaving only horizon arrows   // CR26
 
 } osdConfig_t;
 

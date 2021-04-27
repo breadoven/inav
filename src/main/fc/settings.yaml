@@ -3245,7 +3245,14 @@ groups:
         max: 255
         default_value: 0
         description: Same as left_sidebar_scroll_step, but for the right sidebar
-
+        # CR26
+      - name: osd_sidebar_height
+        field: sidebar_height
+        min: 0
+        max: 5
+        default_value: 3
+        description: Height of sidebars in characters. 0 leaves only the horizon indicator arrows. (Not for pixel OSD)
+        # CR26
       - name: osd_home_position_arm_screen
         type: bool
         default_value: ON
