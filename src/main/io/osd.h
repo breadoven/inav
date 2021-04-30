@@ -101,12 +101,7 @@
 #define OSD_MSG_AUTOTUNE            "(AUTOTUNE)"
 #define OSD_MSG_HEADFREE            "(HEADFREE)"
 #define OSD_MSG_UNABLE_ARM          "UNABLE TO ARM"
-// CR14
-#if defined(USE_SAFE_HOME)
-#define OSD_MSG_DIVERT_SAFEHOME     "DIVERTING TO SAFEHOME"
-#endif
-// CR14
-#define OSD_MSG_WP_RTH_CANCEL       "CANCEL WP MODE TO END RTH"     // CR16
+#define OSD_MSG_WP_RTH_CANCEL       "CANCEL WP TO END RTH"     // CR16
 
 #if defined(USE_SAFE_HOME)
 #define OSD_MSG_DIVERT_SAFEHOME     "DIVERTING TO SAFEHOME"
@@ -352,9 +347,10 @@ typedef struct osdConfig_s {
     uint8_t right_sidebar_scroll; // from osd_sidebar_scroll_e
     uint8_t sidebar_scroll_arrows;
 
-    uint8_t units; // from osd_unit_e
-    uint8_t stats_energy_unit; // from osd_stats_energy_unit_e
-    uint8_t stats_min_voltage_unit; // from osd_stats_min_voltage_unit_e
+    uint8_t units;                       // from osd_unit_e
+    uint8_t stats_energy_unit;           // from osd_stats_energy_unit_e
+    uint8_t stats_min_voltage_unit;      // from osd_stats_min_voltage_unit_e
+    uint8_t stats_page_auto_swap_time;   // stats page auto swap cycle time (seconds) CR25
 
 #ifdef USE_WIND_ESTIMATOR
     bool    estimations_wind_compensation; // use wind compensation for estimated remaining flight/distance

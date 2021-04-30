@@ -816,18 +816,6 @@ static const char * divertingToSafehomeMessage(void)
 }
 #endif
 
-// CR14
-#if defined(USE_SAFE_HOME)
-static const char * divertingToSafehomeMessage(void)
-{
-	if (isSafeHomeInUse() && posControl.flags.forcedRTHActivated) {
-	    return OSD_MESSAGE_STR(OSD_MSG_DIVERT_SAFEHOME);
-	}
-	return NULL;
-}
-#endif
-// CR14
-
 static const char * navigationStateMessage(void)
 {
     switch (NAV_Status.state) {
@@ -2917,7 +2905,8 @@ PG_RESET_TEMPLATE(osdConfig_t, osdConfig,
     .force_grid = SETTING_OSD_FORCE_GRID_DEFAULT,
 
     .stats_energy_unit = SETTING_OSD_STATS_ENERGY_UNIT_DEFAULT,
-    .stats_min_voltage_unit = SETTING_OSD_STATS_MIN_VOLTAGE_UNIT_DEFAULT
+    .stats_min_voltage_unit = SETTING_OSD_STATS_MIN_VOLTAGE_UNIT_DEFAULT,
+    .stats_page_auto_swap_time = SETTING_OSD_STATS_PAGE_AUTO_SWAP_TIME_DEFAULT    // CR25
 );
 
 void pgResetFn_osdLayoutsConfig(osdLayoutsConfig_t *osdLayoutsConfig)
@@ -3459,7 +3448,6 @@ static void osdShowArmed(void)
                 displayWrite(osdDisplayPort, (osdDisplayPort->cols - strlen(buf)) / 2, y + 2, buf);
             }
             y += 4;
-            // CR14
 #if defined (USE_SAFE_HOME)
             if (safehome_distance) { // safehome found during arming
                 if (navConfig()->general.flags.safehome_usage_mode == SAFEHOME_USAGE_OFF) {
@@ -3474,7 +3462,6 @@ static void osdShowArmed(void)
 				displayWriteWithAttr(osdDisplayPort, (osdDisplayPort->cols - strlen(buf)) / 2, y - 8, buf, elemAttr);
             }
 #endif
-            // CR14
         } else {
             strcpy(buf, "!NO HOME POSITION!");
             displayWrite(osdDisplayPort, (osdDisplayPort->cols - strlen(buf)) / 2, y, buf);
@@ -3584,7 +3571,7 @@ static void osdRefresh(timeUs_t currentTimeUs)
             if (STATS_PAGE1 || STATS_PAGE2) {
                 statsPageAutoSwapCntl = 2;
             } else {
-                if (OSD_ALTERNATING_CHOICES(2000, 2)) {
+                if (OSD_ALTERNATING_CHOICES((osdConfig()->stats_page_auto_swap_time * 1000), 2)) {
                     if (statsPageAutoSwapCntl == 0) {
                         osdShowStatsPage1();
                         statsPageAutoSwapCntl = 1;
@@ -3806,14 +3793,12 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
                 if (navStateFSMessage) {
                     messages[messageCount++] = navStateFSMessage;
                 }
-// CR14
 #if defined(USE_SAFE_HOME)
                 const char *safehomeMessage = divertingToSafehomeMessage();
 				if (safehomeMessage) {
 					messages[messageCount++] = safehomeMessage;
 				}
 #endif
-// CR14
                 if (messageCount > 0) {
                     message = messages[OSD_ALTERNATING_CHOICES(systemMessageCycleTime(messageCount, messages), messageCount)];    // CR18
                     if (message == failsafeInfoMessage) {

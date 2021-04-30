@@ -349,7 +349,6 @@ typedef struct {
     /* Home parameters */
     uint32_t                    homeDistance;   // cm
     int32_t                     homeDirection;  // deg*100
-    navWaypointPosition_t       armingHomePosition; // CR14
 
     /* Cruise */
     navCruise_t                 cruise;

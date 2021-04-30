@@ -1936,9 +1936,9 @@ static fpVector3_t * rthGetHomeTargetPosition(rthTargetMode_e mode)
 
         case RTH_HOME_FINAL_LAND:
             // CR19
-            // if p1 > 0 for WP mission use P1 value as landing elevation (cm) otherwise use takeoff home elevation
-            if (FLIGHT_MODE(NAV_WP_MODE) && posControl.waypointList[posControl.activeWaypointIndex].action == NAV_WP_ACTION_LAND && posControl.waypointList[posControl.activeWaypointIndex].p1 != 0) {
-                posControl.rthState.homeTmpWaypoint.z = posControl.waypointList[posControl.activeWaypointIndex].p1;
+            // if p2 > 0 for WP mission use p2 value as landing elevation (in meters !, p2 = int16_t) otherwise use takeoff home elevation
+            if (FLIGHT_MODE(NAV_WP_MODE) && posControl.waypointList[posControl.activeWaypointIndex].action == NAV_WP_ACTION_LAND && posControl.waypointList[posControl.activeWaypointIndex].p2 != 0) {
+                posControl.rthState.homeTmpWaypoint.z = posControl.waypointList[posControl.activeWaypointIndex].p2 * 100;
                 // CR12
                 if (waypointMissionAltConvMode(posControl.waypointList[posControl.activeWaypointIndex].p3) == GEO_ALT_ABSOLUTE) {
                     posControl.rthState.homeTmpWaypoint.z -= posControl.gpsOrigin.alt;  // correct to relative if altitude datum used is absolute
@@ -2476,20 +2476,6 @@ void updateHomePosition(void)
         else {
             isHomeResetAllowed = true;
         }
-
-        // CR14
-        static bool safehomeWasActive = false;
-
-        if (safehome_used != -1 && posControl.flags.forcedRTHActivated) {
-            // Use safehome for failsafe RTH if available
-            setHomePosition(&nearestSafeHome, 0, NAV_POS_UPDATE_XY | NAV_POS_UPDATE_Z | NAV_POS_UPDATE_HEADING, navigationActualStateHomeValidity());
-            safehomeWasActive = true;
-        } else if (safehomeWasActive) {
-            // reset to arming home if failsafe RTH cancelled
-            setHomePosition(&posControl.armingHomePosition.pos, posControl.armingHomePosition.yaw, NAV_POS_UPDATE_XY | NAV_POS_UPDATE_Z | NAV_POS_UPDATE_HEADING, navigationActualStateHomeValidity());
-            safehomeWasActive = false;
-        }
-        // CR14
 
         // Update distance and direction to home if armed (home is not updated when armed)
         if (STATE(GPS_FIX_HOME)) {
