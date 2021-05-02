@@ -102,6 +102,7 @@
 #define OSD_MSG_HEADFREE            "(HEADFREE)"
 #define OSD_MSG_UNABLE_ARM          "UNABLE TO ARM"
 #define OSD_MSG_WP_RTH_CANCEL       "CANCEL WP TO END RTH"     // CR16
+#define OSD_MSG_COMPASS_ERROR       "COMPASS ERROR !"     // CR27
 
 #if defined(USE_SAFE_HOME)
 #define OSD_MSG_DIVERT_SAFEHOME     "DIVERTING TO SAFEHOME"
@@ -232,6 +233,7 @@ typedef enum {
     OSD_RANGEFINDER,
     OSD_MISSION,   // CR21
     OSD_INFO_CYCLE, // CR22
+    OSD_STATUS,     // CR27
     OSD_ITEM_COUNT // MUST BE LAST
 } osd_items_e;
 

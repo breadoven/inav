@@ -339,10 +339,10 @@ void failsafeOnValidDataFailed(void)
     failsafeState.validRxDataFailedAt = millis();
     failsafeState.blockChangeArmState = true;    // CR24
     // CR24
-    if (fstest1 == 0 && micros() > 5000000) {
-        DEBUG_SET(DEBUG_CRUISE, 0, micros());
-        fstest1 = micros();
-    }
+    // if (fstest1 == 0 && micros() > 5000000) {
+        // DEBUG_SET(DEBUG_CRUISE, 0, micros());
+        // fstest1 = micros();
+    // }
     // CR24
     if ((failsafeState.validRxDataFailedAt - failsafeState.validRxDataReceivedAt) > failsafeState.rxDataFailurePeriod) {
         failsafeState.rxLinkState = FAILSAFE_RXLINK_DOWN;

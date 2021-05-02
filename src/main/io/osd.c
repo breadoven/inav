@@ -2731,6 +2731,22 @@ static bool osdDrawSingleElement(uint8_t item)
             return false;
         }
     // CR22
+    // CR27
+    case OSD_STATUS:
+        {
+            if (STATE(MULTIROTOR)) {
+                if (compassGpsCogError <= 180) {
+                    tfp_sprintf(buff, "MAG ERR %3u", compassGpsCogError);
+                } else {
+                    strcpy(buff, "NO GPS COG");
+                }
+                displayWrite(osdDisplayPort, elemPosX, elemPosY, buff);
+                return true;
+            } else {
+                return false;
+            }
+        }
+    // CR27
     default:
         return false;
     }
@@ -3043,6 +3059,7 @@ void pgResetFn_osdLayoutsConfig(osdLayoutsConfig_t *osdLayoutsConfig)
     osdLayoutsConfig->item_pos[0][OSD_GVAR_3] = OSD_POS(1, 4);
 
     osdLayoutsConfig->item_pos[0][OSD_INFO_CYCLE] = OSD_POS(1, 1);    // CR22
+    osdLayoutsConfig->item_pos[0][OSD_STATUS] = OSD_POS(1, 4);    // CR27
 
 #if defined(USE_ESC_SENSOR)
     osdLayoutsConfig->item_pos[0][OSD_ESC_RPM] = OSD_POS(1, 2);
@@ -3881,6 +3898,11 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
                         messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_LANDED);
                     }
                     // CR15
+                    // CR27
+                    if (posControl.flags.compassGpsCogMismatchError) {
+                        messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_COMPASS_ERROR);
+                    }
+                    // CR27
                 }
                 // Pick one of the available messages. Each message lasts
                 // a second.

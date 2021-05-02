@@ -81,6 +81,7 @@ typedef struct navigationFlags_s {
     navigationEstimateStatus_e estVelStatus;        // Indicates that GPS is working (or not)
     navigationEstimateStatus_e estAglStatus;
     navigationEstimateStatus_e estHeadingStatus;    // Indicate valid heading - wither mag or GPS at certain speed on airplane
+    bool compassGpsCogMismatchError;                // mismatch between compass heading and valid GPS heading   // CR27
 
     bool isAdjustingPosition;
     bool isAdjustingAltitude;

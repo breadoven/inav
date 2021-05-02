@@ -916,7 +916,7 @@ static flightModeFlags_e navGetMappedFlightModes(navigationFSMState_t state)
 
 navigationFSMStateFlags_t navGetCurrentStateFlags(void)
 {
-	// CR
+	// General use debug
 	// DEBUG_SET(DEBUG_CRUISE, 0, posControl.waypointList[0].lat);
 
 
@@ -2087,7 +2087,9 @@ void updateActualHeading(bool headingValid, int32_t newHeading)
     /* Update heading. Check if we're acquiring a valid heading for the
      * first time and update home heading accordingly.
      */
+    posControl.flags.compassGpsCogMismatchError = compassHeadingGPSCogErrorCheck();     // CR27
     navigationEstimateStatus_e newEstHeading = headingValid ? EST_TRUSTED : EST_NONE;
+
     if (newEstHeading >= EST_USABLE && posControl.flags.estHeadingStatus < EST_USABLE &&
         (posControl.rthState.homeFlags & (NAV_HOME_VALID_XY | NAV_HOME_VALID_Z)) &&
         (posControl.rthState.homeFlags & NAV_HOME_VALID_HEADING) == 0) {

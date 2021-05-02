@@ -216,7 +216,7 @@ void onNewGPSData(void)
         if(STATE(GPS_FIX_HOME)){
             static bool magDeclinationSet = false;
             if (positionEstimationConfig()->automatic_mag_declination && !magDeclinationSet) {
-                const float declination = geoCalculateMagDeclination(&newLLH); 
+                const float declination = geoCalculateMagDeclination(&newLLH);
                 imuSetMagneticDeclination(declination);
 #ifdef USE_SECONDARY_IMU
                 secondaryImuSetMagneticDeclination(declination);
