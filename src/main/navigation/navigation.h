@@ -535,7 +535,7 @@ bool navigationIsExecutingAnEmergencyLanding(void);
  * or if it's NAV_RTH_ALLOW_LANDING_FAILSAFE and failsafe mode is active.
  */
 bool navigationRTHAllowsLanding(void);
-bool isWaypointMissionRTHActive(void);  // CR16
+bool isWaypointMissionRTHActive(void);
 
 bool isNavLaunchEnabled(void);
 bool isFixedWingLaunchDetected(void);

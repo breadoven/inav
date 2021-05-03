@@ -1321,6 +1321,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_HOVER_PRIOR_TO_LAND
 
     // If position ok OR within valid timeout - continue
     if ((posControl.flags.estPosStatus >= EST_USABLE) || !checkForPositionSensorTimeout()) {
+        // Wait until target heading is reached for MR (with 15 deg margin for error), or continue for Fixed Wing
         if ((ABS(wrap_18000(posControl.rthState.homePosition.yaw - posControl.actualState.yaw)) < DEGREES_TO_CENTIDEGREES(15)) || STATE(FIXED_WING_LEGACY)) {
             resetLandingDetector();
             updateClimbRateToAltitudeController(0, ROC_TO_ALT_RESET);
@@ -3761,12 +3762,12 @@ rthState_e getStateOfForcedRTH(void)
         return RTH_IDLE;
     }
 }
-// CR16
+
 bool isWaypointMissionRTHActive(void)
 {
     return FLIGHT_MODE(NAV_RTH_MODE) && IS_RC_MODE_ACTIVE(BOXNAVWP) && !(IS_RC_MODE_ACTIVE(BOXNAVRTH) || posControl.flags.forcedRTHActivated);
 }
-// CR16
+
 bool navigationIsExecutingAnEmergencyLanding(void)
 {
     return navGetCurrentStateFlags() & NAV_CTL_EMERG;
@@ -3800,9 +3801,12 @@ bool navigationIsFlyingAutonomousMode(void)
 
 bool navigationRTHAllowsLanding(void)
 {
+    // WP mission RTH landing setting
     if (isWaypointMissionRTHActive() && isWaypointMissionValid()) {
         return posControl.waypointList[posControl.waypointCount - 1].p1 > 0;
     }
+
+    // normal RTH landing setting
     navRTHAllowLanding_e allow = navConfig()->general.flags.rth_allow_landing;
     return allow == NAV_RTH_ALLOW_LANDING_ALWAYS || (allow == NAV_RTH_ALLOW_LANDING_FS_ONLY && FLIGHT_MODE(FAILSAFE_MODE));
 }
