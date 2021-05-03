@@ -530,21 +530,28 @@ bool compassHeadingGPSCogErrorCheck(void)
     compassGpsCogError = 2700;
 #if defined(USE_MAG) && defined(USE_GPS)
     if (isGPSHeadingValid() && sensors(SENSOR_MAG) && compassIsHealthy()) {
-        static int32_t compassGpsCogErrorPrev = 1;
-        compassGpsCogError = (ABS(gpsSol.groundCourse - attitude.values.yaw));
+    // if (sensors(SENSOR_MAG) && compassIsHealthy()) {
+        static uint16_t compassGpsCogErrorPrev = 10;
+        static timeMs_t timerStartMs = 0;
+        compassGpsCogError = ABS(gpsSol.groundCourse - attitude.values.yaw);
+        // compassGpsCogError = ABS(900 - attitude.values.yaw);
         compassGpsCogError = compassGpsCogError > 1800 ? ABS(compassGpsCogError - 3600) : compassGpsCogError;
         // DEBUG_SET(DEBUG_CRUISE, 0, compassGpsCogError);
         compassGpsCogError = 0.8 * compassGpsCogErrorPrev + 0.2 * compassGpsCogError;
         compassGpsCogErrorPrev = compassGpsCogError;
         compassGpsCogError = compassGpsCogError / 10;
-    } else {
-        return false;
-    }
 
-    return compassGpsCogError > 10;
-#else
-    return false;
+        if (compassGpsCogError > 10) {
+            if (timerStartMs == 0) {
+                timerStartMs = millis();
+            }
+            return millis() - timerStartMs > 2000;
+        } else {
+            timerStartMs = 0;
+        }
+    }
 #endif
+    return false;
 }
 // CR27
 static void imuCalculateEstimatedAttitude(float dT)

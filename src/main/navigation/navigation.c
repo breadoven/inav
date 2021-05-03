@@ -2087,7 +2087,13 @@ void updateActualHeading(bool headingValid, int32_t newHeading)
     /* Update heading. Check if we're acquiring a valid heading for the
      * first time and update home heading accordingly.
      */
-    posControl.flags.compassGpsCogMismatchError = compassHeadingGPSCogErrorCheck();     // CR27
+    // CR27
+    /* Check compass heading matches GPS COG if available
+     * latch mismatch error if exists */
+    if (!posControl.flags.compassGpsCogMismatchError) {
+        posControl.flags.compassGpsCogMismatchError = compassHeadingGPSCogErrorCheck();
+    }
+    // CR27
     navigationEstimateStatus_e newEstHeading = headingValid ? EST_TRUSTED : EST_NONE;
 
     if (newEstHeading >= EST_USABLE && posControl.flags.estHeadingStatus < EST_USABLE &&
@@ -3706,6 +3712,7 @@ void navigationInit(void)
     posControl.flags.estVelStatus = EST_NONE;
     posControl.flags.estHeadingStatus = EST_NONE;
     posControl.flags.estAglStatus = EST_NONE;
+    posControl.flags.compassGpsCogMismatchError = false;    // CR27
 
     posControl.flags.forcedRTHActivated = 0;
     posControl.waypointCount = 0;
