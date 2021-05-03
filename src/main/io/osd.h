@@ -379,7 +379,7 @@ typedef struct osdConfig_s {
     uint8_t crsf_lq_format;
     uint16_t system_msg_display_time;   // system message display time for multiple messages (ms)   CR18
     uint16_t infocycle_interval_time;   // Info Cycle field item display time interval (ms)   CR22
-    uint8_t sidebar_height;             // sidebar height in characters, 0 turns off sidebars leaving only horizon arrows
+    uint8_t sidebar_height;             // sidebar height in rows, 0 turns off sidebars leaving only level indicator arrows
     uint8_t telemetry; 				    // use telemetry on displayed pixel line 0
 
 } osdConfig_t;

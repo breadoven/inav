@@ -872,10 +872,10 @@ groups:
         min: 4
         max: 255
         default_value: 14
-      - name: flip_over_after_crash_power_factor
-        field: flipOverAfterPowerFactor
-        default_value: 65
-        description: "flip over after crash power factor"
+      - name: turtle_mode_power_factor
+        field: turtleModePowerFactor
+        default_value: 55
+        description: "Turtle mode power factor"
         condition: "USE_DSHOT"
         min: 0
         max: 100
@@ -2701,7 +2701,7 @@ groups:
         min: 0
         max: 60000
       - name: nav_fw_launch_climb_angle
-        description: "Climb angle for launch sequence (degrees), is also restrained by global max_angle_inclination_pit"
+        description: "Climb angle (attitude of model, not climb slope) for launch sequence (degrees), is also restrained by global max_angle_inclination_pit"
         default_value: 18
         field: fw.launch_climb_angle
         min: 5
@@ -3332,12 +3332,14 @@ groups:
         max: 255
         default_value: 0
         description: Same as left_sidebar_scroll_step, but for the right sidebar
+
       - name: osd_sidebar_height
         field: sidebar_height
         min: 0
         max: 5
         default_value: 3
-        description: Height of sidebars in characters. 0 leaves only the horizon indicator arrows. (Not for pixel OSD)
+        description: Height of sidebars in rows. 0 leaves only the level indicator arrows (Not for pixel OSD)
+
       - name: osd_home_position_arm_screen
         type: bool
         default_value: ON
