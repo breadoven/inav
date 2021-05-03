@@ -242,7 +242,7 @@ void calculateNewCruiseTarget(fpVector3_t * origin, int32_t yaw, int32_t distanc
 static bool isWaypointPositionReached(const fpVector3_t * pos, const bool isWaypointHome);
 static void mapWaypointToLocalPosition(fpVector3_t * localPos, const navWaypoint_t * waypoint, geoAltitudeConversionMode_e altConv);        // CR12
 static navigationFSMEvent_t nextForNonGeoStates(void);
-static bool isWaypointMissionValid(void);   // CR9
+static bool isWaypointMissionValid(void);
 
 void initializeRTHSanityChecker(const fpVector3_t * pos);
 bool validateRTHSanityChecker(void);
@@ -676,7 +676,7 @@ static const navigationFSMStateDescriptor_t navFSM[NAV_STATE_COUNT] = {
             [NAV_FSM_EVENT_SUCCESS]                     = NAV_STATE_WAYPOINT_IN_PROGRESS,
             [NAV_FSM_EVENT_ERROR]                       = NAV_STATE_IDLE,
             [NAV_FSM_EVENT_SWITCH_TO_IDLE]              = NAV_STATE_IDLE,
-            [NAV_FSM_EVENT_SWITCH_TO_RTH]               = NAV_STATE_RTH_INITIALIZE,   // CR9
+            [NAV_FSM_EVENT_SWITCH_TO_RTH]               = NAV_STATE_RTH_INITIALIZE,
             [NAV_FSM_EVENT_SWITCH_TO_WAYPOINT_FINISHED] = NAV_STATE_WAYPOINT_FINISHED,
         }
     },
@@ -1321,11 +1321,9 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_HOVER_PRIOR_TO_LAND
 
     // If position ok OR within valid timeout - continue
     if ((posControl.flags.estPosStatus >= EST_USABLE) || !checkForPositionSensorTimeout()) {
-        // CR9
         if ((ABS(wrap_18000(posControl.rthState.homePosition.yaw - posControl.actualState.yaw)) < DEGREES_TO_CENTIDEGREES(15)) || STATE(FIXED_WING_LEGACY)) {
             resetLandingDetector();
             updateClimbRateToAltitudeController(0, ROC_TO_ALT_RESET);
-        // CR9
             return navigationRTHAllowsLanding() ? NAV_FSM_EVENT_SUCCESS : NAV_FSM_EVENT_SWITCH_TO_RTH_HOVER_ABOVE_HOME; // success = land
         }
         else if (!validateRTHSanityChecker()) {
@@ -1533,13 +1531,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_WAYPOINT_PRE_ACTION(nav
             return nextForNonGeoStates();
 
         case NAV_WP_ACTION_RTH:
-        // CR9 -change to using normal RTH method
             return NAV_FSM_EVENT_SWITCH_TO_RTH;
-        // CR9
-            // posControl.rthState.rthInitialDistance = posControl.homeDistance;
-            // initializeRTHSanityChecker(&navGetCurrentActualPositionAndVelocity()->pos);
-            // calculateAndSetActiveWaypointToLocalPosition(rthGetHomeTargetPosition(RTH_HOME_ENROUTE_INITIAL));
-            // return NAV_FSM_EVENT_SUCCESS;       // will switch to NAV_STATE_WAYPOINT_IN_PROGRESS
     };
 
     UNREACHABLE();
@@ -1588,21 +1580,6 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_WAYPOINT_IN_PROGRESS(na
             case NAV_WP_ACTION_SET_POI:
             case NAV_WP_ACTION_RTH:
                 UNREACHABLE();
-            // CR9
-            // case NAV_WP_ACTION_RTH:
-                // if (isWaypointReached(&posControl.activeWaypoint, true) || isWaypointMissed(&posControl.activeWaypoint)) {
-                    // return NAV_FSM_EVENT_SUCCESS;   // will switch to NAV_STATE_WAYPOINT_REACHED
-                // }
-                // else {
-                    // if(navConfig()->general.flags.rth_tail_first && !STATE(FIXED_WING_LEGACY))
-                        // setDesiredPosition(&posControl.activeWaypoint.pos, 0, NAV_POS_UPDATE_XY | NAV_POS_UPDATE_BEARING_TAIL_FIRST);
-                    // else
-                        // setDesiredPosition(&posControl.activeWaypoint.pos, 0, NAV_POS_UPDATE_XY | NAV_POS_UPDATE_BEARING);
-                    // setDesiredPosition(rthGetHomeTargetPosition(RTH_HOME_ENROUTE_PROPORTIONAL), 0, NAV_POS_UPDATE_Z);
-                    // return NAV_FSM_EVENT_NONE;      // will re-process state in >10ms
-                // }
-                // CR9
-                // break;
         }
     }
     /* No pos sensor available for NAV_WAIT_FOR_GPS_TIMEOUT_MS - land */
@@ -1629,16 +1606,6 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_WAYPOINT_REACHED(naviga
         case NAV_WP_ACTION_SET_POI:
         case NAV_WP_ACTION_RTH:
             UNREACHABLE();
-        // CR9
-        // case NAV_WP_ACTION_RTH:
-            // if (posControl.waypointList[posControl.activeWaypointIndex].p1 != 0) {
-                // return NAV_FSM_EVENT_SWITCH_TO_WAYPOINT_RTH_LAND;
-            // }
-            // else {
-                // return NAV_FSM_EVENT_SUCCESS;   // NAV_STATE_WAYPOINT_NEXT
-            // }
-            // break;
-        // CR9
 
         case NAV_WP_ACTION_LAND:
             return NAV_FSM_EVENT_SWITCH_TO_WAYPOINT_RTH_LAND;
@@ -2089,9 +2056,11 @@ void updateActualHeading(bool headingValid, int32_t newHeading)
      */
     // CR27
     /* Check compass heading matches GPS COG if available
-     * latch mismatch error if exists */
+     * latch mismatch error if exists. Reset on disarm ? ONLY FOR TEST !! */
     if (!posControl.flags.compassGpsCogMismatchError) {
         posControl.flags.compassGpsCogMismatchError = compassHeadingGPSCogErrorCheck();
+    } else if (!ARMING_FLAG(ARMED)) {       // TEST ONLY REMOVE AFTER !!
+        posControl.flags.compassGpsCogMismatchError = false;
     }
     // CR27
     navigationEstimateStatus_e newEstHeading = headingValid ? EST_TRUSTED : EST_NONE;
@@ -3831,16 +3800,9 @@ bool navigationIsFlyingAutonomousMode(void)
 
 bool navigationRTHAllowsLanding(void)
 {
-    // if (posControl.waypointList[posControl.activeWaypointIndex].action == NAV_WP_ACTION_LAND)       // Defunt code ? not called from WP mission
-        // return true;
-    // CR9
     if (isWaypointMissionRTHActive() && isWaypointMissionValid()) {
-        // DEBUG_SET(DEBUG_CRUISE, 0, 55);
-        // DEBUG_SET(DEBUG_CRUISE, 1, 100 + posControl.waypointList[posControl.waypointCount - 1].p1);
         return posControl.waypointList[posControl.waypointCount - 1].p1 > 0;
     }
-    // DEBUG_SET(DEBUG_CRUISE, 0, 77);
-    // CR9
     navRTHAllowLanding_e allow = navConfig()->general.flags.rth_allow_landing;
     return allow == NAV_RTH_ALLOW_LANDING_ALWAYS || (allow == NAV_RTH_ALLOW_LANDING_FS_ONLY && FLIGHT_MODE(FAILSAFE_MODE));
 }

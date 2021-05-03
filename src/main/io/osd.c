@@ -1810,9 +1810,7 @@ static bool osdDrawSingleElement(uint8_t item)
             else if (FLIGHT_MODE(MANUAL_MODE))
                 p = "MANU";
             else if (FLIGHT_MODE(NAV_RTH_MODE))
-                // CR9 + CR16
                 p = isWaypointMissionRTHActive() ? "WRTH" : "RTH ";
-                // CR9
             else if (FLIGHT_MODE(NAV_POSHOLD_MODE))
                 p = "HOLD";
             else if (FLIGHT_MODE(NAV_COURSE_HOLD_MODE) && FLIGHT_MODE(NAV_ALTHOLD_MODE))
