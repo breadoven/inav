@@ -3035,9 +3035,17 @@ void resetSafeHomes(void)
 static void mapWaypointToLocalPosition(fpVector3_t * localPos, const navWaypoint_t * waypoint, geoAltitudeConversionMode_e altConv)
 {
     gpsLocation_t wpLLH;
-
-    wpLLH.lat = waypoint->lat;
-    wpLLH.lon = waypoint->lon;
+    // CR28
+    /* Default to home position if lat & lon = 0
+     * Applicable to WAYPOINT, POSHOLD & LANDING WP types */
+    if (waypoint->lat == 0 && waypoint->lon == 0) {
+        wpLLH.lat = GPS_home.lat;
+        wpLLH.lon = GPS_home.lon;
+    } else {
+        wpLLH.lat = waypoint->lat;
+        wpLLH.lon = waypoint->lon;
+    }
+    // CR28
     wpLLH.alt = waypoint->alt;
 
     geoConvertGeodeticToLocal(localPos, &posControl.gpsOrigin, &wpLLH, altConv);
