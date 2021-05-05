@@ -362,6 +362,7 @@ typedef struct {
 
     int8_t                      multiMissionCount;          // CR21 number of missions in multi mission file
     int8_t                      multiMissionTotalWPCount;   // CR21 total number of WPs in multi mission file
+    int8_t                      loadedMultiMissionIndex;    // Index of currently loaded mission  CR21
 
     navWaypointPosition_t       activeWaypoint;         // Local position and initial bearing, filled on waypoint activation
     int8_t                      activeWaypointIndex;

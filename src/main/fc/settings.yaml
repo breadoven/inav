@@ -2322,11 +2322,17 @@ groups:
         field: general.waypoint_safe_distance
         max: 65000
         # CR21
-      - name: nav_multi_waypoint_mission_index
-        description: "Index of mission selected from multi mission WP file. 1 is the first WP mission in the file. If index exceeds number of missions in file then no mission is loaded."
+      - name: nav_wp_multi_mission_index
+        description: "Index of mission selected from multi mission WP entry. 1 is the first useable WP mission in the entry. Limited to a maximum of 9 missions. Set index to 0 to load an empty mission."
         default_value: 1
-        field: general.multi_waypoint_mission_index
+        field: general.waypoint_multi_mission_index
+        min: 0
         max: 9
+      - name: nav_wp_load_on_boot
+        description: "If set to ON WP mission will automatically load during boot."
+        default_value: OFF
+        field: general.waypoint_load_on_boot
+        type: bool
         # CR21
       - name: nav_auto_speed
         description: "Maximum velocity firmware is allowed in full auto modes (RTH, WP) [cm/s] [Multirotor only]"
