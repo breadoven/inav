@@ -3706,11 +3706,7 @@ void navigationInit(void)
 
         loadNonVolatileWaypointList();
 
-        if (savedMultiMissionIndex > posControl.multiMissionCount) {
-            navConfigMutable()->general.waypoint_multi_mission_index = 1;
-        } else {
-            navConfigMutable()->general.waypoint_multi_mission_index = savedMultiMissionIndex;
-        }
+        navConfigMutable()->general.waypoint_multi_mission_index = savedMultiMissionIndex > posControl.multiMissionCount ? 1 : savedMultiMissionIndex;
     #endif
     // CR13
 
