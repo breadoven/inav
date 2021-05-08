@@ -116,6 +116,7 @@ PG_RESET_TEMPLATE(navConfig_t, navConfig,
             .rth_alt_control_override = SETTING_NAV_RTH_ALT_CONTROL_OVERRIDE_DEFAULT, // Override RTH Altitude and Climb First using Pitch and Roll stick
             .nav_overrides_motor_stop = SETTING_NAV_OVERRIDES_MOTOR_STOP_DEFAULT,
             .safehome_usage_mode = SETTING_SAFEHOME_USAGE_MODE_DEFAULT,
+            .waypoint_load_on_boot = SETTING_NAV_WP_LOAD_ON_BOOT_DEFAULT,             // load waypoints automatically during boot   // CR21
         },
 
         // General navigation parameters
@@ -123,7 +124,7 @@ PG_RESET_TEMPLATE(navConfig_t, navConfig,
         .waypoint_radius = SETTING_NAV_WP_RADIUS_DEFAULT,                             // 2m diameter
         .waypoint_safe_distance = SETTING_NAV_WP_SAFE_DISTANCE_DEFAULT,               // centimeters - first waypoint should be closer than this
         .waypoint_multi_mission_index = SETTING_NAV_WP_MULTI_MISSION_INDEX_DEFAULT,   // mission index selected from multi mission WP file CR21
-        .waypoint_load_on_boot = SETTING_NAV_WP_LOAD_ON_BOOT_DEFAULT,                 // load waypoints automatically during boot
+        .waypoint_mission_restart = SETTING_NAV_WP_MISSION_RESTART_DEFAULT,           // CR29
         .max_auto_speed = SETTING_NAV_AUTO_SPEED_DEFAULT,                             // 3 m/s = 10.8 km/h
         .max_auto_climb_rate = SETTING_NAV_AUTO_CLIMB_RATE_DEFAULT,                   // 5 m/s
         .max_manual_speed = SETTING_NAV_MANUAL_SPEED_DEFAULT,
@@ -918,8 +919,9 @@ static flightModeFlags_e navGetMappedFlightModes(navigationFSMState_t state)
 navigationFSMStateFlags_t navGetCurrentStateFlags(void)
 {
 	// General use debug
-	// DEBUG_SET(DEBUG_CRUISE, 0, posControl.waypointList[0].lat);
-
+	// DEBUG_SET(DEBUG_CRUISE, 0, posControl.flags.missionResume);
+    // DEBUG_SET(DEBUG_CRUISE, 2, 55);
+    // DEBUG_SET(DEBUG_CRUISE, 2, 77);
 
     return navGetStateFlags(posControl.navState);
 }
@@ -1460,10 +1462,23 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_WAYPOINT_INITIALIZE(nav
   Use p3 as the volatile jump counter, allowing embedded, rearmed jumps
   Using p3 minimises the risk of saving an invalid counter if a mission is aborted.
 */
-        setupJumpCounters();
-        posControl.activeWaypointIndex = 0;
-        wpHeadingControl.mode = NAV_WP_HEAD_MODE_NONE;  // CR23
+        // CR29
+        static bool missionRestart;
+        if (posControl.activeWaypointIndex == 0) {
+            missionRestart = true;
+        } else if (navConfig()->general.waypoint_mission_restart == SWITCH) {
+            missionRestart = !missionRestart;
+        } else {
+            missionRestart = navConfig()->general.waypoint_mission_restart == START;
+        }
+
+        if (missionRestart) {
+            setupJumpCounters();
+            posControl.activeWaypointIndex = 0;
+            wpHeadingControl.mode = NAV_WP_HEAD_MODE_NONE;
+        }
         return NAV_FSM_EVENT_SUCCESS;   // will switch to NAV_STATE_WAYPOINT_PRE_ACTION
+        // CR29
     }
 }
 
@@ -1533,6 +1548,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_WAYPOINT_PRE_ACTION(nav
             return nextForNonGeoStates();
 
         case NAV_WP_ACTION_RTH:
+            posControl.activeWaypointIndex = 0; // CR29
             return NAV_FSM_EVENT_SWITCH_TO_RTH;
     };
 
@@ -1674,6 +1690,8 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_WAYPOINT_FINISHED(navig
     UNUSED(previousState);
 
     clearJumpCounters();
+    posControl.activeWaypointIndex = 0; // CR29
+
     // If no position sensor available - land immediately
     if ((posControl.flags.estPosStatus >= EST_USABLE) && (posControl.flags.estHeadingStatus >= EST_USABLE)) {
         return NAV_FSM_EVENT_NONE;
@@ -3357,6 +3375,30 @@ static navigationFSMEvent_t selectNavEventFromBoxModeInput(bool launchBypass)
         }
 
         // Pilot-activated waypoint mission. Fall-back to RTH in case of no mission loaded
+        // // CR29
+        // static timeMs_t wpModeToggleStartTimeMs = 0;
+        // static bool wpModeSelectedOff = false;
+        // if (IS_RC_MODE_ACTIVE(BOXNAVWP) && !FLIGHT_MODE(NAV_WP_MODE)) {
+            // if (wpModeToggleStartTimeMs == 0) {
+                // wpModeToggleStartTimeMs = millis();
+                // wpModeSelectedOff = false;
+                // return NAV_FSM_EVENT_NONE;
+            // } else {
+                // if (millis() - wpModeToggleStartTimeMs < 1000) {
+                    // if (wpModeSelectedOff) {
+                        // posControl.flags.missionStartOverride = true;
+                    // } else {
+                        // return NAV_FSM_EVENT_NONE;
+                    // }
+                // }
+                // wpModeToggleStartTimeMs = 0;
+                // wpModeSelectedOff = false;
+            // }
+        // } else if (wpModeToggleStartTimeMs != 0) {
+            // wpModeSelectedOff = true;
+            // wpModeToggleStartTimeMs = millis() - wpModeToggleStartTimeMs < 1000 ? wpModeToggleStartTimeMs : 0;
+        // }
+        // // CR29
         if (IS_RC_MODE_ACTIVE(BOXNAVWP)) {
             if (FLIGHT_MODE(NAV_WP_MODE) || (canActivateWaypoint && canActivatePosHold && canActivateNavigation && canActivateAltHold && STATE(GPS_FIX_HOME)))
                 return NAV_FSM_EVENT_SWITCH_TO_WAYPOINT;
@@ -3697,10 +3739,11 @@ void navigationInit(void)
     posControl.waypointCount = 0;
     posControl.activeWaypointIndex = 0;
     posControl.waypointListValid = false;
+    posControl.activeWaypointIndex = 0;  // CR29
     // CR13 + CR21
     #if defined(NAV_NON_VOLATILE_WAYPOINT_STORAGE)
         uint8_t savedMultiMissionIndex = navConfig()->general.waypoint_multi_mission_index;
-        if (!navConfig()->general.waypoint_load_on_boot) {
+        if (!navConfig()->general.flags.waypoint_load_on_boot) {
             navConfigMutable()->general.waypoint_multi_mission_index = 0;
         }
 

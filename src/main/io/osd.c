@@ -2773,7 +2773,7 @@ static bool osdDrawSingleElement(uint8_t item)
     case OSD_MISSION:
         {
             if (ARMING_FLAG(ARMED)){
-                tfp_sprintf(buff, "M%u       ", posControl.loadedMultiMissionIndex);  // Limit field size when Armed, only show slected mission
+                tfp_sprintf(buff, "M%u       ", posControl.loadedMultiMissionIndex);  // Limit field size when Armed, only show selected mission
             } else {
                 if (navConfig()->general.waypoint_multi_mission_index != posControl.loadedMultiMissionIndex) {
                     tfp_sprintf(buff, "M%u/%u>LOAD", navConfig()->general.waypoint_multi_mission_index, posControl.multiMissionCount);
