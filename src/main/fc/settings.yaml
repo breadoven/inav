@@ -2341,9 +2341,9 @@ groups:
         # CR21
         # CR29
       - name: nav_wp_mission_restart
-        description: "Sets restart behaviour for a mission when disrupted mid mission. START from first WP, RESUME from last active WP or SWITCH between START and RESUME each time WP Mode is selected. RESUME will always restart at the first WP if a mission previously completed to the end."
+        description: "Sets restart behaviour for a WP mission when interrupted mid mission. START from first WP, RESUME from last active WP or SWITCH between START and RESUME each time WP Mode is reselected ON. SWITCH effectively allows resuming once only from a previous mid mission waypoint after which the mission will restart from the first waypoint."
         default_value: "RESUME"
-        field: general.waypoint_mission_restart
+        field: general.flags.waypoint_mission_restart
         table: nav_wp_mission_restart
         # CR29
       - name: nav_auto_speed

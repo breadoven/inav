@@ -117,6 +117,7 @@ PG_RESET_TEMPLATE(navConfig_t, navConfig,
             .nav_overrides_motor_stop = SETTING_NAV_OVERRIDES_MOTOR_STOP_DEFAULT,
             .safehome_usage_mode = SETTING_SAFEHOME_USAGE_MODE_DEFAULT,
             .waypoint_load_on_boot = SETTING_NAV_WP_LOAD_ON_BOOT_DEFAULT,             // load waypoints automatically during boot   // CR21
+            .waypoint_mission_restart = SETTING_NAV_WP_MISSION_RESTART_DEFAULT,       // CR29
         },
 
         // General navigation parameters
@@ -124,7 +125,6 @@ PG_RESET_TEMPLATE(navConfig_t, navConfig,
         .waypoint_radius = SETTING_NAV_WP_RADIUS_DEFAULT,                             // 2m diameter
         .waypoint_safe_distance = SETTING_NAV_WP_SAFE_DISTANCE_DEFAULT,               // centimeters - first waypoint should be closer than this
         .waypoint_multi_mission_index = SETTING_NAV_WP_MULTI_MISSION_INDEX_DEFAULT,   // mission index selected from multi mission WP file CR21
-        .waypoint_mission_restart = SETTING_NAV_WP_MISSION_RESTART_DEFAULT,           // CR29
         .max_auto_speed = SETTING_NAV_AUTO_SPEED_DEFAULT,                             // 3 m/s = 10.8 km/h
         .max_auto_climb_rate = SETTING_NAV_AUTO_CLIMB_RATE_DEFAULT,                   // 5 m/s
         .max_manual_speed = SETTING_NAV_MANUAL_SPEED_DEFAULT,
@@ -1466,10 +1466,10 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_WAYPOINT_INITIALIZE(nav
         static bool missionRestart;
         if (posControl.activeWaypointIndex == 0) {
             missionRestart = true;
-        } else if (navConfig()->general.waypoint_mission_restart == SWITCH) {
+        } else if (navConfig()->general.flags.waypoint_mission_restart == SWITCH) {
             missionRestart = !missionRestart;
         } else {
-            missionRestart = navConfig()->general.waypoint_mission_restart == START;
+            missionRestart = navConfig()->general.flags.waypoint_mission_restart == START;
         }
 
         if (missionRestart) {
