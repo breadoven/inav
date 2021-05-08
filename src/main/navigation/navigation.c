@@ -2963,6 +2963,7 @@ void resetWaypointList(void)
     if (!ARMING_FLAG(ARMED)) {
         posControl.waypointCount = 0;
         posControl.waypointListValid = false;
+        posControl.activeWaypointIndex = 0; // CR29
         // CR8
         posControl.geoWaypointCount = 0;
         // CR8
@@ -3739,7 +3740,6 @@ void navigationInit(void)
     posControl.waypointCount = 0;
     posControl.activeWaypointIndex = 0;
     posControl.waypointListValid = false;
-    posControl.activeWaypointIndex = 0;  // CR29
     // CR13 + CR21
     #if defined(NAV_NON_VOLATILE_WAYPOINT_STORAGE)
         uint8_t savedMultiMissionIndex = navConfig()->general.waypoint_multi_mission_index;
