@@ -2963,7 +2963,6 @@ void resetWaypointList(void)
     if (!ARMING_FLAG(ARMED)) {
         posControl.waypointCount = 0;
         posControl.waypointListValid = false;
-        posControl.activeWaypointIndex = 0; // CR29
         // CR8
         posControl.geoWaypointCount = 0;
         // CR8
@@ -3225,6 +3224,8 @@ void applyWaypointNavigationAndAltitudeHold(void)
     if (!ARMING_FLAG(ARMED)) {
         // If we are disarmed, abort forced RTH
         posControl.flags.forcedRTHActivated = false;
+        // ensure missions always restart from first waypoint after disarm CR29
+        posControl.activeWaypointIndex = 0;
         return;
     }
 
