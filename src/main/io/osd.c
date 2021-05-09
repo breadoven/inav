@@ -2059,7 +2059,12 @@ static bool osdDrawSingleElement(uint8_t item)
 
                 for (int i = osdConfig()->hud_wp_disp - 1; i >= 0 ; i--) { // Display in reverse order so the next WP is always written on top
                     j = posControl.activeWaypointIndex + i;
-                    if (posControl.waypointList[j].lat != 0 && posControl.waypointList[j].lon != 0 && j <= posControl.waypointCount) {
+                    // CR30
+                    if (j > posControl.waypointCount - 1) {
+                        break;
+                    }
+                    // CR30
+                    if (posControl.waypointList[j].lat != 0 && posControl.waypointList[j].lon != 0) {   // CR30
                         wp2.lat = posControl.waypointList[j].lat;
                         wp2.lon = posControl.waypointList[j].lon;
                         wp2.alt = posControl.waypointList[j].alt;
