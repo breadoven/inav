@@ -2683,6 +2683,14 @@ groups:
         field: fw.launch_idle_throttle
         min: 1000
         max: 2000
+        # CR31
+      - name: nav_fw_launch_idle_motor_delay
+        description: "Delay between detected launch and launch sequence start and throttling up (ms)"
+        default_value: 0
+        field: fw.launch_idle_motor_timer
+        min: 0
+        max: 20000
+        # CR31
       - name: nav_fw_launch_motor_delay
         description: "Delay between detected launch and launch sequence start and throttling up (ms)"
         default_value: 500
