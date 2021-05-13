@@ -90,6 +90,7 @@ static const box_t boxes[CHECKBOX_ITEM_COUNT + 1] = {
     { BOXMSPRCOVERRIDE, "MSP RC OVERRIDE", 50 },
     { BOXPREARM, "PREARM", 51 },
     { BOXTURTLE, "TURTLE", 52 },
+    { BOXPLANWPMISSION, "PLAN WP MISSION", 53 },   // CR32
     { CHECKBOX_ITEM_COUNT, NULL, 0xFF }
 };
 
@@ -215,6 +216,7 @@ void initActiveBoxIds(void)
         activeBoxIds[activeBoxIdCount++] = BOXNAVRTH;
         activeBoxIds[activeBoxIdCount++] = BOXNAVWP;
         activeBoxIds[activeBoxIdCount++] = BOXHOMERESET;
+        activeBoxIds[activeBoxIdCount++] = BOXPLANWPMISSION;     // CR32
 
         if (feature(FEATURE_GPS)) {
             activeBoxIds[activeBoxIdCount++] = BOXGCSNAV;

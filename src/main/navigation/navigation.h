@@ -146,11 +146,19 @@ typedef enum {
 } navRTHClimbFirst_e;
 // CR29
 typedef enum {
-    START,
-    RESUME,
-    SWITCH,
+    MISSION_START,
+    MISSION_RESUME,
+    MISSION_SWITCH,
 } navMissionRestart_e;
 // CR29
+// CR32
+typedef enum {
+    WP_PLAN_WAIT,
+    WP_PLAN_SAVE,
+    WP_PLAN_OK,
+    WP_PLAN_FULL,
+} planWPMissionStatus_e;
+// CR32
 typedef struct positionEstimationConfig_s {
     uint8_t automatic_mag_declination;
     uint8_t reset_altitude_type; // from nav_reset_type_e

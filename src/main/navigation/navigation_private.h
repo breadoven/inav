@@ -94,6 +94,7 @@ typedef struct navigationFlags_s {
 
     bool forcedRTHActivated;
     bool landingDetected;   // CR15
+    bool planWPMissionActive;               // WP save status for setting WP mission in flight  // CR32
 } navigationFlags_t;
 
 typedef struct {
@@ -363,6 +364,8 @@ typedef struct {
     int8_t                      multiMissionCount;          // CR21 number of missions in multi mission file
     int8_t                      multiMissionTotalWPCount;   // CR21 total number of WPs in multi mission file
     int8_t                      loadedMultiMissionIndex;    // Index of currently loaded mission  CR21
+
+    int8_t                      planWPMissionStatus;        // WP save status for setting WP mission in flight  // CR32
 
     navWaypointPosition_t       activeWaypoint;         // Local position and initial bearing, filled on waypoint activation
     int8_t                      activeWaypointIndex;

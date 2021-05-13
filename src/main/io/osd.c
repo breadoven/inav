@@ -2777,16 +2777,36 @@ static bool osdDrawSingleElement(uint8_t item)
     // CR21
     case OSD_MISSION:
         {
-            if (ARMING_FLAG(ARMED)){
-                tfp_sprintf(buff, "M%u       ", posControl.loadedMultiMissionIndex);  // Limit field size when Armed, only show selected mission
+            // CR32
+            if (IS_RC_MODE_ACTIVE(BOXPLANWPMISSION)) {
+                char buf[5];
+                switch (posControl.planWPMissionStatus) {
+                case WP_PLAN_WAIT:
+                    strcpy(buf, "WAIT");
+                    break;
+                case WP_PLAN_SAVE:
+                    strcpy(buf, "SAVE");
+                    break;
+                case WP_PLAN_OK:
+                    strcpy(buf, "OK !");
+                    break;
+                case WP_PLAN_FULL:
+                    strcpy(buf, "FULL");
+                }
+                tfp_sprintf(buff, "%s>%2uWP", buf, posControl.waypointCount);
             } else {
-                if (navConfig()->general.waypoint_multi_mission_index != posControl.loadedMultiMissionIndex) {
-                    tfp_sprintf(buff, "M%u/%u>LOAD", navConfig()->general.waypoint_multi_mission_index, posControl.multiMissionCount);
+            // CR32
+                if (ARMING_FLAG(ARMED)){
+                    tfp_sprintf(buff, "M%u       ", posControl.loadedMultiMissionIndex);  // Limit field size when Armed, only show selected mission
                 } else {
-                    if (posControl.waypointListValid && posControl.waypointCount > 0) {
-                        tfp_sprintf(buff, "M%u/%u>%2uWP", posControl.loadedMultiMissionIndex, posControl.multiMissionCount, posControl.waypointCount);
+                    if (posControl.multiMissionCount && navConfig()->general.waypoint_multi_mission_index != posControl.loadedMultiMissionIndex) {
+                        tfp_sprintf(buff, "M%u/%u>LOAD", navConfig()->general.waypoint_multi_mission_index, posControl.multiMissionCount);
                     } else {
-                        tfp_sprintf(buff, "M0/%u> 0WP", posControl.multiMissionCount);
+                        if (posControl.waypointListValid && posControl.waypointCount > 0) {
+                            tfp_sprintf(buff, "M%u/%u>%2uWP", posControl.loadedMultiMissionIndex, posControl.multiMissionCount, posControl.waypointCount);
+                        } else {
+                            tfp_sprintf(buff, "M0/%u> 0WP", posControl.multiMissionCount);
+                        }
                     }
                 }
             }
