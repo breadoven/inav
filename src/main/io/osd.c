@@ -2780,7 +2780,7 @@ static bool osdDrawSingleElement(uint8_t item)
             // CR32
             if (IS_RC_MODE_ACTIVE(BOXPLANWPMISSION)) {
                 char buf[5];
-                switch (posControl.planWPMissionStatus) {
+                switch (posControl.wpMissionPlanStatus) {
                 case WP_PLAN_WAIT:
                     strcpy(buf, "WAIT");
                     break;
@@ -3936,7 +3936,6 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
                         // CR8
                         // tfp_sprintf(messageBuf, "TO WP %u/%u", getGeoWaypointNumber(posControl.activeWaypointIndex), posControl.geoWaypointCount);
                         // CR8
-                        //tfp_sprintf(messageBuf, "TO WP %u/%u", posControl.activeWaypointIndex + 1, posControl.waypointCount);
                         messages[messageCount++] = messageBuf;
                     } else if (NAV_Status.state == MW_NAV_STATE_HOLD_TIMED) {
                         // WP hold time countdown in seconds
@@ -3991,6 +3990,11 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
                         messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_COMPASS_ERROR);
                     }
                     // CR27
+                    // CR32
+                    if (posControl.flags.wpMissionPlanActive) {
+                        messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_MISSION_PLANNER);
+                    }
+                    // CR32
                 }
                 // Pick one of the available messages.
                 if (messageCount > 0) {

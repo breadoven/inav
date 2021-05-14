@@ -146,9 +146,9 @@ typedef enum {
 } navRTHClimbFirst_e;
 // CR29
 typedef enum {
-    MISSION_START,
-    MISSION_RESUME,
-    MISSION_SWITCH,
+    WP_MISSION_START,
+    WP_MISSION_RESUME,
+    WP_MISSION_SWITCH,
 } navMissionRestart_e;
 // CR29
 // CR32
@@ -157,7 +157,7 @@ typedef enum {
     WP_PLAN_SAVE,
     WP_PLAN_OK,
     WP_PLAN_FULL,
-} planWPMissionStatus_e;
+} wpMissionPlanStatus_e;
 // CR32
 typedef struct positionEstimationConfig_s {
     uint8_t automatic_mag_declination;
@@ -236,6 +236,7 @@ typedef struct navConfig_s {
         uint16_t rth_abort_threshold;           // Initiate emergency landing if during RTH we get this much [cm] away from home
         uint16_t max_terrain_follow_altitude;   // Max altitude to be used in SURFACE TRACKING mode
         uint16_t safehome_max_distance;         // Max distance that a safehome is from the arming point
+        uint16_t wp_planner_min_wp_distance;    // Min distance between waypoints set using in flight WP mission planner (cm)   CR32
     } general;
 
     struct {

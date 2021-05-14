@@ -375,6 +375,7 @@
 | nav_wp_load_on_boot | OFF |  |  | If set to ON WP mission will automatically load during boot. |
 | nav_wp_mission_restart | RESUME |  |  | Sets restart behaviour for a WP mission when interrupted mid mission. START from first WP, RESUME from last active WP or SWITCH between START and RESUME each time WP Mode is reselected ON. SWITCH effectively allows resuming once only from a previous mid mission waypoint after which the mission will restart from the first waypoint. |
 | nav_wp_multi_mission_index | 1 | 0 | 9 | Index of mission selected from multi mission WP entry. 1 is the first useable WP mission in the entry. Limited to a maximum of 9 missions. Set index to 0 to load an empty mission. |
+| nav_wp_planner_min_wp_distance | 5000 | 0 | 65000 | Minimum distance between waypoints set using 'on the fly' WP mission planner. Next WP can only be set when craft is more than this distance away from the last WP. (cm) |
 | nav_wp_radius | 100 | 10 | 10000 | Waypoint radius [cm]. Waypoint would be considered reached if machine is within this radius |
 | nav_wp_safe_distance | 10000 |  | 65000 | First waypoint in the mission should be closer than this value [cm]. A value of 0 disables this check. |
 | opflow_hardware | NONE |  |  | Selection of OPFLOW hardware. |
