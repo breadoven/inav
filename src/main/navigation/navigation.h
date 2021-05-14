@@ -215,6 +215,7 @@ typedef struct navConfig_s {
             uint8_t safehome_usage_mode;        // Controls when safehomes are used
             uint8_t waypoint_load_on_boot;      // load waypoints automatically during boot     // CR21
             uint8_t waypoint_mission_restart;   // mission restart action CR29
+            uint8_t mission_planner_resume;     // resume from last WP or start from first WP when Mission Planner mode is restarted   CR32
         } flags;
 
         uint8_t  pos_failure_timeout;           // Time to wait before switching to emergency landing (0 - disable)
@@ -236,7 +237,6 @@ typedef struct navConfig_s {
         uint16_t rth_abort_threshold;           // Initiate emergency landing if during RTH we get this much [cm] away from home
         uint16_t max_terrain_follow_altitude;   // Max altitude to be used in SURFACE TRACKING mode
         uint16_t safehome_max_distance;         // Max distance that a safehome is from the arming point
-        uint16_t wp_planner_min_wp_distance;    // Min distance between waypoints set using in flight WP mission planner (cm)   CR32
     } general;
 
     struct {

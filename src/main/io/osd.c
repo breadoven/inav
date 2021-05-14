@@ -2794,6 +2794,8 @@ static bool osdDrawSingleElement(uint8_t item)
                     strcpy(buf, "FULL");
                 }
                 tfp_sprintf(buff, "%s>%2uWP", buf, posControl.waypointCount);
+            } else if (posControl.wpPlanActiveWPIndex){
+                tfp_sprintf(buff, "PLAN>%2uWP", posControl.waypointCount);
             } else {
             // CR32
                 if (ARMING_FLAG(ARMED)){
