@@ -235,6 +235,9 @@ typedef enum {
     OSD_MISSION,   // CR21
     OSD_INFO_CYCLE, // CR22
     OSD_STATUS,     // CR27
+    OSD_PLIMIT_REMAINING_BURST_TIME,
+    OSD_PLIMIT_ACTIVE_CURRENT_LIMIT,
+    OSD_PLIMIT_ACTIVE_POWER_LIMIT,
     OSD_ITEM_COUNT // MUST BE LAST
 } osd_items_e;
 
@@ -269,7 +272,7 @@ typedef enum {
 typedef enum {
     OSD_SIDEBAR_SCROLL_NONE,
     OSD_SIDEBAR_SCROLL_ALTITUDE,
-    OSD_SIDEBAR_SCROLL_GROUND_SPEED,
+    OSD_SIDEBAR_SCROLL_SPEED,
     OSD_SIDEBAR_SCROLL_HOME_DISTANCE,
 
     OSD_SIDEBAR_SCROLL_MAX = OSD_SIDEBAR_SCROLL_HOME_DISTANCE,
@@ -288,6 +291,7 @@ typedef enum {
 typedef enum {
     OSD_CRSF_LQ_TYPE1,
     OSD_CRSF_LQ_TYPE2,
+    OSD_CRSF_LQ_TYPE3
 } osd_crsf_lq_format_e;
 
 typedef struct osdLayoutsConfig_s {
