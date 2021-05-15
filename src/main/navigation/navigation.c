@@ -118,7 +118,7 @@ PG_RESET_TEMPLATE(navConfig_t, navConfig,
             .safehome_usage_mode = SETTING_SAFEHOME_USAGE_MODE_DEFAULT,
             .waypoint_load_on_boot = SETTING_NAV_WP_LOAD_ON_BOOT_DEFAULT,             // load waypoints automatically during boot   // CR21
             .waypoint_mission_restart = SETTING_NAV_WP_MISSION_RESTART_DEFAULT,       // CR29
-            .mission_planner_resume = SETTING_NAV_MISSION_PLANNER_RESUME_DEFAULT,     // resume or restart WP entry when Mission Planner mode is restarted
+            .mission_planner_resume = SETTING_NAV_MISSION_PLANNER_RESUME_DEFAULT,     // resume or restart WP entry when Mission Planner mode is restarted CR32
         },
 
         // General navigation parameters
@@ -3322,7 +3322,7 @@ static navigationFSMEvent_t selectNavEventFromBoxModeInput(bool launchBypass)
 
         // Keep canActivateWaypoint flag at FALSE if there is no mission loaded
         // Also block WP mission if we are executing RTH or using mission plan    // CR32
-        if (!isWaypointMissionValid() || isExecutingRTH || posControl.flags.wpMissionPlanActive) {   // CR32
+        if (!isWaypointMissionValid() || isExecutingRTH || posControl.flags.wpMissionPlannerActive) {   // CR32
             canActivateWaypoint = false;
         }
 
@@ -3363,7 +3363,7 @@ static navigationFSMEvent_t selectNavEventFromBoxModeInput(bool launchBypass)
 
         // Pilot-triggered RTH (overrides MANUAL), also fall-back for WP if there is no mission loaded
         // Prevent MANUAL falling back to RTH if selected during active mission (canActivateWaypoint is set false on MANUAL selection)
-        const bool blockWPFallback = IS_RC_MODE_ACTIVE(BOXMANUAL) || posControl.flags.wpMissionPlanActive;  // CR32
+        const bool blockWPFallback = IS_RC_MODE_ACTIVE(BOXMANUAL) || posControl.flags.wpMissionPlannerActive;  // CR32
         if (IS_RC_MODE_ACTIVE(BOXNAVRTH) || (IS_RC_MODE_ACTIVE(BOXNAVWP) && !canActivateWaypoint && !blockWPFallback)) { // CR16 + CR32
             // Check for isExecutingRTH to prevent switching our from RTH in case of a brief GPS loss
             // If don't keep this, loss of any of the canActivatePosHold && canActivateNavigation && canActivateAltHold
@@ -3585,19 +3585,19 @@ void updateFlightBehaviorModifiers(void)
 
 void updateWpMissionPlanner(void)
 {
-    if (IS_RC_MODE_ACTIVE(BOXPLANWPMISSION)) {
+    if (IS_RC_MODE_ACTIVE(BOXPLANWPMISSION) && !(FLIGHT_MODE(NAV_WP_MODE) || isWaypointMissionRTHActive())) {
         const bool positionTrusted = posControl.flags.estAltStatus == EST_TRUSTED && posControl.flags.estPosStatus == EST_TRUSTED && STATE(GPS_FIX);
-        if (positionTrusted && !FLIGHT_MODE(NAV_WP_MODE) && posControl.wpMissionPlanStatus != WP_PLAN_FULL) {
-            if (!posControl.flags.wpMissionPlanActive) {
-                posControl.wpPlanActiveWPIndex = navConfig()->general.flags.mission_planner_resume ? posControl.wpPlanActiveWPIndex : 0;
+        if (positionTrusted && posControl.wpMissionPlannerStatus != WP_PLAN_FULL) {
+            if (!posControl.flags.wpMissionPlannerActive) {
+                posControl.wpPlannerActiveWPIndex = navConfig()->general.flags.mission_planner_resume ? posControl.wpPlannerActiveWPIndex : 0;
             }
-            posControl.flags.wpMissionPlanActive = true;
+            posControl.flags.wpMissionPlannerActive = true;
             waypointMissionPlanner();
         } else {
-            posControl.wpMissionPlanStatus = posControl.wpMissionPlanStatus == WP_PLAN_FULL ? WP_PLAN_FULL : WP_PLAN_WAIT;
+            posControl.wpMissionPlannerStatus = posControl.wpMissionPlannerStatus == WP_PLAN_FULL ? WP_PLAN_FULL : WP_PLAN_WAIT;
         }
-    } else if (posControl.flags.wpMissionPlanActive) {
-        posControl.flags.wpMissionPlanActive = false;
+    } else if (posControl.flags.wpMissionPlannerActive) {
+        posControl.flags.wpMissionPlannerActive = false;
     }
 }
 
@@ -3606,7 +3606,7 @@ void waypointMissionPlanner(void)
     static bool boxWPModeIsReset = true;
 
     boxWPModeIsReset = !boxWPModeIsReset ? !IS_RC_MODE_ACTIVE(BOXNAVWP) : boxWPModeIsReset; // able to save new WP only when WP mode reset
-    posControl.wpMissionPlanStatus = boxWPModeIsReset ? boxWPModeIsReset : posControl.wpMissionPlanStatus;  // hold save status until WP mode reset
+    posControl.wpMissionPlannerStatus = boxWPModeIsReset ? boxWPModeIsReset : posControl.wpMissionPlannerStatus;  // hold save status until WP mode reset
 
     if (!boxWPModeIsReset || !IS_RC_MODE_ACTIVE(BOXNAVWP)) {
         return;
@@ -3614,22 +3614,22 @@ void waypointMissionPlanner(void)
     gpsLocation_t wpLLH;
     geoConvertLocalToGeodetic(&wpLLH, &posControl.gpsOrigin, &navGetCurrentActualPositionAndVelocity()->pos);
 
-    posControl.waypointList[posControl.wpPlanActiveWPIndex].action = 1;
-    posControl.waypointList[posControl.wpPlanActiveWPIndex].lat = wpLLH.lat;
-    posControl.waypointList[posControl.wpPlanActiveWPIndex].lon = wpLLH.lon;
-    posControl.waypointList[posControl.wpPlanActiveWPIndex].alt = wpLLH.alt;
-    posControl.waypointList[posControl.wpPlanActiveWPIndex].p1 = posControl.waypointList[posControl.wpPlanActiveWPIndex].p2 = 0;
-    posControl.waypointList[posControl.wpPlanActiveWPIndex].p3 = 1;           // use absolute altitude datum
-    posControl.waypointList[posControl.wpPlanActiveWPIndex].flag = 165;
+    posControl.waypointList[posControl.wpPlannerActiveWPIndex].action = 1;
+    posControl.waypointList[posControl.wpPlannerActiveWPIndex].lat = wpLLH.lat;
+    posControl.waypointList[posControl.wpPlannerActiveWPIndex].lon = wpLLH.lon;
+    posControl.waypointList[posControl.wpPlannerActiveWPIndex].alt = wpLLH.alt;
+    posControl.waypointList[posControl.wpPlannerActiveWPIndex].p1 = posControl.waypointList[posControl.wpPlannerActiveWPIndex].p2 = 0;
+    posControl.waypointList[posControl.wpPlannerActiveWPIndex].p3 = 1;           // use absolute altitude datum
+    posControl.waypointList[posControl.wpPlannerActiveWPIndex].flag = 165;
     posControl.waypointListValid = true;
 
-    if (posControl.wpPlanActiveWPIndex) {
-        posControl.waypointList[posControl.wpPlanActiveWPIndex - 1].flag = 0; // rollling reset of previous end of mission flag when new WP added
+    if (posControl.wpPlannerActiveWPIndex) {
+        posControl.waypointList[posControl.wpPlannerActiveWPIndex - 1].flag = 0; // rollling reset of previous end of mission flag when new WP added
     }
 
-    posControl.wpPlanActiveWPIndex += 1;
-    posControl.waypointCount = posControl.geoWaypointCount = posControl.wpPlanActiveWPIndex;
-    posControl.wpMissionPlanStatus = posControl.waypointCount == NAV_MAX_WAYPOINTS ? WP_PLAN_FULL : WP_PLAN_OK;
+    posControl.wpPlannerActiveWPIndex += 1;
+    posControl.waypointCount = posControl.geoWaypointCount = posControl.wpPlannerActiveWPIndex;
+    posControl.wpMissionPlannerStatus = posControl.waypointCount == NAV_MAX_WAYPOINTS ? WP_PLAN_FULL : WP_PLAN_OK;
     boxWPModeIsReset = false;
 }
     // DEBUG_SET(DEBUG_CRUISE, 0, calculateDistanceToDestination(&tmpPosition));
@@ -3780,7 +3780,8 @@ void navigationInit(void)
     posControl.waypointCount = 0;
     posControl.activeWaypointIndex = 0;
     posControl.waypointListValid = false;
-    posControl.wpPlanActiveWPIndex = 0;     // CR32
+    posControl.wpPlannerActiveWPIndex = 0;     // CR32
+    posControl.flags.wpMissionPlannerActive = false;   //CR32
     // CR13 + CR21
     #if defined(NAV_NON_VOLATILE_WAYPOINT_STORAGE)
         uint8_t savedMultiMissionIndex = navConfig()->general.waypoint_multi_mission_index;

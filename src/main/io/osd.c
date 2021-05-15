@@ -2780,7 +2780,7 @@ static bool osdDrawSingleElement(uint8_t item)
             // CR32
             if (IS_RC_MODE_ACTIVE(BOXPLANWPMISSION)) {
                 char buf[5];
-                switch (posControl.wpMissionPlanStatus) {
+                switch (posControl.wpMissionPlannerStatus) {
                 case WP_PLAN_WAIT:
                     strcpy(buf, "WAIT");
                     break;
@@ -2794,7 +2794,7 @@ static bool osdDrawSingleElement(uint8_t item)
                     strcpy(buf, "FULL");
                 }
                 tfp_sprintf(buff, "%s>%2uWP", buf, posControl.waypointCount);
-            } else if (posControl.wpPlanActiveWPIndex){
+            } else if (posControl.wpPlannerActiveWPIndex){
                 tfp_sprintf(buff, "PLAN>%2uWP", posControl.waypointCount);
             } else {
             // CR32
@@ -3993,7 +3993,7 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
                     }
                     // CR27
                     // CR32
-                    if (posControl.flags.wpMissionPlanActive) {
+                    if (posControl.flags.wpMissionPlannerActive) {
                         messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_MISSION_PLANNER);
                     }
                     // CR32
