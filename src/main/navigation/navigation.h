@@ -213,7 +213,6 @@ typedef struct navConfig_s {
             uint8_t rth_alt_control_override;   // Override RTH Altitude and Climb First settings using Pitch and Roll stick
             uint8_t nav_overrides_motor_stop;   // Autonomous modes override motor_stop setting and user command to stop motor
             uint8_t safehome_usage_mode;        // Controls when safehomes are used
-            uint8_t waypoint_load_on_boot;      // load waypoints automatically during boot     // CR21
             uint8_t waypoint_mission_restart;   // mission restart action CR29
             uint8_t mission_planner_resume;     // resume from last WP or start from first WP when Mission Planner mode is restarted   CR32
         } flags;

@@ -3833,11 +3833,6 @@ void navigationInit(void)
     } else {
         DISABLE_STATE(FW_HEADING_USE_YAW);
     }
-
-#if defined(NAV_NON_VOLATILE_WAYPOINT_STORAGE)
-    if (navConfig()->general.waypoint_load_on_boot)
-        loadNonVolatileWaypointList();
-#endif
 }
 
 /*-----------------------------------------------------------
