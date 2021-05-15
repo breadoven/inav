@@ -62,7 +62,7 @@ int osdGetSpeedFromSelectedSource(void);
 #define OSD_HEADING_GRAPH_DECIDEGREES_PER_CHAR 225
 
 #define OSD_AH_SIDEBAR_WIDTH_POS 7
-// #define OSD_AH_SIDEBAR_HEIGHT_POS 3     // CR26
+#define OSD_AH_SIDEBAR_HEIGHT_POS 3
 
 typedef struct displayPort_s displayPort_t;
 typedef struct displayCanvas_s displayCanvas_t;

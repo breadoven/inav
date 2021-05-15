@@ -1451,7 +1451,7 @@ bool isItemSelectedForDisplay(uint8_t *elemPosX, uint8_t *elemPosY, uint8_t item
                 }
             }
             infocycleLastLayout = currentLayout;
-            infocycleSuspended = false;
+            infocycleSuspended = true;
         }
 
         if (infocycleNumItems > 0 && !infocycleSuspended) {
@@ -3672,7 +3672,7 @@ static void osdShowArmed(void)
         // y += 2;
         y += 1;
     }
-    // CR13 + CR21
+    // CR21
     if (posControl.waypointListValid && posControl.waypointCount > 0) {
         tfp_sprintf(buf, "MISSION %u/%u (%u WP)", posControl.loadedMultiMissionIndex, posControl.multiMissionCount, posControl.waypointCount);
         displayWrite(osdDisplayPort, 6, y, buf);
@@ -4065,11 +4065,9 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
 
                     if (NAV_Status.state == MW_NAV_STATE_WP_ENROUTE) {
                         // Countdown display for remaining Waypoints
-                        // CR11
                         char buf[6];
                         osdFormatDistanceSymbol(buf, posControl.wpDistance, 0);
                         tfp_sprintf(messageBuf, "TO WP %u/%u (%s)", getGeoWaypointNumber(posControl.activeWaypointIndex), posControl.geoWaypointCount, buf);
-                        // CR11
                         // CR8
                         // tfp_sprintf(messageBuf, "TO WP %u/%u", getGeoWaypointNumber(posControl.activeWaypointIndex), posControl.geoWaypointCount);
                         // CR8

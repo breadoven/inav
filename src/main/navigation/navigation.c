@@ -3009,12 +3009,11 @@ bool loadNonVolatileWaypointList(void)
     if (ARMING_FLAG(ARMED) || posControl.wpPlannerActiveWPIndex) // prevent EEPROM load if mission planner WP count > 0  CR32
         return false;
 
-    // CR13 if waypoints are already loaded, just unload them.
+    // if waypoints are already loaded, just unload them.
     if (navConfig()->general.waypoint_multi_mission_index == posControl.loadedMultiMissionIndex && posControl.waypointCount > 0) {   // CR21
         resetWaypointList();
         return false;
     }
-    // CR13
 
     resetWaypointList();
 
@@ -3377,7 +3376,7 @@ static navigationFSMEvent_t selectNavEventFromBoxModeInput(bool launchBypass)
         // Pilot-triggered RTH (overrides MANUAL), also fall-back for WP if there is no mission loaded
         // Prevent MANUAL falling back to RTH if selected during active mission (canActivateWaypoint is set false on MANUAL selection)
         const bool blockWPFallback = IS_RC_MODE_ACTIVE(BOXMANUAL) || posControl.flags.wpMissionPlannerActive;  // CR32
-        if (IS_RC_MODE_ACTIVE(BOXNAVRTH) || (IS_RC_MODE_ACTIVE(BOXNAVWP) && !canActivateWaypoint && !blockWPFallback)) { // CR16 + CR32
+        if (IS_RC_MODE_ACTIVE(BOXNAVRTH) || (IS_RC_MODE_ACTIVE(BOXNAVWP) && !canActivateWaypoint && !blockWPFallback)) { // CR32
             // Check for isExecutingRTH to prevent switching our from RTH in case of a brief GPS loss
             // If don't keep this, loss of any of the canActivatePosHold && canActivateNavigation && canActivateAltHold
             // will kick us out of RTH state machine via NAV_FSM_EVENT_SWITCH_TO_IDLE and will prevent any of the fall-back
@@ -3802,7 +3801,7 @@ void navigationInit(void)
     posControl.waypointListValid = false;
     posControl.wpPlannerActiveWPIndex = 0;     // CR32
     posControl.flags.wpMissionPlannerActive = false;   //CR32
-    // CR13 + CR21
+    // CR21
     #if defined(NAV_NON_VOLATILE_WAYPOINT_STORAGE)
         uint8_t savedMultiMissionIndex = navConfig()->general.waypoint_multi_mission_index;
         if (!navConfig()->general.waypoint_load_on_boot) {
@@ -3813,7 +3812,6 @@ void navigationInit(void)
 
         navConfigMutable()->general.waypoint_multi_mission_index = savedMultiMissionIndex > posControl.multiMissionCount ? 1 : savedMultiMissionIndex;
     #endif
-    // CR13
 
     /* Set initial surface invalid */
     posControl.actualState.surfaceMin = -1.0f;

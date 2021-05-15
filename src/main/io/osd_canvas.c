@@ -645,19 +645,14 @@ static bool osdCanvasDrawSidebar(uint32_t *configured, displayWidgets_t *widgets
         uint8_t ex;
         uint8_t ey;
         osdCrosshairPosition(&ex, &ey);
-        // CR26
-        // const int height = 2 * OSD_AH_SIDEBAR_HEIGHT_POS * OSD_CHAR_HEIGHT;
-        // const int y = (ey - OSD_AH_SIDEBAR_HEIGHT_POS) * OSD_CHAR_HEIGHT;
-        const int height = 2 * osdConfig()->sidebar_height * OSD_CHAR_HEIGHT;
-        const int y = (ey - osdConfig()->sidebar_height) * OSD_CHAR_HEIGHT;
-        // CR26
+        const int height = 2 * OSD_AH_SIDEBAR_HEIGHT_POS * OSD_CHAR_HEIGHT;
+        const int y = (ey - OSD_AH_SIDEBAR_HEIGHT_POS) * OSD_CHAR_HEIGHT;
         widgetSidebarConfiguration_t config = {
             .rect.y = y,
             .rect.w = width,
             .rect.h = height,
             .options = options,
-            // .divisions = OSD_AH_SIDEBAR_HEIGHT_POS * 2,  // CR26
-            .divisions = osdConfig()->sidebar_height * 2,   // CR26
+            .divisions = OSD_AH_SIDEBAR_HEIGHT_POS * 2,
         };
         uint16_t countsPerStep = 0;
         osdCanvasSidebarGetUnit(&config.unit, &countsPerStep, scroll);
