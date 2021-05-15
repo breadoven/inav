@@ -116,7 +116,6 @@ PG_RESET_TEMPLATE(navConfig_t, navConfig,
             .rth_alt_control_override = SETTING_NAV_RTH_ALT_CONTROL_OVERRIDE_DEFAULT, // Override RTH Altitude and Climb First using Pitch and Roll stick
             .nav_overrides_motor_stop = SETTING_NAV_OVERRIDES_MOTOR_STOP_DEFAULT,
             .safehome_usage_mode = SETTING_SAFEHOME_USAGE_MODE_DEFAULT,
-            .waypoint_load_on_boot = SETTING_NAV_WP_LOAD_ON_BOOT_DEFAULT,             // load waypoints automatically during boot   // CR21
             .waypoint_mission_restart = SETTING_NAV_WP_MISSION_RESTART_DEFAULT,       // CR29
             .mission_planner_resume = SETTING_NAV_MISSION_PLANNER_RESUME_DEFAULT,     // resume or restart WP entry when Mission Planner mode is restarted CR32
         },
@@ -3805,7 +3804,7 @@ void navigationInit(void)
     // CR13 + CR21
     #if defined(NAV_NON_VOLATILE_WAYPOINT_STORAGE)
         uint8_t savedMultiMissionIndex = navConfig()->general.waypoint_multi_mission_index;
-        if (!navConfig()->general.flags.waypoint_load_on_boot) {
+        if (!navConfig()->general.waypoint_load_on_boot) {
             navConfigMutable()->general.waypoint_multi_mission_index = 0;
         }
 

@@ -2364,11 +2364,6 @@ groups:
         field: general.waypoint_multi_mission_index
         min: 0
         max: 9
-      - name: nav_wp_load_on_boot
-        description: "If set to ON WP mission will automatically load during boot."
-        default_value: OFF
-        field: general.flags.waypoint_load_on_boot
-        type: bool
         # CR21
         # CR29
       - name: nav_wp_mission_restart
