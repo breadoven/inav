@@ -3006,7 +3006,7 @@ void selectMultiMissionIndex(int8_t increment)
 #ifdef NAV_NON_VOLATILE_WAYPOINT_STORAGE
 bool loadNonVolatileWaypointList(void)
 {
-    if (ARMING_FLAG(ARMED))
+    if (ARMING_FLAG(ARMED) || posControl.wpPlannerActiveWPIndex) // prevent EEPROM load if mission planner WP count > 0  CR32
         return false;
 
     // CR13 if waypoints are already loaded, just unload them.
@@ -3609,6 +3609,7 @@ void updateWpMissionPlanner(void)
         if (positionTrusted && posControl.wpMissionPlannerStatus != WP_PLAN_FULL) {
             if (!posControl.flags.wpMissionPlannerActive) {
                 posControl.wpPlannerActiveWPIndex = navConfig()->general.flags.mission_planner_resume ? posControl.wpPlannerActiveWPIndex : 0;
+                posControl.waypointCount = posControl.geoWaypointCount = posControl.wpPlannerActiveWPIndex;
             }
             posControl.flags.wpMissionPlannerActive = true;
             waypointMissionPlanner();
