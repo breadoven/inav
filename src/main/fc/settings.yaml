@@ -2506,10 +2506,10 @@ groups:
         field: general.flags.safehome_usage_mode
         table: safehome_usage_mode
         # CR32
-      - name: nav_mission_planner_resume
-        description: "When ON waypoint input resumes from last waypoint when Mission Planner mode is restarted. Otherwise WP input restarts from the first waypoint"
+      - name: nav_mission_planner_reset
+        description: "With Reset enabled waypoints entered using WP Mission Planner can be reset to 0 by toggling the mode switch ON-OFF-ON within 1s."
         default_value: ON
-        field: general.flags.mission_planner_resume
+        field: general.flags.mission_planner_reset
         type: bool
         # CR32
       - name: nav_mc_bank_angle
