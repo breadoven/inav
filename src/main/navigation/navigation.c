@@ -1468,8 +1468,9 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_WAYPOINT_INITIALIZE(nav
 */
         // CR29
         static bool missionRestart;
-        if (posControl.activeWaypointIndex == 0) {
+        if (posControl.activeWaypointIndex == 0 || posControl.flags.wpMissionFinished) {
             missionRestart = true;
+            posControl.flags.wpMissionFinished = false;
         } else if (navConfig()->general.flags.waypoint_mission_restart == WP_MISSION_SWITCH) {
             missionRestart = !missionRestart;
         } else {
@@ -1552,7 +1553,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_WAYPOINT_PRE_ACTION(nav
             return nextForNonGeoStates();
 
         case NAV_WP_ACTION_RTH:
-            posControl.activeWaypointIndex = 0; // CR29
+            posControl.flags.wpMissionFinished = true; // CR29
             return NAV_FSM_EVENT_SWITCH_TO_RTH;
     };
 
@@ -1694,7 +1695,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_WAYPOINT_FINISHED(navig
     UNUSED(previousState);
 
     clearJumpCounters();
-    posControl.activeWaypointIndex = 0; // CR29
+    posControl.flags.wpMissionFinished = true;   // CR29
 
     // If no position sensor available - land immediately
     if ((posControl.flags.estPosStatus >= EST_USABLE) && (posControl.flags.estHeadingStatus >= EST_USABLE)) {
@@ -3658,7 +3659,6 @@ void missionPlannerSetWaypoint(void)
     posControl.wpMissionPlannerStatus = posControl.waypointCount == NAV_MAX_WAYPOINTS ? WP_PLAN_FULL : WP_PLAN_OK;
     boxWPModeIsReset = false;
 }
-    // DEBUG_SET(DEBUG_CRUISE, 0, calculateDistanceToDestination(&tmpPosition));
 // CR32
 /**
  * Process NAV mode transition and WP/RTH state machine
