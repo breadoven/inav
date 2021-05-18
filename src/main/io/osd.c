@@ -4062,11 +4062,11 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
                         // if RTH activated whilst WP mode selected, remind pilot to cancel WP mode to exit RTH
                         messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_WP_RTH_CANCEL);
                     }
-                    // CR34
+                    // CR33
                     if (navGetCurrentStateFlags() & NAV_AUTO_WP_DONE) {
                         messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_WP_FINISHED);
                     } else if (NAV_Status.state == MW_NAV_STATE_WP_ENROUTE) {
-                    // CR34
+                    // CR33
                         // Countdown display for remaining Waypoints
                         char buf[6];
                         osdFormatDistanceSymbol(buf, posControl.wpDistance, 0);
