@@ -1468,9 +1468,8 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_WAYPOINT_INITIALIZE(nav
 */
         // CR29
         static bool missionRestart;
-        if (posControl.activeWaypointIndex == 0 || posControl.flags.wpMissionFinished) {
+        if (posControl.activeWaypointIndex == 0) {
             missionRestart = true;
-            posControl.flags.wpMissionFinished = false;
         } else if (navConfig()->general.flags.waypoint_mission_restart == WP_MISSION_SWITCH) {
             missionRestart = !missionRestart;
         } else {
@@ -1511,6 +1510,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_WAYPOINT_PRE_ACTION(nav
         case NAV_WP_ACTION_HOLD_TIME:
         case NAV_WP_ACTION_WAYPOINT:
         case NAV_WP_ACTION_LAND:
+        case NAV_WP_ACTION_FBH: // CR28
             calculateAndSetActiveWaypoint(&posControl.waypointList[posControl.activeWaypointIndex]);
             posControl.wpInitialDistance = calculateDistanceToDestination(&posControl.activeWaypoint.pos);
             posControl.wpInitialAltitude = posControl.actualState.abs.pos.z;
@@ -1553,7 +1553,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_WAYPOINT_PRE_ACTION(nav
             return nextForNonGeoStates();
 
         case NAV_WP_ACTION_RTH:
-            posControl.flags.wpMissionFinished = true; // CR29
+            posControl.activeWaypointIndex = 0; // CR29
             return NAV_FSM_EVENT_SWITCH_TO_RTH;
     };
 
@@ -1570,6 +1570,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_WAYPOINT_IN_PROGRESS(na
             case NAV_WP_ACTION_HOLD_TIME:
             case NAV_WP_ACTION_WAYPOINT:
             case NAV_WP_ACTION_LAND:
+            case NAV_WP_ACTION_FBH:  // CR28
                 if (isWaypointReached(&posControl.activeWaypoint, false) || isWaypointMissed(&posControl.activeWaypoint)) {
                     return NAV_FSM_EVENT_SUCCESS;   // will switch to NAV_STATE_WAYPOINT_REACHED
                 }
@@ -1634,6 +1635,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_WAYPOINT_REACHED(naviga
             return NAV_FSM_EVENT_SWITCH_TO_WAYPOINT_RTH_LAND;
 
         case NAV_WP_ACTION_HOLD_TIME:
+        case NAV_WP_ACTION_FBH:     // CR28
             // Save the current time for the time the waypoint was reached
             posControl.wpReachedTime = millis();
             return NAV_FSM_EVENT_SWITCH_TO_WAYPOINT_HOLD_TIME;
@@ -1649,7 +1651,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_WAYPOINT_HOLD_TIME(navi
     timeMs_t currentTime = millis();
 
     if(posControl.waypointList[posControl.activeWaypointIndex].p1 <= 0)
-        return NAV_FSM_EVENT_SUCCESS;
+        return NAV_FSM_EVENT_SUCCESS;       // NAV_STATE_WAYPOINT_NEXT
 
     if(posControl.wpReachedTime != 0 && currentTime - posControl.wpReachedTime >= (timeMs_t)posControl.waypointList[posControl.activeWaypointIndex].p1*1000L)
         return NAV_FSM_EVENT_SUCCESS;
@@ -1695,7 +1697,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_WAYPOINT_FINISHED(navig
     UNUSED(previousState);
 
     clearJumpCounters();
-    posControl.flags.wpMissionFinished = true;   // CR29
+    posControl.activeWaypointIndex = 0;   // CR29
 
     // If no position sensor available - land immediately
     if ((posControl.flags.estPosStatus >= EST_USABLE) && (posControl.flags.estHeadingStatus >= EST_USABLE)) {
@@ -2948,7 +2950,7 @@ void setWaypoint(uint8_t wpNumber, const navWaypoint_t * wpData)
     }
     // WP #1 - #NAV_MAX_WAYPOINTS - common waypoints - pre-programmed mission
     else if ((wpNumber >= 1) && (wpNumber <= NAV_MAX_WAYPOINTS) && !ARMING_FLAG(ARMED)) {
-        if (wpData->action == NAV_WP_ACTION_WAYPOINT || wpData->action == NAV_WP_ACTION_JUMP || wpData->action == NAV_WP_ACTION_RTH || wpData->action == NAV_WP_ACTION_HOLD_TIME || wpData->action == NAV_WP_ACTION_LAND || wpData->action == NAV_WP_ACTION_SET_POI || wpData->action == NAV_WP_ACTION_SET_HEAD ) {
+        if (wpData->action == NAV_WP_ACTION_WAYPOINT || wpData->action == NAV_WP_ACTION_JUMP || wpData->action == NAV_WP_ACTION_RTH || wpData->action == NAV_WP_ACTION_HOLD_TIME || wpData->action == NAV_WP_ACTION_LAND || wpData->action == NAV_WP_ACTION_SET_POI || wpData->action == NAV_WP_ACTION_SET_HEAD || wpData->action == NAV_WP_ACTION_FBH) {     // CR28
             // Only allow upload next waypoint (continue upload mission) or first waypoint (new mission)
             static int8_t nonGeoWaypointCount = 0;    // CR8
 
@@ -3161,13 +3163,16 @@ float getActiveWaypointSpeed(void)
         uint16_t waypointSpeed = navConfig()->general.max_auto_speed;
 
         if (navGetStateFlags(posControl.navState) & NAV_AUTO_WP) {
-            if (posControl.waypointCount > 0 && (posControl.waypointList[posControl.activeWaypointIndex].action == NAV_WP_ACTION_WAYPOINT || posControl.waypointList[posControl.activeWaypointIndex].action == NAV_WP_ACTION_HOLD_TIME || posControl.waypointList[posControl.activeWaypointIndex].action == NAV_WP_ACTION_LAND)) {
+            if (posControl.waypointCount > 0 && (posControl.waypointList[posControl.activeWaypointIndex].action == NAV_WP_ACTION_WAYPOINT || posControl.waypointList[posControl.activeWaypointIndex].action == NAV_WP_ACTION_HOLD_TIME || posControl.waypointList[posControl.activeWaypointIndex].action == NAV_WP_ACTION_LAND || posControl.waypointList[posControl.activeWaypointIndex].action == NAV_WP_ACTION_FBH)) {   // CR28
                 float wpSpecificSpeed = 0.0f;
-                if(posControl.waypointList[posControl.activeWaypointIndex].action == NAV_WP_ACTION_HOLD_TIME)
+                // CR28
+                if (posControl.waypointList[posControl.activeWaypointIndex].action == NAV_WP_ACTION_HOLD_TIME
+                   || posControl.waypointList[posControl.activeWaypointIndex].action == NAV_WP_ACTION_FBH) {
                     wpSpecificSpeed = posControl.waypointList[posControl.activeWaypointIndex].p2; // P1 is hold time
-                else
+                } else {
                     wpSpecificSpeed = posControl.waypointList[posControl.activeWaypointIndex].p1; // default case
-
+                }
+                // CR28
                 if (wpSpecificSpeed >= 50.0f && wpSpecificSpeed <= navConfig()->general.max_auto_speed) {
                     waypointSpeed = wpSpecificSpeed;
                 }
@@ -3556,12 +3561,12 @@ navArmingBlocker_e navigationIsBlockingArming(bool *usedBypass)
     if (posControl.waypointCount > 0) {
         for (uint8_t wp = 0; wp < posControl.waypointCount ; wp++){
             if (posControl.waypointList[wp].action == NAV_WP_ACTION_JUMP){
-                if((wp == 0) || ((posControl.waypointList[wp].p1 > (wp-2)) && (posControl.waypointList[wp].p1 < (wp+2)) ) || (posControl.waypointList[wp].p1 >=  posControl.waypointCount) || (posControl.waypointList[wp].p2 < -1)) {
+                if ((wp == 0) || ((posControl.waypointList[wp].p1 > (wp-2)) && (posControl.waypointList[wp].p1 < (wp+2)) ) || (posControl.waypointList[wp].p1 >=  posControl.waypointCount) || (posControl.waypointList[wp].p2 < -1)) {
                     return NAV_ARMING_BLOCKER_JUMP_WAYPOINT_ERROR;
                 }
                     /* check for target geo-ref sanity */
                 uint16_t target = posControl.waypointList[wp].p1;
-                if(!(posControl.waypointList[target].action == NAV_WP_ACTION_WAYPOINT || posControl.waypointList[target].action == NAV_WP_ACTION_HOLD_TIME || posControl.waypointList[target].action == NAV_WP_ACTION_LAND)) {
+                if (!(posControl.waypointList[target].action == NAV_WP_ACTION_WAYPOINT || posControl.waypointList[target].action == NAV_WP_ACTION_HOLD_TIME || posControl.waypointList[target].action == NAV_WP_ACTION_LAND || posControl.waypointList[target].action == NAV_WP_ACTION_FBH)) {   // CR28
                     return NAV_ARMING_BLOCKER_JUMP_WAYPOINT_ERROR;
                 }
             }

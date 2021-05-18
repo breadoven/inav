@@ -95,7 +95,6 @@ typedef struct navigationFlags_s {
     bool forcedRTHActivated;
     bool landingDetected;   // CR15
     bool wpMissionPlannerActive;            // Activation status of in flight WP mission planner  // CR32
-    bool wpMissionFinished;                 // Flags mission completed to end, ensures missions restart from beginning when resume option used // CR29
 } navigationFlags_t;
 
 typedef struct {
