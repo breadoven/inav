@@ -2388,7 +2388,13 @@ static bool osdDrawSingleElement(uint8_t item)
             dateTime_t dateTime;
             rtcGetDateTimeLocal(&dateTime);
             buff[0] = SYM_CLOCK;
-            tfp_sprintf(buff + 1, "%02u:%02u", dateTime.hours, dateTime.minutes);
+            // CR34
+            if (osdConfig()->rtc_time_show_seconds) {
+                tfp_sprintf(buff + 1, "%02u:%02u:%02u", dateTime.hours, dateTime.minutes, dateTime.seconds);
+            } else {
+                tfp_sprintf(buff + 1, "%02u:%02u", dateTime.hours, dateTime.minutes);
+            }
+            // CR34
             break;
         }
 
@@ -3088,6 +3094,7 @@ PG_RESET_TEMPLATE(osdConfig_t, osdConfig,
     .infocycle_interval_time = SETTING_OSD_INFOCYCLE_INTERVAL_TIME_DEFAULT,    // CR22
     .units = SETTING_OSD_UNITS_DEFAULT,
     .main_voltage_decimals = SETTING_OSD_MAIN_VOLTAGE_DECIMALS_DEFAULT,
+    .rtc_time_show_seconds = SETTING_OSD_RTC_TIME_SHOW_SECONDS_DEFAULT,         // CR34
 
 #ifdef USE_WIND_ESTIMATOR
     .estimations_wind_compensation = SETTING_OSD_ESTIMATIONS_WIND_COMPENSATION_DEFAULT,
