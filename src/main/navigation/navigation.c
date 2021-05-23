@@ -1510,7 +1510,6 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_WAYPOINT_PRE_ACTION(nav
         case NAV_WP_ACTION_HOLD_TIME:
         case NAV_WP_ACTION_WAYPOINT:
         case NAV_WP_ACTION_LAND:
-        case NAV_WP_ACTION_FBH: // CR28
             calculateAndSetActiveWaypoint(&posControl.waypointList[posControl.activeWaypointIndex]);
             posControl.wpInitialDistance = calculateDistanceToDestination(&posControl.activeWaypoint.pos);
             posControl.wpInitialAltitude = posControl.actualState.abs.pos.z;
@@ -1570,7 +1569,6 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_WAYPOINT_IN_PROGRESS(na
             case NAV_WP_ACTION_HOLD_TIME:
             case NAV_WP_ACTION_WAYPOINT:
             case NAV_WP_ACTION_LAND:
-            case NAV_WP_ACTION_FBH:  // CR28
                 if (isWaypointReached(&posControl.activeWaypoint, false) || isWaypointMissed(&posControl.activeWaypoint)) {
                     return NAV_FSM_EVENT_SUCCESS;   // will switch to NAV_STATE_WAYPOINT_REACHED
                 }
@@ -1635,7 +1633,6 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_WAYPOINT_REACHED(naviga
             return NAV_FSM_EVENT_SWITCH_TO_WAYPOINT_RTH_LAND;
 
         case NAV_WP_ACTION_HOLD_TIME:
-        case NAV_WP_ACTION_FBH:     // CR28
             // Save the current time for the time the waypoint was reached
             posControl.wpReachedTime = millis();
             return NAV_FSM_EVENT_SWITCH_TO_WAYPOINT_HOLD_TIME;
@@ -2950,7 +2947,7 @@ void setWaypoint(uint8_t wpNumber, const navWaypoint_t * wpData)
     }
     // WP #1 - #NAV_MAX_WAYPOINTS - common waypoints - pre-programmed mission
     else if ((wpNumber >= 1) && (wpNumber <= NAV_MAX_WAYPOINTS) && !ARMING_FLAG(ARMED)) {
-        if (wpData->action == NAV_WP_ACTION_WAYPOINT || wpData->action == NAV_WP_ACTION_JUMP || wpData->action == NAV_WP_ACTION_RTH || wpData->action == NAV_WP_ACTION_HOLD_TIME || wpData->action == NAV_WP_ACTION_LAND || wpData->action == NAV_WP_ACTION_SET_POI || wpData->action == NAV_WP_ACTION_SET_HEAD || wpData->action == NAV_WP_ACTION_FBH) {     // CR28
+        if (wpData->action == NAV_WP_ACTION_WAYPOINT || wpData->action == NAV_WP_ACTION_JUMP || wpData->action == NAV_WP_ACTION_RTH || wpData->action == NAV_WP_ACTION_HOLD_TIME || wpData->action == NAV_WP_ACTION_LAND || wpData->action == NAV_WP_ACTION_SET_POI || wpData->action == NAV_WP_ACTION_SET_HEAD) {
             // Only allow upload next waypoint (continue upload mission) or first waypoint (new mission)
             static int8_t nonGeoWaypointCount = 0;    // CR8
 
@@ -3083,9 +3080,9 @@ static void mapWaypointToLocalPosition(fpVector3_t * localPos, const navWaypoint
 {
     gpsLocation_t wpLLH;
     // CR28
-    /* Default to home position if lat & lon = 0
-     * Applicable to WAYPOINT, POSHOLD & LANDING WP types */
-    if (waypoint->lat == 0 && waypoint->lon == 0) {
+    /* Default to home position if lat & lon = 0 or flag = NAV_WP_FLAG_HOME
+     * Applicable to WAYPOINT, HOLD_TIME & LANDING WP types */
+    if ((waypoint->lat == 0 && waypoint->lon == 0) || waypoint->flag == NAV_WP_FLAG_HOME) {
         wpLLH.lat = GPS_home.lat;
         wpLLH.lon = GPS_home.lon;
     } else {
@@ -3163,16 +3160,14 @@ float getActiveWaypointSpeed(void)
         uint16_t waypointSpeed = navConfig()->general.max_auto_speed;
 
         if (navGetStateFlags(posControl.navState) & NAV_AUTO_WP) {
-            if (posControl.waypointCount > 0 && (posControl.waypointList[posControl.activeWaypointIndex].action == NAV_WP_ACTION_WAYPOINT || posControl.waypointList[posControl.activeWaypointIndex].action == NAV_WP_ACTION_HOLD_TIME || posControl.waypointList[posControl.activeWaypointIndex].action == NAV_WP_ACTION_LAND || posControl.waypointList[posControl.activeWaypointIndex].action == NAV_WP_ACTION_FBH)) {   // CR28
+            if (posControl.waypointCount > 0 && (posControl.waypointList[posControl.activeWaypointIndex].action == NAV_WP_ACTION_WAYPOINT || posControl.waypointList[posControl.activeWaypointIndex].action == NAV_WP_ACTION_HOLD_TIME || posControl.waypointList[posControl.activeWaypointIndex].action == NAV_WP_ACTION_LAND)) {
                 float wpSpecificSpeed = 0.0f;
-                // CR28
-                if (posControl.waypointList[posControl.activeWaypointIndex].action == NAV_WP_ACTION_HOLD_TIME
-                   || posControl.waypointList[posControl.activeWaypointIndex].action == NAV_WP_ACTION_FBH) {
+                if (posControl.waypointList[posControl.activeWaypointIndex].action == NAV_WP_ACTION_HOLD_TIME) {
                     wpSpecificSpeed = posControl.waypointList[posControl.activeWaypointIndex].p2; // P1 is hold time
                 } else {
                     wpSpecificSpeed = posControl.waypointList[posControl.activeWaypointIndex].p1; // default case
                 }
-                // CR28
+
                 if (wpSpecificSpeed >= 50.0f && wpSpecificSpeed <= navConfig()->general.max_auto_speed) {
                     waypointSpeed = wpSpecificSpeed;
                 }
@@ -3566,7 +3561,7 @@ navArmingBlocker_e navigationIsBlockingArming(bool *usedBypass)
                 }
                     /* check for target geo-ref sanity */
                 uint16_t target = posControl.waypointList[wp].p1;
-                if (!(posControl.waypointList[target].action == NAV_WP_ACTION_WAYPOINT || posControl.waypointList[target].action == NAV_WP_ACTION_HOLD_TIME || posControl.waypointList[target].action == NAV_WP_ACTION_LAND || posControl.waypointList[target].action == NAV_WP_ACTION_FBH)) {   // CR28
+                if (!(posControl.waypointList[target].action == NAV_WP_ACTION_WAYPOINT || posControl.waypointList[target].action == NAV_WP_ACTION_HOLD_TIME || posControl.waypointList[target].action == NAV_WP_ACTION_LAND)) {
                     return NAV_ARMING_BLOCKER_JUMP_WAYPOINT_ERROR;
                 }
             }
@@ -3652,7 +3647,7 @@ void missionPlannerSetWaypoint(void)
     posControl.waypointList[posControl.wpPlannerActiveWPIndex].alt = wpLLH.alt;
     posControl.waypointList[posControl.wpPlannerActiveWPIndex].p1 = posControl.waypointList[posControl.wpPlannerActiveWPIndex].p2 = 0;
     posControl.waypointList[posControl.wpPlannerActiveWPIndex].p3 = 1;           // use absolute altitude datum
-    posControl.waypointList[posControl.wpPlannerActiveWPIndex].flag = 165;
+    posControl.waypointList[posControl.wpPlannerActiveWPIndex].flag = NAV_WP_FLAG_LAST;
     posControl.waypointListValid = true;
 
     if (posControl.wpPlannerActiveWPIndex) {

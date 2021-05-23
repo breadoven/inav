@@ -316,8 +316,7 @@ typedef enum {
     NAV_WP_ACTION_SET_POI   = 0x05,
     NAV_WP_ACTION_JUMP      = 0x06,
     NAV_WP_ACTION_SET_HEAD  = 0x07,
-    NAV_WP_ACTION_LAND      = 0x08,     // CR28
-    NAV_WP_ACTION_FBH       = 0x09      // CR28
+    NAV_WP_ACTION_LAND      = 0x08
 } navWaypointActions_e;
 
 typedef enum {
@@ -327,7 +326,8 @@ typedef enum {
 } navWaypointHeadings_e;
 
 typedef enum {
-    NAV_WP_FLAG_LAST = 0xA5
+    NAV_WP_FLAG_LAST = 0xA5,
+    NAV_WP_FLAG_HOME = 0x48
 } navWaypointFlags_e;
 
 typedef struct {
