@@ -383,6 +383,7 @@ typedef struct osdConfig_s {
     uint16_t system_msg_display_time;   // system message display time for multiple messages (ms)   CR18
     uint16_t infocycle_interval_time;   // Info Cycle field item display time interval (ms)   CR22
     uint8_t sidebar_height;             // sidebar height in rows, 0 turns off sidebars leaving only level indicator arrows
+    uint8_t ahi_pitch_interval;         // redraws AHI at set pitch interval. (Not pixel OSD) // CR35
     uint8_t telemetry; 				    // use telemetry on displayed pixel line 0
     bool rtc_time_show_seconds;         // show seconds in current time display when enabled    // CR34
 
