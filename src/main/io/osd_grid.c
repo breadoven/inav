@@ -154,11 +154,14 @@ void osdGridDrawArtificialHorizon(displayPort_t *display, unsigned gx, unsigned 
     if (fabsf(ky) < fabsf(kx)) {
 
         previous_orient = 0;
-
+        // CR35
+        /* ahi line ends drawn with 3 deg offset when ahiPitchAngleDatum > 0
+         * Line end offset increased with every 20 deg pitch increase */
+        const int8_t ahiLineEndOffsetFactor = ahiPitchAngleDatum / 20;
+        // CR35
         for (int8_t dx = -OSD_AHI_WIDTH / 2; dx <= OSD_AHI_WIDTH / 2; dx++) {
             // CR35
-            ahiLineEndPitchOffset = ahiPitchAngleDatum && (dx == -OSD_AHI_WIDTH / 2 || dx == OSD_AHI_WIDTH / 2) ? -3 * ABS(ahiPitchAngleDatum) / ahiPitchAngleDatum : 0;
-            ahiLineEndPitchOffset = ABS(ahiPitchAngleDatum) / 30 >= 1 ? ahiLineEndPitchOffset * ABS(ahiPitchAngleDatum) / 30 : ahiLineEndPitchOffset;
+            ahiLineEndPitchOffset = ahiPitchAngleDatum && (dx == -OSD_AHI_WIDTH / 2 || dx == OSD_AHI_WIDTH / 2) ? -(ahiLineEndOffsetFactor + 3 * ABS(ahiPitchAngleDatum) / ahiPitchAngleDatum) : 0;
             // CR35
             float fy = (ratio * dx) * (ky / kx) + (pitchAngle + DEGREES_TO_RADIANS(ahiLineEndPitchOffset)) * pitch_rad_to_char + 0.49f;  // CR35
             int8_t dy = floorf(fy);
