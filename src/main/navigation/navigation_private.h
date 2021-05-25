@@ -442,8 +442,8 @@ bool adjustMulticopterPositionFromRCInput(int16_t rcPitchAdjustment, int16_t rcR
 
 void applyMulticopterNavigationController(navigationFSMStateFlags_t navStateFlags, timeUs_t currentTimeUs);
 
-void resetFixedWingLandingDetector(void);
-void resetMulticopterLandingDetector(void);
+// void resetFixedWingLandingDetector(void);   // CR15
+// void resetMulticopterLandingDetector(void); // CR15
 
 bool isMulticopterLandingDetected(void);
 bool isFixedWingLandingDetected(void);

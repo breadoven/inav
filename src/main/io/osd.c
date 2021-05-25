@@ -749,6 +749,8 @@ static const char * osdArmingDisabledReasonMessage(void)
         case ARMING_DISABLED_DSHOT_BEEPER:
             return OSD_MESSAGE_STR(OSD_MSG_DSHOT_BEEPER);
             // Cases without message
+        case ARMING_DISABLED_LANDING_DETECTED:  // CR15
+            FALLTHROUGH;  // CR15
         case ARMING_DISABLED_CMS_MENU:
             FALLTHROUGH;
         case ARMING_DISABLED_OSD_MENU:
@@ -4126,11 +4128,6 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
                     if (FLIGHT_MODE(HEADFREE_MODE)) {
                         messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_HEADFREE);
                     }
-                    // CR15
-                    if (posControl.flags.landingDetected) {
-                        messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_LANDED);
-                    }
-                    // CR15
                     // CR27
                     if (posControl.flags.compassGpsCogMismatchError) {
                         messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_COMPASS_ERROR);
@@ -4142,6 +4139,11 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
                     }
                     // CR32
                 }
+                // CR15
+                if (posControl.flags.landingDetected) {
+                    messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_LANDED);
+                }
+                // CR15
                 // Pick one of the available messages.
                 if (messageCount > 0) {
                     message = messages[OSD_ALTERNATING_CHOICES(systemMessageCycleTime(messageCount, messages), messageCount)];   // CR18

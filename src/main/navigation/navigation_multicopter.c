@@ -675,30 +675,33 @@ static void applyMulticopterPositionController(timeUs_t currentTimeUs)
 /*-----------------------------------------------------------
  * Multicopter land detector
  *-----------------------------------------------------------*/
-static timeUs_t landingTimer;
-static timeUs_t landingDetectorStartedAt;
-static int32_t landingThrSum;
-static int32_t landingThrSamples;
+// static timeUs_t landingTimer;
+// static timeUs_t landingDetectorStartedAt;
+// static int32_t landingThrSum;
+// static int32_t landingThrSamples;
 
-void resetMulticopterLandingDetector(void)
-{
-    // FIXME: This function is called some time before isMulticopterLandingDetected is first called
-    landingTimer = micros();
-    landingDetectorStartedAt = 0; // ugly hack for now
+// void resetMulticopterLandingDetector(void)
+// {
+    // // FIXME: This function is called some time before isMulticopterLandingDetected is first called
+    // // landingTimer = micros();
+    // // landingDetectorStartedAt = 0; // ugly hack for now
 
-    landingThrSum = 0;
-    landingThrSamples = 0;
-}
+    // // landingThrSum = 0;
+    // // landingThrSamples = 0;
+// }
 
 bool isMulticopterLandingDetected(void)
 {
-    const timeUs_t currentTimeUs = micros();
+    static timeUs_t landingDetectorStartedAt;
     const bool throttleIsLow = calculateThrottleStatus(THROTTLE_STATUS_TYPE_RC) == THROTTLE_LOW;   // CR15
-
-    // FIXME: Remove delay between resetMulticopterLandingDetector and first run of this function so this code isn't needed.
-    if (landingDetectorStartedAt == 0) {
-        landingDetectorStartedAt = currentTimeUs;
+    DEBUG_SET(DEBUG_CRUISE, 4, throttleIsLow);
+    if (posControl.navState != NAV_STATE_RTH_LANDING && (!navigationIsFlyingAutonomousMode() && !throttleIsLow)) {
+        landingDetectorStartedAt = 0;
+        return false;
     }
+
+    static timeUs_t landingTimer;
+    const timeUs_t currentTimeUs = micros();
 
     // Average climb rate should be low enough
     bool lowVerticalMovement = fabsf(navGetCurrentActualPositionAndVelocity()->vel.z) < 25.0f;     // CR15
@@ -708,25 +711,38 @@ bool isMulticopterLandingDetected(void)
 
     // check if gyro rates are low  CR15
     bool lowGyroRates = averageGyroRates() < 2;
-    // CR15
-
-    // We have likely landed if throttle is 40 units below average descend throttle
-    // We use rcCommandAdjustedThrottle to keep track of NAV corrected throttle (isLandingDetected is executed
-    // from processRx() and rcCommand at that moment holds rc input, not adjusted values from NAV core)
-    // Wait for 1 second so throttle has stabilized.
-    bool isAtMinimalThrust = false;
-    // CR15
+    DEBUG_SET(DEBUG_CRUISE, 4, 22);
+    DEBUG_SET(DEBUG_CRUISE, 1, averageGyroRates());
+    DEBUG_SET(DEBUG_CRUISE, 2, lowVerticalMovement);
+    DEBUG_SET(DEBUG_CRUISE, 3, lowHorizontalMovement);
     bool possibleLandingDetected = false;
-    // DEBUG_SET(DEBUG_CRUISE, 3, currentTimeUs - landingDetectorStartedAt);
-    if (navigationIsFlyingAutonomousMode()) {
-        if (currentTimeUs - landingDetectorStartedAt > 1000 * 1000) {
-            landingThrSamples += 1;
-            landingThrSum += rcCommandAdjustedThrottle;
-            isAtMinimalThrust = rcCommandAdjustedThrottle < (landingThrSum / landingThrSamples - 40);
+    if (!lowVerticalMovement || !lowHorizontalMovement) {
+        landingDetectorStartedAt = 0;
+        return false;
+    } else if (posControl.navState == NAV_STATE_RTH_LANDING) {
+        // We have likely landed if throttle is 40 units below average descend throttle
+        // We use rcCommandAdjustedThrottle to keep track of NAV corrected throttle (isLandingDetected is executed
+        // from processRx() and rcCommand at that moment holds rc input, not adjusted values from NAV core)
+
+        static int32_t landingThrSum;
+        static int32_t landingThrSamples;
+        bool isAtMinimalThrust = false;
+        if (landingDetectorStartedAt == 0) {
+            landingThrSum = 0;
+            landingThrSamples = 0;
+            landingDetectorStartedAt = currentTimeUs;
+        } else if (currentTimeUs - landingDetectorStartedAt < 1000000) {   // Wait for 1 second so throttle has stabilized.
+            return false;
         }
-        possibleLandingDetected = isAtMinimalThrust && lowVerticalMovement && lowHorizontalMovement;
+        landingThrSamples += 1;
+        landingThrSum += rcCommandAdjustedThrottle;
+        isAtMinimalThrust = rcCommandAdjustedThrottle < (landingThrSum / landingThrSamples - 40);
+
+        possibleLandingDetected = isAtMinimalThrust;
     } else {
-        if (lowHorizontalMovement && lowVerticalMovement && lowGyroRates && throttleIsLow) {
+        DEBUG_SET(DEBUG_CRUISE, 4, 25);
+        DEBUG_SET(DEBUG_CRUISE, 0, currentTimeUs - landingDetectorStartedAt);
+        if (lowGyroRates && landingDetectorStartedAt != 0) {
             possibleLandingDetected = (currentTimeUs - landingDetectorStartedAt > 3000000);
         } else {
             landingDetectorStartedAt = currentTimeUs;
@@ -734,9 +750,6 @@ bool isMulticopterLandingDetected(void)
         }
     }
     // CR15
-    // DEBUG_SET(DEBUG_CRUISE, 0, rcCommandAdjustedThrottle);
-    // DEBUG_SET(DEBUG_CRUISE, 1, averageGyroRates());
-    // DEBUG_SET(DEBUG_CRUISE, 2, lowVerticalMovement);
 
     // If we have surface sensor (for example sonar) - use it to detect touchdown
     if ((posControl.flags.estAglStatus == EST_TRUSTED) && (posControl.actualState.agl.pos.z >= 0)) {
@@ -749,8 +762,7 @@ bool isMulticopterLandingDetected(void)
     if (!possibleLandingDetected) {
         landingTimer = currentTimeUs;
         return false;
-    }
-    else {
+    } else {
         return ((currentTimeUs - landingTimer) > (navConfig()->mc.auto_disarm_delay * 1000)) ? true : false;
     }
 }

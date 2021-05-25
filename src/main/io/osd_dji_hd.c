@@ -507,6 +507,8 @@ static const char * osdArmingDisabledReasonMessage(void)
         case ARMING_DISABLED_DSHOT_BEEPER:
             return OSD_MESSAGE_STR("MOTOR BEEPER ACTIVE");
             // Cases without message
+        case ARMING_DISABLED_LANDING_DETECTED:  // CR15
+            FALLTHROUGH;  // CR15
         case ARMING_DISABLED_CMS_MENU:
             FALLTHROUGH;
         case ARMING_DISABLED_OSD_MENU:
