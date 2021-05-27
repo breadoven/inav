@@ -1330,7 +1330,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_HOVER_PRIOR_TO_LAND
     if ((posControl.flags.estPosStatus >= EST_USABLE) || !checkForPositionSensorTimeout()) {
         // Wait until target heading is reached for MR (with 15 deg margin for error), or continue for Fixed Wing
         if ((ABS(wrap_18000(posControl.rthState.homePosition.yaw - posControl.actualState.yaw)) < DEGREES_TO_CENTIDEGREES(15)) || STATE(FIXED_WING_LEGACY)) {
-            // resetLandingDetector();     // CR15 delete this when sure
+            posControl.flags.landingDetected = false;   // force reset landing detector just in case  CR15
             updateClimbRateToAltitudeController(0, ROC_TO_ALT_RESET);
             return navigationRTHAllowsLanding() ? NAV_FSM_EVENT_SUCCESS : NAV_FSM_EVENT_SWITCH_TO_RTH_HOVER_ABOVE_HOME; // success = land
         }
@@ -1387,7 +1387,6 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_LANDING(navigationF
     if (!ARMING_FLAG(ARMED)) {
         return NAV_FSM_EVENT_SUCCESS;
     }
-    // else if (isLandingDetected()) {
     else if (posControl.flags.landingDetected) {    // CR15
         return NAV_FSM_EVENT_SUCCESS;
     }
@@ -2598,33 +2597,36 @@ void calculateNewCruiseTarget(fpVector3_t * origin, int32_t yaw, int32_t distanc
  * NAV land detector
  *-----------------------------------------------------------*/
  // CR15
-static bool landingDetectorIsActive = false;
-
 void updateLandingStatus(void)
 {
     throttleStatus_e throttleStatus = calculateThrottleStatus(THROTTLE_STATUS_TYPE_RC);
+    static bool landingDetectorIsActive = false;
 
     if (!ARMING_FLAG(ARMED)) {
-        resetLandingDetector();
+        landingDetectorIsActive = false;
+        posControl.flags.landingDetected = false;
+        posControl.flags.resetLandingDetector = true;
+        if (!IS_RC_MODE_ACTIVE(BOXARM)) {
+            DISABLE_ARMING_FLAG(ARMING_DISABLED_LANDING_DETECTED);
+        }
+        DEBUG_SET(DEBUG_CRUISE, 7, 17);
         return;
     }
 
     if (!landingDetectorIsActive) {
         DEBUG_SET(DEBUG_CRUISE, 6, 55);
-        DEBUG_SET(DEBUG_CRUISE, 1, averageGyroRates());
+        DEBUG_SET(DEBUG_CRUISE, 1, averageAbsGyroRates());
         if (STATE(AIRPLANE)) {
             float airspeed = 0;
 #ifdef USE_PITOT
             airspeed = pitot.airSpeed;
 #endif
-            // landingDetectorIsActive = isImuHeadingValid() && throttleStatus != THROTTLE_LOW && (gpsSol.groundSpeed > 250 || airspeed > 250);
+            // landingDetectorIsActive = isImuHeadingValid() && throttleStatus != THROTTLE_LOW && (posControl.actualState.velXY > 250 || airspeed > 250);
             landingDetectorIsActive = throttleStatus != THROTTLE_LOW;
         } else if (STATE(MULTIROTOR)) {
-            landingDetectorIsActive = rcCommand[THROTTLE] > navConfig()->mc.hover_throttle && averageGyroRates() > 7.0f;
+            landingDetectorIsActive = rcCommand[THROTTLE] > navConfig()->mc.hover_throttle && averageAbsGyroRates() > 7.0f;
         }
-        if (landingDetectorIsActive) {
-            posControl.flags.landingDetected = false;
-        }
+        posControl.flags.landingDetected = landingDetectorIsActive ? false : posControl.flags.landingDetected;
     } else if (isLandingDetected()) {
         landingDetectorIsActive = false;
         posControl.flags.landingDetected = true;
@@ -2639,29 +2641,11 @@ void updateLandingStatus(void)
 }
 // CR15
 
-void resetLandingDetector(void)
-{
-    // CR15
-    landingDetectorIsActive = false;
-    posControl.flags.landingDetected = false;
-    if (!IS_RC_MODE_ACTIVE(BOXARM)) {
-        DISABLE_ARMING_FLAG(ARMING_DISABLED_LANDING_DETECTED);
-    }
-    // CR15
-}
-
 bool isLandingDetected(void)
 {
     DEBUG_SET(DEBUG_CRUISE, 6, 66);
     return STATE(AIRPLANE) ? isFixedWingLandingDetected() : isMulticopterLandingDetected(); // CR15
 }
-
-// CR15
-float averageGyroRates(void)
-{
-    return (fabsf(gyro.gyroADCf[ROLL]) + fabsf(gyro.gyroADCf[PITCH]) + fabsf(gyro.gyroADCf[YAW])) / 3;
-}
-// CR15
 
 /*-----------------------------------------------------------
  * Z-position controller

@@ -93,8 +93,11 @@ typedef struct navigationFlags_s {
     bool isTerrainFollowEnabled;            // Does iNav use rangefinder for terrain following (adjusting baro altitude target according to rangefinders readings)
 
     bool forcedRTHActivated;
-    bool landingDetected;   // CR15
     bool wpMissionPlannerActive;            // Activation status of in flight WP mission planner  // CR32
+
+    /* Landing detector */
+    bool landingDetected;       // CR15
+    bool resetLandingDetector;  // CR15
 } navigationFlags_t;
 
 typedef struct {
@@ -400,12 +403,9 @@ const navEstimatedPosVel_t * navGetCurrentActualPositionAndVelocity(void);
 bool isThrustFacingDownwards(void);
 uint32_t calculateDistanceToDestination(const fpVector3_t * destinationPos);
 int32_t calculateBearingToDestination(const fpVector3_t * destinationPos);
-void resetLandingDetector(void);
+// void resetLandingDetector(void);    // CR15
 bool isLandingDetected(void);
-// CR15
-void updateLandingStatus(void);
-float averageGyroRates(void);
-// CR15
+void updateLandingStatus(void); // CR15
 navigationFSMStateFlags_t navGetCurrentStateFlags(void);
 
 void setHomePosition(const fpVector3_t * pos, int32_t yaw, navSetWaypointFlags_t useMask, navigationHomeFlags_t homeFlags);
