@@ -594,24 +594,24 @@ bool isFixedWingLandingDetected(void)
         return false;
     }
 
-    static timeUs_t fwLandCheckTimerStart;
+    static timeMs_t fwLandingTimerStartAt;
     static int16_t fwLandSetRollDatum;
     static int16_t fwLandSetPitchDatum;
 
-    timeUs_t currentTimeUs = micros();
+    timeMs_t currentTimeMs = millis();
 
     // Check horizontal and vertical volocities are low (cm/s)
     bool velCondition = posControl.actualState.velXY < 100.0f && fabsf(posControl.actualState.abs.vel.z) < 50.0f;
     // Check angular rates are low (degs/s)
     bool gyroCondition = averageAbsGyroRates() < 2.0f;
 
-    DEBUG_SET(DEBUG_CRUISE, 2, (currentTimeUs - fwLandCheckTimerStart) / 100000);
+    DEBUG_SET(DEBUG_CRUISE, 2, (currentTimeMs - fwLandingTimerStartAt) / 100);
     if (velCondition && gyroCondition){
         if (!fixAxisCheck) {        // capture roll and pitch angles to be used as datums to check for absolute change
             fwLandSetRollDatum = attitude.values.roll;  //0.1 deg increments
             fwLandSetPitchDatum = attitude.values.pitch;
             fixAxisCheck = true;
-            fwLandCheckTimerStart = currentTimeUs;
+            fwLandingTimerStartAt = currentTimeMs;
         } else {
             bool isRollAxisStatic = ABS(fwLandSetRollDatum - attitude.values.roll) < 5;
             bool isPitchAxisStatic = ABS(fwLandSetPitchDatum - attitude.values.pitch) < 5;
@@ -619,8 +619,7 @@ bool isFixedWingLandingDetected(void)
             DEBUG_SET(DEBUG_CRUISE, 5, ABS(fwLandSetPitchDatum - attitude.values.pitch));
             if (isRollAxisStatic && isPitchAxisStatic) {
                 // Must have landed, low horizontal and vertical velocities and no axis rotation in Roll and Pitch
-                timeUs_t timeDelay = (2000 + navConfig()->fw.auto_disarm_delay) * 1000;
-                return currentTimeUs - fwLandCheckTimerStart > timeDelay; // check conditions stable for > 2s + disarm delay
+                return currentTimeMs - fwLandingTimerStartAt > 2000; // check conditions stable for > 2s
             } else {
                 fixAxisCheck = false;
             }
@@ -672,8 +671,9 @@ void applyFixedWingNavigationController(navigationFSMStateFlags_t navStateFlags,
         if (true) {
 #endif
             if (navStateFlags & NAV_CTL_ALT) {
-                if (getMotorStatus() == MOTOR_STOPPED_USER) { // CR36 add soaring mode override here
-                    // Motor has been stopped by user. Update target altitude and bypass navigation pitch/throttle control
+                if (getMotorStatus() == MOTOR_STOPPED_USER || IS_RC_MODE_ACTIVE(BOXSOARING)) {  // CR36
+                    // Motor has been stopped by user or soaring mode used to override altitude control (gliders)   CR36
+                    // Update target altitude and bypass navigation pitch/throttle control
                     resetFixedWingAltitudeController();
                     setDesiredPosition(&navGetCurrentActualPositionAndVelocity()->pos, posControl.actualState.yaw, NAV_POS_UPDATE_Z);
                 } else

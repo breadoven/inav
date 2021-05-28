@@ -954,8 +954,10 @@ void taskMainPidLoop(timeUs_t currentTimeUs)
     }
 #endif
     // CR15
-    // Check if landed, FW and MC
-     updateLandingStatus();
+    // Check if landed, FW and MR
+    if (STATE(ALTITUDE_CONTROL)) {
+        updateLandingStatus();
+    }
     // CR15
 }
 

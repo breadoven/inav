@@ -744,13 +744,7 @@ bool isMulticopterLandingDetected(void)
         possibleLandingDetected = possibleLandingDetected && (posControl.actualState.agl.pos.z <= (posControl.actualState.surfaceMin + 5.0f));
     }
 
-    static timeUs_t landingTimer;
-    if (!possibleLandingDetected || landingTimer == 0) {
-        landingTimer = currentTimeUs;
-        return false;
-    } else {
-        return ((currentTimeUs - landingTimer) > (navConfig()->mc.auto_disarm_delay * 1000)) ? true : false;
-    }
+    return possibleLandingDetected;
     // CR15 whole function changed
 }
 

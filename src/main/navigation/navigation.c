@@ -1427,7 +1427,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_FINISHING(navigatio
     UNUSED(previousState);
 
     //On ROVER and BOAT disarm immediately
-    if (!STATE(ALTITUDE_CONTROL) || navConfig()->general.flags.disarm_on_landing) {
+    if (!STATE(ALTITUDE_CONTROL)) {     // CR15
         disarm(DISARM_NAVIGATION);
     }
 
@@ -2602,10 +2602,12 @@ void updateLandingStatus(void)
 {
     throttleStatus_e throttleStatus = calculateThrottleStatus(THROTTLE_STATUS_TYPE_RC);
     static bool landingDetectorIsActive;
+    static timeMs_t landingDisarmTimer;
 
     if (!ARMING_FLAG(ARMED)) {
         resetLandingDetector();
         landingDetectorIsActive = false;
+        landingDisarmTimer = 0;
         if (!IS_RC_MODE_ACTIVE(BOXARM)) {
             DISABLE_ARMING_FLAG(ARMING_DISABLED_LANDING_DETECTED);
         }
@@ -2626,20 +2628,26 @@ void updateLandingStatus(void)
         } else if (STATE(MULTIROTOR)) {
             landingDetectorIsActive = rcCommand[THROTTLE] > navConfig()->mc.hover_throttle && averageAbsGyroRates() > 7.0f;
         }
-        landingDetectorIsActive ? DISABLE_STATE(LANDING_DETECTED) : NULL;
-    } else if (isLandingDetected()) {
-        ENABLE_STATE(LANDING_DETECTED);
-        landingDetectorIsActive = false;
-        DEBUG_SET(DEBUG_CRUISE, 7, 77);
-        if (navConfig()->general.flags.disarm_on_landing && !navigationIsFlyingAutonomousMode()) {
-            ENABLE_ARMING_FLAG(ARMING_DISABLED_LANDING_DETECTED);
-            disarm(DISARM_LANDING);
-        // } else {
+        landingDetectorIsActive ? DISABLE_STATE(LANDING_DETECTED) : 0;
+    } else if (STATE(LANDING_DETECTED)) {
+        if (navConfig()->general.flags.disarm_on_landing) {
+            uint16_t disarmDelayTimeMs = STATE(AIRPLANE) ? navConfig()->fw.auto_disarm_delay : navConfig()->mc.auto_disarm_delay;
+            landingDisarmTimer = landingDisarmTimer == 0 ? millis() : landingDisarmTimer;
+            if (millis() - landingDisarmTimer > disarmDelayTimeMs) {
+                ENABLE_ARMING_FLAG(ARMING_DISABLED_LANDING_DETECTED);
+                disarm(DISARM_LANDING);
+            }
+        } else {
+            landingDetectorIsActive = false;
             // pidResetErrorAccumulators();
         }
+    } else if (isLandingDetected()) {
+        ENABLE_STATE(LANDING_DETECTED);
+        DEBUG_SET(DEBUG_CRUISE, 7, 77);
     }
 }
 // CR15
+
 
 bool isLandingDetected(void)
 {
@@ -3433,7 +3441,7 @@ bool navigationRequiresThrottleTiltCompensation(void)
 bool navigationRequiresAngleMode(void)
 {
     const navigationFSMStateFlags_t currentState = navGetStateFlags(posControl.navState);
-    return (currentState & NAV_REQUIRE_ANGLE) || ((currentState & NAV_REQUIRE_ANGLE_FW) && STATE(FIXED_WING_LEGACY));
+    return (currentState & NAV_REQUIRE_ANGLE) || ((currentState & NAV_REQUIRE_ANGLE_FW) && STATE(FIXED_WING_LEGACY));   // CR36 ? kill angle
 }
 
 /*-----------------------------------------------------------
