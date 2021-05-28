@@ -96,7 +96,6 @@ typedef struct navigationFlags_s {
     bool wpMissionPlannerActive;            // Activation status of in flight WP mission planner  // CR32
 
     /* Landing detector */
-    bool landingDetected;       // CR15
     bool resetLandingDetector;  // CR15
 } navigationFlags_t;
 
@@ -403,7 +402,7 @@ const navEstimatedPosVel_t * navGetCurrentActualPositionAndVelocity(void);
 bool isThrustFacingDownwards(void);
 uint32_t calculateDistanceToDestination(const fpVector3_t * destinationPos);
 int32_t calculateBearingToDestination(const fpVector3_t * destinationPos);
-// void resetLandingDetector(void);    // CR15
+void resetLandingDetector(void);
 bool isLandingDetected(void);
 void updateLandingStatus(void); // CR15
 navigationFSMStateFlags_t navGetCurrentStateFlags(void);
@@ -446,7 +445,6 @@ void applyMulticopterNavigationController(navigationFSMStateFlags_t navStateFlag
 // void resetMulticopterLandingDetector(void); // CR15
 
 bool isMulticopterLandingDetected(void);
-bool isFixedWingLandingDetected(void);
 
 void calculateMulticopterInitialHoldPosition(fpVector3_t * pos);
 
@@ -464,6 +462,8 @@ bool adjustFixedWingPositionFromRCInput(void);
 void applyFixedWingPositionController(timeUs_t currentTimeUs);
 float processHeadingYawController(timeDelta_t deltaMicros, int32_t navHeadingError, bool errorIsDecreasing);
 void applyFixedWingNavigationController(navigationFSMStateFlags_t navStateFlags, timeUs_t currentTimeUs);
+
+bool isFixedWingLandingDetected(void);
 
 void calculateFixedWingInitialHoldPosition(fpVector3_t * pos);
 

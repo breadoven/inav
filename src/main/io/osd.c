@@ -4140,7 +4140,7 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
                     // CR32
                 }
                 // CR15
-                if (posControl.flags.landingDetected) {
+                if (STATE(LANDING_DETECTED)) {
                     messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_LANDED);
                 }
                 // CR15

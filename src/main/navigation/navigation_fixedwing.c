@@ -579,30 +579,35 @@ bool isFixedWingAutoThrottleManuallyIncreased()
  *-----------------------------------------------------------*/
 bool isFixedWingLandingDetected(void)
 {
-    timeUs_t currentTimeUs = micros();
-    // CR15
+    DEBUG_SET(DEBUG_CRUISE, 0, posControl.actualState.velXY);
+    DEBUG_SET(DEBUG_CRUISE, 1, averageAbsGyroRates());
+    DEBUG_SET(DEBUG_CRUISE, 3, fabsf(posControl.actualState.abs.vel.z));
+
+    static bool fixAxisCheck = false;
+
+    // Basic condition to start looking for landing
+    bool startCondition = calculateThrottleStatus(THROTTLE_STATUS_TYPE_RC) == THROTTLE_LOW || posControl.flags.forcedRTHActivated;
+
+    if (!startCondition || posControl.flags.resetLandingDetector) {
+        fixAxisCheck = false;
+        posControl.flags.resetLandingDetector = false;
+        return false;
+    }
+
     static timeUs_t fwLandCheckTimerStart;
     static int16_t fwLandSetRollDatum;
     static int16_t fwLandSetPitchDatum;
-    static bool fixAxisCheck = false;
 
-    DEBUG_SET(DEBUG_CRUISE, 0, posControl.actualState.velXY);
-    DEBUG_SET(DEBUG_CRUISE, 1, averageAbsGyroRates());
-    DEBUG_SET(DEBUG_CRUISE, 2, (currentTimeUs - fwLandCheckTimerStart) / 100000);
-    DEBUG_SET(DEBUG_CRUISE, 3, fabsf(posControl.actualState.abs.vel.z));
+    timeUs_t currentTimeUs = micros();
 
-    // Basic condition to start looking for landing
-    bool condition1 = calculateThrottleStatus(THROTTLE_STATUS_TYPE_RC) == THROTTLE_LOW || posControl.flags.forcedRTHActivated;
     // Check horizontal and vertical volocities are low (cm/s)
-    bool condition2 = posControl.actualState.velXY < 100.0f && fabsf(posControl.actualState.abs.vel.z) < 50.0f;
+    bool velCondition = posControl.actualState.velXY < 100.0f && fabsf(posControl.actualState.abs.vel.z) < 50.0f;
     // Check angular rates are low (degs/s)
-    bool condition3 = averageAbsGyroRates() < 2.0f;
+    bool gyroCondition = averageAbsGyroRates() < 2.0f;
 
-    if (!(condition1 && condition2 && condition3) || posControl.flags.resetLandingDetector) {
-        fixAxisCheck = false;
-        posControl.flags.resetLandingDetector = false;
-    } else {     // capture roll and pitch angles to be used as datums to check for absolute change
-        if (!fixAxisCheck) {
+    DEBUG_SET(DEBUG_CRUISE, 2, (currentTimeUs - fwLandCheckTimerStart) / 100000);
+    if (velCondition && gyroCondition){
+        if (!fixAxisCheck) {        // capture roll and pitch angles to be used as datums to check for absolute change
             fwLandSetRollDatum = attitude.values.roll;  //0.1 deg increments
             fwLandSetPitchDatum = attitude.values.pitch;
             fixAxisCheck = true;

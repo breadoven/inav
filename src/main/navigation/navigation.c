@@ -1330,7 +1330,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_HOVER_PRIOR_TO_LAND
     if ((posControl.flags.estPosStatus >= EST_USABLE) || !checkForPositionSensorTimeout()) {
         // Wait until target heading is reached for MR (with 15 deg margin for error), or continue for Fixed Wing
         if ((ABS(wrap_18000(posControl.rthState.homePosition.yaw - posControl.actualState.yaw)) < DEGREES_TO_CENTIDEGREES(15)) || STATE(FIXED_WING_LEGACY)) {
-            posControl.flags.landingDetected = false;   // force reset landing detector just in case  CR15
+            resetLandingDetector();   // force reset landing detector just in case  CR15
             updateClimbRateToAltitudeController(0, ROC_TO_ALT_RESET);
             return navigationRTHAllowsLanding() ? NAV_FSM_EVENT_SUCCESS : NAV_FSM_EVENT_SWITCH_TO_RTH_HOVER_ABOVE_HOME; // success = land
         }
@@ -1387,7 +1387,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_LANDING(navigationF
     if (!ARMING_FLAG(ARMED)) {
         return NAV_FSM_EVENT_SUCCESS;
     }
-    else if (posControl.flags.landingDetected) {    // CR15
+    else if (STATE(LANDING_DETECTED)) {    // CR15
         return NAV_FSM_EVENT_SUCCESS;
     }
     else {
@@ -2600,12 +2600,11 @@ void calculateNewCruiseTarget(fpVector3_t * origin, int32_t yaw, int32_t distanc
 void updateLandingStatus(void)
 {
     throttleStatus_e throttleStatus = calculateThrottleStatus(THROTTLE_STATUS_TYPE_RC);
-    static bool landingDetectorIsActive = false;
+    static bool landingDetectorIsActive;
 
     if (!ARMING_FLAG(ARMED)) {
+        resetLandingDetector();
         landingDetectorIsActive = false;
-        posControl.flags.landingDetected = false;
-        posControl.flags.resetLandingDetector = true;
         if (!IS_RC_MODE_ACTIVE(BOXARM)) {
             DISABLE_ARMING_FLAG(ARMING_DISABLED_LANDING_DETECTED);
         }
@@ -2626,10 +2625,10 @@ void updateLandingStatus(void)
         } else if (STATE(MULTIROTOR)) {
             landingDetectorIsActive = rcCommand[THROTTLE] > navConfig()->mc.hover_throttle && averageAbsGyroRates() > 7.0f;
         }
-        posControl.flags.landingDetected = landingDetectorIsActive ? false : posControl.flags.landingDetected;
+        landingDetectorIsActive ? DISABLE_STATE(LANDING_DETECTED) : NULL;
     } else if (isLandingDetected()) {
+        ENABLE_STATE(LANDING_DETECTED);
         landingDetectorIsActive = false;
-        posControl.flags.landingDetected = true;
         DEBUG_SET(DEBUG_CRUISE, 7, 77);
         if (navConfig()->general.flags.disarm_on_landing && !navigationIsFlyingAutonomousMode()) {
             ENABLE_ARMING_FLAG(ARMING_DISABLED_LANDING_DETECTED);
@@ -2645,6 +2644,14 @@ bool isLandingDetected(void)
 {
     DEBUG_SET(DEBUG_CRUISE, 6, 66);
     return STATE(AIRPLANE) ? isFixedWingLandingDetected() : isMulticopterLandingDetected(); // CR15
+}
+
+void resetLandingDetector(void)
+{
+    // CR15
+    DISABLE_STATE(LANDING_DETECTED);
+    posControl.flags.resetLandingDetector = true;
+    // CR15
 }
 
 /*-----------------------------------------------------------
