@@ -619,7 +619,8 @@ bool isFixedWingLandingDetected(void)
             DEBUG_SET(DEBUG_CRUISE, 5, ABS(fwLandSetPitchDatum - attitude.values.pitch));
             if (isRollAxisStatic && isPitchAxisStatic) {
                 // Must have landed, low horizontal and vertical velocities and no axis rotation in Roll and Pitch
-                return currentTimeUs - fwLandCheckTimerStart > (navConfig()->mc.auto_disarm_delay * 2000); // check conditions stable for > Xs
+                timeUs_t timeDelay = (2000 + navConfig()->fw.auto_disarm_delay) * 1000;
+                return currentTimeUs - fwLandCheckTimerStart > timeDelay; // check conditions stable for > 2s + disarm delay
             } else {
                 fixAxisCheck = false;
             }
@@ -671,7 +672,7 @@ void applyFixedWingNavigationController(navigationFSMStateFlags_t navStateFlags,
         if (true) {
 #endif
             if (navStateFlags & NAV_CTL_ALT) {
-                if (getMotorStatus() == MOTOR_STOPPED_USER) {
+                if (getMotorStatus() == MOTOR_STOPPED_USER) { // CR36 add soaring mode override here
                     // Motor has been stopped by user. Update target altitude and bypass navigation pitch/throttle control
                     resetFixedWingAltitudeController();
                     setDesiredPosition(&navGetCurrentActualPositionAndVelocity()->pos, posControl.actualState.yaw, NAV_POS_UPDATE_Z);

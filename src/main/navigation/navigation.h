@@ -296,6 +296,7 @@ typedef struct navConfig_s {
         bool     allow_manual_thr_increase;
         bool    useFwNavYawControl;
         uint8_t yawControlDeadband;
+        uint16_t auto_disarm_delay;          // fixed wing disarm delay for landing detector  CR15
     } fw;
 } navConfig_t;
 

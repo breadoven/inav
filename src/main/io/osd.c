@@ -4140,7 +4140,7 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
                     // CR32
                 }
                 // CR15
-                if (STATE(LANDING_DETECTED)) {
+                if (STATE(LANDING_DETECTED) && NAV_Status.state != MW_NAV_STATE_LANDED) {
                     messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_LANDED);
                 }
                 // CR15
