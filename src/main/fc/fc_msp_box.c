@@ -93,6 +93,7 @@ static const box_t boxes[CHECKBOX_ITEM_COUNT + 1] = {
     { BOXNAVCRUISE, "NAV CRUISE", 53 },
     { BOXAUTOLEVEL, "AUTO LEVEL", 54 },
     { BOXPLANWPMISSION, "WP PLANNER", 55 },   // CR32
+    { BOXSOARING, "SOARING", 56 },   // CR36
     { CHECKBOX_ITEM_COUNT, NULL, 0xFF }
 };
 
@@ -211,6 +212,7 @@ void initActiveBoxIds(void)
         }
         if (STATE(AIRPLANE)) {
             activeBoxIds[activeBoxIdCount++] = BOXLOITERDIRCHN;
+            activeBoxIds[activeBoxIdCount++] = BOXSOARING;     // CR36
         }
     }
 
