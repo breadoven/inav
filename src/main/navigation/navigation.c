@@ -2607,7 +2607,6 @@ void updateLandingStatus(void)
     if (!ARMING_FLAG(ARMED)) {
         resetLandingDetector();
         landingDetectorIsActive = false;
-        landingDisarmTimer = 0;
         if (!IS_RC_MODE_ACTIVE(BOXARM)) {
             DISABLE_ARMING_FLAG(ARMING_DISABLED_LANDING_DETECTED);
         }
@@ -2628,11 +2627,12 @@ void updateLandingStatus(void)
         } else if (STATE(MULTIROTOR)) {
             landingDetectorIsActive = rcCommand[THROTTLE] > navConfig()->mc.hover_throttle && averageAbsGyroRates() > 7.0f;
         }
-        landingDetectorIsActive ? DISABLE_STATE(LANDING_DETECTED) : 0;
+        if (landingDetectorIsActive) {
+            DISABLE_STATE(LANDING_DETECTED);
+        }
     } else if (STATE(LANDING_DETECTED)) {
         if (navConfig()->general.flags.disarm_on_landing) {
             uint16_t disarmDelayTimeMs = STATE(AIRPLANE) ? navConfig()->fw.auto_disarm_delay : navConfig()->mc.auto_disarm_delay;
-            landingDisarmTimer = landingDisarmTimer == 0 ? millis() : landingDisarmTimer;
             if (millis() - landingDisarmTimer > disarmDelayTimeMs) {
                 ENABLE_ARMING_FLAG(ARMING_DISABLED_LANDING_DETECTED);
                 disarm(DISARM_LANDING);
@@ -2643,11 +2643,11 @@ void updateLandingStatus(void)
         }
     } else if (isLandingDetected()) {
         ENABLE_STATE(LANDING_DETECTED);
+        landingDisarmTimer = millis();
         DEBUG_SET(DEBUG_CRUISE, 7, 77);
     }
 }
 // CR15
-
 
 bool isLandingDetected(void)
 {
@@ -3376,7 +3376,6 @@ static navigationFSMEvent_t selectNavEventFromBoxModeInput(bool launchBypass)
             canActivateWaypoint = false;    // Block WP mode if we are in PASSTHROUGH mode
             return NAV_FSM_EVENT_SWITCH_TO_IDLE;
         }
-
 
         // Pilot-activated waypoint mission. Fall-back to RTH in case of no mission loaded.
         // Block activation if using WP Mission Planner // CR32

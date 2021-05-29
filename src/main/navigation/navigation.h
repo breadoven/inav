@@ -569,6 +569,8 @@ const char * fixedWingLaunchStateMessage(void);
 
 float calculateAverageSpeed(void);
 
+void updateLandingStatus(void); // CR15
+
 const navigationPIDControllers_t* getNavigationPIDControllers(void);
 
 int32_t navigationGetHeadingError(void);

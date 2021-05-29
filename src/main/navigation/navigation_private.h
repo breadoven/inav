@@ -404,7 +404,7 @@ uint32_t calculateDistanceToDestination(const fpVector3_t * destinationPos);
 int32_t calculateBearingToDestination(const fpVector3_t * destinationPos);
 void resetLandingDetector(void);
 bool isLandingDetected(void);
-void updateLandingStatus(void); // CR15
+
 navigationFSMStateFlags_t navGetCurrentStateFlags(void);
 
 void setHomePosition(const fpVector3_t * pos, int32_t yaw, navSetWaypointFlags_t useMask, navigationHomeFlags_t homeFlags);
