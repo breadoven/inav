@@ -4138,6 +4138,11 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
                         messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_MISSION_PLANNER);
                     }
                     // CR32
+                    // CR36
+                    if (FLIGHT_MODE(SOARING_MODE)) {
+                        messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_NAV_SOARING);
+                    }
+                    // CR36
                 }
                 // CR15
                 if (STATE(LANDING_DETECTED) && NAV_Status.state != MW_NAV_STATE_LANDED) {
