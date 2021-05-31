@@ -579,14 +579,16 @@ bool isFixedWingAutoThrottleManuallyIncreased()
  *-----------------------------------------------------------*/
 bool isFixedWingLandingDetected(void)
 {
-    DEBUG_SET(DEBUG_CRUISE, 0, posControl.actualState.velXY);
+    // DEBUG_SET(DEBUG_CRUISE, 0, posControl.actualState.velXY);
     DEBUG_SET(DEBUG_CRUISE, 1, averageAbsGyroRates());
-    DEBUG_SET(DEBUG_CRUISE, 3, fabsf(posControl.actualState.abs.vel.z));
-
+    // DEBUG_SET(DEBUG_CRUISE, 3, fabsf(posControl.actualState.abs.vel.z));
+        DEBUG_SET(DEBUG_CRUISE, 3, rcCommand[THROTTLE]);
+        DEBUG_SET(DEBUG_CRUISE, 0, getThrottleIdleValue());
     static bool fixAxisCheck = false;
+    const bool throttleIsLow = rcCommand[THROTTLE] - 20 < getThrottleIdleValue();
 
     // Basic condition to start looking for landing
-    bool startCondition = calculateThrottleStatus(THROTTLE_STATUS_TYPE_RC) == THROTTLE_LOW || posControl.flags.forcedRTHActivated;
+    bool startCondition = navGetCurrentStateFlags() & NAV_CTL_LAND || FLIGHT_MODE(FAILSAFE_MODE) || (!navigationIsFlyingAutonomousMode() && throttleIsLow);
 
     if (!startCondition || posControl.flags.resetLandingDetector) {
         fixAxisCheck = false;
@@ -671,7 +673,7 @@ void applyFixedWingNavigationController(navigationFSMStateFlags_t navStateFlags,
         if (true) {
 #endif
             if (navStateFlags & NAV_CTL_ALT) {
-                if (getMotorStatus() == MOTOR_STOPPED_USER || IS_RC_MODE_ACTIVE(BOXSOARING)) {  // CR36
+                if (getMotorStatus() == MOTOR_STOPPED_USER || FLIGHT_MODE(SOARING_MODE)) {  // CR36
                     // Motor has been stopped by user or soaring mode used to override altitude control (gliders)   CR36
                     // Update target altitude and bypass navigation pitch/throttle control
                     resetFixedWingAltitudeController();
@@ -694,6 +696,11 @@ void applyFixedWingNavigationController(navigationFSMStateFlags_t navStateFlags,
         //if (navStateFlags & NAV_CTL_YAW)
         if ((navStateFlags & NAV_CTL_ALT) || (navStateFlags & NAV_CTL_POS))
             applyFixedWingPitchRollThrottleController(navStateFlags, currentTimeUs);
+        // CR36
+        if (FLIGHT_MODE(SOARING_MODE) && navConfig()->general.flags.soaring_motor_stop) {
+            ENABLE_STATE(NAV_MOTOR_STOP_OR_IDLE);
+        }
+        // CR36
     }
 }
 

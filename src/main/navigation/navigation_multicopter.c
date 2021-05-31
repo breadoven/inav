@@ -679,13 +679,13 @@ static void applyMulticopterPositionController(timeUs_t currentTimeUs)
 bool isMulticopterLandingDetected(void)
 {   // CR15
     static timeUs_t landingDetectorStartedAt;
-    const bool throttleIsLow = calculateThrottleStatus(THROTTLE_STATUS_TYPE_RC) == THROTTLE_LOW;
+    const bool throttleIsLow = rcCommand[THROTTLE] - 20 < getThrottleIdleValue();
 
     DEBUG_SET(DEBUG_CRUISE, 4, 22);
     DEBUG_SET(DEBUG_CRUISE, 1, averageAbsGyroRates());
 
     // Basic condition to start looking for landing
-    bool startCondition = posControl.navState == NAV_STATE_RTH_LANDING || (!navigationIsFlyingAutonomousMode() && throttleIsLow);
+    bool startCondition = navGetCurrentStateFlags() & NAV_CTL_LAND || FLIGHT_MODE(FAILSAFE_MODE) || (!navigationIsFlyingAutonomousMode() && throttleIsLow);
 
     if (!startCondition || posControl.flags.resetLandingDetector) {
         landingDetectorStartedAt = 0;
@@ -695,7 +695,7 @@ bool isMulticopterLandingDetected(void)
 
     // check vertical and horizontal velocities are low
     bool velCondition = fabsf(navGetCurrentActualPositionAndVelocity()->vel.z) < 25.0f || posControl.actualState.velXY < 100.0f;
-    // check if gyro rates are low
+    // check gyro rates are low
     bool gyroCondition = averageAbsGyroRates() < 2.0f;
     DEBUG_SET(DEBUG_CRUISE, 2, velCondition);
     DEBUG_SET(DEBUG_CRUISE, 3, gyroCondition);

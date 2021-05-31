@@ -118,6 +118,7 @@ PG_RESET_TEMPLATE(navConfig_t, navConfig,
             .safehome_usage_mode = SETTING_SAFEHOME_USAGE_MODE_DEFAULT,
             .waypoint_mission_restart = SETTING_NAV_WP_MISSION_RESTART_DEFAULT,       // CR29
             .mission_planner_reset = SETTING_NAV_MISSION_PLANNER_RESET_DEFAULT,       // Allow mode switch toggle to reset Mission Planner WPs  CR32
+            .soaring_motor_stop = SETTING_NAV_SOARING_MOTOR_STOP_DEFAULT,             // stops motor when Saoring mode enabled  CR36
         },
 
         // General navigation parameters
@@ -2600,7 +2601,10 @@ void calculateNewCruiseTarget(fpVector3_t * origin, int32_t yaw, int32_t distanc
  // CR15
 void updateLandingStatus(void)
 {
-    throttleStatus_e throttleStatus = calculateThrottleStatus(THROTTLE_STATUS_TYPE_RC);
+    // if (STATE(AIRPLANE) && !navConfig()->general.flags.disarm_on_landing) {
+        // return;     // no point using this with a fixed wing if not set to disarm
+    // }
+
     static bool landingDetectorIsActive;
     static timeMs_t landingDisarmTimer;
 
@@ -2613,22 +2617,12 @@ void updateLandingStatus(void)
         DEBUG_SET(DEBUG_CRUISE, 7, 17);
         return;
     }
-
+        DEBUG_SET(DEBUG_CRUISE, 1, rcCommand[THROTTLE]);
     if (!landingDetectorIsActive) {
         DEBUG_SET(DEBUG_CRUISE, 6, 55);
-        DEBUG_SET(DEBUG_CRUISE, 1, averageAbsGyroRates());
-        if (STATE(AIRPLANE)) {
-            float airspeed = 0;
-#ifdef USE_PITOT
-            airspeed = pitot.airSpeed;
-#endif
-            // landingDetectorIsActive = isImuHeadingValid() && throttleStatus != THROTTLE_LOW && (posControl.actualState.velXY > 250 || airspeed > 250);
-            landingDetectorIsActive = throttleStatus != THROTTLE_LOW;
-        } else if (STATE(MULTIROTOR)) {
-            landingDetectorIsActive = rcCommand[THROTTLE] > navConfig()->mc.hover_throttle && averageAbsGyroRates() > 7.0f;
-        }
-        if (landingDetectorIsActive) {
-            DISABLE_STATE(LANDING_DETECTED);
+        if (isFlightDetected()) {
+            landingDetectorIsActive = true;
+            resetLandingDetector();
         }
     } else if (STATE(LANDING_DETECTED)) {
         if (navConfig()->general.flags.disarm_on_landing) {
@@ -2637,9 +2631,9 @@ void updateLandingStatus(void)
                 ENABLE_ARMING_FLAG(ARMING_DISABLED_LANDING_DETECTED);
                 disarm(DISARM_LANDING);
             }
-        } else {
-            landingDetectorIsActive = false;
-            // pidResetErrorAccumulators();
+        } else {    //restart without disarm only for multirotor
+            pidResetErrorAccumulators();
+            landingDetectorIsActive = rxGetChannelValue(THROTTLE) < navConfig()->mc.hover_throttle - 100;
         }
     } else if (isLandingDetected()) {
         ENABLE_STATE(LANDING_DETECTED);
@@ -2662,7 +2656,21 @@ void resetLandingDetector(void)
     posControl.flags.resetLandingDetector = true;
     // CR15
 }
-
+// CR15
+bool isFlightDetected(void)
+{
+    if (STATE(AIRPLANE)) {
+        float airspeed = 0;
+#ifdef USE_PITOT
+        airspeed = pitot.airSpeed;
+#endif
+        return isImuHeadingValid() && rcCommand[THROTTLE] > navConfig()->fw.cruise_throttle && (posControl.actualState.velXY > 250 || airspeed > 250);
+        // return rcCommand[THROTTLE] > navConfig()->fw.cruise_throttle;
+    } else {    // multirotor
+        return rcCommand[THROTTLE] > navConfig()->mc.hover_throttle && averageAbsGyroRates() > 7.0f;
+    }
+}
+// CR15
 /*-----------------------------------------------------------
  * Z-position controller
  *-----------------------------------------------------------*/
@@ -3323,8 +3331,8 @@ static navigationFSMEvent_t selectNavEventFromBoxModeInput(bool launchBypass)
             canActivateWaypoint = false;
         }
 
-        // LAUNCH mode has priority over any other NAV mode
-        if (STATE(FIXED_WING_LEGACY)) {
+        if (STATE(AIRPLANE)) {     // Airplane specific modes   // CR36
+            // LAUNCH mode has priority over any other NAV mode
             if (isNavLaunchEnabled()) {     // FIXME: Only available for fixed wing aircrafts now
                 if (canActivateLaunchMode) {
                     canActivateLaunchMode = false;
@@ -3349,6 +3357,16 @@ static navigationFSMEvent_t selectNavEventFromBoxModeInput(bool launchBypass)
                         return NAV_FSM_EVENT_SWITCH_TO_IDLE;
                 }
             }
+            // CR36
+            // Soaring mode used by planes, disables altitude control in Position hold and Cruise modes.
+            if (IS_RC_MODE_ACTIVE(BOXSOARING) && (FLIGHT_MODE(NAV_POSHOLD_MODE) || FLIGHT_MODE(NAV_COURSE_HOLD_MODE))) {
+                if (!FLIGHT_MODE(SOARING_MODE)) {
+                    ENABLE_FLIGHT_MODE(SOARING_MODE);
+                }
+            } else {
+                DISABLE_FLIGHT_MODE(SOARING_MODE);
+            }
+            // CR36
         }
 
         // Failsafe_RTH (can override MANUAL)
@@ -3440,7 +3458,7 @@ bool navigationRequiresThrottleTiltCompensation(void)
 bool navigationRequiresAngleMode(void)
 {
     const navigationFSMStateFlags_t currentState = navGetStateFlags(posControl.navState);
-    return (currentState & NAV_REQUIRE_ANGLE) || ((currentState & NAV_REQUIRE_ANGLE_FW) && STATE(FIXED_WING_LEGACY));   // CR36 ? kill angle
+    return (currentState & NAV_REQUIRE_ANGLE) || ((currentState & NAV_REQUIRE_ANGLE_FW) && STATE(FIXED_WING_LEGACY));
 }
 
 /*-----------------------------------------------------------
@@ -3899,7 +3917,7 @@ bool launchAllowedWithThrottleLow(void)
 bool navigationIsControllingThrottle(void)
 {
     // Note that this makes a detour into mixer code to evaluate actual motor status
-    return navigationInAutomaticThrottleMode() && (getMotorStatus() != MOTOR_STOPPED_USER);
+    return navigationInAutomaticThrottleMode() && getMotorStatus() != MOTOR_STOPPED_USER && !FLIGHT_MODE(SOARING_MODE);    // CR36
 }
 
 bool navigationIsControllingAltitude(void) {
