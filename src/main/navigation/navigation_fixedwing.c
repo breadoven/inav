@@ -579,11 +579,11 @@ bool isFixedWingAutoThrottleManuallyIncreased()
  *-----------------------------------------------------------*/
 bool isFixedWingLandingDetected(void)
 {
-    // DEBUG_SET(DEBUG_CRUISE, 0, posControl.actualState.velXY);
+    DEBUG_SET(DEBUG_CRUISE, 0, posControl.actualState.velXY);
     DEBUG_SET(DEBUG_CRUISE, 1, averageAbsGyroRates());
-    // DEBUG_SET(DEBUG_CRUISE, 3, fabsf(posControl.actualState.abs.vel.z));
-        DEBUG_SET(DEBUG_CRUISE, 3, rcCommand[THROTTLE]);
-        DEBUG_SET(DEBUG_CRUISE, 0, getThrottleIdleValue());
+    DEBUG_SET(DEBUG_CRUISE, 3, fabsf(posControl.actualState.abs.vel.z));
+    // DEBUG_SET(DEBUG_CRUISE, 3, rcCommand[THROTTLE] - 20);
+    // DEBUG_SET(DEBUG_CRUISE, 0, getThrottleIdleValue());
     static bool fixAxisCheck = false;
     const bool throttleIsLow = rcCommand[THROTTLE] - 20 < getThrottleIdleValue();
 
@@ -591,9 +591,7 @@ bool isFixedWingLandingDetected(void)
     bool startCondition = navGetCurrentStateFlags() & NAV_CTL_LAND || FLIGHT_MODE(FAILSAFE_MODE) || (!navigationIsFlyingAutonomousMode() && throttleIsLow);
 
     if (!startCondition || posControl.flags.resetLandingDetector) {
-        fixAxisCheck = false;
-        posControl.flags.resetLandingDetector = false;
-        return false;
+        return fixAxisCheck = posControl.flags.resetLandingDetector = false;
     }
 
     static timeMs_t fwLandingTimerStartAt;
@@ -621,14 +619,16 @@ bool isFixedWingLandingDetected(void)
             DEBUG_SET(DEBUG_CRUISE, 5, ABS(fwLandSetPitchDatum - attitude.values.pitch));
             if (isRollAxisStatic && isPitchAxisStatic) {
                 // Must have landed, low horizontal and vertical velocities and no axis rotation in Roll and Pitch
-                return currentTimeMs - fwLandingTimerStartAt > 2000; // check conditions stable for > 2s
+                timeMs_t safetyTimeDelay = 2000 + navConfig()->fw.auto_disarm_delay;
+                return currentTimeMs - fwLandingTimerStartAt > safetyTimeDelay; // check conditions stable for 2s + optional extra delay
             } else {
                 fixAxisCheck = false;
             }
         }
     }
-    // CR15
+
     return false;
+    // CR15
 }
 
 /*-----------------------------------------------------------

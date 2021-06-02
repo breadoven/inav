@@ -2606,7 +2606,6 @@ void updateLandingStatus(void)
     // }
 
     static bool landingDetectorIsActive;
-    static timeMs_t landingDisarmTimer;
 
     if (!ARMING_FLAG(ARMED)) {
         resetLandingDetector();
@@ -2625,19 +2624,15 @@ void updateLandingStatus(void)
             resetLandingDetector();
         }
     } else if (STATE(LANDING_DETECTED)) {
+        pidResetErrorAccumulators();
         if (navConfig()->general.flags.disarm_on_landing) {
-            uint16_t disarmDelayTimeMs = STATE(AIRPLANE) ? navConfig()->fw.auto_disarm_delay : navConfig()->mc.auto_disarm_delay;
-            if (millis() - landingDisarmTimer > disarmDelayTimeMs) {
-                ENABLE_ARMING_FLAG(ARMING_DISABLED_LANDING_DETECTED);
-                disarm(DISARM_LANDING);
-            }
+            ENABLE_ARMING_FLAG(ARMING_DISABLED_LANDING_DETECTED);
+            disarm(DISARM_LANDING);
         } else {    //restart without disarm only for multirotor
-            pidResetErrorAccumulators();
             landingDetectorIsActive = rxGetChannelValue(THROTTLE) < navConfig()->mc.hover_throttle - 100;
         }
     } else if (isLandingDetected()) {
         ENABLE_STATE(LANDING_DETECTED);
-        landingDisarmTimer = millis();
         DEBUG_SET(DEBUG_CRUISE, 7, 77);
     }
 }

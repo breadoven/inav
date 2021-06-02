@@ -689,8 +689,7 @@ bool isMulticopterLandingDetected(void)
 
     if (!startCondition || posControl.flags.resetLandingDetector) {
         landingDetectorStartedAt = 0;
-        posControl.flags.resetLandingDetector = false;
-        return false;
+        return  posControl.flags.resetLandingDetector = false;
     }
 
     // check vertical and horizontal velocities are low
@@ -703,7 +702,7 @@ bool isMulticopterLandingDetected(void)
     bool possibleLandingDetected = false;
     const timeUs_t currentTimeUs = micros();
 
-    if (posControl.navState == NAV_STATE_RTH_LANDING) {
+    if (navGetCurrentStateFlags() & NAV_CTL_LAND) {
         // We have likely landed if throttle is 40 units below average descend throttle
         // We use rcCommandAdjustedThrottle to keep track of NAV corrected throttle (isLandingDetected is executed
         // from processRx() and rcCommand at that moment holds rc input, not adjusted values from NAV core)
@@ -713,12 +712,15 @@ bool isMulticopterLandingDetected(void)
         bool isAtMinimalThrust = false;
 
         if (landingDetectorStartedAt == 0) {
-            landingThrSum = 0;
-            landingThrSamples = 0;
+            landingThrSum = landingThrSamples = 0;
             landingDetectorStartedAt = currentTimeUs;
         }
-        if (currentTimeUs - landingDetectorStartedAt < 1000000) {   // Wait for 1 second so throttle has stabilized.
-            return false;
+        if (!landingThrSamples) {
+            if (currentTimeUs - landingDetectorStartedAt < 1000000) {   // Wait for 1 second so throttle has stabilized.
+                return false;
+            } else {
+                landingDetectorStartedAt = currentTimeUs;
+            }
         }
         landingThrSamples += 1;
         landingThrSum += rcCommandAdjustedThrottle;
@@ -728,8 +730,8 @@ bool isMulticopterLandingDetected(void)
     } else {
         DEBUG_SET(DEBUG_CRUISE, 4, 25);
         DEBUG_SET(DEBUG_CRUISE, 0, currentTimeUs - landingDetectorStartedAt);
-        if (velCondition && gyroCondition && landingDetectorStartedAt != 0) {
-            possibleLandingDetected = (currentTimeUs - landingDetectorStartedAt > 2000000);
+        if (landingDetectorStartedAt != 0) {
+            possibleLandingDetected = velCondition && gyroCondition;
         } else {
             landingDetectorStartedAt = currentTimeUs;
             return false;
@@ -744,7 +746,14 @@ bool isMulticopterLandingDetected(void)
         possibleLandingDetected = possibleLandingDetected && (posControl.actualState.agl.pos.z <= (posControl.actualState.surfaceMin + 5.0f));
     }
 
-    return possibleLandingDetected;
+    if (possibleLandingDetected) {
+        timeUs_t safetyTimeDelay = 2000000 + navConfig()->mc.auto_disarm_delay;  // check conditions stable for 2s + optional extra delay
+        return (currentTimeUs - landingDetectorStartedAt > safetyTimeDelay);
+    } else {
+        landingDetectorStartedAt = currentTimeUs;
+        return false;
+    }
+
     // CR15 whole function changed
 }
 
