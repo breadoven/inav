@@ -74,7 +74,6 @@ FILE_COMPILE_FOR_SPEED
 #include "msp/msp_serial.h"
 
 #include "navigation/navigation.h"
-#include "navigation/navigation_private.h"  // CR17
 
 #include "rx/rx.h"
 #include "rx/msp.h"
@@ -776,34 +775,10 @@ void processRx(timeUs_t currentTimeUs)
         }
     }
     else if (rcControlsConfig()->airmodeHandlingType == THROTTLE_THRESHOLD) {
-        // DISABLE_STATE(ANTI_WINDUP); // CR17
         //This case applies only to MR when Airmode management is throttle threshold activated
         if (throttleStatus == THROTTLE_LOW && !STATE(AIRMODE_ACTIVE)) {
             pidResetErrorAccumulators();
-        // CR17
-        } else {
-            static timeUs_t airmodeLandCheckTimerStart;
-            if (throttleStatus == THROTTLE_LOW && !navigationIsFlyingAutonomousMode()) {
-                // DEBUG_SET(DEBUG_CRUISE, 0, posControl.actualState.velXY);
-                // DEBUG_SET(DEBUG_CRUISE, 1, posControl.actualState.abs.vel.z);
-                // DEBUG_SET(DEBUG_CRUISE, 2, (micros() - airmodeLandCheckTimerStart) / 100000);
-                if (posControl.actualState.velXY > 100 || fabsf(posControl.actualState.abs.vel.z) > 50) {
-                    airmodeLandCheckTimerStart = micros();
-                }
-                if (micros() - airmodeLandCheckTimerStart > 2000000) {
-                    ENABLE_STATE(ANTI_WINDUP);
-                    pidResetErrorAccumulators();
-                    // DISABLE_STATE(AIRMODE_ACTIVE);
-                    // DEBUG_SET(DEBUG_CRUISE, 3, 100);
-                }
-            } else {
-                airmodeLandCheckTimerStart = micros();
-                DISABLE_STATE(ANTI_WINDUP);
-                // ENABLE_STATE(AIRMODE_ACTIVE);
-                // DEBUG_SET(DEBUG_CRUISE, 3, 200);
-            }
         }
-        // CR17
     }
 //---------------------------------------------------------
     if (mixerConfig()->platformType == PLATFORM_AIRPLANE) {
