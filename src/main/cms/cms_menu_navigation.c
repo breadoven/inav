@@ -51,7 +51,6 @@ static const OSD_Entry cmsx_menuNavSettingsEntries[] =
     OSD_SETTING_ENTRY("MC MAX BANK ANGLE", SETTING_NAV_MC_BANK_ANGLE),
     OSD_SETTING_ENTRY("MID THR FOR AH", SETTING_NAV_USE_MIDTHR_FOR_ALTHOLD),
     OSD_SETTING_ENTRY("MC HOVER THR", SETTING_NAV_MC_HOVER_THR),
-    OSD_SETTING_ENTRY("MISSION RESTART", SETTING_NAV_WP_MISSION_RESTART),   // CR29
 
     OSD_BACK_AND_END_ENTRY,
  };
@@ -181,7 +180,28 @@ static const CMS_Menu cmsx_menuFWSettings = {
     .onGlobalExit = NULL,
     .entries = cmsx_menuFWSettingsEntries
 };
+// CR37
+static const OSD_Entry cmsx_menuMissionSettingsEntries[] =
+{
+    OSD_LABEL_ENTRY("-- MISSIONS --"),
 
+    OSD_SETTING_ENTRY("MULTI MISSION NO", SETTING_NAV_WP_MULTI_MISSION_INDEX),     // CR21
+    OSD_SETTING_ENTRY("MISSION RESTART", SETTING_NAV_WP_MISSION_RESTART),   // CR29
+
+    OSD_BACK_AND_END_ENTRY,
+ };
+
+static const CMS_Menu cmsx_menuMissionSettings = {
+#ifdef CMS_MENU_DEBUG
+    .GUARD_text = "MENUMISSIONSETTINGS",
+    .GUARD_type = OME_MENU,
+#endif
+    .onEnter = NULL,
+    .onExit = NULL,
+    .onGlobalExit = NULL,
+    .entries = cmsx_menuMissionSettingsEntries
+};
+// CR37
 static const OSD_Entry cmsx_menuNavigationEntries[] =
 {
     OSD_LABEL_ENTRY("-- NAVIGATION --"),
@@ -189,7 +209,7 @@ static const OSD_Entry cmsx_menuNavigationEntries[] =
     OSD_SUBMENU_ENTRY("BASIC SETTINGS", &cmsx_menuNavSettings),
     OSD_SUBMENU_ENTRY("RTH", &cmsx_menuRTH),
     OSD_SUBMENU_ENTRY("FIXED WING", &cmsx_menuFWSettings),
-    OSD_SETTING_ENTRY("MULTI MISSION NO", SETTING_NAV_WP_MULTI_MISSION_INDEX),     // CR21
+    OSD_SUBMENU_ENTRY("MISSIONS", &cmsx_menuMissionSettings),  // CR37
 
     OSD_BACK_AND_END_ENTRY,
 };
