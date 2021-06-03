@@ -36,6 +36,7 @@
 #include "sensors/acceleration.h"
 #include "sensors/boardalignment.h"
 #include "sensors/gyro.h"   // CR15
+#include "sensors/pitotmeter.h"     // CR15
 
 #include "flight/pid.h"
 #include "flight/imu.h"
@@ -573,7 +574,21 @@ bool isFixedWingAutoThrottleManuallyIncreased()
 {
     return isAutoThrottleManuallyIncreased;
 }
+// CR15
+bool isFixedWingFlying(void)
+{
+    float airspeed = 0;
+#ifdef USE_PITOT
+    airspeed = pitot.airSpeed;
+#endif
+    bool velCondition = posControl.actualState.velXY > 250 || airspeed > 250;
+    bool throttleCondition = rcCommand[THROTTLE] > navConfig()->fw.cruise_throttle;
+    bool launchCondition = isNavLaunchEnabled() && fixedWingLaunchStatus() == FW_LAUNCH_FLYING;  // CR38
 
+    return (isImuHeadingValid() && throttleCondition && velCondition) || launchCondition;
+    // return throttleCondition;
+}
+// CR15
 /*-----------------------------------------------------------
  * FixedWing land detector
  *-----------------------------------------------------------*/

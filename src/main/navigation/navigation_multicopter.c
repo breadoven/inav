@@ -672,7 +672,12 @@ static void applyMulticopterPositionController(timeUs_t currentTimeUs)
         rcCommand[ROLL] = pidAngleToRcCommand(posControl.rcAdjustment[ROLL], pidProfile()->max_angle_inclination[FD_ROLL]);
     }
 }
-
+// CR15
+bool isMulticopterFlying(void)
+{
+    return rcCommand[THROTTLE] > navConfig()->mc.hover_throttle && averageAbsGyroRates() > 7.0f;
+}
+// CR15
 /*-----------------------------------------------------------
  * Multicopter land detector
  *-----------------------------------------------------------*/

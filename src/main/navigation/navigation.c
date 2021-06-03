@@ -57,8 +57,6 @@
 #include "sensors/sensors.h"
 #include "sensors/acceleration.h"
 #include "sensors/boardalignment.h"
-#include "sensors/gyro.h"   // CR15
-#include "sensors/pitotmeter.h"     // CR15
 
 // Multirotors:
 #define MR_RTH_CLIMB_OVERSHOOT_CM   100  // target this amount of cm *above* the target altitude to ensure it is actually reached (Vz > 0 at target alt)
@@ -2656,20 +2654,7 @@ void resetLandingDetector(void)
 // CR15
 bool isFlightDetected(void)
 {
-    if (STATE(AIRPLANE)) {
-        float airspeed = 0;
-#ifdef USE_PITOT
-        airspeed = pitot.airSpeed;
-#endif
-        bool velCondition = posControl.actualState.velXY > 250 || airspeed > 250;
-        bool throttleCondition = rcCommand[THROTTLE] > navConfig()->fw.cruise_throttle;
-        bool launchCondition = isNavLaunchEnabled() && fixedWingLaunchStatus() == FW_LAUNCH_FLYING;  // CR38
-
-        return (isImuHeadingValid() && throttleCondition && velCondition) || launchCondition;
-        // return throttleCondition;
-    } else {    // multirotor
-        return rcCommand[THROTTLE] > navConfig()->mc.hover_throttle && averageAbsGyroRates() > 7.0f;
-    }
+    return STATE(AIRPLANE) ? isFixedWingFlying() : isMulticopterFlying(); // CR15
 }
 // CR15
 /*-----------------------------------------------------------
