@@ -130,6 +130,7 @@ typedef struct fixedWingLaunchData_s {
 
 static EXTENDED_FASTRAM fixedWingLaunchData_t fwLaunch;
 static bool idleMotorAboutToStart;   // CR31
+static uint8_t launchStatus;    // CR38
 
 static const fixedWingLaunchStateDescriptor_t launchStateMachine[FW_LAUNCH_STATE_COUNT] = {
 
@@ -302,12 +303,16 @@ static fixedWingLaunchEvent_t fwLaunchState_FW_LAUNCH_STATE_IDLE(timeUs_t curren
 {
     UNUSED(currentTimeUs);
 
+    launchStatus = launchStatus == FW_LAUNCH_FLYING ? FW_LAUNCH_END_SUCCESS : FW_LAUNCH_END_ABORT;  // CR38
+
     return FW_LAUNCH_EVENT_NONE;
 }
 
 static fixedWingLaunchEvent_t fwLaunchState_FW_LAUNCH_STATE_WAIT_THROTTLE(timeUs_t currentTimeUs)
 {
     UNUSED(currentTimeUs);
+
+    launchStatus = FW_LAUNCH_START;  // CR38
 
     // CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
     if (!isThrottleLow() || navConfig()->fw.launch_allow_throttle_low) {
@@ -403,6 +408,7 @@ static fixedWingLaunchEvent_t fwLaunchState_FW_LAUNCH_STATE_DETECTED(timeUs_t cu
     UNUSED(currentTimeUs);
     // waiting for the navigation to move it to next step FW_LAUNCH_STATE_MOTOR_DELAY
     applyThrottleIdleLogic(false);
+    launchStatus = FW_LAUNCH_DETECTED;    // CR38
 
     return FW_LAUNCH_EVENT_NONE;
 }
@@ -467,6 +473,8 @@ static fixedWingLaunchEvent_t fwLaunchState_FW_LAUNCH_STATE_FINISH(timeUs_t curr
 {
     const timeMs_t elapsedTimeMs = currentStateElapsedMs(currentTimeUs);
     const timeMs_t endTimeMs = navConfig()->fw.launch_end_time;
+
+    launchStatus = FW_LAUNCH_FLYING;  // considered a success if this far in launch sequence CR38
 
     if (areSticksDeflectedMoreThanPosHoldDeadband()) {
         return FW_LAUNCH_EVENT_ABORT; // cancel the launch and do the FW_LAUNCH_STATE_IDLE state
@@ -558,21 +566,26 @@ void resetFixedWingLaunchController(timeUs_t currentTimeUs)
     setCurrentState(FW_LAUNCH_STATE_WAIT_THROTTLE, currentTimeUs);
 }
 
-bool isFixedWingLaunchDetected(void)
-{
-    return fwLaunch.currentState >= FW_LAUNCH_STATE_DETECTED;
-}
+// bool isFixedWingLaunchDetected(void)
+// {
+    // return fwLaunch.currentState >= FW_LAUNCH_STATE_DETECTED;
+// }
 
 void enableFixedWingLaunchController(timeUs_t currentTimeUs)
 {
     setCurrentState(FW_LAUNCH_STATE_MOTOR_DELAY, currentTimeUs);
 }
 
-bool isFixedWingLaunchFinishedOrAborted(void)
+// bool isFixedWingLaunchFinishedOrAborted(void)
+// {
+    // return fwLaunch.currentState == FW_LAUNCH_STATE_IDLE;
+// }
+// CR38
+uint8_t fixedWingLaunchStatus(void)
 {
-    return fwLaunch.currentState == FW_LAUNCH_STATE_IDLE;
+    return launchStatus;
 }
-
+// CR38
 // CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 bool isFixedWingLaunchFinishedThrottleLow(void)
 {

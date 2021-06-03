@@ -159,6 +159,15 @@ typedef enum {
     WP_PLAN_FULL,
 } wpMissionPlannerStatus_e;
 // CR32
+// CR38
+typedef enum {
+    FW_LAUNCH_START,
+    FW_LAUNCH_DETECTED,
+    FW_LAUNCH_FLYING,
+    FW_LAUNCH_END_ABORT,
+    FW_LAUNCH_END_SUCCESS,
+} navFwLaunchStatus_e;
+// CR38
 typedef struct positionEstimationConfig_s {
     uint8_t automatic_mag_declination;
     uint8_t reset_altitude_type; // from nav_reset_type_e
@@ -561,8 +570,9 @@ bool navigationRTHAllowsLanding(void);
 bool isWaypointMissionRTHActive(void);
 
 bool isNavLaunchEnabled(void);
-bool isFixedWingLaunchDetected(void);
-bool isFixedWingLaunchFinishedOrAborted(void);
+// bool isFixedWingLaunchDetected(void);
+// bool isFixedWingLaunchFinishedOrAborted(void);
+uint8_t fixedWingLaunchStatus(void);     // CR38
 // CR6
 bool isFixedWingLaunchFinishedThrottleLow(void);
 // CR6

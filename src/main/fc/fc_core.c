@@ -836,9 +836,7 @@ void taskMainPidLoop(timeUs_t currentTimeUs)
 {
     cycleTime = getTaskDeltaTime(TASK_SELF);
     dT = (float)cycleTime * 0.000001f;
-// CR6 xxxxxxxxxxxxxxxxxx
-    if (ARMING_FLAG(ARMED) && (!STATE(FIXED_WING_LEGACY) || !isNavLaunchEnabled() || (isNavLaunchEnabled() && (isFixedWingLaunchDetected() || isFixedWingLaunchFinishedOrAborted() || isFixedWingLaunchFinishedThrottleLow())))) {
-        // CR6 xxxxxxxxxxxxxxxxxx
+    if (ARMING_FLAG(ARMED) && (!STATE(FIXED_WING_LEGACY) || !isNavLaunchEnabled() || (isNavLaunchEnabled() && fixedWingLaunchStatus() > FW_LAUNCH_START))) {  // CR38
         flightTime += cycleTime;
         armTime += cycleTime;
         updateAccExtremes();
