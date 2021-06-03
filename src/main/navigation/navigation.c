@@ -1755,7 +1755,8 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_LAUNCH_WAIT(navigationF
     const timeUs_t currentTimeUs = micros();
     UNUSED(previousState);
 
-    if (isFixedWingLaunchDetected()) {
+    // if (isFixedWingLaunchDetected()) {
+    if (fixedWingLaunchStatus() == FW_LAUNCH_DETECTED) {  // CR38
         enableFixedWingLaunchController(currentTimeUs);
         return NAV_FSM_EVENT_SUCCESS;   // NAV_STATE_LAUNCH_IN_PROGRESS
     }
@@ -1779,7 +1780,8 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_LAUNCH_IN_PROGRESS(navi
 {
     UNUSED(previousState);
 
-    if (isFixedWingLaunchFinishedOrAborted()) {
+    // if (isFixedWingLaunchFinishedOrAborted()) {
+    if (fixedWingLaunchStatus() >= FW_LAUNCH_END_ABORT) {  // CR38
         return NAV_FSM_EVENT_SUCCESS;
     }
 
@@ -2624,12 +2626,12 @@ void updateLandingStatus(void)
             resetLandingDetector();
         }
     } else if (STATE(LANDING_DETECTED)) {
-        pidResetErrorAccumulators();
+        // pidResetErrorAccumulators(); remove until fully tested
         if (navConfig()->general.flags.disarm_on_landing) {
             ENABLE_ARMING_FLAG(ARMING_DISABLED_LANDING_DETECTED);
             disarm(DISARM_LANDING);
-        } else {    //restart without disarm only for multirotor
-            landingDetectorIsActive = rxGetChannelValue(THROTTLE) < navConfig()->mc.hover_throttle - 100;
+        } else {    // for multirotor only - reset landing detection active without disarm when throttle raised toward hover throttle
+            landingDetectorIsActive = rxGetChannelValue(THROTTLE) < (0.5 * (navConfig()->mc.hover_throttle + getThrottleIdleValue()));
         }
     } else if (isLandingDetected()) {
         ENABLE_STATE(LANDING_DETECTED);
@@ -2659,8 +2661,12 @@ bool isFlightDetected(void)
 #ifdef USE_PITOT
         airspeed = pitot.airSpeed;
 #endif
-        return isImuHeadingValid() && rcCommand[THROTTLE] > navConfig()->fw.cruise_throttle && (posControl.actualState.velXY > 250 || airspeed > 250);
-        // return rcCommand[THROTTLE] > navConfig()->fw.cruise_throttle;
+        bool velCondition = posControl.actualState.velXY > 250 || airspeed > 250;
+        bool throttleCondition = rcCommand[THROTTLE] > navConfig()->fw.cruise_throttle;
+        bool launchCondition = isNavLaunchEnabled() && fixedWingLaunchStatus() == FW_LAUNCH_FLYING;  // CR38
+
+        return (isImuHeadingValid() && throttleCondition && velCondition) || launchCondition;
+        // return throttleCondition;
     } else {    // multirotor
         return rcCommand[THROTTLE] > navConfig()->mc.hover_throttle && averageAbsGyroRates() > 7.0f;
     }

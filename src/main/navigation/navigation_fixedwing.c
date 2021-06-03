@@ -585,7 +585,7 @@ bool isFixedWingLandingDetected(void)
     // DEBUG_SET(DEBUG_CRUISE, 3, rcCommand[THROTTLE] - 20);
     // DEBUG_SET(DEBUG_CRUISE, 0, getThrottleIdleValue());
     static bool fixAxisCheck = false;
-    const bool throttleIsLow = rcCommand[THROTTLE] - 20 < getThrottleIdleValue();
+    const bool throttleIsLow = rcCommand[THROTTLE] - 5 < getThrottleIdleValue();
 
     // Basic condition to start looking for landing
     bool startCondition = navGetCurrentStateFlags() & NAV_CTL_LAND || FLIGHT_MODE(FAILSAFE_MODE) || (!navigationIsFlyingAutonomousMode() && throttleIsLow);

@@ -679,7 +679,7 @@ static void applyMulticopterPositionController(timeUs_t currentTimeUs)
 bool isMulticopterLandingDetected(void)
 {   // CR15
     static timeUs_t landingDetectorStartedAt;
-    const bool throttleIsLow = rcCommand[THROTTLE] - 20 < getThrottleIdleValue();
+    const bool throttleIsLow = rcCommand[THROTTLE] - 5 < getThrottleIdleValue();
 
     DEBUG_SET(DEBUG_CRUISE, 4, 22);
     DEBUG_SET(DEBUG_CRUISE, 1, averageAbsGyroRates());
