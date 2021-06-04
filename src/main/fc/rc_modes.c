@@ -83,21 +83,14 @@ static void processAirmodeMultirotor(void) {
              * Disarm disables airmode immediately
              */
             DISABLE_STATE(AIRMODE_ACTIVE);
-        } else if (
-            !STATE(AIRMODE_ACTIVE) && 
-            rcCommand[THROTTLE] > rcControlsConfig()->airmodeThrottleThreshold &&
-            (feature(FEATURE_AIRMODE) || IS_RC_MODE_ACTIVE(BOXAIRMODE))
+        } else if (!STATE(AIRMODE_ACTIVE) && rcCommand[THROTTLE] > rcControlsConfig()->airmodeThrottleThreshold && (feature(FEATURE_AIRMODE) || IS_RC_MODE_ACTIVE(BOXAIRMODE))
         ) {
             /*
              * Airmode is allowed to be active only after ARMED and then THROTTLE goes above
              * activation threshold
              */
             ENABLE_STATE(AIRMODE_ACTIVE);
-        } else if (
-            STATE(AIRMODE_ACTIVE) &&
-            !feature(FEATURE_AIRMODE) &&
-            !IS_RC_MODE_ACTIVE(BOXAIRMODE)
-        ) {
+        } else if (STATE(AIRMODE_ACTIVE) && !feature(FEATURE_AIRMODE) && !IS_RC_MODE_ACTIVE(BOXAIRMODE)) {
             /*
              *  When user disables BOXAIRMODE, turn airmode off as well
              */

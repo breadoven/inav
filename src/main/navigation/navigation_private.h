@@ -81,6 +81,7 @@ typedef struct navigationFlags_s {
     navigationEstimateStatus_e estVelStatus;        // Indicates that GPS is working (or not)
     navigationEstimateStatus_e estAglStatus;
     navigationEstimateStatus_e estHeadingStatus;    // Indicate valid heading - wither mag or GPS at certain speed on airplane
+    bool compassGpsCogMismatchError;                // mismatch between compass heading and valid GPS heading   // CR27
 
     bool isAdjustingPosition;
     bool isAdjustingAltitude;
@@ -92,6 +93,10 @@ typedef struct navigationFlags_s {
     bool isTerrainFollowEnabled;            // Does iNav use rangefinder for terrain following (adjusting baro altitude target according to rangefinders readings)
 
     bool forcedRTHActivated;
+    bool wpMissionPlannerActive;            // Activation status of in flight WP mission planner  // CR32
+
+    /* Landing detector */
+    bool resetLandingDetector;  // CR15
 } navigationFlags_t;
 
 typedef struct {
@@ -338,7 +343,7 @@ typedef struct {
     uint32_t                    lastValidPositionTimeMs;
     uint32_t                    lastValidAltitudeTimeMs;
 
-    /* INAV GPS origin (position where GPS fix was first acquired) */
+    /* INAV GPS origin (position where GPS fix first acquired) */
     gpsOrigin_t                 gpsOrigin;
 
     /* Home parameters (NEU coordinated), geodetic position of home (LLH) is stores in GPS_home variable */
@@ -356,13 +361,21 @@ typedef struct {
     navWaypoint_t               waypointList[NAV_MAX_WAYPOINTS];
     bool                        waypointListValid;
     int8_t                      waypointCount;
+    int8_t                      geoWaypointCount;           // total geospatial WPs in mission // CR8
 
-    navWaypointPosition_t       activeWaypoint;     // Local position and initial bearing, filled on waypoint activation
+    int8_t                      multiMissionCount;          // CR21 number of missions in multi mission file
+    int8_t                      multiMissionTotalWPCount;   // CR21 total number of WPs in multi mission file
+    int8_t                      loadedMultiMissionIndex;    // Index of currently loaded mission  CR21
+
+    int8_t                      wpMissionPlannerStatus;     // WP save status for setting in flight WP mission planner  // CR32
+    int8_t                      wpPlannerActiveWPIndex;     // CR32
+
+    navWaypointPosition_t       activeWaypoint;         // Local position and initial bearing, filled on waypoint activation
     int8_t                      activeWaypointIndex;
-    float                       wpInitialAltitude; // Altitude at start of WP
-    float                       wpInitialDistance; // Distance when starting flight to WP
-    float                       wpDistance;        // Distance to active WP
-    timeMs_t                    wpReachedTime;     // Time the waypoint was reached
+    float                       wpInitialAltitude;      // Altitude at start of WP
+    float                       wpInitialDistance;      // Distance when starting flight to WP
+    float                       wpDistance;             // Distance to active WP
+    timeMs_t                    wpReachedTime;          // Time the waypoint was reached
 
     /* Internals & statistics */
     int16_t                     rcAdjustment[4];
@@ -391,7 +404,11 @@ uint32_t calculateDistanceToDestination(const fpVector3_t * destinationPos);
 int32_t calculateBearingToDestination(const fpVector3_t * destinationPos);
 void resetLandingDetector(void);
 bool isLandingDetected(void);
-
+// CR15
+bool isFlightDetected(void);
+bool isFixedWingFlying(void);
+bool isMulticopterFlying(void);
+// CR15
 navigationFSMStateFlags_t navGetCurrentStateFlags(void);
 
 void setHomePosition(const fpVector3_t * pos, int32_t yaw, navSetWaypointFlags_t useMask, navigationHomeFlags_t homeFlags);
@@ -428,11 +445,10 @@ bool adjustMulticopterPositionFromRCInput(int16_t rcPitchAdjustment, int16_t rcR
 
 void applyMulticopterNavigationController(navigationFSMStateFlags_t navStateFlags, timeUs_t currentTimeUs);
 
-void resetFixedWingLandingDetector(void);
-void resetMulticopterLandingDetector(void);
+// void resetFixedWingLandingDetector(void);   // CR15
+// void resetMulticopterLandingDetector(void); // CR15
 
 bool isMulticopterLandingDetected(void);
-bool isFixedWingLandingDetected(void);
 
 void calculateMulticopterInitialHoldPosition(fpVector3_t * pos);
 
@@ -451,13 +467,19 @@ void applyFixedWingPositionController(timeUs_t currentTimeUs);
 float processHeadingYawController(timeDelta_t deltaMicros, int32_t navHeadingError, bool errorIsDecreasing);
 void applyFixedWingNavigationController(navigationFSMStateFlags_t navStateFlags, timeUs_t currentTimeUs);
 
+bool isFixedWingLandingDetected(void);
+
 void calculateFixedWingInitialHoldPosition(fpVector3_t * pos);
 
 /* Fixed-wing launch controller */
 void resetFixedWingLaunchController(timeUs_t currentTimeUs);
-bool isFixedWingLaunchDetected(void);
+// bool isFixedWingLaunchDetected(void);
 void enableFixedWingLaunchController(timeUs_t currentTimeUs);
-bool isFixedWingLaunchFinishedOrAborted(void);
+// bool isFixedWingLaunchFinishedOrAborted(void);
+uint8_t fixedWingLaunchStatus(void);     // CR38
+// CR6
+bool isFixedWingLaunchFinishedThrottleLow(void);
+// CR6
 void abortFixedWingLaunch(void);
 void applyFixedWingLaunchController(timeUs_t currentTimeUs);
 

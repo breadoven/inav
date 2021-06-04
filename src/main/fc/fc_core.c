@@ -221,14 +221,14 @@ static void updateArmingStatus(void)
             }
         }
 
-	/* CHECK: pitch / roll sticks centered when NAV_LAUNCH_MODE enabled */
-	if (isNavLaunchEnabled()) {
-	  if (areSticksDeflectedMoreThanPosHoldDeadband()) {
-	    ENABLE_ARMING_FLAG(ARMING_DISABLED_ROLLPITCH_NOT_CENTERED);
-	  } else {
-	    DISABLE_ARMING_FLAG(ARMING_DISABLED_ROLLPITCH_NOT_CENTERED);
-	  }
-	}
+        /* CHECK: pitch / roll sticks centered when NAV_LAUNCH_MODE enabled */
+        if (isNavLaunchEnabled()) {
+            if (areSticksDeflectedMoreThanPosHoldDeadband()) {
+                ENABLE_ARMING_FLAG(ARMING_DISABLED_ROLLPITCH_NOT_CENTERED);
+            } else {
+                DISABLE_ARMING_FLAG(ARMING_DISABLED_ROLLPITCH_NOT_CENTERED);
+            }
+        }
 
         /* CHECK: Angle */
         if (!STATE(SMALL_ANGLE)) {
@@ -337,7 +337,7 @@ static void updateArmingStatus(void)
         // If arming is disabled and the ARM switch is on
         // Note that this should be last check so all other blockers could be cleared correctly
         // if blocking modes are linked to the same RC channel
-        if (isArmingDisabled() && IS_RC_MODE_ACTIVE(BOXARM)) {
+        if ((isArmingDisabled()) && IS_RC_MODE_ACTIVE(BOXARM)) {
             ENABLE_ARMING_FLAG(ARMING_DISABLED_ARM_SWITCH);
         } else if (!IS_RC_MODE_ACTIVE(BOXARM)) {
             DISABLE_ARMING_FLAG(ARMING_DISABLED_ARM_SWITCH);
@@ -742,52 +742,51 @@ void processRx(timeUs_t currentTimeUs)
     }
     else if (rcControlsConfig()->airmodeHandlingType == STICK_CENTER) {
         if (throttleStatus == THROTTLE_LOW) {
-             if (STATE(AIRMODE_ACTIVE) && !failsafeIsActive()) {
-                 if ((rollPitchStatus == CENTERED) || (feature(FEATURE_MOTOR_STOP) && !STATE(FIXED_WING_LEGACY))) {
-                     ENABLE_STATE(ANTI_WINDUP);
-                 }
-                 else {
-                     DISABLE_STATE(ANTI_WINDUP);
-                 }
-             }
-             else {
-                 DISABLE_STATE(ANTI_WINDUP);
-                 pidResetErrorAccumulators();
-             }
-         }
-         else {
-             DISABLE_STATE(ANTI_WINDUP);
-         }
+            if (STATE(AIRMODE_ACTIVE) && !failsafeIsActive()) {
+                if ((rollPitchStatus == CENTERED) || (feature(FEATURE_MOTOR_STOP) && !STATE(FIXED_WING_LEGACY))) {
+                    ENABLE_STATE(ANTI_WINDUP);
+                }
+                else {
+                    DISABLE_STATE(ANTI_WINDUP);
+                }
+            }
+            else {
+                DISABLE_STATE(ANTI_WINDUP);
+                pidResetErrorAccumulators();
+            }
+        }
+        else {
+            DISABLE_STATE(ANTI_WINDUP);
+        }
     }
     else if (rcControlsConfig()->airmodeHandlingType == STICK_CENTER_ONCE) {
         if (throttleStatus == THROTTLE_LOW) {
-             if (STATE(AIRMODE_ACTIVE) && !failsafeIsActive()) {
-                 if ((rollPitchStatus == CENTERED) && !STATE(ANTI_WINDUP_DEACTIVATED)) {
-                     ENABLE_STATE(ANTI_WINDUP);
-                 }
-                 else {
-                     DISABLE_STATE(ANTI_WINDUP);
-                 }
-             }
-             else {
-                 DISABLE_STATE(ANTI_WINDUP);
-                 pidResetErrorAccumulators();
-             }
-         }
-         else {
-             DISABLE_STATE(ANTI_WINDUP);
-             if (rollPitchStatus != CENTERED) {
-                 ENABLE_STATE(ANTI_WINDUP_DEACTIVATED);
-             }
-         }
+            if (STATE(AIRMODE_ACTIVE) && !failsafeIsActive()) {
+                if ((rollPitchStatus == CENTERED) && !STATE(ANTI_WINDUP_DEACTIVATED)) {
+                    ENABLE_STATE(ANTI_WINDUP);
+                }
+                else {
+                    DISABLE_STATE(ANTI_WINDUP);
+                }
+            }
+            else {
+                DISABLE_STATE(ANTI_WINDUP);
+                pidResetErrorAccumulators();
+            }
+        }
+        else {
+            DISABLE_STATE(ANTI_WINDUP);
+            if (rollPitchStatus != CENTERED) {
+                ENABLE_STATE(ANTI_WINDUP_DEACTIVATED);
+            }
+        }
     }
     else if (rcControlsConfig()->airmodeHandlingType == THROTTLE_THRESHOLD) {
-         DISABLE_STATE(ANTI_WINDUP);
-         //This case applies only to MR when Airmode management is throttle threshold activated
-         if (throttleStatus == THROTTLE_LOW && !STATE(AIRMODE_ACTIVE)) {
-             pidResetErrorAccumulators();
-         }
-     }
+        //This case applies only to MR when Airmode management is throttle threshold activated
+        if (throttleStatus == THROTTLE_LOW && !STATE(AIRMODE_ACTIVE)) {
+            pidResetErrorAccumulators();
+        }
+    }
 //---------------------------------------------------------
     if (mixerConfig()->platformType == PLATFORM_AIRPLANE) {
         DISABLE_FLIGHT_MODE(HEADFREE_MODE);
@@ -844,8 +843,7 @@ void taskMainPidLoop(timeUs_t currentTimeUs)
 {
     cycleTime = getTaskDeltaTime(TASK_SELF);
     dT = (float)cycleTime * 0.000001f;
-
-    if (ARMING_FLAG(ARMED) && (!STATE(FIXED_WING_LEGACY) || !isNavLaunchEnabled() || (isNavLaunchEnabled() && (isFixedWingLaunchDetected() || isFixedWingLaunchFinishedOrAborted())))) {
+    if (ARMING_FLAG(ARMED) && (!STATE(FIXED_WING_LEGACY) || !isNavLaunchEnabled() || (isNavLaunchEnabled() && fixedWingLaunchStatus() > FW_LAUNCH_START))) {  // CR38
         flightTime += cycleTime;
         armTime += cycleTime;
         updateAccExtremes();
@@ -859,7 +857,7 @@ void taskMainPidLoop(timeUs_t currentTimeUs)
     imuUpdateAccelerometer();
     imuUpdateAttitude(currentTimeUs);
 
-    annexCode();
+    annexCode();    // resets throttle AWH
 
     if (rxConfig()->rcFilterFrequency) {
         rcInterpolationApply(isRXDataNew);
@@ -935,6 +933,12 @@ void taskMainPidLoop(timeUs_t currentTimeUs)
         blackboxUpdate(micros());
     }
 #endif
+    // CR15
+    // Check if landed, FW and MR
+    if (STATE(ALTITUDE_CONTROL)) {
+        updateLandingStatus();
+    }
+    // CR15
 }
 
 // This function is called in a busy-loop, everything called from here should do it's own

@@ -176,6 +176,8 @@ static bool fullRedraw = false;
 static uint8_t armState;
 static uint8_t statsPagesCheck = 0;
 
+static bool infocycleSuspended = false;     // CR22
+
 typedef struct osdMapData_s {
     uint32_t scale;
     char referenceSymbol;
@@ -747,6 +749,8 @@ static const char * osdArmingDisabledReasonMessage(void)
         case ARMING_DISABLED_DSHOT_BEEPER:
             return OSD_MESSAGE_STR(OSD_MSG_DSHOT_BEEPER);
             // Cases without message
+        case ARMING_DISABLED_LANDING_DETECTED:  // CR15
+            FALLTHROUGH;  // CR15
         case ARMING_DISABLED_CMS_MENU:
             FALLTHROUGH;
         case ARMING_DISABLED_OSD_MENU:
@@ -1383,14 +1387,112 @@ static void osdDisplayAdjustableDecimalValue(uint8_t elemPosX, uint8_t elemPosY,
     displayWriteWithAttr(osdDisplayPort, elemPosX + strlen(str) + 1 + valueOffset, elemPosY, buff, elemAttr);
 }
 
-static bool osdDrawSingleElement(uint8_t item)
+// CR8
+int8_t getGeoWaypointNumber(int8_t waypointIndex)
 {
+    static int8_t lastWaypointIndex = 1;
+    static int8_t lastGeoWaypointIndex;
+
+    if (waypointIndex != lastWaypointIndex) {
+        lastWaypointIndex = waypointIndex;
+        lastGeoWaypointIndex = waypointIndex;
+        for (uint8_t i = 0; i <= waypointIndex; i++) {
+            if (posControl.waypointList[i].action == NAV_WP_ACTION_SET_POI ||
+                posControl.waypointList[i].action == NAV_WP_ACTION_SET_HEAD ||
+                posControl.waypointList[i].action == NAV_WP_ACTION_JUMP) {
+                    lastGeoWaypointIndex -= 1;
+            }
+        }
+    }
+
+    return lastGeoWaypointIndex + 1;
+}
+// CR8
+
+bool hiddenInfocycleItem(uint8_t item)
+{
+    if (item == OSD_ARTIFICIAL_HORIZON) {
+        return true;
+    }
+    return false;
+}
+
+// CR22
+bool isItemSelectedForDisplay(uint8_t *elemPosX, uint8_t *elemPosY, uint8_t item)
+{
+    static uint8_t infocycleItemCounter;
+    if (item == 0) {
+        infocycleItemCounter = 0;
+    }
+
     uint16_t pos = osdLayoutsConfig()->item_pos[currentLayout][item];
+
     if (!OSD_VISIBLE(pos)) {
         return false;
     }
-    uint8_t elemPosX = OSD_X(pos);
-    uint8_t elemPosY = OSD_Y(pos);
+    // normal position of item if not active in Infocycle field
+    *elemPosX = OSD_X(pos);
+    *elemPosY = OSD_Y(pos);
+
+    /* Infocycle routine to direct selected OSD items to Info Cycle field on OSD.
+    Items cycled in field unless BOXOSD mode selected for < 2s in which case items are displayed in normal positions
+    and Infocycle is suspended. Infocycle starts again by selecting BOXOSD again for < 2s.
+    BOXOSD switches off OSD if selected for > 2s*/
+
+    uint16_t infocyclePos = osdLayoutsConfig()->item_pos[currentLayout][OSD_INFO_CYCLE];
+
+    if (OSD_VISIBLE(infocyclePos)) {
+        static uint8_t infocycleNumItems;
+        static uint8_t infocycleLastLayout = 5;
+
+        if (currentLayout != infocycleLastLayout) {
+            infocycleNumItems = 0;
+            for (uint8_t i = 0; i < OSD_ITEM_COUNT; i++) {
+                if (OSD_INFOCYCLE(osdLayoutsConfig()->item_pos[currentLayout][i])) {   // count number infocycle items
+                    infocycleNumItems += 1;
+                }
+            }
+            infocycleLastLayout = currentLayout;
+            infocycleSuspended = true;
+        }
+
+        if (infocycleNumItems > 0 && !infocycleSuspended) {
+            static uint8_t infocyclePreviousItem;
+
+            if (OSD_INFOCYCLE(pos)) {
+                infocycleItemCounter += 1;
+                if (infocycleItemCounter == OSD_ALTERNATING_CHOICES(osdConfig()->infocycle_interval_time, infocycleNumItems) + 1) {
+                    if (hiddenInfocycleItem(item)) {
+                        return false;
+                    }
+                    *elemPosX = OSD_X(infocyclePos);
+                    *elemPosY = OSD_Y(infocyclePos);
+                    if (infocyclePreviousItem != item) {     // clear infocycle field before displaying new item
+                        infocyclePreviousItem = item;
+                        displayWrite(osdDisplayPort, *elemPosX, *elemPosY, "            ");   // 12 characters long
+                    }
+                } else {
+                    return false;
+                }
+            }
+        }
+    }
+
+    return true;
+}
+// CR22
+
+static bool osdDrawSingleElement(uint8_t item)
+{
+    // CR22
+    uint8_t elemPosX;
+    uint8_t elemPosY;
+
+    if (!isItemSelectedForDisplay(&elemPosX, &elemPosY, item)) {
+        return false;
+    }
+    // CR22
+
     textAttributes_t elemAttr = TEXT_ATTRIBUTES_NONE;
     char buff[32] = {0};
 
@@ -1824,7 +1926,6 @@ static bool osdDrawSingleElement(uint8_t item)
         {
             vtxDeviceOsdInfo_t osdInfo;
             vtxCommonGetOsdInfo(vtxCommonDevice(), &osdInfo);
-
             tfp_sprintf(buff, "CH:%c%s:", osdInfo.bandLetter, osdInfo.channelName);
             displayWrite(osdDisplayPort, elemPosX, elemPosY, buff);
 
@@ -1839,8 +1940,10 @@ static bool osdDrawSingleElement(uint8_t item)
         {
             vtxDeviceOsdInfo_t osdInfo;
             vtxCommonGetOsdInfo(vtxCommonDevice(), &osdInfo);
-
-            tfp_sprintf(buff, "%c", osdInfo.powerIndexLetter);
+            // CR3 xxxxxxxxxxxxxxxxxxxxxxxx
+            buff[0] = SYM_HUD_SIGNAL_4;
+            tfp_sprintf(buff+1, "%c", osdInfo.powerIndexLetter);
+            // xxxxxxxxxxxxxxxxxxxxxxxxxxxxx
             if (isAdjustmentFunctionSelected(ADJUSTMENT_VTX_POWER_LEVEL)) TEXT_ATTRIBUTES_ADD_BLINK(elemAttr);
             displayWriteWithAttr(osdDisplayPort, elemPosX, elemPosY, buff, elemAttr);
             return true;
@@ -1981,11 +2084,15 @@ static bool osdDrawSingleElement(uint8_t item)
                         wp2.lat = posControl.waypointList[j].lat;
                         wp2.lon = posControl.waypointList[j].lon;
                         wp2.alt = posControl.waypointList[j].alt;
+
                         fpVector3_t poi;
                         geoConvertGeodeticToLocal(&poi, &posControl.gpsOrigin, &wp2, waypointMissionAltConvMode(posControl.waypointList[j].p3));
                         int32_t altConvModeAltitude = waypointMissionAltConvMode(posControl.waypointList[j].p3) == GEO_ALT_ABSOLUTE ? osdGetAltitudeMsl() : osdGetAltitude();
-                        while (j > 9) j -= 10; // Only the last digit displayed if WP>=10, no room for more
-                        osdHudDrawPoi(calculateDistanceToDestination(&poi) / 100, osdGetHeadingAngle(calculateBearingToDestination(&poi) / 100), (posControl.waypointList[j].alt - altConvModeAltitude)/ 100, 2, SYM_WAYPOINT, 49 + j, i);
+                        // CR8
+                        j = getGeoWaypointNumber(j);
+                        while (j > 9) j -= 10; // Only the last digit displayed if WP>=10, no room for more (48 = ascii 0)
+                        osdHudDrawPoi(calculateDistanceToDestination(&poi) / 100, osdGetHeadingAngle(calculateBearingToDestination(&poi) / 100), (posControl.waypointList[j].alt - altConvModeAltitude)/ 100, 2, SYM_WAYPOINT, 48 + j, i);
+                        // CR8
                     }
                 }
             }
@@ -2720,7 +2827,71 @@ static bool osdDrawSingleElement(uint8_t item)
     case OSD_NAV_FW_CONTROL_SMOOTHNESS:
         osdDisplayAdjustableDecimalValue(elemPosX, elemPosY, "CTL S", 0, navConfig()->fw.control_smoothness, 1, 0, ADJUSTMENT_NAV_FW_CONTROL_SMOOTHNESS);
         return true;
-
+    // CR21
+    case OSD_MISSION:
+        {
+            // CR32
+            if (IS_RC_MODE_ACTIVE(BOXPLANWPMISSION)) {
+                char buf[5];
+                switch (posControl.wpMissionPlannerStatus) {
+                case WP_PLAN_WAIT:
+                    strcpy(buf, "WAIT");
+                    break;
+                case WP_PLAN_SAVE:
+                    strcpy(buf, "SAVE");
+                    break;
+                case WP_PLAN_OK:
+                    strcpy(buf, "OK !");
+                    break;
+                case WP_PLAN_FULL:
+                    strcpy(buf, "FULL");
+                }
+                tfp_sprintf(buff, "%s>%2uWP", buf, posControl.waypointCount);
+            } else if (posControl.wpPlannerActiveWPIndex){
+                tfp_sprintf(buff, "PLAN>%2uWP", posControl.waypointCount);
+            } else {
+            // CR32
+                if (ARMING_FLAG(ARMED)){
+                    tfp_sprintf(buff, "M%u       ", posControl.loadedMultiMissionIndex);  // Limit field size when Armed, only show selected mission
+                } else {
+                    if (posControl.multiMissionCount && navConfig()->general.waypoint_multi_mission_index != posControl.loadedMultiMissionIndex) {
+                        tfp_sprintf(buff, "M%u/%u>LOAD", navConfig()->general.waypoint_multi_mission_index, posControl.multiMissionCount);
+                    } else {
+                        if (posControl.waypointListValid && posControl.waypointCount > 0) {
+                            tfp_sprintf(buff, "M%u/%u>%2uWP", posControl.loadedMultiMissionIndex, posControl.multiMissionCount, posControl.waypointCount);
+                        } else {
+                            tfp_sprintf(buff, "M0/%u> 0WP", posControl.multiMissionCount);
+                        }
+                    }
+                }
+            }
+            displayWrite(osdDisplayPort, elemPosX, elemPosY, buff);
+            return true;
+        }
+    // CR21
+    // CR22
+    case OSD_INFO_CYCLE:
+        {
+            // deliberately left blank
+            return false;
+        }
+    // CR22
+    // CR27
+    case OSD_STATUS:
+        {
+            if (STATE(MULTIROTOR)) {
+                if (compassGpsCogError <= 180) {
+                    tfp_sprintf(buff, "MAG ERR %3u", compassGpsCogError);
+                } else {
+                    strcpy(buff, "NO GPS COG");
+                }
+                displayWrite(osdDisplayPort, elemPosX, elemPosY, buff);
+                return true;
+            } else {
+                return false;
+            }
+        }
+    // CR27
 #ifdef USE_POWER_LIMITS
     case OSD_PLIMIT_REMAINING_BURST_TIME:
         osdFormatCentiNumber(buff, powerLimiterGetRemainingBurstTime() * 100, 0, 1, 0, 3);
@@ -2912,12 +3083,15 @@ PG_RESET_TEMPLATE(osdConfig_t, osdConfig,
     .left_sidebar_scroll_step = SETTING_OSD_LEFT_SIDEBAR_SCROLL_STEP_DEFAULT,
     .right_sidebar_scroll_step = SETTING_OSD_RIGHT_SIDEBAR_SCROLL_STEP_DEFAULT,
     .sidebar_height = SETTING_OSD_SIDEBAR_HEIGHT_DEFAULT,
+    .ahi_pitch_interval = SETTING_OSD_AHI_PITCH_INTERVAL_DEFAULT,   // CR35
     .osd_home_position_arm_screen = SETTING_OSD_HOME_POSITION_ARM_SCREEN_DEFAULT,
     .pan_servo_index = SETTING_OSD_PAN_SERVO_INDEX_DEFAULT,
     .pan_servo_pwm2centideg = SETTING_OSD_PAN_SERVO_PWM2CENTIDEG_DEFAULT,
-
+    .system_msg_display_time = SETTING_OSD_SYSTEM_MSG_DISPLAY_TIME_DEFAULT,    // CR18
+    .infocycle_interval_time = SETTING_OSD_INFOCYCLE_INTERVAL_TIME_DEFAULT,    // CR22
     .units = SETTING_OSD_UNITS_DEFAULT,
     .main_voltage_decimals = SETTING_OSD_MAIN_VOLTAGE_DECIMALS_DEFAULT,
+    .rtc_time_show_seconds = SETTING_OSD_RTC_TIME_SHOW_SECONDS_DEFAULT,         // CR34
 
 #ifdef USE_WIND_ESTIMATOR
     .estimations_wind_compensation = SETTING_OSD_ESTIMATIONS_WIND_COMPENSATION_DEFAULT,
@@ -2939,7 +3113,8 @@ PG_RESET_TEMPLATE(osdConfig_t, osdConfig,
     .force_grid = SETTING_OSD_FORCE_GRID_DEFAULT,
 
     .stats_energy_unit = SETTING_OSD_STATS_ENERGY_UNIT_DEFAULT,
-    .stats_min_voltage_unit = SETTING_OSD_STATS_MIN_VOLTAGE_UNIT_DEFAULT
+    .stats_min_voltage_unit = SETTING_OSD_STATS_MIN_VOLTAGE_UNIT_DEFAULT,
+    .stats_page_auto_swap_time = SETTING_OSD_STATS_PAGE_AUTO_SWAP_TIME_DEFAULT    // CR25
 );
 
 void pgResetFn_osdLayoutsConfig(osdLayoutsConfig_t *osdLayoutsConfig)
@@ -3001,6 +3176,7 @@ void pgResetFn_osdLayoutsConfig(osdLayoutsConfig_t *osdLayoutsConfig)
     osdLayoutsConfig->item_pos[0][OSD_REMAINING_FLIGHT_TIME_BEFORE_RTH] = OSD_POS(23, 7);
     osdLayoutsConfig->item_pos[0][OSD_REMAINING_DISTANCE_BEFORE_RTH] = OSD_POS(23, 6);
 
+    osdLayoutsConfig->item_pos[0][OSD_MISSION] = OSD_POS(0, 10);    // CR21
     osdLayoutsConfig->item_pos[0][OSD_GPS_SATS] = OSD_POS(0, 11) | OSD_VISIBLE_FLAG;
     osdLayoutsConfig->item_pos[0][OSD_GPS_HDOP] = OSD_POS(0, 10);
 
@@ -3073,6 +3249,9 @@ void pgResetFn_osdLayoutsConfig(osdLayoutsConfig_t *osdLayoutsConfig)
     osdLayoutsConfig->item_pos[0][OSD_GVAR_1] = OSD_POS(1, 2);
     osdLayoutsConfig->item_pos[0][OSD_GVAR_2] = OSD_POS(1, 3);
     osdLayoutsConfig->item_pos[0][OSD_GVAR_3] = OSD_POS(1, 4);
+
+    osdLayoutsConfig->item_pos[0][OSD_INFO_CYCLE] = OSD_POS(1, 1);    // CR22
+    osdLayoutsConfig->item_pos[0][OSD_STATUS] = OSD_POS(1, 4);    // CR27
 
 #if defined(USE_ESC_SENSOR)
     osdLayoutsConfig->item_pos[0][OSD_ESC_RPM] = OSD_POS(1, 2);
@@ -3284,7 +3463,7 @@ static void osdUpdateStats(void)
 
 static void osdShowStatsPage1(void)
 {
-    const char * disarmReasonStr[DISARM_REASON_COUNT] = { "UNKNOWN", "TIMEOUT", "STICKS", "SWITCH", "SWITCH", "KILLSW", "FAILSAFE", "NAV SYS" };
+    const char * disarmReasonStr[DISARM_REASON_COUNT] = { "UNKNOWN", "TIMEOUT", "STICKS", "SWITCH", "SWITCH", "KILLSW", "FAILSAFE", "NAV SYS", "LANDING"};  // CR15
     uint8_t top = 1;    /* first fully visible line */
     const uint8_t statNameX = 1;
     const uint8_t statValuesX = 20;
@@ -3293,9 +3472,20 @@ static void osdShowStatsPage1(void)
 
     displayBeginTransaction(osdDisplayPort, DISPLAY_TRANSACTION_OPT_RESET_DRAWING);
     displayClearScreen(osdDisplayPort);
-
-    displayWrite(osdDisplayPort, statNameX, top++, "--- STATS ---      1/2 ->");
-
+    //CR4 xxxxxxxxxxxxxxxxxxxxxxx
+    dateTime_t dt;
+    char buf[MAX(32, FORMATTED_DATE_TIME_BUFSIZE)];
+    char *date;
+    char *time;
+    if (rtcGetDateTime(&dt)) {
+        dateTimeFormatLocal(buf, &dt);
+        dateTimeSplitFormatted(buf, &date, &time);
+        tfp_sprintf(buff, "-STATS-(%s) 1/2 ->", date);
+        displayWrite(osdDisplayPort, statNameX, top++, buff);
+    } else {
+        displayWrite(osdDisplayPort, statNameX, top++, "--- STATS ---      1/2 ->");
+    }
+    //CR4 xxxxxxxxxxxxxxxxxxxxxxx
     if (feature(FEATURE_GPS)) {
         displayWrite(osdDisplayPort, statNameX, top, "MAX SPEED        :");
         osdFormatVelocityStr(buff, stats.max_speed, true);
@@ -3321,7 +3511,6 @@ static void osdShowStatsPage1(void)
             itoa(stats.min_lq, buff, 10);
             strcat(buff, "%");
             displayWrite(osdDisplayPort, statValuesX, top++, buff);
-
             displayWrite(osdDisplayPort, statNameX, top, "MIN RSSI         :");
             itoa(stats.min_rssi_dbm, buff, 10);
             tfp_sprintf(buff, "%s%c", buff, SYM_DBM);
@@ -3332,7 +3521,7 @@ static void osdShowStatsPage1(void)
             itoa(stats.min_rssi, buff, 10);
             strcat(buff, "%");
             displayWrite(osdDisplayPort, statValuesX, top++, buff);
-        }
+    }
 
     displayWrite(osdDisplayPort, statNameX, top, "FLY TIME         :");
     uint16_t flySeconds = getFlightTime();
@@ -3474,8 +3663,8 @@ static void osdShowArmed(void)
     char versionBuf[30];
     char *date;
     char *time;
-    // We need 12 visible rows, start row never < first fully visible row 1
-    uint8_t y = osdDisplayPort->rows > 13 ? (osdDisplayPort->rows - 12) / 2 : 1;
+    // We need 12 visible rows
+    uint8_t y = osdDisplayPort->rows > 13 ? (osdDisplayPort->rows - 12) / 2 : 1;    // rows = 13 NTSC, 16 PAL MAX7456
 
     displayClearScreen(osdDisplayPort);
     displayWrite(osdDisplayPort, 12, y, "ARMED");
@@ -3484,14 +3673,15 @@ static void osdShowArmed(void)
     if (strlen(systemConfig()->name) > 0) {
         osdFormatCraftName(craftNameBuf);
         displayWrite(osdDisplayPort, (osdDisplayPort->cols - strlen(systemConfig() -> name)) / 2, y, craftNameBuf );
+        // y += 2;
         y += 1;
     }
-
+    // CR21
     if (posControl.waypointListValid && posControl.waypointCount > 0) {
-        displayWrite(osdDisplayPort, 7, y, "*MISSION LOADED*");
+        tfp_sprintf(buf, "MISSION %u/%u (%u WP)", posControl.loadedMultiMissionIndex, posControl.multiMissionCount, posControl.waypointCount);
+        displayWrite(osdDisplayPort, 6, y, buf);
     }
     y += 1;
-
 #if defined(USE_GPS)
     if (feature(FEATURE_GPS)) {
         if (STATE(GPS_FIX_HOME)) {
@@ -3567,10 +3757,28 @@ static void osdRefresh(timeUs_t currentTimeUs)
 {
     osdFilterData(currentTimeUs);
 
+    // CR22
+    bool boxOsdClearDisplay = false;
+    static timeMs_t boxOsdTimer = 0;
+    const uint16_t boxOsdTimeDelay_Ms = 1000;
+
+    if (IS_RC_MODE_ACTIVE(BOXOSD)) {
+        if (boxOsdTimer == 0) {
+            boxOsdTimer = millis();
+        }
+        boxOsdClearDisplay = millis() - boxOsdTimer > boxOsdTimeDelay_Ms;
+    } else {
+        if (millis() - boxOsdTimer < boxOsdTimeDelay_Ms) {
+            infocycleSuspended = !infocycleSuspended;
+            displayClearScreen(osdDisplayPort);
+        }
+        boxOsdTimer = 0;
+    }
+    // CR22
 #ifdef USE_CMS
-    if (IS_RC_MODE_ACTIVE(BOXOSD) && (!cmsInMenu) && !(osdConfig()->osd_failsafe_switch_layout && FLIGHT_MODE(FAILSAFE_MODE))) {
+    if (boxOsdClearDisplay && (!cmsInMenu) && !(osdConfig()->osd_failsafe_switch_layout && FLIGHT_MODE(FAILSAFE_MODE))) {   // CR22
 #else
-    if (IS_RC_MODE_ACTIVE(BOXOSD) && !(osdConfig()->osd_failsafe_switch_layout && FLIGHT_MODE(FAILSAFE_MODE))) {
+    if (boxOsdClearDisplay && !(osdConfig()->osd_failsafe_switch_layout && FLIGHT_MODE(FAILSAFE_MODE))) {   // CR22
 #endif
       displayClearScreen(osdDisplayPort);
       armState = ARMING_FLAG(ARMED);
@@ -3578,9 +3786,11 @@ static void osdRefresh(timeUs_t currentTimeUs)
     }
 
     // detect arm/disarm
+    static uint8_t statsPageAutoSwapCntl = 2;   // CR25
     if (armState != ARMING_FLAG(ARMED)) {
         if (ARMING_FLAG(ARMED)) {
             osdResetStats();
+            statsPageAutoSwapCntl = 2;  // CR25
             osdShowArmed(); // reset statistic etc
             uint32_t delay = ARMED_SCREEN_DISPLAY_TIME;
             statsPagesCheck = 0;
@@ -3590,8 +3800,9 @@ static void osdRefresh(timeUs_t currentTimeUs)
 #endif
             osdSetNextRefreshIn(delay);
         } else {
-            osdShowStatsPage1(); // show first page of statistic
+            osdShowStatsPage1(); // show first page of statistics    // CR25
             osdSetNextRefreshIn(STATS_SCREEN_DISPLAY_TIME);
+            statsPageAutoSwapCntl = 0;  // CR25
         }
 
         armState = ARMING_FLAG(ARMED);
@@ -3602,6 +3813,25 @@ static void osdRefresh(timeUs_t currentTimeUs)
         // or THR is high or PITCH is high, resume refreshing.
         // Clear the screen first to erase other elements which
         // might have been drawn while the OSD wasn't refreshing.
+        // CR25
+        if (statsPageAutoSwapCntl != 2) {
+            if (STATS_PAGE1 || STATS_PAGE2) {
+                statsPageAutoSwapCntl = 2;
+            } else {
+                if (OSD_ALTERNATING_CHOICES((osdConfig()->stats_page_auto_swap_time * 1000), 2)) {
+                    if (statsPageAutoSwapCntl == 0) {
+                        osdShowStatsPage1();
+                        statsPageAutoSwapCntl = 1;
+                    }
+                } else {
+                    if (statsPageAutoSwapCntl == 1) {
+                        osdShowStatsPage2();
+                        statsPageAutoSwapCntl = 0;
+                    }
+                }
+            }
+        }
+        // CR25
 
         if (!DELAYED_REFRESH_RESUME_COMMAND)
             refreshWaitForResumeCmdRelease = false;
@@ -3769,7 +3999,20 @@ displayCanvas_t *osdGetDisplayPortCanvas(void)
 #endif
     return NULL;
 }
-
+// CR18
+timeMs_t systemMessageCycleTime(unsigned messageCount, const char **messages){
+    uint8_t i = 0;
+    float factor = 1.0f;
+    while (i < messageCount) {
+        if ((float)strlen(messages[i]) / 15.0f > factor) {
+            factor = (float)strlen(messages[i]) / 15.0f;
+        }
+        i++;
+    }
+    // DEBUG_SET(DEBUG_CRUISE, 0, osdConfig()->system_msg_display_time * factor);
+    return osdConfig()->system_msg_display_time * factor;
+}
+// CR18
 textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenteredText)
 {
     textAttributes_t elemAttr = TEXT_ATTRIBUTES_NONE;
@@ -3804,7 +4047,7 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
 				}
 #endif
                 if (messageCount > 0) {
-                    message = messages[OSD_ALTERNATING_CHOICES(1000, messageCount)];
+                    message = messages[OSD_ALTERNATING_CHOICES(systemMessageCycleTime(messageCount, messages), messageCount)];    // CR18
                     if (message == failsafeInfoMessage) {
                         // failsafeInfoMessage is not useful for recovering
                         // a lost model, but might help avoiding a crash.
@@ -3823,12 +4066,18 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
                         // if RTH activated whilst WP mode selected, remind pilot to cancel WP mode to exit RTH
                         messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_WP_RTH_CANCEL);
                     }
-
-                    if (NAV_Status.state == MW_NAV_STATE_WP_ENROUTE) {
+                    // CR33
+                    if (navGetCurrentStateFlags() & NAV_AUTO_WP_DONE) {
+                        messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_WP_FINISHED);
+                    } else if (NAV_Status.state == MW_NAV_STATE_WP_ENROUTE) {
+                    // CR33
                         // Countdown display for remaining Waypoints
                         char buf[6];
                         osdFormatDistanceSymbol(buf, posControl.wpDistance, 0);
-                        tfp_sprintf(messageBuf, "TO WP %u/%u (%s)", posControl.activeWaypointIndex + 1, posControl.waypointCount, buf);
+                        tfp_sprintf(messageBuf, "TO WP %u/%u (%s)", getGeoWaypointNumber(posControl.activeWaypointIndex), posControl.geoWaypointCount, buf);
+                        // CR8
+                        // tfp_sprintf(messageBuf, "TO WP %u/%u", getGeoWaypointNumber(posControl.activeWaypointIndex), posControl.geoWaypointCount);
+                        // CR8
                         messages[messageCount++] = messageBuf;
                     } else if (NAV_Status.state == MW_NAV_STATE_HOLD_TIMED) {
                         // WP hold time countdown in seconds
@@ -3873,18 +4122,37 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
                     if (FLIGHT_MODE(HEADFREE_MODE)) {
                         messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_HEADFREE);
                     }
+                    // CR27
+                    if (posControl.flags.compassGpsCogMismatchError) {
+                        messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_COMPASS_ERROR);
+                    }
+                    // CR27
+                    // CR32
+                    if (posControl.flags.wpMissionPlannerActive) {
+                        messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_MISSION_PLANNER);
+                    }
+                    // CR32
+                    // CR36
+                    if (FLIGHT_MODE(SOARING_MODE)) {
+                        messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_NAV_SOARING);
+                    }
+                    // CR36
                 }
-                // Pick one of the available messages. Each message lasts
-                // a second.
+                // CR15
+                if (STATE(LANDING_DETECTED) && NAV_Status.state != MW_NAV_STATE_LANDED) {
+                    messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_LANDED);
+                }
+                // CR15
+                // Pick one of the available messages.
                 if (messageCount > 0) {
-                    message = messages[OSD_ALTERNATING_CHOICES(1000, messageCount)];
+                    message = messages[OSD_ALTERNATING_CHOICES(systemMessageCycleTime(messageCount, messages), messageCount)];   // CR18
                 }
             }
         } else if (ARMING_FLAG(ARMING_DISABLED_ALL_FLAGS)) {
             unsigned invalidIndex;
             // Check if we're unable to arm for some reason
             if (ARMING_FLAG(ARMING_DISABLED_INVALID_SETTING) && !settingsValidate(&invalidIndex)) {
-                if (OSD_ALTERNATING_CHOICES(1000, 2) == 0) {
+                if (OSD_ALTERNATING_CHOICES(osdConfig()->system_msg_display_time, 2) == 0) {    // CR18
                     const setting_t *setting = settingGet(invalidIndex);
                     settingGetName(setting, messageBuf);
                     for (int ii = 0; messageBuf[ii]; ii++) {
@@ -3896,7 +4164,7 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
                     TEXT_ATTRIBUTES_ADD_INVERTED(elemAttr);
                 }
             } else {
-                if (OSD_ALTERNATING_CHOICES(1000, 2) == 0) {
+                if (OSD_ALTERNATING_CHOICES(osdConfig()->system_msg_display_time, 2) == 0) {    // CR18
                     message = OSD_MESSAGE_STR(OSD_MSG_UNABLE_ARM);
                     TEXT_ATTRIBUTES_ADD_INVERTED(elemAttr);
                 } else {

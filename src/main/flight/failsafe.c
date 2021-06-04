@@ -53,6 +53,8 @@
 
 #include "sensors/sensors.h"
 
+timeUs_t fstest1;       // CR24
+
 /*
  * Usage:
  *
@@ -326,6 +328,7 @@ void failsafeOnRxResume(void)
 void failsafeOnValidDataReceived(void)
 {
     failsafeState.validRxDataReceivedAt = millis();
+    failsafeState.blockChangeArmState = false;    // CR24
     if ((failsafeState.validRxDataReceivedAt - failsafeState.validRxDataFailedAt) > failsafeState.rxDataRecoveryPeriod) {
         failsafeState.rxLinkState = FAILSAFE_RXLINK_UP;
     }
@@ -334,11 +337,23 @@ void failsafeOnValidDataReceived(void)
 void failsafeOnValidDataFailed(void)
 {
     failsafeState.validRxDataFailedAt = millis();
+    failsafeState.blockChangeArmState = true;    // CR24
+    // CR24
+    // if (fstest1 == 0 && micros() > 5000000) {
+        // DEBUG_SET(DEBUG_CRUISE, 0, micros());
+        // fstest1 = micros();
+    // }
+    // CR24
     if ((failsafeState.validRxDataFailedAt - failsafeState.validRxDataReceivedAt) > failsafeState.rxDataFailurePeriod) {
         failsafeState.rxLinkState = FAILSAFE_RXLINK_DOWN;
     }
 }
-
+// CR24
+bool failsafeBlockChangeArmState(void)
+{
+    return failsafeState.blockChangeArmState;
+}
+// CR24
 static bool failsafeCheckStickMotion(void)
 {
     if (failsafeConfig()->failsafe_stick_motion_threshold > 0) {

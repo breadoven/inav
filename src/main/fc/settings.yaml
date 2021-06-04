@@ -179,6 +179,11 @@ tables:
   - name: nav_rth_climb_first
     enum: navRTHClimbFirst_e
     values: ["OFF", "ON", "ON_FW_SPIRAL"]
+    # CR29
+  - name: nav_wp_mission_restart
+    enum: navMissionRestart_e
+    values: ["START", "RESUME", "SWITCH"]
+    # CR29
 
 constants:
   RPYL_PID_MIN: 0
@@ -1395,7 +1400,15 @@ groups:
         default_value: 250
         field: switchDisarmDelayMs
         min: 0
+        # CR24
         max: 1000
+      - name: switch_arm_delay
+        description: "Delay before arming when set by switch (ms) [0-1000]"
+        default_value: 250
+        field: switchArmDelayMs
+        min: 0
+        max: 1000
+        # CR24
       - name: prearm_timeout
         description: "Duration (ms) for which Prearm being activated is valid. after this, Prearm needs to be reset. 0 means Prearm does not timeout."
         default_value: 10000
@@ -2344,6 +2357,21 @@ groups:
         default_value: 10000
         field: general.waypoint_safe_distance
         max: 65000
+        # CR21
+      - name: nav_wp_multi_mission_index
+        description: "Index of mission selected from multi mission WP entry. 1 is the first useable WP mission in the entry. Limited to a maximum of 9 missions. Set index to 0 to load an empty mission."
+        default_value: 1
+        field: general.waypoint_multi_mission_index
+        min: 0
+        max: 9
+        # CR21
+        # CR29
+      - name: nav_wp_mission_restart
+        description: "Sets restart behaviour for a WP mission when interrupted mid mission. START from first WP, RESUME from last active WP or SWITCH between START and RESUME each time WP Mode is reselected ON. SWITCH effectively allows resuming once only from a previous mid mission waypoint after which the mission will restart from the first waypoint."
+        default_value: "RESUME"
+        field: general.flags.waypoint_mission_restart
+        table: nav_wp_mission_restart
+        # CR29
       - name: nav_auto_speed
         description: "Maximum velocity firmware is allowed in full auto modes (RTH, WP) [cm/s] [Multirotor only]"
         default_value: 300
@@ -2409,6 +2437,13 @@ groups:
         default_value: "ALL_NAV"
         field: general.flags.nav_overrides_motor_stop
         table: nav_overrides_motor_stop
+        # CR36
+      - name: nav_soaring_motor_stop
+        description: "Stops motor when Soaring mode enabled."
+        default_value: OFF
+        field: general.flags.soaring_motor_stop
+        type: bool
+        # CR36
       - name: nav_rth_climb_first
         description: "If set to ON or ON_FW_SPIRAL aircraft will climb to nav_rth_altitude first before turning to head home. If set to OFF aircraft will turn and head home immediately climbing on the way. For a fixed wing ON will use a linear climb, ON_FW_SPIRAL will use a loiter turning climb with climb rate set by nav_auto_climb_rate, turn rate set by nav_fw_loiter_radius (ON_FW_SPIRAL is a fixed wing setting and behaves the same as ON for a multirotor)"
         default_value: "ON"
@@ -2477,6 +2512,13 @@ groups:
         default_value: "RTH"
         field: general.flags.safehome_usage_mode
         table: safehome_usage_mode
+        # CR32
+      - name: nav_mission_planner_reset
+        description: "With Reset enabled waypoints entered using WP Mission Planner can be reset to 0 by toggling the mode switch ON-OFF-ON within 1s."
+        default_value: ON
+        field: general.flags.mission_planner_reset
+        type: bool
+        # CR32
       - name: nav_mc_bank_angle
         description: "Maximum banking angle (deg) that multicopter navigation is allowed to set. Machine must be able to satisfy this angle without loosing altitude"
         default_value: 30
@@ -2490,7 +2532,7 @@ groups:
         min: 1000
         max: 2000
       - name: nav_mc_auto_disarm_delay
-        description: "Delay before multi-rotor disarms when `nav_disarm_on_landing` is set (m/s)"
+        description: "Delay before multi-rotor disarms when `nav_disarm_on_landing` is set (ms)"
         default_value: 2000
         field: mc.auto_disarm_delay
         min: 100
@@ -2588,6 +2630,14 @@ groups:
         field: fw.max_throttle
         min: 1000
         max: 2000
+        # CR15
+      - name: nav_fw_auto_disarm_delay
+        description: "Delay before plane disarms when `nav_disarm_on_landing` is set (ms)"
+        default_value: 2000
+        field: fw.auto_disarm_delay
+        min: 100
+        max: 10000
+        # CR15
       - name: nav_fw_bank_angle
         description: "Max roll angle when rolling / turning in GPS assisted modes, is also restrained by global max_angle_inclination_rll"
         default_value: 35
@@ -2687,6 +2737,14 @@ groups:
         field: fw.launch_idle_throttle
         min: 1000
         max: 2000
+        # CR31
+      - name: nav_fw_launch_idle_motor_delay
+        description: "Delay between raising throttle and motor starting at idle (ms)"
+        default_value: 0
+        field: fw.launch_idle_motor_timer
+        min: 0
+        max: 60000
+        # CR31
       - name: nav_fw_launch_motor_delay
         description: "Delay between detected launch and launch sequence start and throttling up (ms)"
         default_value: 500
@@ -2728,6 +2786,13 @@ groups:
         field: fw.launch_climb_angle
         min: 5
         max: 45
+        # CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+      - name: nav_fw_launch_allow_throttle_low
+        description: "Allow launch sequence with throttle maintained low throughout. When main launch sequence completes control is maintained with Nav cruise throttle until sticks moved/throttle raised or control switches to other Nav mode if preselected"
+        default_value: OFF
+        field: fw.launch_allow_throttle_low
+        type: bool
+        # CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
       - name: nav_fw_cruise_yaw_rate
         description: "Max YAW rate when NAV CRUISE mode is enabled (0=disable control via yaw stick) [dps]"
         default_value: 20
@@ -3019,7 +3084,14 @@ groups:
         field: stats_min_voltage_unit
         table: osd_stats_min_voltage_unit
         type: uint8_t
-
+        # CR25
+      - name: osd_stats_page_auto_swap_time
+        description: "Auto swap display time interval between disarm stats pages (seconds)."
+        default_value: 3
+        field: stats_page_auto_swap_time
+        min: 1
+        max: 10
+        # CR25
       - name: osd_rssi_alarm
         description: "Value below which to make the OSD RSSI indicator blink"
         default_value: 20
@@ -3254,6 +3326,13 @@ groups:
         field: main_voltage_decimals
         min: 1
         max: 2
+        # CR34
+      - name: osd_rtc_time_show_seconds
+        description: "Enable to show seconds in current time display."
+        field: rtc_time_show_seconds
+        type: bool
+        default_value: OFF
+        # CR34
       - name: osd_coordinate_digits
         field: coordinate_digits
         min: 8
@@ -3278,6 +3357,7 @@ groups:
         default_value: 11
         min: 10
         max: 13
+
       - name: osd_plus_code_short
         description: "Number of leading digits removed from plus code. Removing 2, 4 and 6 digits requires a reference location within, respectively, ~800km, ~40 km and ~2km to recover the original coordinates."
         field: plus_code_short
@@ -3347,7 +3427,14 @@ groups:
         max: 5
         default_value: 3
         description: Height of sidebars in rows. 0 leaves only the level indicator arrows (Not for pixel OSD)
-
+        # CR35
+      - name: osd_ahi_pitch_interval
+        field: ahi_pitch_interval
+        min: 0
+        max: 30
+        default_value: 10
+        description: Draws AHI at increments of the set pitch interval over full pitch range. AHI line is drawn with ends offset when pitch first exceeds interval with offset increasing with increasing pitch. Offset direction changes between climb and dive. Set to 0 to disable (Not for pixel OSD)
+        # CR35
       - name: osd_home_position_arm_screen
         type: bool
         default_value: ON
@@ -3366,6 +3453,23 @@ groups:
         default_value: 0
         min: -36
         max: 36
+
+        # CR18
+      - name: osd_system_msg_display_time
+        description: System message display cycle time for multiple messages (milliseconds).
+        field: system_msg_display_time
+        default_value: 1000
+        min: 500
+        max: 5000
+        # CR18
+        # CR22
+      - name: osd_infocycle_interval_time
+        description: Info Cycle field item display time (milliseconds).
+        field: infocycle_interval_time
+        default_value: 2000
+        min: 500
+        max: 5000
+        # CR22
 
   - name: PG_OSD_COMMON_CONFIG
     type: osdCommonConfig_t

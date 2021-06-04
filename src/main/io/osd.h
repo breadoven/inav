@@ -30,7 +30,9 @@
 #define OSD_LAYOUT_COUNT (OSD_ALTERNATE_LAYOUT_COUNT + 1)
 
 #define OSD_VISIBLE_FLAG    0x0800
+#define OSD_INFOCYCLE_FLAG  0x0400  // CR22
 #define OSD_VISIBLE(x)      ((x) & OSD_VISIBLE_FLAG)
+#define OSD_INFOCYCLE(x)    ((x) & OSD_INFOCYCLE_FLAG)  // CR22
 #define OSD_POS(x,y)        ((x) | ((y) << 5))
 #define OSD_X(x)            ((x) & 0x001F)
 #define OSD_Y(x)            (((x) >> 5) & 0x001F)
@@ -84,15 +86,14 @@
 #define OSD_MSG_STARTING_RTH        "STARTING RTH"
 #define OSD_MSG_RTH_CLIMB           "ADJUSTING RTH ALTITUDE"
 #define OSD_MSG_HEADING_HOME        "EN ROUTE TO HOME"
-#define OSD_MSG_HOLDING_WAYPOINT    "HOLDING WAYPOINT"
-#define OSD_MSG_TO_WP               "TO WP"
+#define OSD_MSG_WP_FINISHED         "WP END>HOLDING POSITION"  // CR33
 #define OSD_MSG_PREPARE_NEXT_WP     "PREPARING FOR NEXT WAYPOINT"
 #define OSD_MSG_WP_RTH_CANCEL       "CANCEL WP TO EXIT RTH"
 #define OSD_MSG_EMERG_LANDING       "EMERGENCY LANDING"
 #define OSD_MSG_LANDING             "LANDING"
 #define OSD_MSG_LOITERING_HOME      "LOITERING AROUND HOME"
 #define OSD_MSG_HOVERING            "HOVERING"
-#define OSD_MSG_LANDED              "LANDED"
+#define OSD_MSG_LANDED              "! LANDED !"
 #define OSD_MSG_PREPARING_LAND      "PREPARING TO LAND"
 #define OSD_MSG_AUTOLAUNCH          "AUTOLAUNCH"
 #define OSD_MSG_ALTITUDE_HOLD       "(ALTITUDE HOLD)"
@@ -100,6 +101,9 @@
 #define OSD_MSG_AUTOTUNE            "(AUTOTUNE)"
 #define OSD_MSG_HEADFREE            "(HEADFREE)"
 #define OSD_MSG_UNABLE_ARM          "UNABLE TO ARM"
+#define OSD_MSG_COMPASS_ERROR       "COMPASS ERROR !"     // CR27
+#define OSD_MSG_MISSION_PLANNER     "(WP MISSION PLANNER)"     // CR32
+#define OSD_MSG_NAV_SOARING         "(SOARING ENABLED)"     // CR36
 
 #if defined(USE_SAFE_HOME)
 #define OSD_MSG_DIVERT_SAFEHOME     "DIVERTING TO SAFEHOME"
@@ -228,6 +232,9 @@ typedef enum {
     OSD_NAV_FW_CONTROL_SMOOTHNESS,
     OSD_VERSION,
     OSD_RANGEFINDER,
+    OSD_MISSION,   // CR21
+    OSD_INFO_CYCLE, // CR22
+    OSD_STATUS,     // CR27
     OSD_PLIMIT_REMAINING_BURST_TIME,
     OSD_PLIMIT_ACTIVE_CURRENT_LIMIT,
     OSD_PLIMIT_ACTIVE_POWER_LIMIT,
@@ -347,9 +354,10 @@ typedef struct osdConfig_s {
     uint8_t right_sidebar_scroll; // from osd_sidebar_scroll_e
     uint8_t sidebar_scroll_arrows;
 
-    uint8_t units; // from osd_unit_e
-    uint8_t stats_energy_unit; // from osd_stats_energy_unit_e
-    uint8_t stats_min_voltage_unit; // from osd_stats_min_voltage_unit_e
+    uint8_t units;                       // from osd_unit_e
+    uint8_t stats_energy_unit;           // from osd_stats_energy_unit_e
+    uint8_t stats_min_voltage_unit;      // from osd_stats_min_voltage_unit_e
+    uint8_t stats_page_auto_swap_time;   // stats page auto swap cycle time (seconds) CR25
 
 #ifdef USE_WIND_ESTIMATOR
     bool    estimations_wind_compensation; // use wind compensation for estimated remaining flight/distance
@@ -373,8 +381,12 @@ typedef struct osdConfig_s {
     uint8_t pan_servo_index;            // Index of the pan servo used for home direction offset
     int8_t pan_servo_pwm2centideg;      // Centidegrees of servo rotation per us pwm
     uint8_t crsf_lq_format;
+    uint16_t system_msg_display_time;   // system message display time for multiple messages (ms)   CR18
+    uint16_t infocycle_interval_time;   // Info Cycle field item display time interval (ms)   CR22
     uint8_t sidebar_height;             // sidebar height in rows, 0 turns off sidebars leaving only level indicator arrows
+    uint8_t ahi_pitch_interval;         // redraws AHI at set pitch interval. (Not pixel OSD) // CR35
     uint8_t telemetry; 				    // use telemetry on displayed pixel line 0
+    bool rtc_time_show_seconds;         // show seconds in current time display when enabled    // CR34
 
 } osdConfig_t;
 

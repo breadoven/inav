@@ -92,6 +92,8 @@ static const box_t boxes[CHECKBOX_ITEM_COUNT + 1] = {
     { BOXTURTLE, "TURTLE", 52 },
     { BOXNAVCRUISE, "NAV CRUISE", 53 },
     { BOXAUTOLEVEL, "AUTO LEVEL", 54 },
+    { BOXPLANWPMISSION, "WP PLANNER", 55 },   // CR32
+    { BOXSOARING, "SOARING", 56 },   // CR36
     { CHECKBOX_ITEM_COUNT, NULL, 0xFF }
 };
 
@@ -210,6 +212,7 @@ void initActiveBoxIds(void)
         }
         if (STATE(AIRPLANE)) {
             activeBoxIds[activeBoxIdCount++] = BOXLOITERDIRCHN;
+            activeBoxIds[activeBoxIdCount++] = BOXSOARING;     // CR36
         }
     }
 
@@ -217,6 +220,7 @@ void initActiveBoxIds(void)
         activeBoxIds[activeBoxIdCount++] = BOXNAVRTH;
         activeBoxIds[activeBoxIdCount++] = BOXNAVWP;
         activeBoxIds[activeBoxIdCount++] = BOXHOMERESET;
+        activeBoxIds[activeBoxIdCount++] = BOXPLANWPMISSION;     // CR32
 
         if (feature(FEATURE_GPS)) {
             activeBoxIds[activeBoxIdCount++] = BOXGCSNAV;
@@ -247,7 +251,7 @@ void initActiveBoxIds(void)
         if (!feature(FEATURE_FW_AUTOTRIM)) {
             activeBoxIds[activeBoxIdCount++] = BOXAUTOTRIM;
         }
-        
+
 #if defined(USE_AUTOTUNE_FIXED_WING)
         activeBoxIds[activeBoxIdCount++] = BOXAUTOTUNE;
 #endif

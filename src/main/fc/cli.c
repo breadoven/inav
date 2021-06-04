@@ -1382,6 +1382,8 @@ static void printWaypoints(uint8_t dumpMask, const navWaypoint_t *navWaypoint, c
 
 static void cliWaypoints(char *cmdline)
 {
+    static int8_t multiMissionWPCounter = 0;      // CR21
+
     if (isEmpty(cmdline)) {
         printWaypoints(DUMP_MASTER, posControl.waypointList, NULL);
     } else if (sl_strcasecmp(cmdline, "reset") == 0) {
@@ -1393,9 +1395,19 @@ static void cliWaypoints(char *cmdline)
         for (int i = 0; i < NAV_MAX_WAYPOINTS; i++) {
             if (!(posControl.waypointList[i].action == NAV_WP_ACTION_WAYPOINT || posControl.waypointList[i].action == NAV_WP_ACTION_JUMP || posControl.waypointList[i].action == NAV_WP_ACTION_RTH || posControl.waypointList[i].action == NAV_WP_ACTION_HOLD_TIME || posControl.waypointList[i].action == NAV_WP_ACTION_LAND || posControl.waypointList[i].action == NAV_WP_ACTION_SET_POI || posControl.waypointList[i].action == NAV_WP_ACTION_SET_HEAD)) break;
             if (posControl.waypointList[i].flag == NAV_WP_FLAG_LAST) {
-                posControl.waypointCount = i + 1;
-                posControl.waypointListValid = true;
-                break;
+                // DEBUG_SET(DEBUG_CRUISE, 0, posControl.multiMissionCount);
+                if (posControl.multiMissionCount == 1) {  // CR21
+                    posControl.waypointCount = i + 1;
+                    posControl.waypointListValid = true;
+                // CR21
+                    multiMissionWPCounter = 0;
+                    posControl.multiMissionCount = 0;
+                    navConfigMutable()->general.waypoint_multi_mission_index = 1;    // reset selected mission to 1 when new file loaded
+                    break;
+                } else {
+                    posControl.multiMissionCount -= 1;
+                // CR21
+                }
             }
         }
         if (posControl.waypointListValid) {
@@ -1410,7 +1422,7 @@ static void cliWaypoints(char *cmdline)
         uint8_t validArgumentCount = 0;
         const char *ptr = cmdline;
         i = fastA2I(ptr);
-        if (i >= 0 && i < NAV_MAX_WAYPOINTS) {
+        if (i + multiMissionWPCounter >= 0 && i + multiMissionWPCounter < NAV_MAX_WAYPOINTS) {  // CR21
             ptr = nextArg(ptr);
             if (ptr) {
                 action = fastA2I(ptr);
@@ -1460,17 +1472,31 @@ static void cliWaypoints(char *cmdline)
 
             if (!(validArgumentCount == 6 || validArgumentCount == 8)) {
                 cliShowParseError();
-            } else if (!(action == 0 || action == NAV_WP_ACTION_WAYPOINT || action == NAV_WP_ACTION_RTH || action == NAV_WP_ACTION_JUMP || action == NAV_WP_ACTION_HOLD_TIME || action == NAV_WP_ACTION_LAND || action == NAV_WP_ACTION_SET_POI || action == NAV_WP_ACTION_SET_HEAD) || !(flag == 0 || flag == NAV_WP_FLAG_LAST)) {
+            } else if (!(action == 0 || action == NAV_WP_ACTION_WAYPOINT || (action == NAV_WP_ACTION_RTH && i > 0) || action == NAV_WP_ACTION_JUMP || action == NAV_WP_ACTION_HOLD_TIME || action == NAV_WP_ACTION_LAND || action == NAV_WP_ACTION_SET_POI || action == NAV_WP_ACTION_SET_HEAD) || !(flag == 0 || flag == NAV_WP_FLAG_LAST || flag == NAV_WP_FLAG_HOME)) {     // CR21 + CR28
                 cliShowParseError();
             } else {
-                posControl.waypointList[i].action = action;
-                posControl.waypointList[i].lat = lat;
-                posControl.waypointList[i].lon = lon;
-                posControl.waypointList[i].alt = alt;
-                posControl.waypointList[i].p1 = p1;
-                posControl.waypointList[i].p2 = p2;
-                posControl.waypointList[i].p3 = p3;
-                posControl.waypointList[i].flag = flag;
+                // CR21
+                if (i + multiMissionWPCounter == 0) {
+                    posControl.multiMissionCount = 0;
+                }
+
+                posControl.waypointList[i + multiMissionWPCounter].action = action;
+                posControl.waypointList[i + multiMissionWPCounter].lat = lat;
+                posControl.waypointList[i + multiMissionWPCounter].lon = lon;
+                posControl.waypointList[i + multiMissionWPCounter].alt = alt;
+                posControl.waypointList[i + multiMissionWPCounter].p1 = p1;
+                posControl.waypointList[i + multiMissionWPCounter].p2 = p2;
+                posControl.waypointList[i + multiMissionWPCounter].p3 = p3;
+                posControl.waypointList[i + multiMissionWPCounter].flag = flag;
+
+                // Process WP entries made up of multiple successive WP missions (multiple EOF flags NAV_WP_FLAG_LAST).
+                // Individial missions extracted when loaded at runtime, number defined by setting nav_waypoint_multi_mission_index
+                if (flag == NAV_WP_FLAG_LAST) {
+                    multiMissionWPCounter += i + 1;
+                    posControl.multiMissionCount += 1;
+                }
+                // DEBUG_SET(DEBUG_CRUISE, 1, posControl.multiMissionCount);
+                // CR21
             }
         } else {
             cliShowArgumentRangeError("wp index", 0, NAV_MAX_WAYPOINTS - 1);
@@ -2290,8 +2316,8 @@ static void cliFlashRead(char *cmdline)
 #ifdef USE_OSD
 static void printOsdLayout(uint8_t dumpMask, const osdLayoutsConfig_t *config, const osdLayoutsConfig_t *configDefault, int layout, int item)
 {
-    // "<layout> <item> <col> <row> <visible>"
-    const char *format = "osd_layout %d %d %d %d %c";
+    // "<layout> <item> <col> <row> <visible> <infocycle>"  // CR22
+    const char *format = "osd_layout %d %d %d %d %c %c";    // CR22
     for (int ii = 0; ii < OSD_LAYOUT_COUNT; ii++) {
         if (layout >= 0 && layout != ii) {
             continue;
@@ -2307,13 +2333,15 @@ static void printOsdLayout(uint8_t dumpMask, const osdLayoutsConfig_t *config, c
                 ii, jj,
                 OSD_X(defaultLayoutItems[jj]),
                 OSD_Y(defaultLayoutItems[jj]),
-                OSD_VISIBLE(defaultLayoutItems[jj]) ? 'V' : 'H');
+                OSD_VISIBLE(defaultLayoutItems[jj]) ? 'V' : 'H',       // CR22
+                OSD_INFOCYCLE(defaultLayoutItems[jj]) ? 'O' : 'A');     // CR22
 
             cliDumpPrintLinef(dumpMask, equalsDefault, format,
                 ii, jj,
                 OSD_X(layoutItems[jj]),
                 OSD_Y(layoutItems[jj]),
-                OSD_VISIBLE(layoutItems[jj]) ? 'V' : 'H');
+                OSD_VISIBLE(layoutItems[jj]) ? 'V' : 'H',          // CR22
+                OSD_INFOCYCLE(layoutItems[jj]) ? 'A' : 'O');        // CR22
         }
     }
 }
@@ -2327,6 +2355,7 @@ static void cliOsdLayout(char *cmdline)
     int col = 0;
     int row = 0;
     bool visible = false;
+    bool infocycle = false; // CR22
     char *tok = strtok_r(cmdline, " ", &saveptr);
 
     int ii;
@@ -2374,6 +2403,21 @@ static void cliOsdLayout(char *cmdline)
                         return;
                 }
                 break;
+            // CR22
+            case 5:
+                switch (*tok) {
+                    case 'O':
+                        infocycle = false;
+                        break;
+                    case 'A':
+                        infocycle = true;
+                        break;
+                    default:
+                        cliShowParseError();
+                        return;
+                }
+                break;
+            // CR22
             default:
                 cliShowParseError();
                 return;
@@ -2395,9 +2439,18 @@ static void cliOsdLayout(char *cmdline)
             // No visibility provided. Keep the previous one.
             visible = OSD_VISIBLE(osdLayoutsConfig()->item_pos[layout][item]);
             FALLTHROUGH;
+        // CR22
         case 5:
-            // Layout, item, pos and visibility. Set the item.
-            osdLayoutsConfigMutable()->item_pos[layout][item] = OSD_POS(col, row) | (visible ? OSD_VISIBLE_FLAG : 0);
+            // No infocycle provided. Keep the previous one.
+            infocycle = OSD_INFOCYCLE(osdLayoutsConfig()->item_pos[layout][item]);
+            FALLTHROUGH;
+        case 6:
+            // Layout, item, pos, visibility and infocycle. Set the item.
+            if (item == OSD_INFO_CYCLE) {
+                infocycle = false;      // always exclude Infocycle field, for obvious reasons
+            }
+            osdLayoutsConfigMutable()->item_pos[layout][item] = OSD_POS(col, row) | (visible ? OSD_VISIBLE_FLAG : 0) | (infocycle ? OSD_INFOCYCLE_FLAG : 0);
+        // CR22
             break;
         default:
             // Unhandled
@@ -2930,28 +2983,28 @@ static void printImu2Status(void)
     cliPrintLinef("Acc: %d", secondaryImuState.calibrationStatus.acc);
     cliPrintLinef("Mag: %d", secondaryImuState.calibrationStatus.mag);
     cliPrintLine("Calibration gains:");
-    
+
     cliPrintLinef(
-        "Gyro: %d %d %d", 
-        secondaryImuConfig()->calibrationOffsetGyro[X], 
-        secondaryImuConfig()->calibrationOffsetGyro[Y], 
+        "Gyro: %d %d %d",
+        secondaryImuConfig()->calibrationOffsetGyro[X],
+        secondaryImuConfig()->calibrationOffsetGyro[Y],
         secondaryImuConfig()->calibrationOffsetGyro[Z]
     );
     cliPrintLinef(
-        "Acc: %d %d %d", 
-        secondaryImuConfig()->calibrationOffsetAcc[X], 
-        secondaryImuConfig()->calibrationOffsetAcc[Y], 
+        "Acc: %d %d %d",
+        secondaryImuConfig()->calibrationOffsetAcc[X],
+        secondaryImuConfig()->calibrationOffsetAcc[Y],
         secondaryImuConfig()->calibrationOffsetAcc[Z]
     );
     cliPrintLinef(
-        "Mag: %d %d %d", 
-        secondaryImuConfig()->calibrationOffsetMag[X], 
-        secondaryImuConfig()->calibrationOffsetMag[Y], 
+        "Mag: %d %d %d",
+        secondaryImuConfig()->calibrationOffsetMag[X],
+        secondaryImuConfig()->calibrationOffsetMag[Y],
         secondaryImuConfig()->calibrationOffsetMag[Z]
     );
     cliPrintLinef(
-        "Radius: %d %d", 
-        secondaryImuConfig()->calibrationRadiusAcc, 
+        "Radius: %d %d",
+        secondaryImuConfig()->calibrationRadiusAcc,
         secondaryImuConfig()->calibrationRadiusMag
     );
 }
@@ -3760,7 +3813,7 @@ const clicmd_t cmdTable[] = {
     CLI_COMMAND_DEF("wp", "waypoint list", NULL, cliWaypoints),
 #endif
 #ifdef USE_OSD
-    CLI_COMMAND_DEF("osd_layout", "get or set the layout of OSD items", "[<layout> [<item> [<col> <row> [<visible>]]]]", cliOsdLayout),
+    CLI_COMMAND_DEF("osd_layout", "get or set the layout of OSD items", "[<layout> [<item> [<col> <row> [<visible>] [<infocycle>]]]]", cliOsdLayout),   // CR22
 #endif
 };
 
