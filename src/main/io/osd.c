@@ -2390,13 +2390,7 @@ static bool osdDrawSingleElement(uint8_t item)
             dateTime_t dateTime;
             rtcGetDateTimeLocal(&dateTime);
             buff[0] = SYM_CLOCK;
-            // CR34
-            if (osdConfig()->rtc_time_show_seconds) {
-                tfp_sprintf(buff + 1, "%02u:%02u:%02u", dateTime.hours, dateTime.minutes, dateTime.seconds);
-            } else {
-                tfp_sprintf(buff + 1, "%02u:%02u", dateTime.hours, dateTime.minutes);
-            }
-            // CR34
+            tfp_sprintf(buff + 1, "%02u:%02u:%02u", dateTime.hours, dateTime.minutes, dateTime.seconds);
             break;
         }
 
