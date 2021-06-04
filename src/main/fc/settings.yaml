@@ -2737,14 +2737,12 @@ groups:
         field: fw.launch_idle_throttle
         min: 1000
         max: 2000
-        # CR31
       - name: nav_fw_launch_idle_motor_delay
         description: "Delay between raising throttle and motor starting at idle (ms)"
         default_value: 0
         field: fw.launch_idle_motor_timer
         min: 0
         max: 60000
-        # CR31
       - name: nav_fw_launch_motor_delay
         description: "Delay between detected launch and launch sequence start and throttling up (ms)"
         default_value: 500
@@ -3326,13 +3324,6 @@ groups:
         field: main_voltage_decimals
         min: 1
         max: 2
-        # CR34
-      - name: osd_rtc_time_show_seconds
-        description: "Enable to show seconds in current time display."
-        field: rtc_time_show_seconds
-        type: bool
-        default_value: OFF
-        # CR34
       - name: osd_coordinate_digits
         field: coordinate_digits
         min: 8

@@ -132,12 +132,10 @@ static const uint8_t beep_launchModeBeep[] = {
 static const uint8_t beep_launchModeLowThrottleBeep[] = {
     5, 5, 5, 5, 3, 100, BEEPER_COMMAND_STOP
 };
-// CR31
 // 4 short beeps and a pause. Indicates motor about to start at idle throttle
 static const uint8_t beep_launchModeIdleStartBeep[] = {
     5, 5, 5, 5, 5, 5, 5, 80, BEEPER_COMMAND_STOP
 };
-// CR31
 // short beeps
 static const uint8_t beep_hardwareFailure[] = {
     10, 10, BEEPER_COMMAND_STOP
@@ -202,7 +200,7 @@ typedef struct beeperTableEntry_s {
     { BEEPER_ENTRY(BEEPER_USB,                      18, NULL,                           "ON_USB") },
     { BEEPER_ENTRY(BEEPER_LAUNCH_MODE_ENABLED,      19, beep_launchModeBeep,            "LAUNCH_MODE") },
     { BEEPER_ENTRY(BEEPER_LAUNCH_MODE_LOW_THROTTLE, 20, beep_launchModeLowThrottleBeep, "LAUNCH_MODE_LOW_THROTTLE") },
-    { BEEPER_ENTRY(BEEPER_LAUNCH_MODE_IDLE_START,   21, beep_launchModeIdleStartBeep,   "LAUNCH_MODE_IDLE_START") },    // CR31
+    { BEEPER_ENTRY(BEEPER_LAUNCH_MODE_IDLE_START,   21, beep_launchModeIdleStartBeep,   "LAUNCH_MODE_IDLE_START") },
     { BEEPER_ENTRY(BEEPER_CAM_CONNECTION_OPEN,      22, beep_camOpenBeep,               "CAM_CONNECTION_OPEN") },
     { BEEPER_ENTRY(BEEPER_CAM_CONNECTION_CLOSE,     23, beep_camCloseBeep,              "CAM_CONNECTION_CLOSED") },
 

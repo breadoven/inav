@@ -3091,7 +3091,6 @@ PG_RESET_TEMPLATE(osdConfig_t, osdConfig,
     .infocycle_interval_time = SETTING_OSD_INFOCYCLE_INTERVAL_TIME_DEFAULT,    // CR22
     .units = SETTING_OSD_UNITS_DEFAULT,
     .main_voltage_decimals = SETTING_OSD_MAIN_VOLTAGE_DECIMALS_DEFAULT,
-    .rtc_time_show_seconds = SETTING_OSD_RTC_TIME_SHOW_SECONDS_DEFAULT,         // CR34
 
 #ifdef USE_WIND_ESTIMATOR
     .estimations_wind_compensation = SETTING_OSD_ESTIMATIONS_WIND_COMPENSATION_DEFAULT,

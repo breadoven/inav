@@ -386,7 +386,6 @@ typedef struct osdConfig_s {
     uint8_t sidebar_height;             // sidebar height in rows, 0 turns off sidebars leaving only level indicator arrows
     uint8_t ahi_pitch_interval;         // redraws AHI at set pitch interval. (Not pixel OSD) // CR35
     uint8_t telemetry; 				    // use telemetry on displayed pixel line 0
-    bool rtc_time_show_seconds;         // show seconds in current time display when enabled    // CR34
 
 } osdConfig_t;
 
