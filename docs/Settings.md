@@ -294,6 +294,7 @@
 | nav_emerg_landing_speed | 500 | 100 | 2000 | Rate of descent UAV will try to maintain when doing emergency descent sequence [cm/s] |
 | nav_extra_arming_safety | ON |  |  | If set to ON drone won't arm if no GPS fix and any navigation mode like RTH or POSHOLD is configured. ALLOW_BYPASS allows the user to momentarily disable this check by holding yaw high (left stick held at the bottom right in mode 2) when switch arming is used |
 | nav_fw_allow_manual_thr_increase | OFF |  |  | Enable the possibility to manually increase the throttle in auto throttle controlled modes for fixed wing |
+| nav_fw_auto_disarm_delay | 2000 | 100 | 10000 | Delay before plane disarms when `nav_disarm_on_landing` is set (ms) |
 | nav_fw_bank_angle | 35 | 5 | 80 | Max roll angle when rolling / turning in GPS assisted modes, is also restrained by global max_angle_inclination_rll |
 | nav_fw_climb_angle | 20 | 5 | 80 | Max pitch angle when climbing in GPS assisted modes, is also restrained by global max_angle_inclination_pit |
 | nav_fw_control_smoothness | 0 | 0 | 9 | How smoothly the autopilot controls the airplane to correct the navigation error |
@@ -304,9 +305,11 @@
 | nav_fw_heading_p | 60 | 0 | 255 | P gain of Heading Hold controller (Fixedwing) |
 | nav_fw_land_dive_angle | 2 | -20 | 20 | Dive angle that airplane will use during final landing phase. During dive phase, motor is stopped or IDLE and roll control is locked to 0 degrees |
 | nav_fw_launch_accel | 1863 | 1000 | 20000 | Forward acceleration threshold for bungee launch of throw launch [cm/s/s], 1G = 981 cm/s/s |
+| nav_fw_launch_allow_throttle_low | OFF |  |  | Allow launch sequence with throttle maintained low throughout. When main launch sequence completes control is maintained with Nav cruise throttle until sticks moved/throttle raised or control switches to other Nav mode if preselected |
 | nav_fw_launch_climb_angle | 18 | 5 | 45 | Climb angle (attitude of model, not climb slope) for launch sequence (degrees), is also restrained by global max_angle_inclination_pit |
 | nav_fw_launch_detect_time | 40 | 10 | 1000 | Time for which thresholds have to breached to consider launch happened [ms] |
 | nav_fw_launch_end_time | 3000 | 0 | 5000 | Time for the transition of throttle and pitch angle, between the launch state and the subsequent flight mode [ms] |
+| nav_fw_launch_idle_motor_delay | 0 | 0 | 60000 | Delay between raising throttle and motor starting at idle (ms) |
 | nav_fw_launch_idle_thr | 1000 | 1000 | 2000 | Launch idle throttle - throttle to be set before launch sequence is initiated. If set below minimum throttle it will force motor stop or at idle throttle (depending if the MOTOR_STOP is enabled). If set above minimum throttle it will force throttle to this value (if MOTOR_STOP is enabled it will be handled according to throttle stick position) |
 | nav_fw_launch_max_altitude | 0 | 0 | 60000 | Altitude (centimeters) at which LAUNCH mode will be turned off and regular flight mode will take over [0-60000]. |
 | nav_fw_launch_max_angle | 45 | 5 | 180 | Max tilt angle (pitch/roll combined) to consider launch successful. Set to 180 to disable completely [deg] |
@@ -341,7 +344,7 @@
 | nav_manual_speed | 500 | 10 | 2000 | Maximum velocity firmware is allowed when processing pilot input for POSHOLD/CRUISE control mode [cm/s] [Multirotor only] |
 | nav_max_altitude | 0 | 0 | 65000 | Max allowed altitude (above Home Point) that applies to all NAV modes (including Altitude Hold). 0 means limit is disabled |
 | nav_max_terrain_follow_alt | 100 |  | 1000 | Max allowed above the ground altitude for terrain following mode |
-| nav_mc_auto_disarm_delay | 2000 | 100 | 10000 | Delay before multi-rotor disarms when `nav_disarm_on_landing` is set (m/s) |
+| nav_mc_auto_disarm_delay | 2000 | 100 | 10000 | Delay before multi-rotor disarms when `nav_disarm_on_landing` is set (ms) |
 | nav_mc_bank_angle | 30 | 15 | 45 | Maximum banking angle (deg) that multicopter navigation is allowed to set. Machine must be able to satisfy this angle without loosing altitude |
 | nav_mc_braking_bank_angle | 40 | 15 | 60 | max angle that MR is allowed to bank in BOOST mode |
 | nav_mc_braking_boost_disengage_speed | 100 | 0 | 1000 | BOOST will be disabled when speed goes below this value |
@@ -370,6 +373,7 @@
 | nav_mc_vel_z_p | 100 | 0 | 255 | P gain of velocity PID controller |
 | nav_mc_wp_slowdown | ON |  |  | When ON, NAV engine will slow down when switching to the next waypoint. This prioritizes turning over forward movement. When OFF, NAV engine will continue to the next waypoint and turn as it goes. |
 | nav_min_rth_distance | 500 | 0 | 5000 | Minimum distance from homepoint when RTH full procedure will be activated [cm]. Below this distance, the mode will activate at the current location and the final phase is executed (loiter / land). Above this distance, the full procedure is activated, which may include initial climb and flying directly to the homepoint before entering the loiter / land phase. |
+| nav_mission_planner_reset | ON |  |  | With Reset enabled waypoints entered using WP Mission Planner can be reset to 0 by toggling the mode switch ON-OFF-ON within 1s. |
 | nav_overrides_motor_stop | ALL_NAV |  |  | When set to OFF the navigation system will not take over the control of the motor if the throttle is low (motor will stop). When set to OFF_ALWAYS the navigation system will not take over the control of the motor if the throttle was low even when failsafe is triggered. When set to AUTO_ONLY the navigation system will only take over the control of the throttle in autonomous navigation modes (NAV WP and NAV RTH). When set to ALL_NAV (default) the navigation system will take over the control of the motor completely and never allow the motor to stop even when the throttle is low. This setting only has an effect on NAV modes which take control of the throttle when combined with MOTOR_STOP and is likely to cause a stall if fw_min_throttle_down_pitch isn't set correctly or the pitch estimation is wrong for fixed wing models when not set to ALL_NAV |
 | nav_position_timeout | 5 | 0 | 10 | If GPS fails wait for this much seconds before switching to emergency landing mode (0 - disable) |
 | nav_rth_abort_threshold | 50000 |  | 65000 | RTH sanity checking feature will notice if distance to home is increasing during RTH and once amount of increase exceeds the threshold defined by this parameter, instead of continuing RTH machine will enter emergency landing, self-level and go down safely. Default is 500m which is safe enough for both multirotor machines and airplanes. [cm] |
@@ -381,10 +385,13 @@
 | nav_rth_climb_ignore_emerg | OFF |  |  | If set to ON, aircraft will execute initial climb regardless of position sensor (GPS) status. |
 | nav_rth_home_altitude | 0 |  | 65000 | Aircraft will climb/descend to this altitude after reaching home if landing is not enabled. Set to 0 to stay at `nav_rth_altitude` (default) [cm] |
 | nav_rth_tail_first | OFF |  |  | If set to ON drone will return tail-first. Obviously meaningless for airplanes. |
+| nav_soaring_motor_stop | OFF |  |  | Stops motor when Soaring mode enabled. |
 | nav_use_fw_yaw_control | OFF |  |  | Enables or Disables the use of the heading PID controller on fixed wing. Heading PID controller is always enabled for rovers and boats |
 | nav_use_midthr_for_althold | OFF |  |  | If set to OFF, the FC remembers your throttle stick position when enabling ALTHOLD and treats it as a neutral midpoint for holding altitude |
 | nav_user_control_mode | ATTI |  |  | Defines how Pitch/Roll input from RC receiver affects flight in POSHOLD mode: ATTI - pitch/roll controls attitude like in ANGLE mode; CRUISE - pitch/roll controls velocity in forward and right direction. |
 | nav_wp_load_on_boot | OFF |  |  | If set to ON, waypoints will be automatically loaded from EEPROM to the FC during startup. |
+| nav_wp_mission_restart | RESUME |  |  | Sets restart behaviour for a WP mission when interrupted mid mission. START from first WP, RESUME from last active WP or SWITCH between START and RESUME each time WP Mode is reselected ON. SWITCH effectively allows resuming once only from a previous mid mission waypoint after which the mission will restart from the first waypoint. |
+| nav_wp_multi_mission_index | 1 | 0 | 9 | Index of mission selected from multi mission WP entry. 1 is the first useable WP mission in the entry. Limited to a maximum of 9 missions. Set index to 0 to load an empty mission. |
 | nav_wp_radius | 100 | 10 | 10000 | Waypoint radius [cm]. Waypoint would be considered reached if machine is within this radius |
 | nav_wp_safe_distance | 10000 |  | 65000 | First waypoint in the mission should be closer than this value [cm]. A value of 0 disables this check. |
 | opflow_hardware | NONE |  |  | Selection of OPFLOW hardware. |
@@ -392,6 +399,7 @@
 | osd_ahi_bordered | OFF |  |  | Shows a border/corners around the AHI region (pixel OSD only) |
 | osd_ahi_height | 162 |  | 255 | AHI height in pixels (pixel OSD only) |
 | osd_ahi_max_pitch | 20 | 10 | 90 | Max pitch, in degrees, for OSD artificial horizon |
+| osd_ahi_pitch_interval | 10 | 0 | 30 | Draws AHI at increments of the set pitch interval over full pitch range. AHI line is drawn with ends offset when pitch first exceeds interval with offset increasing with increasing pitch. Offset direction changes between climb and dive. Set to 0 to disable (Not for pixel OSD) |
 | osd_ahi_reverse_roll | OFF |  |  |  |
 | osd_ahi_style | DEFAULT |  |  | Sets OSD Artificial Horizon style "DEFAULT" or "LINE" for the FrSky Graphical OSD. |
 | osd_ahi_vertical_offset | -18 | -128 | 127 | AHI vertical offset from center (pixel OSD only) |
@@ -428,6 +436,7 @@
 | osd_hud_wp_disp | 0 | 0 | 3 | How many navigation waypoints are displayed, set to 0 (zero) to disable. As sample, if set to 2, and you just passed the 3rd waypoint of the mission, you'll see markers for the 4th waypoint (marked 1) and the 5th waypoint (marked 2) |
 | osd_imu_temp_alarm_max | 600 | -550 | 1250 | Temperature above which the IMU temperature OSD element will start blinking (decidegrees centigrade) |
 | osd_imu_temp_alarm_min | -200 | -550 | 1250 | Temperature under which the IMU temperature OSD element will start blinking (decidegrees centigrade) |
+| osd_infocycle_interval_time | 2000 | 500 | 5000 | Info Cycle field item display time (milliseconds). |
 | osd_left_sidebar_scroll | NONE |  |  |  |
 | osd_left_sidebar_scroll_step | 0 |  | 255 | How many units each sidebar step represents. 0 means the default value for the scroll type. |
 | osd_link_quality_alarm | 70 | 0 | 100 | LQ % indicator blinks below this value. For Crossfire use 70%, for Tracer use 50% |
@@ -448,6 +457,8 @@
 | osd_speed_source | GROUND |  |  | Sets the speed type displayed by the DJI OSD and OSD canvas (FrSky Pixel): GROUND, 3D, AIR |
 | osd_stats_energy_unit | MAH |  |  | Unit used for the drawn energy in the OSD stats [MAH/WH] (milliAmpere hour/ Watt hour) |
 | osd_stats_min_voltage_unit | BATTERY |  |  | Display minimum voltage of the `BATTERY` or the average per `CELL` in the OSD stats. |
+| osd_stats_page_auto_swap_time | 3 | 1 | 10 | Auto swap display time interval between disarm stats pages (seconds). |
+| osd_system_msg_display_time | 1000 | 500 | 5000 | System message display cycle time for multiple messages (milliseconds). |
 | osd_telemetry | OFF |  |  | To enable OSD telemetry for antenna tracker. Possible values are `OFF`, `ON` and `TEST` |
 | osd_temp_label_align | LEFT |  |  | Allows to chose between left and right alignment for the OSD temperature sensor labels. Valid values are `LEFT` and `RIGHT` |
 | osd_time_alarm | 10 | 0 | 600 | Value above which to make the OSD flight time indicator blink (minutes) |
@@ -528,6 +539,7 @@
 | stats_total_dist | 0 |  | 2147483647 | Total flight distance [in meters]. The value is updated on every disarm when "stats" are enabled. |
 | stats_total_energy | 0 |  | 2147483647 |  |
 | stats_total_time | 0 |  | 2147483647 | Total flight time [in seconds]. The value is updated on every disarm when "stats" are enabled. |
+| switch_arm_delay | 250 | 0 | 1000 | Delay before arming when set by switch (ms) [0-1000] |
 | switch_disarm_delay | 250 | 0 | 1000 | Delay before disarming when requested by switch (ms) [0-1000] |
 | telemetry_halfduplex | ON |  |  | S.Port telemetry only: Turn UART into UNIDIR for usage on F1 and F4 target. See Telemetry.md for details |
 | telemetry_inverted | OFF |  |  | Determines if the telemetry protocol default signal inversion is reversed. This should be OFF in most cases unless a custom or hacked RX is used. |
