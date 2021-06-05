@@ -2957,9 +2957,8 @@ void resetWaypointList(void)
     if (!ARMING_FLAG(ARMED)) {
         posControl.waypointCount = 0;
         posControl.waypointListValid = false;
-        // CR8
-        posControl.geoWaypointCount = 0;
-        // CR8
+        posControl.geoWaypointCount = 0;  // CR8
+        posControl.loadedMultiMissionIndex = 0;  // CR21
     }
 }
 
