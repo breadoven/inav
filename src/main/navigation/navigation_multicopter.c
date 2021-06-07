@@ -734,7 +734,6 @@ bool isMulticopterLandingDetected(void)
         possibleLandingDetected = isAtMinimalThrust && velCondition;
     } else {
         DEBUG_SET(DEBUG_CRUISE, 4, 25);
-        DEBUG_SET(DEBUG_CRUISE, 0, currentTimeUs - landingDetectorStartedAt);
         if (landingDetectorStartedAt != 0) {
             possibleLandingDetected = velCondition && gyroCondition;
         } else {
@@ -742,7 +741,7 @@ bool isMulticopterLandingDetected(void)
             return false;
         }
     }
-
+    DEBUG_SET(DEBUG_CRUISE, 0, currentTimeUs - landingDetectorStartedAt);
     // If we have surface sensor (for example sonar) - use it to detect touchdown
     if ((posControl.flags.estAglStatus == EST_TRUSTED) && (posControl.actualState.agl.pos.z >= 0)) {
         // TODO: Come up with a clever way to let sonar increase detection performance, not just add extra safety.

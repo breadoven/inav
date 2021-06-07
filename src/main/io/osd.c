@@ -1391,21 +1391,20 @@ static void osdDisplayAdjustableDecimalValue(uint8_t elemPosX, uint8_t elemPosY,
 int8_t getGeoWaypointNumber(int8_t waypointIndex)
 {
     static int8_t lastWaypointIndex = 1;
-    static int8_t lastGeoWaypointIndex;
+    static int8_t geoWaypointIndex;
 
     if (waypointIndex != lastWaypointIndex) {
-        lastWaypointIndex = waypointIndex;
-        lastGeoWaypointIndex = waypointIndex;
+        lastWaypointIndex = geoWaypointIndex = waypointIndex;
         for (uint8_t i = 0; i <= waypointIndex; i++) {
             if (posControl.waypointList[i].action == NAV_WP_ACTION_SET_POI ||
                 posControl.waypointList[i].action == NAV_WP_ACTION_SET_HEAD ||
                 posControl.waypointList[i].action == NAV_WP_ACTION_JUMP) {
-                    lastGeoWaypointIndex -= 1;
+                    geoWaypointIndex -= 1;
             }
         }
     }
 
-    return lastGeoWaypointIndex + 1;
+    return geoWaypointIndex + 1;
 }
 // CR8
 
@@ -4074,9 +4073,6 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
                         char buf[6];
                         osdFormatDistanceSymbol(buf, posControl.wpDistance, 0);
                         tfp_sprintf(messageBuf, "TO WP %u/%u (%s)", getGeoWaypointNumber(posControl.activeWaypointIndex), posControl.geoWaypointCount, buf);
-                        // CR8
-                        // tfp_sprintf(messageBuf, "TO WP %u/%u", getGeoWaypointNumber(posControl.activeWaypointIndex), posControl.geoWaypointCount);
-                        // CR8
                         messages[messageCount++] = messageBuf;
                     } else if (NAV_Status.state == MW_NAV_STATE_HOLD_TIMED) {
                         // WP hold time countdown in seconds
@@ -4121,11 +4117,6 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
                     if (FLIGHT_MODE(HEADFREE_MODE)) {
                         messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_HEADFREE);
                     }
-                    // CR27
-                    if (posControl.flags.compassGpsCogMismatchError) {
-                        messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_COMPASS_ERROR);
-                    }
-                    // CR27
                     // CR32
                     if (posControl.flags.wpMissionPlannerActive) {
                         messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_MISSION_PLANNER);
@@ -4142,6 +4133,11 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
                     messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_LANDED);
                 }
                 // CR15
+                // CR27
+                if (posControl.flags.compassGpsCogMismatchError) {
+                    messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_COMPASS_ERROR);
+                }
+                // CR27
                 // Pick one of the available messages.
                 if (messageCount > 0) {
                     message = messages[OSD_ALTERNATING_CHOICES(systemMessageCycleTime(messageCount, messages), messageCount)];   // CR18

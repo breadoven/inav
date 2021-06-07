@@ -2628,7 +2628,8 @@ void updateLandingStatus(void)
         if (navConfig()->general.flags.disarm_on_landing) {
             ENABLE_ARMING_FLAG(ARMING_DISABLED_LANDING_DETECTED);
             disarm(DISARM_LANDING);
-        } else {    // for multirotor only - reset landing detection active without disarm when throttle raised toward hover throttle
+        } else if (!navigationIsFlyingAutonomousMode()) {
+            // for multirotor only - reset landing detection active without disarm when throttle raised toward hover throttle
             landingDetectorIsActive = rxGetChannelValue(THROTTLE) < (0.5 * (navConfig()->mc.hover_throttle + getThrottleIdleValue()));
         }
     } else if (isLandingDetected()) {

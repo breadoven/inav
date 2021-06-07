@@ -545,7 +545,7 @@ bool compassHeadingGPSCogErrorCheck(void)
             if (timerStartMs == 0) {
                 timerStartMs = millis();
             }
-            return millis() - timerStartMs > 2000;
+            return millis() - timerStartMs > 10000;
         } else {
             timerStartMs = 0;
         }
