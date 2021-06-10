@@ -734,7 +734,7 @@ bool isMulticopterLandingDetected(void)
         isAtMinimalThrust = rcCommandAdjustedThrottle < (landingThrSum / landingThrSamples - 40);
 
         possibleLandingDetected = isAtMinimalThrust && velCondition;
-    } else {
+    } else {        // non autonomous and emergency landing
         DEBUG_SET(DEBUG_CRUISE, 4, 25);
         if (landingDetectorStartedAt != 0) {
             possibleLandingDetected = velCondition && gyroCondition;

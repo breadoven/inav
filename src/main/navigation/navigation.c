@@ -1722,8 +1722,13 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_EMERGENCY_LANDING_INITI
 
 static navigationFSMEvent_t navOnEnteringState_NAV_STATE_EMERGENCY_LANDING_IN_PROGRESS(navigationFSMState_t previousState)
 {
-    // TODO:
+
     UNUSED(previousState);
+    // CR15
+    if (STATE(LANDING_DETECTED)) {
+        return NAV_FSM_EVENT_SUCCESS;
+    }
+    // CR15
     return NAV_FSM_EVENT_NONE;
 }
 
@@ -1733,9 +1738,9 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_EMERGENCY_LANDING_FINIS
     UNUSED(previousState);
 
     // Prevent I-terms growing when already landed
-    pidResetErrorAccumulators();
+    // pidResetErrorAccumulators(); // CR15
 
-    return NAV_FSM_EVENT_SUCCESS;
+    return NAV_FSM_EVENT_NONE;  // CR15
 }
 
 static navigationFSMEvent_t navOnEnteringState_NAV_STATE_LAUNCH_INITIALIZE(navigationFSMState_t previousState)
@@ -2629,7 +2634,7 @@ void updateLandingStatus(void)
             ENABLE_ARMING_FLAG(ARMING_DISABLED_LANDING_DETECTED);
             disarm(DISARM_LANDING);
         } else if (!navigationIsFlyingAutonomousMode()) {
-            // for multirotor only - reset landing detection active without disarm when throttle raised toward hover throttle
+            // for multirotor only - reactivate landing detector without disarm when throttle raised toward hover throttle
             landingDetectorIsActive = rxGetChannelValue(THROTTLE) < (0.5 * (navConfig()->mc.hover_throttle + getThrottleIdleValue()));
         }
     } else if (isLandingDetected()) {
