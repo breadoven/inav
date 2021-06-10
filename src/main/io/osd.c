@@ -1760,7 +1760,7 @@ static bool osdDrawSingleElement(uint8_t item)
     case OSD_ALTITUDE:
         {
             int32_t alt = osdGetAltitude();
-            osdFormatAltitudeSymbol(buff, alt);
+            // osdFormatAltitudeSymbol(buff, alt);
             uint16_t alt_alarm = osdConfig()->alt_alarm;
             uint16_t neg_alt_alarm = osdConfig()->neg_alt_alarm;
             if ((alt_alarm > 0 && CENTIMETERS_TO_METERS(alt) > alt_alarm) ||
@@ -1768,6 +1768,13 @@ static bool osdDrawSingleElement(uint8_t item)
 
                 TEXT_ATTRIBUTES_ADD_BLINK(elemAttr);
             }
+            // CR41
+            if (alt < 0) {
+                alt = -alt;
+                TEXT_ATTRIBUTES_ADD_INVERTED(elemAttr);
+            }
+            osdFormatAltitudeSymbol(buff, alt);
+            // CR41
             break;
         }
 

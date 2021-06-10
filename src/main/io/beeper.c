@@ -344,7 +344,7 @@ void beeperUpdate(timeUs_t currentTimeUs)
 
     if (!beeperIsOn) {
 #ifdef USE_DSHOT
-        if (isMotorProtocolDshot() && !areMotorsRunning() && beeperConfig()->dshot_beeper_enabled   // CR40
+        if (isMotorProtocolDshot() && !areMotorsRunning() && beeperConfig()->dshot_beeper_enabled
             && currentTimeUs - lastDshotBeeperCommandTimeUs > getDShotBeaconGuardDelayUs())
         {
             lastDshotBeeperCommandTimeUs = currentTimeUs;

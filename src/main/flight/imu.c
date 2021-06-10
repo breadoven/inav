@@ -541,11 +541,11 @@ bool compassHeadingGPSCogErrorCheck(void)
         compassGpsCogErrorPrev = compassGpsCogError;
         compassGpsCogError = compassGpsCogError / 10;
 
-        if (compassGpsCogError > 10) {
+        if (compassGpsCogError > 90) { // 90 fir test, change for better value
             if (timerStartMs == 0) {
                 timerStartMs = millis();
             }
-            return millis() - timerStartMs > 10000;
+            return millis() - timerStartMs > 10000; // 10s for test, use shorter time
         } else {
             timerStartMs = 0;
         }
