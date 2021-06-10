@@ -1736,10 +1736,11 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_EMERGENCY_LANDING_FINIS
 {
     // TODO:
     UNUSED(previousState);
-
-    // Prevent I-terms growing when already landed
-    // pidResetErrorAccumulators(); // CR15
-
+    // CR15
+    // disarm(DISARM_NAVIGATION);
+    rcCommand[THROTTLE] = getThrottleIdleValue();
+    ENABLE_STATE(NAV_MOTOR_STOP_OR_IDLE);;
+    // CR15
     return NAV_FSM_EVENT_NONE;  // CR15
 }
 

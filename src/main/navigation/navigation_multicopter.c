@@ -753,7 +753,7 @@ bool isMulticopterLandingDetected(void)
     }
 
     if (possibleLandingDetected) {
-        timeUs_t safetyTimeDelay = 2000000 + navConfig()->mc.auto_disarm_delay;  // check conditions stable for 2s + optional extra delay
+        timeUs_t safetyTimeDelay = 1000 * (2000 + navConfig()->mc.auto_disarm_delay);  // check conditions stable for 2s + optional extra delay
         return (currentTimeUs - landingDetectorStartedAt > safetyTimeDelay);
     } else {
         landingDetectorStartedAt = currentTimeUs;
