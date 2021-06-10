@@ -684,13 +684,15 @@ bool isMulticopterFlying(void)
 bool isMulticopterLandingDetected(void)
 {   // CR15
     static timeUs_t landingDetectorStartedAt;
-    const bool throttleIsLow = rcCommand[THROTTLE] - 5 < getThrottleIdleValue();
+    const bool throttleIsLow = calculateThrottleStatus(THROTTLE_STATUS_TYPE_RC) == THROTTLE_LOW;
 
     DEBUG_SET(DEBUG_CRUISE, 4, 22);
     DEBUG_SET(DEBUG_CRUISE, 1, averageAbsGyroRates());
 
     // Basic condition to start looking for landing
-    bool startCondition = navGetCurrentStateFlags() & NAV_CTL_LAND || FLIGHT_MODE(FAILSAFE_MODE) || (!navigationIsFlyingAutonomousMode() && throttleIsLow);
+    bool startCondition = (navGetCurrentStateFlags() & (NAV_CTL_LAND | NAV_CTL_EMERG))
+                          || FLIGHT_MODE(FAILSAFE_MODE)
+                          || (!navigationIsFlyingAutonomousMode() && throttleIsLow);
 
     if (!startCondition || posControl.flags.resetLandingDetector) {
         landingDetectorStartedAt = 0;
