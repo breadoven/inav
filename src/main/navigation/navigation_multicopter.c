@@ -691,7 +691,7 @@ bool isMulticopterLandingDetected(void)
 
     // Basic condition to start looking for landing
     bool startCondition = (navGetCurrentStateFlags() & (NAV_CTL_LAND | NAV_CTL_EMERG))
-                          || FLIGHT_MODE(FAILSAFE_MODE)
+                          || (FLIGHT_MODE(FAILSAFE_MODE) && !FLIGHT_MODE(NAV_WP_MODE))  // prevent landing detection if failsafe_mission OFF
                           || (!navigationIsFlyingAutonomousMode() && throttleIsLow);
 
     if (!startCondition || posControl.flags.resetLandingDetector) {
