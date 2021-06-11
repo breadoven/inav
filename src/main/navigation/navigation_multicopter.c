@@ -689,9 +689,9 @@ bool isMulticopterLandingDetected(void)
     DEBUG_SET(DEBUG_CRUISE, 4, 22);
     DEBUG_SET(DEBUG_CRUISE, 1, averageAbsGyroRates());
 
-    // Basic condition to start looking for landing
+    // Basic condition to start looking for landing (prevent landing detection if failsafe_mission OFF except landing states)
     bool startCondition = (navGetCurrentStateFlags() & (NAV_CTL_LAND | NAV_CTL_EMERG))
-                          || (FLIGHT_MODE(FAILSAFE_MODE) && !FLIGHT_MODE(NAV_WP_MODE))  // prevent landing detection if failsafe_mission OFF
+                          || (FLIGHT_MODE(FAILSAFE_MODE) && !FLIGHT_MODE(NAV_WP_MODE))
                           || (!navigationIsFlyingAutonomousMode() && throttleIsLow);
 
     if (!startCondition || posControl.flags.resetLandingDetector) {
@@ -699,9 +699,9 @@ bool isMulticopterLandingDetected(void)
         return  posControl.flags.resetLandingDetector = false;
     }
 
-    // check vertical and horizontal velocities are low
-    bool velCondition = fabsf(navGetCurrentActualPositionAndVelocity()->vel.z) < 25.0f || posControl.actualState.velXY < 100.0f;
-    // check gyro rates are low
+    // check vertical and horizontal velocities are low (cm/s)
+    bool velCondition = fabsf(navGetCurrentActualPositionAndVelocity()->vel.z) < 25.0f && posControl.actualState.velXY < 100.0f;
+    // check gyro rates are low (degs/s)
     bool gyroCondition = averageAbsGyroRates() < 2.0f;
     DEBUG_SET(DEBUG_CRUISE, 2, velCondition);
     DEBUG_SET(DEBUG_CRUISE, 3, gyroCondition);
