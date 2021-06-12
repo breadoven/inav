@@ -547,6 +547,7 @@ geoAltitudeConversionMode_e waypointMissionAltConvMode(geoAltitudeDatumFlag_e da
 
 /* Distance/bearing calculation */
 bool navCalculatePathToDestination(navDestinationPath_t *result, const fpVector3_t * destinationPos);
+uint32_t distanceToFirstWP(void);   // CR39
 
 /* Failsafe-forced RTH mode */
 void activateForcedRTH(void);
@@ -570,12 +571,12 @@ bool navigationRTHAllowsLanding(void);
 bool isWaypointMissionRTHActive(void);
 
 bool isNavLaunchEnabled(void);
+// CR38
 // bool isFixedWingLaunchDetected(void);
 // bool isFixedWingLaunchFinishedOrAborted(void);
-uint8_t fixedWingLaunchStatus(void);     // CR38
-// CR6
-bool isFixedWingLaunchFinishedThrottleLow(void);
-// CR6
+uint8_t fixedWingLaunchStatus(void);
+// CR38
+bool isFixedWingLaunchFinishedThrottleLow(void);    // CR6
 const char * fixedWingLaunchStateMessage(void);
 
 float calculateAverageSpeed(void);
