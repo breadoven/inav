@@ -1466,20 +1466,18 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_WAYPOINT_INITIALIZE(nav
   Using p3 minimises the risk of saving an invalid counter if a mission is aborted.
 */
         // CR29
-        static bool missionRestart;
-        if (posControl.activeWaypointIndex == 0) {
-            missionRestart = true;
-        } else if (navConfig()->general.flags.waypoint_mission_restart == WP_MISSION_SWITCH) {
-            missionRestart = !missionRestart;
-        } else {
-            missionRestart = navConfig()->general.flags.waypoint_mission_restart == WP_MISSION_START;
-        }
-
-        if (missionRestart) {
+        if (posControl.activeWaypointIndex == 0 || posControl.wpMissionRestart) {
             setupJumpCounters();
             posControl.activeWaypointIndex = 0;
             wpHeadingControl.mode = NAV_WP_HEAD_MODE_NONE;
         }
+
+        if (navConfig()->general.flags.waypoint_mission_restart == WP_MISSION_SWITCH) {
+            posControl.wpMissionRestart = posControl.activeWaypointIndex ? !posControl.wpMissionRestart : false;
+        } else {
+            posControl.wpMissionRestart = navConfig()->general.flags.waypoint_mission_restart == WP_MISSION_START;
+        }
+
         return NAV_FSM_EVENT_SUCCESS;   // will switch to NAV_STATE_WAYPOINT_PRE_ACTION
         // CR29
     }
@@ -1551,7 +1549,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_WAYPOINT_PRE_ACTION(nav
             return nextForNonGeoStates();
 
         case NAV_WP_ACTION_RTH:
-            posControl.activeWaypointIndex = 0; // CR29
+            posControl.wpMissionRestart = true; // CR29
             return NAV_FSM_EVENT_SWITCH_TO_RTH;
     };
 
@@ -1693,7 +1691,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_WAYPOINT_FINISHED(navig
     UNUSED(previousState);
 
     clearJumpCounters();
-    posControl.activeWaypointIndex = 0;   // CR29
+    posControl.wpMissionRestart = true;   // CR29
 
     // If no position sensor available - land immediately
     if ((posControl.flags.estPosStatus >= EST_USABLE) && (posControl.flags.estHeadingStatus >= EST_USABLE)) {
@@ -2084,11 +2082,11 @@ void updateActualHeading(bool headingValid, int32_t newHeading)
     // CR27
     /* Check compass heading matches GPS COG if available
      * latch mismatch error if exists. Reset on disarm ? ONLY FOR TEST !! */
-    if (!posControl.flags.compassGpsCogMismatchError) {
-        posControl.flags.compassGpsCogMismatchError = compassHeadingGPSCogErrorCheck();
-    } else if (!ARMING_FLAG(ARMED)) {       // TEST ONLY REMOVE AFTER !!
-        posControl.flags.compassGpsCogMismatchError = false;
-    }
+    // if (!posControl.flags.compassGpsCogMismatchError) {
+        // posControl.flags.compassGpsCogMismatchError = compassHeadingGPSCogErrorCheck();
+    // } else if (!ARMING_FLAG(ARMED)) {       // TEST ONLY REMOVE AFTER !!
+        // posControl.flags.compassGpsCogMismatchError = false;
+    // }
     // CR27
     navigationEstimateStatus_e newEstHeading = headingValid ? EST_TRUSTED : EST_NONE;
 

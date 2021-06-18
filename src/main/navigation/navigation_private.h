@@ -362,6 +362,7 @@ typedef struct {
     bool                        waypointListValid;
     int8_t                      waypointCount;
     int8_t                      geoWaypointCount;           // total geospatial WPs in mission // CR8
+    bool                        wpMissionRestart;           // mission restart from first waypoint  CR29
 
     int8_t                      multiMissionCount;          // CR21 number of missions in multi mission file
     int8_t                      multiMissionTotalWPCount;   // CR21 total number of WPs in multi mission file

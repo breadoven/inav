@@ -54,6 +54,8 @@ FILE_COMPILE_FOR_SPEED
 
 #include "io/gps.h"
 
+#include "navigation/navigation_private.h"  // CR27
+
 #include "sensors/acceleration.h"
 #include "sensors/barometer.h"
 #include "sensors/compass.h"
@@ -533,7 +535,8 @@ bool compassHeadingGPSCogErrorCheck(void)
     // if (sensors(SENSOR_MAG) && compassIsHealthy()) {
         static uint16_t compassGpsCogErrorPrev = 10;
         static timeMs_t timerStartMs = 0;
-        compassGpsCogError = ABS(gpsSol.groundCourse - attitude.values.yaw);
+        int32_t bearing = calculateBearingToDestination(&posControl.desiredState.pos);
+        compassGpsCogError = ABS(gpsSol.groundCourse - bearing);
         // compassGpsCogError = ABS(900 - attitude.values.yaw);
         compassGpsCogError = compassGpsCogError > 1800 ? ABS(compassGpsCogError - 3600) : compassGpsCogError;
         // DEBUG_SET(DEBUG_CRUISE, 0, compassGpsCogError);
@@ -541,7 +544,7 @@ bool compassHeadingGPSCogErrorCheck(void)
         compassGpsCogErrorPrev = compassGpsCogError;
         compassGpsCogError = compassGpsCogError / 10;
 
-        if (compassGpsCogError > 90) { // 90 fir test, change for better value
+        if (compassGpsCogError > 90) { // 90 for test, change for better value
             if (timerStartMs == 0) {
                 timerStartMs = millis();
             }
