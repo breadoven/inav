@@ -2082,11 +2082,11 @@ void updateActualHeading(bool headingValid, int32_t newHeading)
     // CR27
     /* Check compass heading matches GPS COG if available
      * latch mismatch error if exists. Reset on disarm ? ONLY FOR TEST !! */
-    // if (!posControl.flags.compassGpsCogMismatchError) {
-        // posControl.flags.compassGpsCogMismatchError = compassHeadingGPSCogErrorCheck();
-    // } else if (!ARMING_FLAG(ARMED)) {       // TEST ONLY REMOVE AFTER !!
-        // posControl.flags.compassGpsCogMismatchError = false;
-    // }
+    if (!posControl.flags.compassGpsCogMismatchError) {
+        posControl.flags.compassGpsCogMismatchError = compassHeadingGPSCogErrorCheck();
+    } else if (!ARMING_FLAG(ARMED)) {       // TEST ONLY REMOVE AFTER !!
+        posControl.flags.compassGpsCogMismatchError = false;
+    }
     // CR27
     navigationEstimateStatus_e newEstHeading = headingValid ? EST_TRUSTED : EST_NONE;
 

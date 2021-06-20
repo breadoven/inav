@@ -535,7 +535,7 @@ bool compassHeadingGPSCogErrorCheck(void)
     // if (sensors(SENSOR_MAG) && compassIsHealthy()) {
         static uint16_t compassGpsCogErrorPrev = 10;
         static timeMs_t timerStartMs = 0;
-        int32_t bearing = calculateBearingToDestination(&posControl.desiredState.pos);
+        int32_t bearing = calculateBearingToDestination(&posControl.desiredState.pos) / 10;
         compassGpsCogError = ABS(gpsSol.groundCourse - bearing);
         // compassGpsCogError = ABS(900 - attitude.values.yaw);
         compassGpsCogError = compassGpsCogError > 1800 ? ABS(compassGpsCogError - 3600) : compassGpsCogError;

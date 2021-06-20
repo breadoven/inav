@@ -2899,7 +2899,7 @@ static bool osdDrawSingleElement(uint8_t item)
                 if (compassGpsCogError <= 180) {
                     tfp_sprintf(buff, "MAG ERR %3u", compassGpsCogError);
                 } else {
-                    strcpy(buff, "NO GPS COG");
+                    strcpy(buff, "NO GPS COG ");
                 }
                 displayWrite(osdDisplayPort, elemPosX, elemPosY, buff);
                 return true;
