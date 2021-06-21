@@ -485,7 +485,7 @@ static fixedWingLaunchEvent_t fwLaunchState_FW_LAUNCH_STATE_FINISH(timeUs_t curr
     // CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
     if (navConfig()->fw.launch_allow_throttle_low && isThrottleLow()) {
         // default to cruise throttle until switch to preselected Nav mode or pilot takes control
-        rcCommand[THROTTLE] = navConfig()->fw.cruise_throttle;
+        rcCommand[THROTTLE] = currentBatteryProfile->nav.fw.cruise_throttle;
     }
     // CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
@@ -520,9 +520,9 @@ static fixedWingLaunchEvent_t fwLaunchState_FW_LAUNCH_STATE_FINISH_THR_LOW(timeU
 
     if (isThrottleLow()) {
         throttleRaisedStartTimeMs = US2MS(currentTimeUs);
-        rcCommand[THROTTLE] = navConfig()->fw.cruise_throttle;
+        rcCommand[THROTTLE] = currentBatteryProfile->nav.fw.cruise_throttle;
     } else {
-        rcCommand[THROTTLE] = scaleRangef(elapsedTimeMs, 0.0f, endTimeMs,  navConfig()->fw.cruise_throttle, rcCommand[THROTTLE]);
+        rcCommand[THROTTLE] = scaleRangef(elapsedTimeMs, 0.0f, endTimeMs,  currentBatteryProfile->nav.fw.cruise_throttle, rcCommand[THROTTLE]);
         if (elapsedTimeMs > endTimeMs) {
             return FW_LAUNCH_EVENT_SUCCESS;
         }

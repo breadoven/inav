@@ -2972,6 +2972,16 @@ Enable the possibility to manually increase the throttle in auto throttle contro
 
 ---
 
+### nav_fw_auto_disarm_delay
+
+Delay before plane disarms when `nav_disarm_on_landing` is set (ms)
+
+| Default | Min | Max |
+| --- | --- | --- |
+| 2000 | 100 | 10000 |
+
+---
+
 ### nav_fw_bank_angle
 
 Max roll angle when rolling / turning in GPS assisted modes, is also restrained by global max_angle_inclination_rll
@@ -3069,6 +3079,16 @@ Forward acceleration threshold for bungee launch of throw launch [cm/s/s], 1G = 
 | Default | Min | Max |
 | --- | --- | --- |
 | 1863 | 1000 | 20000 |
+
+---
+
+### nav_fw_launch_allow_throttle_low
+
+Allow launch sequence with throttle maintained low throughout. When main launch sequence completes control is maintained with Nav cruise throttle until sticks moved/throttle raised or control switches to other Nav mode if preselected
+
+| Default | Min | Max |
+| --- | --- | --- |
+| OFF |  |  |
 
 ---
 
@@ -3454,7 +3474,7 @@ Max allowed above the ground altitude for terrain following mode
 
 ### nav_mc_auto_disarm_delay
 
-Delay before multi-rotor disarms when `nav_disarm_on_landing` is set (m/s)
+Delay before multi-rotor disarms when `nav_disarm_on_landing` is set (ms)
 
 | Default | Min | Max |
 | --- | --- | --- |
@@ -3742,6 +3762,16 @@ Minimum distance from homepoint when RTH full procedure will be activated [cm]. 
 
 ---
 
+### nav_mission_planner_reset
+
+With Reset enabled waypoints entered using WP Mission Planner can be reset to 0 by toggling the mode switch ON-OFF-ON within 1s.
+
+| Default | Min | Max |
+| --- | --- | --- |
+| ON |  |  |
+
+---
+
 ### nav_overrides_motor_stop
 
 When set to OFF the navigation system will not take over the control of the motor if the throttle is low (motor will stop). When set to OFF_ALWAYS the navigation system will not take over the control of the motor if the throttle was low even when failsafe is triggered. When set to AUTO_ONLY the navigation system will only take over the control of the throttle in autonomous navigation modes (NAV WP and NAV RTH). When set to ALL_NAV (default) the navigation system will take over the control of the motor completely and never allow the motor to stop even when the throttle is low. This setting only has an effect on NAV modes which take control of the throttle when combined with MOTOR_STOP and is likely to cause a stall if fw_min_throttle_down_pitch isn't set correctly or the pitch estimation is wrong for fixed wing models when not set to ALL_NAV
@@ -3852,6 +3882,16 @@ If set to ON drone will return tail-first. Obviously meaningless for airplanes.
 
 ---
 
+### nav_soaring_motor_stop
+
+Stops motor when Soaring mode enabled.
+
+| Default | Min | Max |
+| --- | --- | --- |
+| OFF |  |  |
+
+---
+
 ### nav_use_fw_yaw_control
 
 Enables or Disables the use of the heading PID controller on fixed wing. Heading PID controller is always enabled for rovers and boats
@@ -3889,6 +3929,26 @@ If set to ON, waypoints will be automatically loaded from EEPROM to the FC durin
 | Default | Min | Max |
 | --- | --- | --- |
 | OFF |  |  |
+
+---
+
+### nav_wp_mission_restart
+
+Sets restart behaviour for a WP mission when interrupted mid mission. START from first WP, RESUME from last active WP or SWITCH between START and RESUME each time WP Mode is reselected ON. SWITCH effectively allows resuming once only from a previous mid mission waypoint after which the mission will restart from the first waypoint.
+
+| Default | Min | Max |
+| --- | --- | --- |
+| RESUME |  |  |
+
+---
+
+### nav_wp_multi_mission_index
+
+Index of mission selected from multi mission WP entry. 1 is the first useable WP mission in the entry. Limited to a maximum of 9 missions. Set index to 0 to load an empty mission.
+
+| Default | Min | Max |
+| --- | --- | --- |
+| 1 | 0 | 9 |
 
 ---
 
@@ -3969,6 +4029,16 @@ Max pitch, in degrees, for OSD artificial horizon
 | Default | Min | Max |
 | --- | --- | --- |
 | 20 | 10 | 90 |
+
+---
+
+### osd_ahi_pitch_interval
+
+Draws AHI at increments of the set pitch interval over full pitch range. AHI line is drawn with ends offset when pitch first exceeds interval with offset increasing with increasing pitch. Offset direction changes between climb and dive. Set to 0 to disable (Not for pixel OSD)
+
+| Default | Min | Max |
+| --- | --- | --- |
+| 10 | 0 | 30 |
 
 ---
 
@@ -4332,6 +4402,16 @@ Temperature under which the IMU temperature OSD element will start blinking (dec
 
 ---
 
+### osd_infocycle_interval_time
+
+Info Cycle field item display time (milliseconds).
+
+| Default | Min | Max |
+| --- | --- | --- |
+| 2000 | 500 | 5000 |
+
+---
+
 ### osd_left_sidebar_scroll
 
 _// TODO_
@@ -4539,6 +4619,26 @@ Display minimum voltage of the `BATTERY` or the average per `CELL` in the OSD st
 | Default | Min | Max |
 | --- | --- | --- |
 | BATTERY |  |  |
+
+---
+
+### osd_stats_page_auto_swap_time
+
+Auto swap display time interval between disarm stats pages (seconds). Disabled when set to 0.
+
+| Default | Min | Max |
+| --- | --- | --- |
+| 3 | 0 | 10 |
+
+---
+
+### osd_system_msg_display_time
+
+System message display cycle time for multiple messages (milliseconds).
+
+| Default | Min | Max |
+| --- | --- | --- |
+| 1000 | 500 | 5000 |
 
 ---
 
@@ -5319,6 +5419,16 @@ Total flight time [in seconds]. The value is updated on every disarm when "stats
 | Default | Min | Max |
 | --- | --- | --- |
 | 0 |  | 2147483647 |
+
+---
+
+### switch_arm_delay
+
+Delay before arming when set by switch (ms) [0-1000]
+
+| Default | Min | Max |
+| --- | --- | --- |
+| 250 | 0 | 1000 |
 
 ---
 

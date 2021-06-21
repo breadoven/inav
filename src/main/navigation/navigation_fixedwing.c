@@ -584,7 +584,7 @@ bool isFixedWingFlying(void)
     airspeed = pitot.airSpeed;
 #endif
     bool velCondition = posControl.actualState.velXY > 250 || airspeed > 250;
-    bool throttleCondition = rcCommand[THROTTLE] > navConfig()->fw.cruise_throttle;
+    bool throttleCondition = rcCommand[THROTTLE] > currentBatteryProfile->nav.fw.cruise_throttle;
     bool launchCondition = isNavLaunchEnabled() && fixedWingLaunchStatus() == FW_LAUNCH_FLYING;  // CR38
 
     return (isImuHeadingValid() && throttleCondition && velCondition) || launchCondition;

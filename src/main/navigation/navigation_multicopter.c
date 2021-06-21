@@ -677,7 +677,7 @@ static void applyMulticopterPositionController(timeUs_t currentTimeUs)
 // CR15
 bool isMulticopterFlying(void)
 {
-    return rcCommand[THROTTLE] > navConfig()->mc.hover_throttle && averageAbsGyroRates() > 7.0f;
+    return rcCommand[THROTTLE] > currentBatteryProfile->nav.mc.hover_throttle && averageAbsGyroRates() > 7.0f;
 }
 // CR15
 /*-----------------------------------------------------------
