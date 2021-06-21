@@ -50,6 +50,8 @@
 
 #include "io/gps.h"
 
+#include "sensors/battery.h"
+
 #define SWING_LAUNCH_MIN_ROTATION_RATE      DEGREES_TO_RADIANS(100)     // expect minimum 100dps rotation rate
 #define LAUNCH_MOTOR_IDLE_SPINUP_TIME 1500                              // ms
 #define UNUSED(x) ((void)(x))
@@ -252,13 +254,13 @@ static void setCurrentState(fixedWingLaunchState_t nextState, timeUs_t currentTi
 
 static bool isThrottleIdleEnabled(void)
 {
-    return navConfig()->fw.launch_idle_throttle > getThrottleIdleValue();
+    return currentBatteryProfile->nav.fw.launch_idle_throttle > getThrottleIdleValue();
 }
 
 static void applyThrottleIdleLogic(bool forceMixerIdle)
 {
     if (isThrottleIdleEnabled() && !forceMixerIdle) {
-        rcCommand[THROTTLE] = navConfig()->fw.launch_idle_throttle;
+        rcCommand[THROTTLE] = currentBatteryProfile->nav.fw.launch_idle_throttle;
     }
     else {
         ENABLE_STATE(NAV_MOTOR_STOP_OR_IDLE);           // If MOTOR_STOP is enabled mixer will keep motor stopped
@@ -278,7 +280,7 @@ static inline bool isLaunchMaxAltitudeReached(void)
 
 static inline bool areSticksMoved(timeMs_t initialTime, timeUs_t currentTimeUs)
 {
-    return (initialTime + currentStateElapsedMs(currentTimeUs)) > navConfig()->fw.launch_min_time && areSticksDeflectedMoreThanPosHoldDeadband();
+    return (initialTime + currentStateElapsedMs(currentTimeUs)) > navConfig()->fw.launch_min_time && isRollPitchStickDeflected();
 }
 
 static void resetPidsIfNeeded(void) {
@@ -348,6 +350,7 @@ static fixedWingLaunchEvent_t fwLaunchState_FW_LAUNCH_STATE_IDLE_MOTOR_DELAY(tim
         idleMotorAboutToStart = false;
         return FW_LAUNCH_EVENT_SUCCESS;
     }
+    // 5 second warning motor about to start at idle, changes Beeper sound
     idleMotorAboutToStart = navConfig()->fw.launch_idle_motor_timer - currentStateElapsedMs(currentTimeUs) < 5000;
 
     return FW_LAUNCH_EVENT_NONE;
@@ -367,7 +370,7 @@ static fixedWingLaunchEvent_t fwLaunchState_FW_LAUNCH_STATE_MOTOR_IDLE(timeUs_t 
         return FW_LAUNCH_EVENT_SUCCESS;
     }
     else {
-        rcCommand[THROTTLE] = scaleRangef(elapsedTimeMs, 0.0f, LAUNCH_MOTOR_IDLE_SPINUP_TIME, getThrottleIdleValue(), navConfig()->fw.launch_idle_throttle);
+        rcCommand[THROTTLE] = scaleRangef(elapsedTimeMs, 0.0f, LAUNCH_MOTOR_IDLE_SPINUP_TIME, getThrottleIdleValue(), currentBatteryProfile->nav.fw.launch_idle_throttle);
         fwLaunch.pitchAngle = scaleRangef(elapsedTimeMs, 0.0f, LAUNCH_MOTOR_IDLE_SPINUP_TIME, 0, navConfig()->fw.launch_climb_angle);
     }
 
@@ -436,14 +439,14 @@ static fixedWingLaunchEvent_t fwLaunchState_FW_LAUNCH_STATE_MOTOR_SPINUP(timeUs_
 
     const timeMs_t elapsedTimeMs = currentStateElapsedMs(currentTimeUs);
     const uint16_t motorSpinUpMs = navConfig()->fw.launch_motor_spinup_time;
-    const uint16_t launchThrottle = navConfig()->fw.launch_throttle;
+    const uint16_t launchThrottle = currentBatteryProfile->nav.fw.launch_throttle;
 
     if (elapsedTimeMs > motorSpinUpMs) {
         rcCommand[THROTTLE] = launchThrottle;
         return FW_LAUNCH_EVENT_SUCCESS;
     }
     else {
-        const uint16_t minIdleThrottle = MAX(getThrottleIdleValue(), navConfig()->fw.launch_idle_throttle);
+        const uint16_t minIdleThrottle = MAX(getThrottleIdleValue(), currentBatteryProfile->nav.fw.launch_idle_throttle);
         rcCommand[THROTTLE] = scaleRangef(elapsedTimeMs, 0.0f, motorSpinUpMs,  minIdleThrottle, launchThrottle);
     }
 
@@ -452,7 +455,7 @@ static fixedWingLaunchEvent_t fwLaunchState_FW_LAUNCH_STATE_MOTOR_SPINUP(timeUs_
 
 static fixedWingLaunchEvent_t fwLaunchState_FW_LAUNCH_STATE_IN_PROGRESS(timeUs_t currentTimeUs)
 {
-    rcCommand[THROTTLE] = navConfig()->fw.launch_throttle;
+    rcCommand[THROTTLE] = currentBatteryProfile->nav.fw.launch_throttle;
 
     if (isLaunchMaxAltitudeReached()) {
         return FW_LAUNCH_EVENT_SUCCESS; // cancel the launch and do the FW_LAUNCH_STATE_FINISH state
@@ -476,7 +479,7 @@ static fixedWingLaunchEvent_t fwLaunchState_FW_LAUNCH_STATE_FINISH(timeUs_t curr
 
     launchStatus = FW_LAUNCH_FLYING;  // considered a success if this far in launch sequence CR38
 
-    if (areSticksDeflectedMoreThanPosHoldDeadband()) {
+    if (isRollPitchStickDeflected()) {
         return FW_LAUNCH_EVENT_ABORT; // cancel the launch and do the FW_LAUNCH_STATE_IDLE state
     }
     // CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
@@ -497,7 +500,7 @@ static fixedWingLaunchEvent_t fwLaunchState_FW_LAUNCH_STATE_FINISH(timeUs_t curr
     }
     else {
         // make a smooth transition from the launch state to the current state for throttle and the pitch angle
-        rcCommand[THROTTLE] = scaleRangef(elapsedTimeMs, 0.0f, endTimeMs,  navConfig()->fw.launch_throttle, rcCommand[THROTTLE]);
+        rcCommand[THROTTLE] = scaleRangef(elapsedTimeMs, 0.0f, endTimeMs,  currentBatteryProfile->nav.fw.launch_throttle, rcCommand[THROTTLE]);
         fwLaunch.pitchAngle = scaleRangef(elapsedTimeMs, 0.0f, endTimeMs, navConfig()->fw.launch_climb_angle, rcCommand[PITCH]);
     }
 
@@ -511,7 +514,7 @@ static fixedWingLaunchEvent_t fwLaunchState_FW_LAUNCH_STATE_FINISH_THR_LOW(timeU
     const timeMs_t elapsedTimeMs = US2MS(currentTimeUs) - throttleRaisedStartTimeMs;
     const timeMs_t endTimeMs = 1000;
 
-    if (areSticksDeflectedMoreThanPosHoldDeadband()) {
+    if (isRollPitchStickDeflected()) {
         return FW_LAUNCH_EVENT_SUCCESS;     // end the launch and go to FW_LAUNCH_STATE_IDLE
     }
 

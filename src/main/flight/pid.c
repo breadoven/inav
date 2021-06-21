@@ -56,6 +56,7 @@ FILE_COMPILE_FOR_SPEED
 
 #include "rx/rx.h"
 
+#include "sensors/battery.h"
 #include "sensors/sensors.h"
 #include "sensors/gyro.h"
 #include "sensors/acceleration.h"
@@ -169,7 +170,7 @@ static EXTENDED_FASTRAM bool levelingEnabled = false;
 static EXTENDED_FASTRAM float fixedWingLevelTrim;
 static EXTENDED_FASTRAM pidController_t fixedWingLevelTrimController;
 
-PG_REGISTER_PROFILE_WITH_RESET_TEMPLATE(pidProfile_t, pidProfile, PG_PID_PROFILE, 2);
+PG_REGISTER_PROFILE_WITH_RESET_TEMPLATE(pidProfile_t, pidProfile, PG_PID_PROFILE, 4);
 
 PG_RESET_TEMPLATE(pidProfile_t, pidProfile,
         .bank_mc = {
@@ -299,16 +300,8 @@ PG_RESET_TEMPLATE(pidProfile_t, pidProfile,
         .navFwPosHdgPidsumLimit = SETTING_NAV_FW_POS_HDG_PIDSUM_LIMIT_DEFAULT,
         .controlDerivativeLpfHz = SETTING_MC_CD_LPF_HZ_DEFAULT,
 
-#ifdef USE_GYRO_KALMAN
-        .kalman_q = SETTING_SETPOINT_KALMAN_Q_DEFAULT,
-        .kalman_w = SETTING_SETPOINT_KALMAN_W_DEFAULT,
-        .kalman_sharpness = SETTING_SETPOINT_KALMAN_SHARPNESS_DEFAULT,
-        .kalmanEnabled = SETTING_SETPOINT_KALMAN_ENABLED_DEFAULT,
-#endif
-
         .fixedWingLevelTrim = SETTING_FW_LEVEL_PITCH_TRIM_DEFAULT,
         .fixedWingLevelTrimGain = SETTING_FW_LEVEL_PITCH_GAIN_DEFAULT,
-        .fixedWingLevelTrimDeadband = SETTING_FW_LEVEL_PITCH_DEADBAND_DEFAULT,
 
 #ifdef USE_SMITH_PREDICTOR
         .smithPredictorStrength = SETTING_SMITH_PREDICTOR_STRENGTH_DEFAULT,
@@ -421,7 +414,7 @@ void pidReduceErrorAccumulators(int8_t delta, uint8_t axis)
 
 float getTotalRateTarget(void)
 {
-    return sqrtf(sq(pidState[FD_ROLL].rateTarget) + sq(pidState[FD_PITCH].rateTarget) + sq(pidState[FD_YAW].rateTarget));
+    return fast_fsqrtf(sq(pidState[FD_ROLL].rateTarget) + sq(pidState[FD_PITCH].rateTarget) + sq(pidState[FD_YAW].rateTarget));
 }
 
 float getAxisIterm(uint8_t axis)
@@ -607,7 +600,7 @@ static void pidLevel(pidState_t *pidState, flight_dynamics_index_t axis, float h
 
     // Automatically pitch down if the throttle is manually controlled and reduced bellow cruise throttle
     if ((axis == FD_PITCH) && STATE(AIRPLANE) && FLIGHT_MODE(ANGLE_MODE) && !navigationIsControllingThrottle()) {
-        angleTarget += scaleRange(MAX(0, navConfig()->fw.cruise_throttle - rcCommand[THROTTLE]), 0, navConfig()->fw.cruise_throttle - PWM_RANGE_MIN, 0, mixerConfig()->fwMinThrottleDownPitchAngle);
+        angleTarget += scaleRange(MAX(0, currentBatteryProfile->nav.fw.cruise_throttle - rcCommand[THROTTLE]), 0, currentBatteryProfile->nav.fw.cruise_throttle - PWM_RANGE_MIN, 0, currentBatteryProfile->fwMinThrottleDownPitchAngle);
     }
 
     //PITCH trim applied by a AutoLevel flight mode and manual pitch trimming
@@ -625,22 +618,8 @@ static void pidLevel(pidState_t *pidState, flight_dynamics_index_t axis, float h
          * Positive fixedWingLevelTrim means nose should point upwards
          * Negative fixedWingLevelTrim means nose should point downwards
          */
-        angleTarget -= fixedWingLevelTrim;
-        DEBUG_SET(DEBUG_AUTOLEVEL, 3, angleTarget * 10);
-    }
-
-        //PITCH trim applied by a AutoLevel flight mode and manual pitch trimming
-    if (axis == FD_PITCH && STATE(AIRPLANE)) {
-        /*
-         * fixedWingLevelTrim has opposite sign to rcCommand.
-         * Positive rcCommand means nose should point downwards
-         * Negative rcCommand mean nose should point upwards
-         * This is counter intuitive and a natural way suggests that + should mean UP
-         * This is why fixedWingLevelTrim has opposite sign to rcCommand
-         * Positive fixedWingLevelTrim means nose should point upwards
-         * Negative fixedWingLevelTrim means nose should point downwards
-         */
         angleTarget -= DEGREES_TO_DECIDEGREES(fixedWingLevelTrim);
+        DEBUG_SET(DEBUG_AUTOLEVEL, 3, angleTarget * 10);
     }
 
 #ifdef USE_SECONDARY_IMU
@@ -801,7 +780,7 @@ static void NOINLINE pidApplyFixedWingRateController(pidState_t *pidState, fligh
         pidState->errorGyroIf = constrainf(pidState->errorGyroIf, -pidProfile()->fixedWingItermThrowLimit, pidProfile()->fixedWingItermThrowLimit);
     }
 
-    axisPID[axis] = constrainf(newPTerm + newFFTerm + pidState->errorGyroIf, -pidState->pidSumLimit, +pidState->pidSumLimit);
+    axisPID[axis] = constrainf(newPTerm + newFFTerm + pidState->errorGyroIf + newDTerm, -pidState->pidSumLimit, +pidState->pidSumLimit);
 
 #ifdef USE_AUTOTUNE_FIXED_WING
     if (FLIGHT_MODE(AUTO_TUNE) && !FLIGHT_MODE(MANUAL_MODE)) {
@@ -1132,9 +1111,7 @@ void FAST_CODE pidController(float dT)
         pidState[axis].rateTarget = constrainf(rateTarget, -GYRO_SATURATION_LIMIT, +GYRO_SATURATION_LIMIT);
 
 #ifdef USE_GYRO_KALMAN
-        if (pidProfile()->kalmanEnabled) {
-            pidState[axis].gyroRate = gyroKalmanUpdate(axis, pidState[axis].gyroRate, pidState[axis].rateTarget);
-        }
+        gyroKalmanUpdateSetpoint(axis, pidState[axis].rateTarget);
 #endif
 
 #ifdef USE_SMITH_PREDICTOR
@@ -1278,11 +1255,6 @@ void pidInit(void)
     }
 
     pidResetTPAFilter();
-#ifdef USE_GYRO_KALMAN
-    if (pidProfile()->kalmanEnabled) {
-        gyroKalmanInitialize(pidProfile()->kalman_q, pidProfile()->kalman_w, pidProfile()->kalman_sharpness);
-    }
-#endif
 
     fixedWingLevelTrim = pidProfile()->fixedWingLevelTrim;
 
@@ -1333,11 +1305,10 @@ void updateFixedWingLevelTrim(timeUs_t currentTimeUs)
      */
     pidControllerFlags_e flags = PID_LIMIT_INTEGRATOR;
 
-    //Iterm should freeze when pitch stick is deflected
+    //Iterm should freeze when sticks are deflected
     if (
         !IS_RC_MODE_ACTIVE(BOXAUTOLEVEL) ||
-        rxGetChannelValue(PITCH) > (PWM_RANGE_MIDDLE + pidProfile()->fixedWingLevelTrimDeadband) ||
-        rxGetChannelValue(PITCH) < (PWM_RANGE_MIDDLE - pidProfile()->fixedWingLevelTrimDeadband) ||
+        areSticksDeflected() ||
         (!FLIGHT_MODE(ANGLE_MODE) && !FLIGHT_MODE(HORIZON_MODE)) ||
         navigationIsControllingAltitude()
     ) {
@@ -1360,4 +1331,9 @@ void updateFixedWingLevelTrim(timeUs_t currentTimeUs)
     fixedWingLevelTrim = pidProfile()->fixedWingLevelTrim + (output * FIXED_WING_LEVEL_TRIM_MULTIPLIER);
 
     previousArmingState = !!ARMING_FLAG(ARMED);
+}
+
+float getFixedWingLevelTrim(void)
+{
+    return STATE(AIRPLANE) ? fixedWingLevelTrim : 0;
 }
