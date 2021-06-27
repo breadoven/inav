@@ -640,8 +640,8 @@ static void pidLevel(pidState_t *pidState, flight_dynamics_index_t axis, float h
 #endif
 
     // CR36
-    if (FLIGHT_MODE(SOARING_MODE) && axis == FD_PITCH) {
-        angleErrorDeg = 0;  // disable pitch ANGLE mode
+    if (FLIGHT_MODE(SOARING_MODE) && axis == FD_PITCH && !isRollPitchStickDeflected()) {
+        angleErrorDeg = 0;  // disable pitch ANGLE mode when eoll/pitch centered
     }
     // CR36
 

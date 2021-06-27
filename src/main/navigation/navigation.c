@@ -3340,7 +3340,8 @@ static navigationFSMEvent_t selectNavEventFromBoxModeInput(bool launchBypass)
             }
             // CR36
             // Soaring mode used by planes, disables altitude control in Position hold and Cruise modes.
-            if (IS_RC_MODE_ACTIVE(BOXSOARING) && (FLIGHT_MODE(NAV_POSHOLD_MODE) || FLIGHT_MODE(NAV_COURSE_HOLD_MODE))) {
+            // if (IS_RC_MODE_ACTIVE(BOXSOARING) && (FLIGHT_MODE(NAV_POSHOLD_MODE) || FLIGHT_MODE(NAV_COURSE_HOLD_MODE))) {
+            if (IS_RC_MODE_ACTIVE(BOXSOARING) && (FLIGHT_MODE(NAV_POSHOLD_MODE) || FLIGHT_MODE(NAV_ALTHOLD_MODE))) {
                 if (!FLIGHT_MODE(SOARING_MODE)) {
                     ENABLE_FLIGHT_MODE(SOARING_MODE);
                 }
