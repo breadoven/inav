@@ -117,7 +117,7 @@ PG_RESET_TEMPLATE(navConfig_t, navConfig,
             .safehome_usage_mode = SETTING_SAFEHOME_USAGE_MODE_DEFAULT,
             .waypoint_mission_restart = SETTING_NAV_WP_MISSION_RESTART_DEFAULT,       // CR29
             .mission_planner_reset = SETTING_NAV_MISSION_PLANNER_RESET_DEFAULT,       // Allow mode switch toggle to reset Mission Planner WPs  CR32
-            .soaring_motor_stop = SETTING_NAV_SOARING_MOTOR_STOP_DEFAULT,             // stops motor when Saoring mode enabled  CR36
+            .soaring_motor_stop = SETTING_NAV_FW_SOARING_MOTOR_STOP_DEFAULT,          // stops motor when Saoring mode enabled  CR36
         },
 
         // General navigation parameters
@@ -198,6 +198,7 @@ PG_RESET_TEMPLATE(navConfig_t, navConfig,
         .useFwNavYawControl = SETTING_NAV_USE_FW_YAW_CONTROL_DEFAULT,
         .yawControlDeadband = SETTING_NAV_FW_YAW_DEADBAND_DEFAULT,
         .auto_disarm_delay = SETTING_NAV_FW_AUTO_DISARM_DELAY_DEFAULT,          // ms - time delay to disarm when auto disarm after landing enabled  CR15
+        .soaring_pitch_deadband = SETTING_NAV_FW_SOARING_PITCH_DEADBAND_DEFAULT,// pitch angle mode deadband when Saoring mode enabled  CR36
     }
 );
 
@@ -3339,9 +3340,8 @@ static navigationFSMEvent_t selectNavEventFromBoxModeInput(bool launchBypass)
                 }
             }
             // CR36
-            // Soaring mode used by planes, disables altitude control in Position hold and Cruise modes.
-            // if (IS_RC_MODE_ACTIVE(BOXSOARING) && (FLIGHT_MODE(NAV_POSHOLD_MODE) || FLIGHT_MODE(NAV_COURSE_HOLD_MODE))) {
-            if (IS_RC_MODE_ACTIVE(BOXSOARING) && (FLIGHT_MODE(NAV_POSHOLD_MODE) || FLIGHT_MODE(NAV_ALTHOLD_MODE))) {
+            // Soaring mode used by planes, disables altitude control in Position hold and Cruise modes. NAV_COURSE_HOLD_MODE
+            if (IS_RC_MODE_ACTIVE(BOXSOARING) && (FLIGHT_MODE(NAV_POSHOLD_MODE) || FLIGHT_MODE(NAV_COURSE_HOLD_MODE))) {
                 if (!FLIGHT_MODE(SOARING_MODE)) {
                     ENABLE_FLIGHT_MODE(SOARING_MODE);
                 }

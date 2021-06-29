@@ -297,9 +297,10 @@ typedef struct navConfig_s {
         // xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
         uint8_t  cruise_yaw_rate;            // Max yaw rate (dps) when CRUISE MODE is enabled
         bool     allow_manual_thr_increase;
-        bool    useFwNavYawControl;
-        uint8_t yawControlDeadband;
+        bool     useFwNavYawControl;
+        uint8_t  yawControlDeadband;
         uint16_t auto_disarm_delay;          // fixed wing disarm delay for landing detector  CR15
+        uint8_t  soaring_pitch_deadband;     // soaring mode pitch angle deadband (deg)  // CR36
     } fw;
 } navConfig_t;
 
