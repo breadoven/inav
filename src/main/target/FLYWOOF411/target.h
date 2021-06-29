@@ -164,8 +164,8 @@
 // ***************  OTHERS *************************
 #define DEFAULT_FEATURES                (FEATURE_TX_PROF_SEL | FEATURE_OSD | FEATURE_VBAT | FEATURE_TELEMETRY | FEATURE_SOFTSERIAL)
 
-// #define USE_DSHOT
-// #define USE_ESC_SENSOR
+// #define USE_DSHOT        removed to prevent Flash1 overflow with Custom build
+// #define USE_ESC_SENSOR   removed to prevent Flash1 overflow with Custom build
 #define USE_SERIALSHOT
 #define USE_SERIAL_4WAY_BLHELI_INTERFACE
 
