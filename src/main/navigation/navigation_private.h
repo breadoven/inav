@@ -477,10 +477,8 @@ void resetFixedWingLaunchController(timeUs_t currentTimeUs);
 // bool isFixedWingLaunchDetected(void);
 void enableFixedWingLaunchController(timeUs_t currentTimeUs);
 // bool isFixedWingLaunchFinishedOrAborted(void);
-uint8_t fixedWingLaunchStatus(void);     // CR38
-// CR6
-bool isFixedWingLaunchFinishedThrottleLow(void);
-// CR6
+// bool fixedWingLaunchStatus(navFwLaunchStatus_e statusCheck); // CR38
+// bool isFixedWingLaunchFinishedThrottleLow(void);    // CR6
 void abortFixedWingLaunch(void);
 void applyFixedWingLaunchController(timeUs_t currentTimeUs);
 

@@ -160,12 +160,10 @@ typedef enum {
 } wpMissionPlannerStatus_e;
 // CR32
 // CR38
-typedef enum {
-    FW_LAUNCH_START,
-    FW_LAUNCH_DETECTED,
-    FW_LAUNCH_FLYING,
-    FW_LAUNCH_END_ABORT,
-    FW_LAUNCH_END_SUCCESS,
+typedef enum {  // keep aligned with fixedWingLaunchState_t
+    FW_LAUNCH_DETECTED = 4,
+    FW_LAUNCH_ABORTED = 10,
+    FW_LAUNCH_FLYING = 11,
 } navFwLaunchStatus_e;
 // CR38
 typedef struct positionEstimationConfig_s {
@@ -568,6 +566,7 @@ bool isNavLaunchEnabled(void);
 // CR38
 // bool isFixedWingLaunchDetected(void);
 // bool isFixedWingLaunchFinishedOrAborted(void);
+// bool fixedWingLaunchStatus(navFwLaunchStatus_e statusCheck);
 uint8_t fixedWingLaunchStatus(void);
 // CR38
 bool isFixedWingLaunchFinishedThrottleLow(void);    // CR6

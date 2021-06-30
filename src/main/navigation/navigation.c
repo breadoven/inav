@@ -1753,6 +1753,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_LAUNCH_WAIT(navigationF
     UNUSED(previousState);
 
     // if (isFixedWingLaunchDetected()) {
+    // if (fixedWingLaunchStatus(FW_LAUNCH_DETECTED)) {  // CR38
     if (fixedWingLaunchStatus() == FW_LAUNCH_DETECTED) {  // CR38
         enableFixedWingLaunchController(currentTimeUs);
         return NAV_FSM_EVENT_SUCCESS;   // NAV_STATE_LAUNCH_IN_PROGRESS
@@ -1778,7 +1779,8 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_LAUNCH_IN_PROGRESS(navi
     UNUSED(previousState);
 
     // if (isFixedWingLaunchFinishedOrAborted()) {
-    if (fixedWingLaunchStatus() >= FW_LAUNCH_END_ABORT) {  // CR38
+    // if (fixedWingLaunchStatus(FW_LAUNCH_ABORTED) || fixedWingLaunchStatus(FW_LAUNCH_FLYING)) {  // CR38
+    if (fixedWingLaunchStatus() >= FW_LAUNCH_ABORTED) {  // CR38
         return NAV_FSM_EVENT_SUCCESS;
     }
 
