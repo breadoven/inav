@@ -596,9 +596,9 @@ bool isFixedWingFlying(void)
  *-----------------------------------------------------------*/
 bool isFixedWingLandingDetected(void)
 {
-    DEBUG_SET(DEBUG_CRUISE, 0, posControl.actualState.velXY);
-    DEBUG_SET(DEBUG_CRUISE, 1, averageAbsGyroRates());
-    DEBUG_SET(DEBUG_CRUISE, 3, fabsf(posControl.actualState.abs.vel.z));
+    // DEBUG_SET(DEBUG_CRUISE, 0, posControl.actualState.velXY);
+    // DEBUG_SET(DEBUG_CRUISE, 1, averageAbsGyroRates());
+    // DEBUG_SET(DEBUG_CRUISE, 3, fabsf(posControl.actualState.abs.vel.z));
     // DEBUG_SET(DEBUG_CRUISE, 3, rcCommand[THROTTLE] - 20);
     // DEBUG_SET(DEBUG_CRUISE, 0, getThrottleIdleValue());
     static bool fixAxisCheck = false;
@@ -624,7 +624,7 @@ bool isFixedWingLandingDetected(void)
     // Check angular rates are low (degs/s)
     bool gyroCondition = averageAbsGyroRates() < 2.0f;
 
-    DEBUG_SET(DEBUG_CRUISE, 2, (currentTimeMs - fwLandingTimerStartAt) / 100);
+    // DEBUG_SET(DEBUG_CRUISE, 2, (currentTimeMs - fwLandingTimerStartAt) / 100);
     if (velCondition && gyroCondition){
         if (!fixAxisCheck) {        // capture roll and pitch angles to be used as datums to check for absolute change
             fwLandSetRollDatum = attitude.values.roll;  //0.1 deg increments

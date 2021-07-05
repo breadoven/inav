@@ -2617,7 +2617,7 @@ void updateLandingStatus(void)
         DEBUG_SET(DEBUG_CRUISE, 7, 17);
         return;
     }
-        DEBUG_SET(DEBUG_CRUISE, 1, rcCommand[THROTTLE]);
+        // DEBUG_SET(DEBUG_CRUISE, 1, rcCommand[THROTTLE]);
     if (!landingDetectorIsActive) {
         DEBUG_SET(DEBUG_CRUISE, 6, 55);
         if (isFlightDetected()) {

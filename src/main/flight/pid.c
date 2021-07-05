@@ -592,7 +592,23 @@ static float calcHorizonRateMagnitude(void)
 
     return horizonRateMagnitude;
 }
-
+// CR36
+/* Soaring mode ANGLE error deadband. Angle pitch control inactive within deadband - pitch servo centered.
+ * Angle error only starts to increase when pitch atttiude outside deadband. Allows pitch to free float within deadband.
+*  Deadband inactive if pitch/roll stick not centered to provide direct stick override. */
+int16_t soaringModeAngleError(void)
+{
+    int16_t deadband = (navConfig()->fw.soaring_pitch_deadband * 10);
+    if (calculateRollPitchCenterStatus() == CENTERED) {
+        if ((ABS(attitude.raw[FD_PITCH])) > deadband) {
+            return attitude.raw[FD_PITCH] > 0 ? deadband - attitude.raw[FD_PITCH] : -(attitude.raw[FD_PITCH] + deadband);
+        } else {
+            return 0;
+        }
+    }
+    return 1000;
+}
+// CR36
 static void pidLevel(pidState_t *pidState, flight_dynamics_index_t axis, float horizonRateMagnitude, float dT)
 {
     // This is ROLL/PITCH, run ANGLE/HORIZON controllers
@@ -638,15 +654,18 @@ static void pidLevel(pidState_t *pidState, flight_dynamics_index_t axis, float h
 #else
     float angleErrorDeg = DECIDEGREES_TO_DEGREES(angleTarget - attitude.raw[axis]);   // del const CR36
 #endif
-
     // CR36
-    if (FLIGHT_MODE(SOARING_MODE) && axis == FD_PITCH && !isRollPitchStickDeflected()) {
-        if (fabs(angleErrorDeg) > navConfig()->fw.soaring_pitch_deadband) {
-            angleErrorDeg += angleErrorDeg > 0.0f ? -navConfig()->fw.soaring_pitch_deadband : navConfig()->fw.soaring_pitch_deadband;
-        } else {
-            angleErrorDeg = 0.0f;
+    if (FLIGHT_MODE(SOARING_MODE) && axis == FD_PITCH) {
+        int16_t angleError = soaringModeAngleError();
+        DEBUG_SET(DEBUG_CRUISE, 0, angleError);
+        if (angleError != 1000) {
+            angleErrorDeg = (float)(DECIDEGREES_TO_DEGREES(angleError));
+            pidState->errorGyroIf = 0.0f;
+            pidState->errorGyroIfLimit = 0.0f;
         }
     }
+    DEBUG_SET(DEBUG_CRUISE, 1, angleErrorDeg);
+    DEBUG_SET(DEBUG_CRUISE, 2, axisPID[PITCH]);
     // CR36
 
     float angleRateTarget = constrainf(angleErrorDeg * (pidBank()->pid[PID_LEVEL].P / FP_PID_LEVEL_P_MULTIPLIER), -currentControlRateProfile->stabilized.rates[axis] * 10.0f, currentControlRateProfile->stabilized.rates[axis] * 10.0f);
@@ -785,6 +804,13 @@ static void NOINLINE pidApplyFixedWingRateController(pidState_t *pidState, fligh
     }
 
     axisPID[axis] = constrainf(newPTerm + newFFTerm + pidState->errorGyroIf + newDTerm, -pidState->pidSumLimit, +pidState->pidSumLimit);
+
+    if (FLIGHT_MODE(SOARING_MODE) && axis == FD_PITCH) {
+        if (!soaringModeAngleError()) {
+            axisPID[FD_PITCH] = 0;  // center pitch servo if pitch attitude within soaring deadband
+        }
+    }
+    DEBUG_SET(DEBUG_CRUISE, 3, axisPID[PITCH]);
 
 #ifdef USE_AUTOTUNE_FIXED_WING
     if (FLIGHT_MODE(AUTO_TUNE) && !FLIGHT_MODE(MANUAL_MODE)) {
@@ -1132,6 +1158,7 @@ void FAST_CODE pidController(float dT)
         const float horizonRateMagnitude = calcHorizonRateMagnitude();
         pidLevel(&pidState[FD_ROLL], FD_ROLL, horizonRateMagnitude, dT);
         pidLevel(&pidState[FD_PITCH], FD_PITCH, horizonRateMagnitude, dT);
+
         canUseFpvCameraMix = false;     // FPVANGLEMIX is incompatible with ANGLE/HORIZON
         levelingEnabled = true;
     } else {
@@ -1159,7 +1186,6 @@ void FAST_CODE pidController(float dT)
         // Step 4: Run gyro-driven control
         checkItermLimitingActive(&pidState[axis]);
         checkItermFreezingActive(&pidState[axis], axis);
-
         pidControllerApplyFn(&pidState[axis], axis, dT);
     }
 }
