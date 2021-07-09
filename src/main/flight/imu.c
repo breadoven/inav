@@ -46,6 +46,7 @@ FILE_COMPILE_FOR_SPEED
 #include "fc/config.h"
 #include "fc/runtime_config.h"
 #include "fc/settings.h"
+#include "fc/rc_controls.h"
 
 #include "flight/hil.h"
 #include "flight/imu.h"
@@ -535,9 +536,14 @@ bool compassHeadingGPSCogErrorCheck(void)
     // if (sensors(SENSOR_MAG) && compassIsHealthy()) {
         static uint16_t compassGpsCogErrorPrev = 10;
         static timeMs_t timerStartMs = 0;
-        int32_t bearing = calculateBearingToDestination(&posControl.desiredState.pos) / 10;
-        compassGpsCogError = ABS(gpsSol.groundCourse - bearing);
-        // compassGpsCogError = ABS(900 - attitude.values.yaw);
+        int16_t commandCorrection = RADIANS_TO_DECIDEGREES(atan2_approx(rcCommand[ROLL], rcCommand[PITCH]));
+        DEBUG_SET(DEBUG_CRUISE, 0, rcCommand[PITCH]);
+        DEBUG_SET(DEBUG_CRUISE, 1, rcCommand[ROLL]);
+        DEBUG_SET(DEBUG_CRUISE, 2, commandCorrection);
+
+        compassGpsCogError = ABS(gpsSol.groundCourse - (wrap_36000(10 * (attitude.values.yaw + commandCorrection))) / 10);
+        // compassGpsCogError = ABS(900 - (wrap_36000(10 * (attitude.values.yaw + commandCorrection))) / 10);
+        DEBUG_SET(DEBUG_CRUISE, 3, compassGpsCogError);
         compassGpsCogError = compassGpsCogError > 1800 ? ABS(compassGpsCogError - 3600) : compassGpsCogError;
         // DEBUG_SET(DEBUG_CRUISE, 0, compassGpsCogError);
         compassGpsCogError = 0.8 * compassGpsCogErrorPrev + 0.2 * compassGpsCogError;
