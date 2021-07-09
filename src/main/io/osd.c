@@ -663,10 +663,8 @@ static void osdFormatCraftName(char *buff)
 
 static const char * osdArmingDisabledReasonMessage(void)
 {
-    // CR39
     const char *message = NULL;
     char messageBuf[MAX(SETTING_MAX_NAME_LENGTH, OSD_MESSAGE_LENGTH+1)];
-    // CR39
     switch (isArmingDisabledReason()) {
         case ARMING_DISABLED_FAILSAFE_SYSTEM:
             // See handling of FAILSAFE_RX_LOSS_MONITORING in failsafe.c
@@ -691,7 +689,7 @@ static const char * osdArmingDisabledReasonMessage(void)
 #if defined(USE_NAV)
             // Check the exact reason
             switch (navigationIsBlockingArming(NULL)) {
-                char buf[6];    // CR39
+                char buf[6];
                 case NAV_ARMING_BLOCKER_NONE:
                     break;
                 case NAV_ARMING_BLOCKER_MISSING_GPS_FIX:
@@ -699,12 +697,9 @@ static const char * osdArmingDisabledReasonMessage(void)
                 case NAV_ARMING_BLOCKER_NAV_IS_ALREADY_ACTIVE:
                     return OSD_MESSAGE_STR(OSD_MSG_DISABLE_NAV_FIRST);
                 case NAV_ARMING_BLOCKER_FIRST_WAYPOINT_TOO_FAR:
-                    // CR39
                     osdFormatDistanceSymbol(buf, distanceToFirstWP(), 0);
                     tfp_sprintf(messageBuf, "FIRST WP TOO FAR (%s)", buf);
                     return message = messageBuf;
-                    // return OSD_MESSAGE_STR(OSD_MSG_1ST_WP_TOO_FAR);
-                    // CR39
                 case NAV_ARMING_BLOCKER_JUMP_WAYPOINT_ERROR:
                     return OSD_MESSAGE_STR(OSD_MSG_JUMP_WP_MISCONFIG);
             }
@@ -1806,7 +1801,7 @@ static bool osdDrawSingleElement(uint8_t item)
             }
             // CR41
             if (alt < 0) {
-                alt = -alt;
+                // alt = -alt;
                 TEXT_ATTRIBUTES_ADD_INVERTED(elemAttr);
             }
             osdFormatAltitudeSymbol(buff, alt);

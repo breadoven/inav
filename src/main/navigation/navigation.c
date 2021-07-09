@@ -2079,7 +2079,9 @@ void updateActualHeading(bool headingValid, int32_t newHeading)
     // CR27
     /* Check compass heading matches GPS COG if available
      * latch mismatch error if exists. Reset on disarm ? ONLY FOR TEST !! */
-    if (!posControl.flags.compassGpsCogMismatchError) {
+    // bool flightCondition = (getFlightModeForTelemetry() == FLM_ACRO_AIR || FLIGHT_MODE(ANGLE_MODE) || FLIGHT_MODE(HORIZON_MODE)) && !navigationIsFlyingAutonomousMode() && !FLIGHT_MODE(HEADFREE_MODE);
+    bool rcCommandCondition = ABS(rcCommand[PITCH]) > 50 || ABS(rcCommand[ROLL]) > 50;
+    if (!posControl.flags.compassGpsCogMismatchError && rcCommandCondition) {   // && flightCondition
         posControl.flags.compassGpsCogMismatchError = compassHeadingGPSCogErrorCheck();
     } else if (!ARMING_FLAG(ARMED)) {       // TEST ONLY REMOVE AFTER !!
         posControl.flags.compassGpsCogMismatchError = false;
@@ -3488,14 +3490,14 @@ bool navigationTerrainFollowingEnabled(void)
 {
     return posControl.flags.isTerrainFollowEnabled;
 }
-// CR39
+
 uint32_t distanceToFirstWP(void)
 {
     fpVector3_t startingWaypointPos;
     mapWaypointToLocalPosition(&startingWaypointPos, &posControl.waypointList[0], GEO_ALT_RELATIVE);
     return calculateDistanceToDestination(&startingWaypointPos);
 }
-// CR39
+
 navArmingBlocker_e navigationIsBlockingArming(bool *usedBypass)
 {
     const bool navBoxModesEnabled = IS_RC_MODE_ACTIVE(BOXNAVRTH) || IS_RC_MODE_ACTIVE(BOXNAVWP) || IS_RC_MODE_ACTIVE(BOXNAVPOSHOLD) || (STATE(FIXED_WING_LEGACY) && IS_RC_MODE_ACTIVE(BOXNAVALTHOLD)) || (STATE(FIXED_WING_LEGACY) && (IS_RC_MODE_ACTIVE(BOXNAVCOURSEHOLD) || IS_RC_MODE_ACTIVE(BOXNAVCRUISE)));
@@ -3512,7 +3514,7 @@ navArmingBlocker_e navigationIsBlockingArming(bool *usedBypass)
     // Apply extra arming safety only if pilot has any of GPS modes configured
     if ((isUsingNavigationModes() || failsafeMayRequireNavigationMode()) && !((posControl.flags.estPosStatus >= EST_USABLE) && STATE(GPS_FIX_HOME))) {
         if (navConfig()->general.flags.extra_arming_safety == NAV_EXTRA_ARMING_SAFETY_ALLOW_BYPASS &&
-            (STATE(NAV_EXTRA_ARMING_SAFETY_BYPASSED) || checkStickPosition(YAW_HI))) {  // CR39
+            (STATE(NAV_EXTRA_ARMING_SAFETY_BYPASSED) || checkStickPosition(YAW_HI))) {
             if (usedBypass) {
                 *usedBypass = true;
             }
@@ -3528,9 +3530,7 @@ navArmingBlocker_e navigationIsBlockingArming(bool *usedBypass)
 
     // Don't allow arming if first waypoint is farther than configured safe distance
     if ((posControl.waypointCount > 0) && (navConfig()->general.waypoint_safe_distance != 0)) {
-        // CR39
         if (distanceToFirstWP() > navConfig()->general.waypoint_safe_distance && !checkStickPosition(YAW_HI)) {
-        // CR39
             return NAV_ARMING_BLOCKER_FIRST_WAYPOINT_TOO_FAR;
         }
     }
