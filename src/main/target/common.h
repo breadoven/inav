@@ -210,7 +210,7 @@
 //Enable DST calculations
 #define RTC_AUTOMATIC_DST
 // Wind estimator
-#define USE_WIND_ESTIMATOR
+// #define USE_WIND_ESTIMATOR
 
 #else // MCU_FLASH_SIZE < 128
 
