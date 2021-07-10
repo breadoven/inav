@@ -597,8 +597,9 @@ static float calcHorizonRateMagnitude(void)
  * Angle error only starts to increase when atttiude outside deadband. */
 int16_t angleFreefloatDeadband(int16_t deadband, flight_dynamics_index_t axis)
 {
-    if ((ABS(attitude.raw[axis])) > deadband) {
-        return attitude.raw[axis] > 0 ? deadband - attitude.raw[axis] : -(attitude.raw[axis] + deadband);
+    int16_t levelDatum = axis == FD_PITCH ? attitude.raw[axis] + DEGREES_TO_DECIDEGREES(fixedWingLevelTrim) : attitude.raw[axis];
+    if (ABS(levelDatum) > deadband) {
+        return levelDatum > 0 ? deadband - levelDatum : -(levelDatum + deadband);
     } else {
         return 0;
     }
@@ -652,11 +653,10 @@ static void pidLevel(pidState_t *pidState, flight_dynamics_index_t axis, float h
     // CR36
     // Soaring mode deadband inactive if pitch/roll stick not centered to maintain RC stick adjustment
     if (FLIGHT_MODE(SOARING_MODE) && axis == FD_PITCH && calculateRollPitchCenterStatus() == CENTERED) {
-        angleErrorDeg = (float)(DECIDEGREES_TO_DEGREES(angleFreefloatDeadband(navConfig()->fw.soaring_pitch_deadband * 10, FD_PITCH)));
+        angleErrorDeg = DECIDEGREES_TO_DEGREES((float)angleFreefloatDeadband(DEGREES_TO_DECIDEGREES(navConfig()->fw.soaring_pitch_deadband), FD_PITCH));
         pidState->errorGyroIf = 0.0f;
         pidState->errorGyroIfLimit = 0.0f;
     }
-    // DEBUG_SET(DEBUG_CRUISE, 1, angleErrorDeg);
     // DEBUG_SET(DEBUG_CRUISE, 2, axisPID[PITCH]);
     // CR36
 
@@ -1332,6 +1332,7 @@ void updateFixedWingLevelTrim(timeUs_t currentTimeUs)
         !IS_RC_MODE_ACTIVE(BOXAUTOLEVEL) ||
         areSticksDeflected() ||
         (!FLIGHT_MODE(ANGLE_MODE) && !FLIGHT_MODE(HORIZON_MODE)) ||
+        FLIGHT_MODE(SOARING_MODE) ||   // CR36
         navigationIsControllingAltitude()
     ) {
         flags |= PID_FREEZE_INTEGRATOR;
