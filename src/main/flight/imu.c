@@ -528,14 +528,22 @@ static float imuCalculateAccelerometerWeight(const float dT)
     return accWeight_Nearness * accWeight_RateIgnore;
 }
 // CR27
+#if defined(USE_MAG) && defined(USE_GPS)
 bool compassHeadingGPSCogErrorCheck(void)
 {
-    compassGpsCogError = 2700;
-#if defined(USE_MAG) && defined(USE_GPS)
-    if (isGPSHeadingValid() && sensors(SENSOR_MAG) && compassIsHealthy()) {
-    // if (sensors(SENSOR_MAG) && compassIsHealthy()) {
+    static timeMs_t timerStartMs = 0;
+
+    compassGpsCogError = 270;
+    if (!isGPSHeadingValid()) {
+        timerStartMs = 0;
+        return false;
+    }
+
+    compassGpsCogError = 260;
+    bool rcCommandCondition = ABS(rcCommand[PITCH]) > 50 || ABS(rcCommand[ROLL]) > 50;
+
+    if (sensors(SENSOR_MAG) && compassIsHealthy() && rcCommandCondition && ARMING_FLAG(ARMED)) {
         static uint16_t compassGpsCogErrorPrev = 10;
-        static timeMs_t timerStartMs = 0;
         int16_t commandCorrection = RADIANS_TO_DECIDEGREES(atan2_approx(rcCommand[ROLL], rcCommand[PITCH]));
         DEBUG_SET(DEBUG_CRUISE, 0, rcCommand[PITCH]);
         DEBUG_SET(DEBUG_CRUISE, 1, rcCommand[ROLL]);
@@ -545,23 +553,19 @@ bool compassHeadingGPSCogErrorCheck(void)
         // compassGpsCogError = ABS(900 - (wrap_36000(10 * (attitude.values.yaw + commandCorrection))) / 10);
         DEBUG_SET(DEBUG_CRUISE, 3, compassGpsCogError);
         compassGpsCogError = compassGpsCogError > 1800 ? ABS(compassGpsCogError - 3600) : compassGpsCogError;
-        // DEBUG_SET(DEBUG_CRUISE, 0, compassGpsCogError);
         compassGpsCogError = 0.8 * compassGpsCogErrorPrev + 0.2 * compassGpsCogError;
         compassGpsCogErrorPrev = compassGpsCogError;
         compassGpsCogError = compassGpsCogError / 10;
 
         if (compassGpsCogError > 90) { // 90 for test, change for better value
-            if (timerStartMs == 0) {
-                timerStartMs = millis();
-            }
+            timerStartMs = timerStartMs == 0 ? millis(): timerStartMs;
             return millis() - timerStartMs > 10000; // 10s for test, use shorter time
-        } else {
-            timerStartMs = 0;
         }
     }
-#endif
+    timerStartMs = 0;
     return false;
 }
+#endif
 // CR27
 static void imuCalculateEstimatedAttitude(float dT)
 {

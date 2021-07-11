@@ -688,8 +688,8 @@ bool isMulticopterLandingDetected(void)
     static timeUs_t landingDetectorStartedAt;
     const bool throttleIsLow = calculateThrottleStatus(THROTTLE_STATUS_TYPE_RC) == THROTTLE_LOW;
 
-    DEBUG_SET(DEBUG_CRUISE, 4, 22);
-    DEBUG_SET(DEBUG_CRUISE, 1, averageAbsGyroRates());
+    // DEBUG_SET(DEBUG_CRUISE, 4, 22);
+    // DEBUG_SET(DEBUG_CRUISE, 1, averageAbsGyroRates());
 
     // Basic condition to start looking for landing (prevent landing detection if failsafe_mission OFF except landing states)
     bool startCondition = (navGetCurrentStateFlags() & (NAV_CTL_LAND | NAV_CTL_EMERG))

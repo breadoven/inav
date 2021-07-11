@@ -2080,9 +2080,7 @@ void updateActualHeading(bool headingValid, int32_t newHeading)
     /* Check compass heading matches GPS COG if available
      * latch mismatch error if exists. Reset on disarm ? ONLY FOR TEST !! */
     if (STATE(MULTIROTOR)) {
-        // bool flightCondition = (getFlightModeForTelemetry() == FLM_ACRO_AIR || FLIGHT_MODE(ANGLE_MODE) || FLIGHT_MODE(HORIZON_MODE)) && !navigationIsFlyingAutonomousMode() && !FLIGHT_MODE(HEADFREE_MODE);
-        bool rcCommandCondition = ABS(rcCommand[PITCH]) > 50 || ABS(rcCommand[ROLL]) > 50;
-        if (!posControl.flags.compassGpsCogMismatchError && rcCommandCondition) {   // && flightCondition
+        if (!posControl.flags.compassGpsCogMismatchError) {
             posControl.flags.compassGpsCogMismatchError = compassHeadingGPSCogErrorCheck();
         } else if (!ARMING_FLAG(ARMED)) {       // TEST ONLY REMOVE AFTER !!
             posControl.flags.compassGpsCogMismatchError = false;

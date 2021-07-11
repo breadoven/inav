@@ -651,11 +651,13 @@ static void pidLevel(pidState_t *pidState, flight_dynamics_index_t axis, float h
     float angleErrorDeg = DECIDEGREES_TO_DEGREES(angleTarget - attitude.raw[axis]);   // del const CR36
 #endif
     // CR36
-    // Soaring mode deadband inactive if pitch/roll stick not centered to maintain RC stick adjustment
+    // Soaring mode deadband inactive if pitch/roll stick not centered - to maintain RC stick adjustment
     if (FLIGHT_MODE(SOARING_MODE) && axis == FD_PITCH && calculateRollPitchCenterStatus() == CENTERED) {
         angleErrorDeg = DECIDEGREES_TO_DEGREES((float)angleFreefloatDeadband(DEGREES_TO_DECIDEGREES(navConfig()->fw.soaring_pitch_deadband), FD_PITCH));
-        pidState->errorGyroIf = 0.0f;
-        pidState->errorGyroIfLimit = 0.0f;
+        if (!angleErrorDeg) {
+            pidState->errorGyroIf = 0.0f;
+            pidState->errorGyroIfLimit = 0.0f;
+        }
     }
     // DEBUG_SET(DEBUG_CRUISE, 2, axisPID[PITCH]);
     // CR36
@@ -798,7 +800,7 @@ static void NOINLINE pidApplyFixedWingRateController(pidState_t *pidState, fligh
     axisPID[axis] = constrainf(newPTerm + newFFTerm + pidState->errorGyroIf + newDTerm, -pidState->pidSumLimit, +pidState->pidSumLimit);
     // CR36
     if (FLIGHT_MODE(SOARING_MODE) && axis == FD_PITCH && calculateRollPitchCenterStatus() == CENTERED) {
-        if (!angleFreefloatDeadband(navConfig()->fw.soaring_pitch_deadband * 10, FD_PITCH)) {
+        if (!angleFreefloatDeadband(DEGREES_TO_DECIDEGREES(navConfig()->fw.soaring_pitch_deadband), FD_PITCH)) {
             axisPID[FD_PITCH] = 0;  // center pitch servo if pitch attitude within soaring deadband
         }
     }

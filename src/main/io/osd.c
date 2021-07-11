@@ -2152,13 +2152,23 @@ static bool osdDrawSingleElement(uint8_t item)
         break;
 
     case OSD_ATTITUDE_PITCH:
-        if (ABS(attitude.values.pitch) < 1)
+        ;// CR42
+        int16_t levelDatumPitch = attitude.values.pitch + DEGREES_TO_DECIDEGREES(getFixedWingLevelTrim());
+        // if (ABS(attitude.values.pitch) < 1)
+            // buff[0] = 'P';
+        // else if (attitude.values.pitch > 0)
+            // buff[0] = SYM_PITCH_DOWN;
+        // else if (attitude.values.pitch < 0)
+            // buff[0] = SYM_PITCH_UP;
+        // osdFormatCentiNumber(buff + 1, DECIDEGREES_TO_CENTIDEGREES(ABS(attitude.values.pitch)), 0, 1, 0, 3);
+        if (ABS(levelDatumPitch) < 1)
             buff[0] = 'P';
-        else if (attitude.values.pitch > 0)
+        else if (levelDatumPitch > 0)
             buff[0] = SYM_PITCH_DOWN;
-        else if (attitude.values.pitch < 0)
+        else if (levelDatumPitch < 0)
             buff[0] = SYM_PITCH_UP;
-        osdFormatCentiNumber(buff + 1, DECIDEGREES_TO_CENTIDEGREES(ABS(attitude.values.pitch)), 0, 1, 0, 3);
+        osdFormatCentiNumber(buff + 1, DECIDEGREES_TO_CENTIDEGREES(ABS(levelDatumPitch)), 0, 1, 0, 3);
+        // CR42
         break;
 
     case OSD_ARTIFICIAL_HORIZON:
@@ -2924,10 +2934,12 @@ static bool osdDrawSingleElement(uint8_t item)
     case OSD_STATUS:
         {
             if (STATE(MULTIROTOR)) {
-                if (compassGpsCogError <= 180) {
-                    tfp_sprintf(buff, "MAG ERR %3u", compassGpsCogError);
-                } else {
+                if (compassGpsCogError == 270) {
                     strcpy(buff, "NO GPS COG ");
+                } else if (compassGpsCogError == 260) {
+                    strcpy(buff, "MOVE DRONE!");
+                } else {
+                    tfp_sprintf(buff, "MAG ERR %3u", compassGpsCogError);
                 }
                 displayWrite(osdDisplayPort, elemPosX, elemPosY, buff);
                 return true;
