@@ -212,7 +212,6 @@ void initActiveBoxIds(void)
         }
         if (STATE(AIRPLANE)) {
             activeBoxIds[activeBoxIdCount++] = BOXLOITERDIRCHN;
-            activeBoxIds[activeBoxIdCount++] = BOXSOARING;     // CR36
         }
     }
 
@@ -221,14 +220,15 @@ void initActiveBoxIds(void)
         activeBoxIds[activeBoxIdCount++] = BOXNAVWP;
         activeBoxIds[activeBoxIdCount++] = BOXHOMERESET;
         activeBoxIds[activeBoxIdCount++] = BOXPLANWPMISSION;     // CR32
+        // if (feature(FEATURE_GPS)) {  // CR36
+        activeBoxIds[activeBoxIdCount++] = BOXGCSNAV;
 
-        if (feature(FEATURE_GPS)) {
-            activeBoxIds[activeBoxIdCount++] = BOXGCSNAV;
-            if (STATE(AIRPLANE)) {
-                activeBoxIds[activeBoxIdCount++] = BOXNAVCOURSEHOLD;
-                activeBoxIds[activeBoxIdCount++] = BOXNAVCRUISE;
-            }
+        if (STATE(AIRPLANE)) {
+            activeBoxIds[activeBoxIdCount++] = BOXNAVCOURSEHOLD;
+            activeBoxIds[activeBoxIdCount++] = BOXNAVCRUISE;
+            activeBoxIds[activeBoxIdCount++] = BOXSOARING;     // CR36
         }
+        // }    // CR36
     }
 
 #ifdef USE_MR_BRAKING_MODE
