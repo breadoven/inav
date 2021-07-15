@@ -220,15 +220,15 @@ void initActiveBoxIds(void)
         activeBoxIds[activeBoxIdCount++] = BOXNAVWP;
         activeBoxIds[activeBoxIdCount++] = BOXHOMERESET;
         activeBoxIds[activeBoxIdCount++] = BOXPLANWPMISSION;     // CR32
-        // if (feature(FEATURE_GPS)) {  // CR36
+        // CR36
         activeBoxIds[activeBoxIdCount++] = BOXGCSNAV;
 
         if (STATE(AIRPLANE)) {
             activeBoxIds[activeBoxIdCount++] = BOXNAVCOURSEHOLD;
             activeBoxIds[activeBoxIdCount++] = BOXNAVCRUISE;
-            activeBoxIds[activeBoxIdCount++] = BOXSOARING;     // CR36
+            activeBoxIds[activeBoxIdCount++] = BOXSOARING;
         }
-        // }    // CR36
+        //  CR36
     }
 
 #ifdef USE_MR_BRAKING_MODE

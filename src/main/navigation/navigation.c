@@ -1125,7 +1125,13 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_INITIALIZE(navigati
     if ((posControl.flags.estHeadingStatus == EST_NONE) || (posControl.flags.estAltStatus == EST_NONE) || (posControl.flags.estPosStatus != EST_TRUSTED) || !STATE(GPS_FIX_HOME)) {
         // Heading sensor, altitude sensor and HOME fix are mandatory for RTH. If not satisfied - switch to emergency landing
         // If we are in dead-reckoning mode - also fail, since coordinates may be unreliable
-        return NAV_FSM_EVENT_SWITCH_TO_EMERGENCY_LANDING;
+        // CR44
+        if (posControl.flags.forcedRTHActivated) {
+            return NAV_FSM_EVENT_SWITCH_TO_EMERGENCY_LANDING;
+        } else {
+            return NAV_FSM_EVENT_SWITCH_TO_IDLE;
+        }
+        // CR44
     }
 
     if (STATE(FIXED_WING_LEGACY) && (posControl.homeDistance < navConfig()->general.min_rth_distance) && !posControl.flags.forcedRTHActivated) {
@@ -1134,7 +1140,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_INITIALIZE(navigati
     }
 
     // If we have valid position sensor or configured to ignore it's loss at initial stage - continue
-    if ((posControl.flags.estPosStatus >= EST_USABLE) || navConfig()->general.flags.rth_climb_ignore_emerg) {
+    if ((posControl.flags.estPosStatus >= EST_USABLE) || navConfig()->general.flags.rth_climb_ignore_emerg) {   // how does this work given above logic
         // Reset altitude and position controllers if necessary
         if ((prevFlags & NAV_CTL_POS) == 0) {
             resetPositionController();
