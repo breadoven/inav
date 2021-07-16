@@ -1124,14 +1124,9 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_INITIALIZE(navigati
 
     if ((posControl.flags.estHeadingStatus == EST_NONE) || (posControl.flags.estAltStatus == EST_NONE) || (posControl.flags.estPosStatus != EST_TRUSTED) || !STATE(GPS_FIX_HOME)) {
         // Heading sensor, altitude sensor and HOME fix are mandatory for RTH. If not satisfied - switch to emergency landing
+        // Relevant to failsafe forced RTH only. Switched RTH blocked in selectNavEventFromBoxModeInput if sensors unavailanle. CR44
         // If we are in dead-reckoning mode - also fail, since coordinates may be unreliable
-        // CR44
-        if (posControl.flags.forcedRTHActivated) {
-            return NAV_FSM_EVENT_SWITCH_TO_EMERGENCY_LANDING;
-        } else {
-            return NAV_FSM_EVENT_SWITCH_TO_IDLE;
-        }
-        // CR44
+        return NAV_FSM_EVENT_SWITCH_TO_EMERGENCY_LANDING;
     }
 
     if (STATE(FIXED_WING_LEGACY) && (posControl.homeDistance < navConfig()->general.min_rth_distance) && !posControl.flags.forcedRTHActivated) {
@@ -1140,7 +1135,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_INITIALIZE(navigati
     }
 
     // If we have valid position sensor or configured to ignore it's loss at initial stage - continue
-    if ((posControl.flags.estPosStatus >= EST_USABLE) || navConfig()->general.flags.rth_climb_ignore_emerg) {   // how does this work given above logic
+    if ((posControl.flags.estPosStatus >= EST_USABLE) || navConfig()->general.flags.rth_climb_ignore_emerg) {   // CR44 how does this work given above EST_TRUSTED
         // Reset altitude and position controllers if necessary
         if ((prevFlags & NAV_CTL_POS) == 0) {
             resetPositionController();
@@ -1187,7 +1182,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_INITIALIZE(navigati
     }
     /* Position sensor failure timeout - land */
     else if (checkForPositionSensorTimeout()) {
-        return NAV_FSM_EVENT_SWITCH_TO_EMERGENCY_LANDING;
+        return NAV_FSM_EVENT_SWITCH_TO_EMERGENCY_LANDING;       // CR44 Doesn't work given logic above EST_TRUSTED
     }
     /* No valid POS sensor but still within valid timeout - wait */
     else {
@@ -1643,15 +1638,23 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_WAYPOINT_HOLD_TIME(navi
 {
     UNUSED(previousState);
 
-    timeMs_t currentTime = millis();
+    if ((posControl.flags.estPosStatus >= EST_USABLE) && (posControl.flags.estHeadingStatus >= EST_USABLE)) {   // CR44
+        timeMs_t currentTime = millis();
 
-    if(posControl.waypointList[posControl.activeWaypointIndex].p1 <= 0)
-        return NAV_FSM_EVENT_SUCCESS;       // NAV_STATE_WAYPOINT_NEXT
+        if(posControl.waypointList[posControl.activeWaypointIndex].p1 <= 0)
+            return NAV_FSM_EVENT_SUCCESS;       // NAV_STATE_WAYPOINT_NEXT
 
-    if(posControl.wpReachedTime != 0 && currentTime - posControl.wpReachedTime >= (timeMs_t)posControl.waypointList[posControl.activeWaypointIndex].p1*1000L)
-        return NAV_FSM_EVENT_SUCCESS;
-
-    return NAV_FSM_EVENT_NONE;      // will re-process state in >10ms
+        if(posControl.wpReachedTime != 0 && currentTime - posControl.wpReachedTime >= (timeMs_t)posControl.waypointList[posControl.activeWaypointIndex].p1*1000L)
+            return NAV_FSM_EVENT_SUCCESS;
+    // CR44
+    /* No pos sensor available for NAV_WAIT_FOR_GPS_TIMEOUT_MS - land */
+    else if (checkForPositionSensorTimeout()) {
+        return NAV_FSM_EVENT_SWITCH_TO_EMERGENCY_LANDING;
+    } else {
+        return NAV_FSM_EVENT_NONE;      // will re-process state in >10ms
+    }
+    // CR44
+    // return NAV_FSM_EVENT_NONE;      // will re-process state in >10ms
 }
 
 static navigationFSMEvent_t navOnEnteringState_NAV_STATE_WAYPOINT_RTH_LAND(navigationFSMState_t previousState)
@@ -3376,7 +3379,8 @@ static navigationFSMEvent_t selectNavEventFromBoxModeInput(bool launchBypass)
             // If don't keep this, loss of any of the canActivatePosHold && canActivateNavigation && canActivateAltHold
             // will kick us out of RTH state machine via NAV_FSM_EVENT_SWITCH_TO_IDLE and will prevent any of the fall-back
             // logic to kick in (waiting for GPS on airplanes, switch to emergency landing etc)
-            if (isExecutingRTH || (canActivatePosHold && canActivateNavigation && canActivateAltHold && STATE(GPS_FIX_HOME))) {
+            // if (isExecutingRTH || (canActivatePosHold && canActivateNavigation && canActivateAltHold && STATE(GPS_FIX_HOME))) {  // CR44
+            if (isExecutingRTH || (canActivateNavigation && canActivateAltHold && STATE(GPS_FIX_HOME))) {
                 return NAV_FSM_EVENT_SWITCH_TO_RTH;
             }
         }
@@ -3390,7 +3394,8 @@ static navigationFSMEvent_t selectNavEventFromBoxModeInput(bool launchBypass)
         // Pilot-activated waypoint mission. Fall-back to RTH in case of no mission loaded.
         // Block activation if using WP Mission Planner // CR32
         if (IS_RC_MODE_ACTIVE(BOXNAVWP) && !posControl.flags.wpMissionPlannerActive) {  // CR32
-            if (FLIGHT_MODE(NAV_WP_MODE) || (canActivateWaypoint && canActivatePosHold && canActivateNavigation && canActivateAltHold && STATE(GPS_FIX_HOME)))
+            // if (FLIGHT_MODE(NAV_WP_MODE) || (canActivateWaypoint && canActivatePosHold && canActivateNavigation && canActivateAltHold && STATE(GPS_FIX_HOME)))       // CR44
+            if (FLIGHT_MODE(NAV_WP_MODE) || (canActivateWaypoint && canActivateNavigation && canActivateAltHold && STATE(GPS_FIX_HOME)))
                 return NAV_FSM_EVENT_SWITCH_TO_WAYPOINT;
         }
         else {
