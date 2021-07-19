@@ -540,13 +540,14 @@ bool compassHeadingGPSCogErrorCheck(void)
     }
 
     compassGpsCogError = 260;
-    bool rcCommandCondition = ABS(rcCommand[PITCH]) > 50 || ABS(rcCommand[ROLL]) > 50;
-
-    if (sensors(SENSOR_MAG) && compassIsHealthy() && rcCommandCondition && ARMING_FLAG(ARMED)) {
-        static uint16_t compassGpsCogErrorPrev = 10;
-        int16_t commandCorrection = RADIANS_TO_DECIDEGREES(atan2_approx(rcCommand[ROLL], rcCommand[PITCH]));
+    bool rcCommandCondition = ABS(rcCommand[PITCH]) > 25 || ABS(rcCommand[ROLL]) > 25 || navigationIsFlyingAutonomousMode();
         DEBUG_SET(DEBUG_CRUISE, 0, rcCommand[PITCH]);
         DEBUG_SET(DEBUG_CRUISE, 1, rcCommand[ROLL]);
+
+    if (sensors(SENSOR_MAG) && compassIsHealthy() && rcCommandCondition) {
+        static uint16_t compassGpsCogErrorPrev = 10;
+        int16_t commandCorrection = RADIANS_TO_DECIDEGREES(atan2_approx(rcCommand[ROLL], rcCommand[PITCH]));
+
         DEBUG_SET(DEBUG_CRUISE, 2, commandCorrection);
 
         compassGpsCogError = ABS(gpsSol.groundCourse - (wrap_36000(10 * (attitude.values.yaw + commandCorrection))) / 10);

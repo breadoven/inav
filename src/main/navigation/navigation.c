@@ -1641,20 +1641,18 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_WAYPOINT_HOLD_TIME(navi
     if ((posControl.flags.estPosStatus >= EST_USABLE) && (posControl.flags.estHeadingStatus >= EST_USABLE)) {   // CR44
         timeMs_t currentTime = millis();
 
-        if(posControl.waypointList[posControl.activeWaypointIndex].p1 <= 0)
+        if (posControl.waypointList[posControl.activeWaypointIndex].p1 <= 0)
             return NAV_FSM_EVENT_SUCCESS;       // NAV_STATE_WAYPOINT_NEXT
 
-        if(posControl.wpReachedTime != 0 && currentTime - posControl.wpReachedTime >= (timeMs_t)posControl.waypointList[posControl.activeWaypointIndex].p1*1000L)
+        if (posControl.wpReachedTime != 0 && currentTime - posControl.wpReachedTime >= (timeMs_t)posControl.waypointList[posControl.activeWaypointIndex].p1*1000L)
             return NAV_FSM_EVENT_SUCCESS;
     // CR44
     /* No pos sensor available for NAV_WAIT_FOR_GPS_TIMEOUT_MS - land */
-    else if (checkForPositionSensorTimeout()) {
+    } else if (checkForPositionSensorTimeout()) {
         return NAV_FSM_EVENT_SWITCH_TO_EMERGENCY_LANDING;
-    } else {
-        return NAV_FSM_EVENT_NONE;      // will re-process state in >10ms
     }
     // CR44
-    // return NAV_FSM_EVENT_NONE;      // will re-process state in >10ms
+    return NAV_FSM_EVENT_NONE;      // will re-process state in >10ms
 }
 
 static navigationFSMEvent_t navOnEnteringState_NAV_STATE_WAYPOINT_RTH_LAND(navigationFSMState_t previousState)
@@ -2088,7 +2086,7 @@ void updateActualHeading(bool headingValid, int32_t newHeading)
     // CR27
     /* Check compass heading matches GPS COG if available
      * latch mismatch error if exists. Reset on disarm ? ONLY FOR TEST !! */
-    if (STATE(MULTIROTOR)) {
+    if (STATE(MULTIROTOR) && ARMING_FLAG(ARMED)) {
         if (!posControl.flags.compassGpsCogMismatchError) {
             posControl.flags.compassGpsCogMismatchError = compassHeadingGPSCogErrorCheck();
         } else if (!ARMING_FLAG(ARMED)) {       // TEST ONLY REMOVE AFTER !!
