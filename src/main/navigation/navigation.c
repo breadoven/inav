@@ -126,7 +126,8 @@ PG_RESET_TEMPLATE(navConfig_t, navConfig,
         .waypoint_safe_distance = SETTING_NAV_WP_SAFE_DISTANCE_DEFAULT,               // centimeters - first waypoint should be closer than this
         .waypoint_multi_mission_index = SETTING_NAV_WP_MULTI_MISSION_INDEX_DEFAULT,   // mission index selected from multi mission WP file CR21
         .waypoint_load_on_boot = SETTING_NAV_WP_LOAD_ON_BOOT_DEFAULT,                 // load waypoints automatically during boot
-        .max_auto_speed = SETTING_NAV_AUTO_SPEED_DEFAULT,                             // 3 m/s = 10.8 km/h
+        .auto_speed = SETTING_NAV_AUTO_SPEED_DEFAULT,                                 // speed in autonomous modes (3 m/s = 10.8 km/h)  CR45
+        .max_auto_speed = SETTING_NAV_MAX_AUTO_SPEED_DEFAULT,                         // max allowed speed autonomous modes  CR45
         .max_auto_climb_rate = SETTING_NAV_AUTO_CLIMB_RATE_DEFAULT,                   // 5 m/s
         .max_manual_speed = SETTING_NAV_MANUAL_SPEED_DEFAULT,
         .max_manual_climb_rate = SETTING_NAV_MANUAL_CLIMB_RATE_DEFAULT,
@@ -3142,7 +3143,7 @@ float getActiveWaypointSpeed(void)
         return navConfig()->general.max_manual_speed;
     }
     else {
-        uint16_t waypointSpeed = navConfig()->general.max_auto_speed;
+        uint16_t waypointSpeed = navConfig()->general.auto_speed;   // CR45
 
         if (navGetStateFlags(posControl.navState) & NAV_AUTO_WP) {
             if (posControl.waypointCount > 0 && (posControl.waypointList[posControl.activeWaypointIndex].action == NAV_WP_ACTION_WAYPOINT || posControl.waypointList[posControl.activeWaypointIndex].action == NAV_WP_ACTION_HOLD_TIME || posControl.waypointList[posControl.activeWaypointIndex].action == NAV_WP_ACTION_LAND)) {
@@ -3155,6 +3156,10 @@ float getActiveWaypointSpeed(void)
 
                 if (wpSpecificSpeed >= 50.0f && wpSpecificSpeed <= navConfig()->general.max_auto_speed) {
                     waypointSpeed = wpSpecificSpeed;
+                // CR45
+                } else if (wpSpecificSpeed > navConfig()->general.max_auto_speed) {
+                    waypointSpeed = navConfig()->general.max_auto_speed;
+                // CR45
                 }
             }
         }

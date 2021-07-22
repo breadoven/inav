@@ -2924,7 +2924,7 @@ Maximum climb/descent rate that UAV is allowed to reach during navigation modes.
 
 ### nav_auto_speed
 
-Maximum velocity firmware is allowed in full auto modes (RTH, WP) [cm/s] [Multirotor only]
+Speed in fully autonomous modes (RTH, WP) [cm/s]. Used for WP mode when no specific WP velocity set. [Multirotor only]
 
 | Default | Min | Max |
 | --- | --- | --- |
@@ -3382,6 +3382,26 @@ P gain of altitude PID controller (Fixedwing)
 
 ---
 
+### nav_fw_soaring_motor_stop
+
+Stops motor when Soaring mode enabled.
+
+| Default | Min | Max |
+| --- | --- | --- |
+| OFF |  |  |
+
+---
+
+### nav_fw_soaring_pitch_deadband
+
+Pitch angle deadband when soaring mode enabled (degrees). Angle mode only active outside deadband.
+
+| Default | Min | Max |
+| --- | --- | --- |
+| 5 | 0 | 15 |
+
+---
+
 ### nav_fw_yaw_deadband
 
 Deadband for heading trajectory PID controller. When heading error is below the deadband, controller assumes that vehicle is on course
@@ -3444,7 +3464,7 @@ Maximum climb/descent rate firmware is allowed when processing pilot input for A
 
 ### nav_manual_speed
 
-Maximum velocity firmware is allowed when processing pilot input for POSHOLD/CRUISE control mode [cm/s] [Multirotor only]
+Maximum speed allowed when processing pilot input for POSHOLD/CRUISE control mode [cm/s] [Multirotor only]
 
 | Default | Min | Max |
 | --- | --- | --- |
@@ -3459,6 +3479,16 @@ Max allowed altitude (above Home Point) that applies to all NAV modes (including
 | Default | Min | Max |
 | --- | --- | --- |
 | 0 | 0 | 65000 |
+
+---
+
+### nav_max_auto_speed
+
+Maximum speed allowed in fully autonomous modes (RTH, WP) [cm/s] [Multirotor only]
+
+| Default | Min | Max |
+| --- | --- | --- |
+| 1000 | 10 | 2000 |
 
 ---
 
@@ -3875,16 +3905,6 @@ Aircraft will climb/descend to this altitude after reaching home if landing is n
 ### nav_rth_tail_first
 
 If set to ON drone will return tail-first. Obviously meaningless for airplanes.
-
-| Default | Min | Max |
-| --- | --- | --- |
-| OFF |  |  |
-
----
-
-### nav_soaring_motor_stop
-
-Stops motor when Soaring mode enabled.
 
 | Default | Min | Max |
 | --- | --- | --- |
