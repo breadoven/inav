@@ -1939,7 +1939,8 @@ static bool osdDrawSingleElement(uint8_t item)
             else if (FLIGHT_MODE(NAV_COURSE_HOLD_MODE))
                 p = "CRSH";
             else if (FLIGHT_MODE(NAV_WP_MODE))
-                p = " WP ";
+                p = FLIGHT_MODE(SOARING_MODE) ? "WP-S" : " WP ";    // CR36
+                // p = " WP ";
             else if (FLIGHT_MODE(NAV_ALTHOLD_MODE) && navigationRequiresAngleMode()) {
                 // If navigationRequiresAngleMode() returns false when ALTHOLD is active,
                 // it means it can be combined with ANGLE, HORIZON, ACRO, etc...

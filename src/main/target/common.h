@@ -210,7 +210,7 @@
 //Enable DST calculations
 #define RTC_AUTOMATIC_DST
 // Wind estimator
-// #define USE_WIND_ESTIMATOR
+// #define USE_WIND_ESTIMATOR   // CR46 removed to free up memory with Flywood F411 mainly, but don't use anyway
 
 #else // MCU_FLASH_SIZE < 128
 

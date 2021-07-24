@@ -1402,7 +1402,6 @@ static void cliWaypoints(char *cmdline)
                 // CR21
                     multiMissionWPCounter = 0;
                     posControl.multiMissionCount = 0;
-                    navConfigMutable()->general.waypoint_multi_mission_index = 1;    // reset selected mission to 1 when new file loaded
                     break;
                 } else {
                     posControl.multiMissionCount -= 1;
