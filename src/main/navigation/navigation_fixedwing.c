@@ -634,8 +634,8 @@ bool isFixedWingLandingDetected(void)
         } else {
             bool isRollAxisStatic = ABS(fwLandSetRollDatum - attitude.values.roll) < 5;
             bool isPitchAxisStatic = ABS(fwLandSetPitchDatum - attitude.values.pitch) < 5;
-            DEBUG_SET(DEBUG_CRUISE, 4, ABS(fwLandSetRollDatum - attitude.values.roll));
-            DEBUG_SET(DEBUG_CRUISE, 5, ABS(fwLandSetPitchDatum - attitude.values.pitch));
+            // DEBUG_SET(DEBUG_CRUISE, 4, ABS(fwLandSetRollDatum - attitude.values.roll));
+            // DEBUG_SET(DEBUG_CRUISE, 5, ABS(fwLandSetPitchDatum - attitude.values.pitch));
             if (isRollAxisStatic && isPitchAxisStatic) {
                 // Must have landed, low horizontal and vertical velocities and no axis rotation in Roll and Pitch
                 timeMs_t safetyTimeDelay = 2000 + navConfig()->fw.auto_disarm_delay;

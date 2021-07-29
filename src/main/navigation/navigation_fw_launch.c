@@ -565,7 +565,6 @@ void applyFixedWingLaunchController(timeUs_t currentTimeUs)
 
     resetPidsIfNeeded();
     updateRcCommand();
-    // DEBUG_SET(DEBUG_CRUISE, 0, fwLaunch.currentState);
 
     // Control beeper
     if (fwLaunch.currentState == FW_LAUNCH_STATE_WAIT_THROTTLE) {

@@ -2624,12 +2624,12 @@ void updateLandingStatus(void)
         if (!IS_RC_MODE_ACTIVE(BOXARM)) {
             DISABLE_ARMING_FLAG(ARMING_DISABLED_LANDING_DETECTED);
         }
-        DEBUG_SET(DEBUG_CRUISE, 7, 17);
+        // DEBUG_SET(DEBUG_CRUISE, 7, 17);
         return;
     }
         // DEBUG_SET(DEBUG_CRUISE, 1, rcCommand[THROTTLE]);
     if (!landingDetectorIsActive) {
-        DEBUG_SET(DEBUG_CRUISE, 6, 55);
+        // DEBUG_SET(DEBUG_CRUISE, 6, 55);
         if (isFlightDetected()) {
             landingDetectorIsActive = true;
             resetLandingDetector();
@@ -2645,14 +2645,14 @@ void updateLandingStatus(void)
         }
     } else if (isLandingDetected()) {
         ENABLE_STATE(LANDING_DETECTED);
-        DEBUG_SET(DEBUG_CRUISE, 7, 77);
+        // DEBUG_SET(DEBUG_CRUISE, 7, 77);
     }
 }
 // CR15
 
 bool isLandingDetected(void)
 {
-    DEBUG_SET(DEBUG_CRUISE, 6, 66);
+    // DEBUG_SET(DEBUG_CRUISE, 6, 66);
     return STATE(AIRPLANE) ? isFixedWingLandingDetected() : isMulticopterLandingDetected(); // CR15
 }
 
