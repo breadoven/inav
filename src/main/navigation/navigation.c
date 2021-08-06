@@ -1123,7 +1123,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_INITIALIZE(navigati
 {
     navigationFSMStateFlags_t prevFlags = navGetStateFlags(previousState);
 
-    if ((posControl.flags.estHeadingStatus == EST_NONE) || (posControl.flags.estAltStatus == EST_NONE) || (posControl.flags.estPosStatus != EST_TRUSTED) || !STATE(GPS_FIX_HOME)) {
+    if ((posControl.flags.estHeadingStatus == EST_NONE) || (posControl.flags.estAltStatus == EST_NONE) || !STATE(GPS_FIX_HOME)) {   // CR44
         // Heading sensor, altitude sensor and HOME fix are mandatory for RTH. If not satisfied - switch to emergency landing
         // Relevant to failsafe forced RTH only. Switched RTH blocked in selectNavEventFromBoxModeInput if sensors unavailanle. CR44
         // If we are in dead-reckoning mode - also fail, since coordinates may be unreliable
@@ -1135,8 +1135,8 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_INITIALIZE(navigati
         return NAV_FSM_EVENT_SWITCH_TO_IDLE;
     }
 
-    // If we have valid position sensor or configured to ignore it's loss at initial stage - continue
-    if ((posControl.flags.estPosStatus >= EST_USABLE) || navConfig()->general.flags.rth_climb_ignore_emerg) {   // CR44 how does this work given above EST_TRUSTED
+    // If we have valid position sensor or configured to ignore its loss at initial stage - continue
+    if ((posControl.flags.estPosStatus >= EST_USABLE) || navConfig()->general.flags.rth_climb_ignore_emerg) {
         // Reset altitude and position controllers if necessary
         if ((prevFlags & NAV_CTL_POS) == 0) {
             resetPositionController();
@@ -1182,13 +1182,15 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_INITIALIZE(navigati
         }
     }
     /* Position sensor failure timeout - land */
-    else if (checkForPositionSensorTimeout()) {
-        return NAV_FSM_EVENT_SWITCH_TO_EMERGENCY_LANDING;       // CR44 Doesn't work given logic above EST_TRUSTED
+    else if (checkForPositionSensorTimeout() || (!navConfig()->general.pos_failure_timeout && posControl.flags.forcedRTHActivated)) {  // CR44
+        return NAV_FSM_EVENT_SWITCH_TO_EMERGENCY_LANDING;
     }
     /* No valid POS sensor but still within valid timeout - wait */
-    else {
+    // CR44
+    // else {
         return NAV_FSM_EVENT_NONE;
-    }
+    // }
+    // CR44
 }
 
 static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_CLIMB_TO_SAFE_ALT(navigationFSMState_t previousState)
@@ -1278,7 +1280,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_HEAD_HOME(navigatio
 
     rthAltControlStickOverrideCheck(PITCH);
 
-    if ((posControl.flags.estHeadingStatus == EST_NONE)) {
+    if ((posControl.flags.estHeadingStatus == EST_NONE) || !validateRTHSanityChecker()) {   // CR44
         return NAV_FSM_EVENT_SWITCH_TO_EMERGENCY_LANDING;
     }
 
@@ -1291,10 +1293,12 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_HEAD_HOME(navigatio
             setDesiredPosition(tmpHomePos, posControl.rthState.homePosition.yaw, NAV_POS_UPDATE_XY | NAV_POS_UPDATE_Z | NAV_POS_UPDATE_HEADING);
             return NAV_FSM_EVENT_SUCCESS;       // NAV_STATE_RTH_HOVER_PRIOR_TO_LANDING
         }
-        else if (!validateRTHSanityChecker()) {
-            // Sanity check of RTH
-            return NAV_FSM_EVENT_SWITCH_TO_EMERGENCY_LANDING;
-        }
+        // CR44
+        // else if (!validateRTHSanityChecker()) {
+            // // Sanity check of RTH
+            // return NAV_FSM_EVENT_SWITCH_TO_EMERGENCY_LANDING;
+        // }
+        // CR44
         else {
             setDesiredPosition(tmpHomePos, 0, NAV_POS_UPDATE_Z | NAV_POS_UPDATE_XY);
             return NAV_FSM_EVENT_NONE;
@@ -1305,16 +1309,18 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_HEAD_HOME(navigatio
         return NAV_FSM_EVENT_SWITCH_TO_EMERGENCY_LANDING;
     }
     /* No valid POS sensor but still within valid timeout - wait */
-    else {
+    // CR44
+    // else {
         return NAV_FSM_EVENT_NONE;
-    }
+    // }
+    // CR44
 }
 
 static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_HOVER_PRIOR_TO_LANDING(navigationFSMState_t previousState)
 {
     UNUSED(previousState);
 
-    if ((posControl.flags.estHeadingStatus == EST_NONE)) {
+    if ((posControl.flags.estHeadingStatus == EST_NONE) || !validateRTHSanityChecker()) {   // CR44
         return NAV_FSM_EVENT_SWITCH_TO_EMERGENCY_LANDING;
     }
 
@@ -1331,10 +1337,12 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_HOVER_PRIOR_TO_LAND
             updateClimbRateToAltitudeController(0, ROC_TO_ALT_RESET);
             return navigationRTHAllowsLanding() ? NAV_FSM_EVENT_SUCCESS : NAV_FSM_EVENT_SWITCH_TO_RTH_HOVER_ABOVE_HOME; // success = land
         }
-        else if (!validateRTHSanityChecker()) {
-            // Continue to check for RTH sanity during pre-landing hover
-            return NAV_FSM_EVENT_SWITCH_TO_EMERGENCY_LANDING;
-        }
+        // CR44
+        // else if (!validateRTHSanityChecker()) {
+            // // Continue to check for RTH sanity during pre-landing hover
+            // return NAV_FSM_EVENT_SWITCH_TO_EMERGENCY_LANDING;
+        // }
+        // CR44
         else {
             fpVector3_t * tmpHomePos = rthGetHomeTargetPosition(RTH_HOME_ENROUTE_FINAL);
             setDesiredPosition(tmpHomePos, posControl.rthState.homePosition.yaw, NAV_POS_UPDATE_XY | NAV_POS_UPDATE_Z | NAV_POS_UPDATE_HEADING);
@@ -1348,10 +1356,11 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_HOVER_PRIOR_TO_LAND
 static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_HOVER_ABOVE_HOME(navigationFSMState_t previousState)
 {
     UNUSED(previousState);
-
-    if (!(validateRTHSanityChecker() || (posControl.flags.estPosStatus >= EST_USABLE) || !checkForPositionSensorTimeout()))
+    // CR44
+    if (!validateRTHSanityChecker() || posControl.flags.estHeadingStatus == EST_NONE || ((posControl.flags.estPosStatus == EST_NONE) && checkForPositionSensorTimeout())) {
         return NAV_FSM_EVENT_SWITCH_TO_EMERGENCY_LANDING;
-
+    }
+    // CR44
     fpVector3_t * tmpHomePos = rthGetHomeTargetPosition(RTH_HOME_FINAL_HOVER);
 
     if (navConfig()->general.rth_home_altitude) {
@@ -1388,7 +1397,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_LANDING(navigationF
         return NAV_FSM_EVENT_SUCCESS;
     }
     else {
-        if (!validateRTHSanityChecker()) {
+        if (!validateRTHSanityChecker() || posControl.flags.estHeadingStatus == EST_NONE || ((posControl.flags.estPosStatus == EST_NONE) && checkForPositionSensorTimeout())) { // CR44
             // Continue to check for RTH sanity during landing
             return NAV_FSM_EVENT_SWITCH_TO_EMERGENCY_LANDING;
         }
@@ -1507,7 +1516,6 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_WAYPOINT_PRE_ACTION(nav
             calculateAndSetActiveWaypoint(&posControl.waypointList[posControl.activeWaypointIndex]);
             posControl.wpInitialDistance = calculateDistanceToDestination(&posControl.activeWaypoint.pos);
             posControl.wpInitialAltitude = posControl.actualState.abs.pos.z;
-            // DEBUG_SET(DEBUG_CRUISE, 3, posControl.wpInitialAltitude);
             return NAV_FSM_EVENT_SUCCESS;       // will switch to NAV_STATE_WAYPOINT_IN_PROGRESS
 
                 // We use p3 as the volatile jump counter (p2 is the static value)
@@ -1599,14 +1607,16 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_WAYPOINT_IN_PROGRESS(na
         }
     }
     /* No pos sensor available for NAV_WAIT_FOR_GPS_TIMEOUT_MS - land */
-    else if (checkForPositionSensorTimeout()) {
+    else if (checkForPositionSensorTimeout() || (posControl.flags.estHeadingStatus == EST_NONE)) {   // CR44
         return NAV_FSM_EVENT_SWITCH_TO_EMERGENCY_LANDING;
     }
-    else {
+    // CR44
+    // else {
         return NAV_FSM_EVENT_NONE;      // will re-process state in >10ms
-    }
+    // }
 
-    UNREACHABLE();
+    // UNREACHABLE();
+    // CR44
 }
 
 static navigationFSMEvent_t navOnEnteringState_NAV_STATE_WAYPOINT_REACHED(navigationFSMState_t previousState)
@@ -1649,7 +1659,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_WAYPOINT_HOLD_TIME(navi
             return NAV_FSM_EVENT_SUCCESS;
     // CR44
     /* No pos sensor available for NAV_WAIT_FOR_GPS_TIMEOUT_MS - land */
-    } else if (checkForPositionSensorTimeout()) {
+    } else if (checkForPositionSensorTimeout() || (posControl.flags.estHeadingStatus == EST_NONE)) {
         return NAV_FSM_EVENT_SWITCH_TO_EMERGENCY_LANDING;
     }
     // CR44
@@ -1696,17 +1706,19 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_WAYPOINT_FINISHED(navig
     clearJumpCounters();
     posControl.wpMissionRestart = true;   // CR29
 
-    // If no position sensor available - land immediately
-    if ((posControl.flags.estPosStatus >= EST_USABLE) && (posControl.flags.estHeadingStatus >= EST_USABLE)) {
-        return NAV_FSM_EVENT_NONE;
-    }
-    /* No pos sensor available for NAV_WAIT_FOR_GPS_TIMEOUT_MS - land */
-    else if (checkForPositionSensorTimeout()) {
+    // CR44
+    // If no position sensor available for NAV_WAIT_FOR_GPS_TIMEOUT_MS - land immediately
+    if ((posControl.flags.estHeadingStatus == EST_NONE) || ((posControl.flags.estPosStatus == EST_NONE) && checkForPositionSensorTimeout())) {
         return NAV_FSM_EVENT_SWITCH_TO_EMERGENCY_LANDING;
     }
-    else {
+    // /* No pos sensor available for NAV_WAIT_FOR_GPS_TIMEOUT_MS - land */
+    // else if (checkForPositionSensorTimeout()) {
+        // return NAV_FSM_EVENT_SWITCH_TO_EMERGENCY_LANDING;
+    // }
+    // else {
         return NAV_FSM_EVENT_NONE;      // will re-process state in >10ms
-    }
+    // }
+    // CR44
 }
 
 static navigationFSMEvent_t navOnEnteringState_NAV_STATE_EMERGENCY_LANDING_INITIALIZE(navigationFSMState_t previousState)
