@@ -94,7 +94,7 @@
 #define OSD_MSG_HOVERING            "HOVERING"
 #define OSD_MSG_LANDED              "! LANDED !"
 #define OSD_MSG_PREPARING_LAND      "PREPARING TO LAND"
-#define OSD_MSG_NAV_SENSOR_LOSS     "NAV FAIL -> SENSOR LOSS"   // CR44
+// #define OSD_MSG_NAV_SENSOR_LOSS     "NAV FAIL -> SENSOR LOSS"   // CR44
 #define OSD_MSG_AUTOLAUNCH          "AUTOLAUNCH"
 #define OSD_MSG_ALTITUDE_HOLD       "(ALTITUDE HOLD)"
 #define OSD_MSG_AUTOTRIM            "(AUTOTRIM)"
