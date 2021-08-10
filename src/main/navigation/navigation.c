@@ -3344,6 +3344,8 @@ static navigationFSMEvent_t selectNavEventFromBoxModeInput(bool launchBypass)
          * WP or RTH modes need reset after landing to deactive Emergency landing */
         if (navigationIsExecutingAnEmergencyLanding()) {
             if (!(canActivateNavigation && canActivateAltHold && STATE(GPS_FIX_HOME)) &&
+                !IS_RC_MODE_ACTIVE(BOXMANUAL) &&
+                !(IS_RC_MODE_ACTIVE(BOXNAVALTHOLD) && canActivateAltHold) &&
                 (IS_RC_MODE_ACTIVE(BOXNAVWP) || IS_RC_MODE_ACTIVE(BOXNAVRTH))) {
                 return NAV_FSM_EVENT_SWITCH_TO_EMERGENCY_LANDING;
             }

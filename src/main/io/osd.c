@@ -2617,15 +2617,16 @@ static bool osdDrawSingleElement(uint8_t item)
              * Only 7 digits for negative and 8 digits for positive values allowed
              */
             for (uint8_t bufferIndex = 0; bufferIndex < DEBUG32_VALUE_COUNT; ++elemPosY, bufferIndex += 2) {
+                char buffx[32] = {0};
                 tfp_sprintf(
-                    buff,
+                    buffx,
                     "[%u]=%8ld [%u]=%8ld",
                     bufferIndex,
                     constrain(debug[bufferIndex], -9999999, 99999999),
                     bufferIndex+1,
                     constrain(debug[bufferIndex+1], -9999999, 99999999)
                 );
-                displayWrite(osdDisplayPort, elemPosX, elemPosY, buff);
+                displayWrite(osdDisplayPort, elemPosX, elemPosY, buffx);
             }
             break;
         }
