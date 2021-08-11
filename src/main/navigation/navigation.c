@@ -817,8 +817,8 @@ static const navigationFSMStateDescriptor_t navFSM[NAV_STATE_COUNT] = {
             [NAV_FSM_EVENT_SUCCESS]                        = NAV_STATE_EMERGENCY_LANDING_IN_PROGRESS,
             [NAV_FSM_EVENT_ERROR]                          = NAV_STATE_IDLE,
             [NAV_FSM_EVENT_SWITCH_TO_IDLE]                 = NAV_STATE_IDLE,
-            [NAV_FSM_EVENT_SWITCH_TO_ALTHOLD]              = NAV_STATE_IDLE,   // ALTHOLD bails out from emergency (to IDLE, AltHold will take over from there)
             // CR44
+            [NAV_FSM_EVENT_SWITCH_TO_ALTHOLD]              = NAV_STATE_ALTHOLD_INITIALIZE,
             [NAV_FSM_EVENT_SWITCH_TO_RTH]                  = NAV_STATE_RTH_INITIALIZE,
             [NAV_FSM_EVENT_SWITCH_TO_WAYPOINT]             = NAV_STATE_WAYPOINT_INITIALIZE,
             // CR44
@@ -837,8 +837,8 @@ static const navigationFSMStateDescriptor_t navFSM[NAV_STATE_COUNT] = {
             [NAV_FSM_EVENT_TIMEOUT]                        = NAV_STATE_EMERGENCY_LANDING_IN_PROGRESS,    // re-process the state
             [NAV_FSM_EVENT_SUCCESS]                        = NAV_STATE_EMERGENCY_LANDING_FINISHED,
             [NAV_FSM_EVENT_SWITCH_TO_IDLE]                 = NAV_STATE_IDLE,
-            [NAV_FSM_EVENT_SWITCH_TO_ALTHOLD]              = NAV_STATE_IDLE,   // ALTHOLD bails out from emergency (to IDLE, AltHold will take over from there)
             // CR44
+            [NAV_FSM_EVENT_SWITCH_TO_ALTHOLD]              = NAV_STATE_ALTHOLD_INITIALIZE,
             [NAV_FSM_EVENT_SWITCH_TO_RTH]                  = NAV_STATE_RTH_INITIALIZE,
             [NAV_FSM_EVENT_SWITCH_TO_WAYPOINT]             = NAV_STATE_WAYPOINT_INITIALIZE,
             // CR44
@@ -3339,9 +3339,9 @@ static navigationFSMEvent_t selectNavEventFromBoxModeInput(bool launchBypass)
         const bool isExecutingRTH        = navGetStateFlags(posControl.navState) & NAV_AUTO_RTH;
         checkSafeHomeState(isExecutingRTH || posControl.flags.forcedRTHActivated);
         // CR44
-        /* Keep Emergency landing mode activeonce triggered. Is dectivated when landing in progress if WP or RTH cancelled
-         * or position sensors working again. Remains active if landing finished regardless of sensor status.
-         * WP or RTH modes need reset after landing to deactive Emergency landing */
+        /* Keep Emergency landing mode active once triggered. Is deactivated when landing in progress if WP or RTH cancelled
+         * or position sensors working again or if Manual or Althold modes selected.
+         * Remains active if landing finished regardless of sensor status or if WP or RTH modes still selected */
         if (navigationIsExecutingAnEmergencyLanding()) {
             if (!(canActivateNavigation && canActivateAltHold && STATE(GPS_FIX_HOME)) &&
                 !IS_RC_MODE_ACTIVE(BOXMANUAL) &&
