@@ -843,7 +843,13 @@ void taskMainPidLoop(timeUs_t currentTimeUs)
 {
     cycleTime = getTaskDeltaTime(TASK_SELF);
     dT = (float)cycleTime * 0.000001f;
-    if (ARMING_FLAG(ARMED) && (!STATE(FIXED_WING_LEGACY) || !isNavLaunchEnabled() || (isNavLaunchEnabled() && fixedWingLaunchStatus() >= FW_LAUNCH_DETECTED))) {  // CR38
+    // CR38
+#if defined(USE_NAV)
+    if (ARMING_FLAG(ARMED) && (!STATE(FIXED_WING_LEGACY) || !isNavLaunchEnabled() || (isNavLaunchEnabled() && fixedWingLaunchStatus() >= FW_LAUNCH_DETECTED))) {
+#else
+    if (ARMING_FLAG(ARMED)) {
+#endif
+    // CR38
         flightTime += cycleTime;
         armTime += cycleTime;
         updateAccExtremes();
@@ -934,10 +940,12 @@ void taskMainPidLoop(timeUs_t currentTimeUs)
     }
 #endif
     // CR15
+#if defined(USE_NAV)
     // Check if landed, FW and MR
     if (STATE(ALTITUDE_CONTROL)) {
         updateLandingStatus();
     }
+#endif
     // CR15
 }
 
