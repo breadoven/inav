@@ -3244,8 +3244,9 @@ void applyWaypointNavigationAndAltitudeHold(void)
 
     // No navigation when disarmed
     if (!ARMING_FLAG(ARMED)) {
-        // If we are disarmed, abort forced RTH
+        // If we are disarmed, abort forced RTH or Emergency Landing // CR49
         posControl.flags.forcedRTHActivated = false;
+        posControl.flags.forcedEmergLandActivated = false;  // CR49
         // ensure missions always restart from first waypoint after disarm CR29
         posControl.activeWaypointIndex = 0;
         return;
@@ -3338,6 +3339,11 @@ static navigationFSMEvent_t selectNavEventFromBoxModeInput(bool launchBypass)
         const bool canActivateNavigation = canActivateNavigationModes();
         const bool isExecutingRTH        = navGetStateFlags(posControl.navState) & NAV_AUTO_RTH;
         checkSafeHomeState(isExecutingRTH || posControl.flags.forcedRTHActivated);
+        // CR49
+        if (posControl.flags.forcedEmergLandActivated) {
+            return NAV_FSM_EVENT_SWITCH_TO_EMERGENCY_LANDING;
+        }
+        // CR49
         // CR44
         /* Keep Emergency landing mode active once triggered. Is deactivated when landing in progress if WP or RTH cancelled
          * or position sensors working again or if Manual or Althold modes selected.
@@ -3834,6 +3840,7 @@ void navigationInit(void)
     posControl.flags.compassGpsCogMismatchError = false;    // CR27
 
     posControl.flags.forcedRTHActivated = 0;
+    posControl.flags.forcedEmergLandActivated = false;    // CR49
     posControl.waypointCount = 0;
     posControl.activeWaypointIndex = 0;
     posControl.waypointListValid = false;
@@ -3919,7 +3926,39 @@ rthState_e getStateOfForcedRTH(void)
         return RTH_IDLE;
     }
 }
+// CR49
+/*-----------------------------------------------------------
+ * Ability to execute Emergency Landing on external event
+ *-----------------------------------------------------------*/
+void activateForcedEmergLand(void)
+{
+    abortFixedWingLaunch();
+    posControl.flags.forcedEmergLandActivated = true;
+    navProcessFSMEvents(selectNavEventFromBoxModeInput(false));    // CR6
+}
 
+void abortForcedEmergLand(void)
+{
+    // Disable failsafe emergency landing and make sure we back out of navigation mode to IDLE
+    // If any navigation mode was active prior to emergency landing it will be re-enabled with next RX update
+    posControl.flags.forcedEmergLandActivated = false;
+    navProcessFSMEvents(NAV_FSM_EVENT_SWITCH_TO_IDLE);
+}
+
+emergLandState_e getStateOfForcedEmergLand(void)
+{
+    /* If forced emergency landing activated and in EMERG state */
+    if (posControl.flags.forcedEmergLandActivated && (navGetStateFlags(posControl.navState) & NAV_CTL_EMERG)) {
+        if (posControl.navState == NAV_STATE_EMERGENCY_LANDING_FINISHED) {
+            return EMERGLAND_HAS_LANDED;
+        } else {
+            return EMERGLAND_IN_PROGRESS;
+        }
+    } else {
+        return EMERGLAND_IDLE;
+    }
+}
+// CR49
 bool isWaypointMissionRTHActive(void)
 {
     return FLIGHT_MODE(NAV_RTH_MODE) && IS_RC_MODE_ACTIVE(BOXNAVWP) && !(IS_RC_MODE_ACTIVE(BOXNAVRTH) || posControl.flags.forcedRTHActivated);

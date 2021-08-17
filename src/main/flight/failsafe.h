@@ -121,12 +121,21 @@ typedef enum {
     FAILSAFE_PROCEDURE_RTH,
     FAILSAFE_PROCEDURE_NONE
 } failsafeProcedure_e;
-
+// CR49
+#if defined(USE_NAV)
 typedef enum {
     RTH_IDLE = 0,               // RTH is waiting
     RTH_IN_PROGRESS,            // RTH is active
     RTH_HAS_LANDED              // RTH is active and has landed.
 } rthState_e;
+
+typedef enum {
+    EMERGLAND_IDLE = 0,         // Emergency landing is waiting
+    EMERGLAND_IN_PROGRESS,      // Emergency landing is active
+    EMERGLAND_HAS_LANDED        // Emergency landing is active and has landed.
+} emergLandState_e;
+#endif
+// CR49
 
 typedef struct failsafeState_s {
     int16_t events;
@@ -166,7 +175,9 @@ void failsafeOnRxResume(void);
 bool failsafeMayRequireNavigationMode(void);
 void failsafeApplyControlInput(void);
 bool failsafeRequiresAngleMode(void);
-bool failsafeRequiresMotorStop(void);
+#if !defined(USE_NAV)
+bool failsafeRequiresMotorStop(void);    // CR49
+#endif
 bool failsafeShouldApplyControlInput(void);
 bool failsafeBypassNavigation(void);
 void failsafeUpdateRcCommandValues(void);

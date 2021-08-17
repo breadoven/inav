@@ -67,6 +67,16 @@ void resetSafeHomes(void);                       // remove all safehomes
 bool findNearestSafeHome(void);                  // Find nearest safehome
 
 #endif // defined(USE_SAFE_HOME)
+// CR38
+typedef enum {  // keep aligned with fixedWingLaunchState_t
+    FW_LAUNCH_DETECTED = 4,
+    FW_LAUNCH_ABORTED = 10,
+    FW_LAUNCH_FLYING = 11,
+} navFwLaunchStatus_e;
+
+uint8_t fixedWingLaunchStatus(void);
+// CR38
+void updateLandingStatus(void); // CR15
 
 #if defined(USE_NAV)
 #if defined(USE_BLACKBOX)
@@ -159,13 +169,6 @@ typedef enum {
     WP_PLAN_FULL,
 } wpMissionPlannerStatus_e;
 // CR32
-// CR38
-typedef enum {  // keep aligned with fixedWingLaunchState_t
-    FW_LAUNCH_DETECTED = 4,
-    FW_LAUNCH_ABORTED = 10,
-    FW_LAUNCH_FLYING = 11,
-} navFwLaunchStatus_e;
-// CR38
 typedef struct positionEstimationConfig_s {
     uint8_t automatic_mag_declination;
     uint8_t reset_altitude_type; // from nav_reset_type_e
@@ -546,6 +549,12 @@ uint32_t distanceToFirstWP(void);
 void activateForcedRTH(void);
 void abortForcedRTH(void);
 rthState_e getStateOfForcedRTH(void);
+// CR49
+/* Failsafe-forced Emergency Landing mode */
+void activateForcedEmergLand(void);
+void abortForcedEmergLand(void);
+emergLandState_e getStateOfForcedEmergLand(void);
+// CR49
 
 /* Getter functions which return data about the state of the navigation system */
 bool navigationInAutomaticThrottleMode(void);
@@ -568,14 +577,11 @@ bool isNavLaunchEnabled(void);
 // bool isFixedWingLaunchDetected(void);
 // bool isFixedWingLaunchFinishedOrAborted(void);
 // bool fixedWingLaunchStatus(navFwLaunchStatus_e statusCheck);
-uint8_t fixedWingLaunchStatus(void);
 // CR38
 bool isFixedWingLaunchFinishedThrottleLow(void);    // CR6
 const char * fixedWingLaunchStateMessage(void);
 
 float calculateAverageSpeed(void);
-
-void updateLandingStatus(void); // CR15
 
 const navigationPIDControllers_t* getNavigationPIDControllers(void);
 
@@ -612,6 +618,6 @@ extern int16_t navAccNEU[3];
 #define getEstimatedActualVelocity(axis) (0)
 #define navigationIsControllingThrottle() (0)
 #define navigationRTHAllowsLanding() (0)
-#define navigationGetHomeHeading(0)
+#define navigationGetHomeHeading() (0)  // CR49
 
-#endif
+#endif  // NAV

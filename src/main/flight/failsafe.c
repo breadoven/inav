@@ -99,16 +99,39 @@ typedef struct {
 } failsafeProcedureLogic_t;
 
 static const failsafeProcedureLogic_t failsafeProcedureLogic[] = {
+    // CR49
+    // [FAILSAFE_PROCEDURE_AUTO_LANDING] = {
+            // .bypassNavigation = true,
+            // .forceAngleMode = true,
+            // .channelBehavior = {
+                // FAILSAFE_CHANNEL_AUTO,          // ROLL
+                // FAILSAFE_CHANNEL_AUTO,          // PITCH
+                // FAILSAFE_CHANNEL_AUTO,          // YAW
+                // FAILSAFE_CHANNEL_AUTO           // THROTTLE
+            // }
+    // },
+
     [FAILSAFE_PROCEDURE_AUTO_LANDING] = {
-            .bypassNavigation = true,
             .forceAngleMode = true,
+#if defined(USE_NAV)
+            .bypassNavigation = false,
+            .channelBehavior = {
+                FAILSAFE_CHANNEL_NEUTRAL,       // ROLL
+                FAILSAFE_CHANNEL_NEUTRAL,       // PITCH
+                FAILSAFE_CHANNEL_NEUTRAL,       // YAW
+                FAILSAFE_CHANNEL_HOLD           // THROTTLE
+            }
+#else
+            .bypassNavigation = true,
             .channelBehavior = {
                 FAILSAFE_CHANNEL_AUTO,          // ROLL
                 FAILSAFE_CHANNEL_AUTO,          // PITCH
                 FAILSAFE_CHANNEL_AUTO,          // YAW
                 FAILSAFE_CHANNEL_AUTO           // THROTTLE
             }
+#endif
     },
+    // CR49
 
     [FAILSAFE_PROCEDURE_DROP_IT] = {
             .bypassNavigation = true,
@@ -215,20 +238,22 @@ bool failsafeRequiresAngleMode(void)
            failsafeState.controlling &&
            failsafeProcedureLogic[failsafeState.activeProcedure].forceAngleMode;
 }
-
+// CR49
+#if !defined(USE_NAV)
 bool failsafeRequiresMotorStop(void)
 {
     return failsafeState.active &&
            failsafeState.activeProcedure == FAILSAFE_PROCEDURE_AUTO_LANDING &&
            currentBatteryProfile->failsafe_throttle < getThrottleIdleValue();
 }
-
+#endif
+// CR49
 void failsafeStartMonitoring(void)
 {
     failsafeState.monitoring = true;
 }
 
-static bool failsafeShouldHaveCausedLandingByNow(void)
+static bool failsafeShouldHaveCausedLandingByNow(void)  // CR49 probably still needed
 {
     return failsafeConfig()->failsafe_off_delay && (millis() > failsafeState.landingShouldBeFinishedAt);
 }
@@ -453,8 +478,13 @@ void failsafeUpdateState(void)
 
                     switch (failsafeState.activeProcedure) {
                         case FAILSAFE_PROCEDURE_AUTO_LANDING:
-                            // Stabilize, and set Throttle to specified level
+                            // Use Emergency Landing if Nav defined. Ootherwise stabilize, and set Throttle to specified level.     // CR49
                             failsafeActivate(FAILSAFE_LANDING);
+// CR49
+#if defined(USE_NAV)
+                            activateForcedEmergLand();
+#endif
+// CR49
                             break;
 
                         case FAILSAFE_PROCEDURE_DROP_IT:
@@ -526,21 +556,62 @@ void failsafeUpdateState(void)
                 break;
 #endif
 
+            // case FAILSAFE_LANDING:
+                // if (receivingRxDataAndNotFailsafeMode && sticksAreMoving) {
+                    // failsafeState.phase = FAILSAFE_RX_LOSS_RECOVERED;
+                    // reprocessState = true;
+                // }
+                // if (armed) {
+                    // beeperMode = BEEPER_RX_LOST_LANDING;
+                // }
+                // if (failsafeShouldHaveCausedLandingByNow() || !armed) {
+                    // failsafeState.receivingRxDataPeriodPreset = PERIOD_OF_30_SECONDS; // require 30 seconds of valid rxData
+                    // failsafeState.phase = FAILSAFE_LANDED;
+                    // reprocessState = true;
+                // }
+                // break;
+                // CR49
             case FAILSAFE_LANDING:
                 if (receivingRxDataAndNotFailsafeMode && sticksAreMoving) {
+#if defined(USE_NAV)
+                    abortForcedEmergLand();
+#endif
                     failsafeState.phase = FAILSAFE_RX_LOSS_RECOVERED;
                     reprocessState = true;
-                }
-                if (armed) {
-                    beeperMode = BEEPER_RX_LOST_LANDING;
-                }
-                if (failsafeShouldHaveCausedLandingByNow() || !armed) {
-                    failsafeState.receivingRxDataPeriodPreset = PERIOD_OF_30_SECONDS; // require 30 seconds of valid rxData
-                    failsafeState.phase = FAILSAFE_LANDED;
-                    reprocessState = true;
+                } else {
+                    if (armed) {
+                        beeperMode = BEEPER_RX_LOST_LANDING;
+                    }
+#if defined(USE_NAV)
+                    bool emergLanded = false;
+                    switch (getStateOfForcedEmergLand()) {
+                        case EMERGLAND_IN_PROGRESS:
+                            break;
+
+                        case EMERGLAND_HAS_LANDED:
+                            emergLanded = true;
+                            break;
+
+                        case EMERGLAND_IDLE:
+                        default:
+                            // This shouldn't happen. If emergency landing was somehow aborted during failsafe - fallback to FAILSAFE_LANDING procedure
+                            abortForcedEmergLand();
+                            failsafeSetActiveProcedure(FAILSAFE_PROCEDURE_DROP_IT);
+                            failsafeActivate(FAILSAFE_LANDED);
+                            reprocessState = true;
+                            break;
+                    }
+                    if (emergLanded || failsafeShouldHaveCausedLandingByNow() || !armed) {
+#else
+                    if (failsafeShouldHaveCausedLandingByNow() || !armed) {
+#endif
+                        failsafeState.receivingRxDataPeriodPreset = PERIOD_OF_30_SECONDS; // require 30 seconds of valid rxData
+                        failsafeState.phase = FAILSAFE_LANDED;
+                        reprocessState = true;
+                    }
                 }
                 break;
-
+                // CR49
             case FAILSAFE_LANDED:
                 ENABLE_ARMING_FLAG(ARMING_DISABLED_FAILSAFE_SYSTEM); // To prevent accidently rearming by an intermittent rx link
                 disarm(DISARM_FAILSAFE);
