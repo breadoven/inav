@@ -2884,6 +2884,7 @@ static bool osdDrawSingleElement(uint8_t item)
         osdDisplayAdjustableDecimalValue(elemPosX, elemPosY, "CTL S", 0, navConfig()->fw.control_smoothness, 1, 0, ADJUSTMENT_NAV_FW_CONTROL_SMOOTHNESS);
         return true;
     // CR21
+#if defined(USE_NAV)
     case OSD_MISSION:
         {
             // CR32
@@ -2924,6 +2925,7 @@ static bool osdDrawSingleElement(uint8_t item)
             displayWrite(osdDisplayPort, elemPosX, elemPosY, buff);
             return true;
         }
+#endif
     // CR21
     // CR22
     case OSD_INFO_CYCLE:
@@ -4180,9 +4182,11 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
                         messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_HEADFREE);
                     }
                     // CR32
+#if defined(USE_NAV)
                     if (posControl.flags.wpMissionPlannerActive) {
                         messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_MISSION_PLANNER);
                     }
+#endif
                     // CR32
                     // CR36
                     if (FLIGHT_MODE(SOARING_MODE)) {
