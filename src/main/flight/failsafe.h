@@ -130,9 +130,9 @@ typedef enum {
 } rthState_e;
 
 typedef enum {
-    EMERGLAND_IDLE = 0,         // Emergency landing is waiting
-    EMERGLAND_IN_PROGRESS,      // Emergency landing is active
-    EMERGLAND_HAS_LANDED        // Emergency landing is active and has landed.
+    EMERG_LAND_IDLE = 0,        // Emergency landing is waiting
+    EMERG_LAND_IN_PROGRESS,     // Emergency landing is active
+    EMERG_LAND_HAS_LANDED       // Emergency landing is active and has landed.
 } emergLandState_e;
 #endif
 // CR49

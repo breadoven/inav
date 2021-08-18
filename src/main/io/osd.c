@@ -3744,9 +3744,10 @@ static void osdShowArmed(void)
         tfp_sprintf(buf, "MISSION %u/%u (%u WP)", posControl.loadedMultiMissionIndex, posControl.multiMissionCount, posControl.waypointCount);
         displayWrite(osdDisplayPort, 6, y, buf);
     }
-    y += 1;
 #endif
     // CR21
+    y += 1;
+
 #if defined(USE_GPS)
     if (feature(FEATURE_GPS)) {
         if (STATE(GPS_FIX_HOME)) {

@@ -93,7 +93,7 @@ typedef struct navigationFlags_s {
     bool isTerrainFollowEnabled;            // Does iNav use rangefinder for terrain following (adjusting baro altitude target according to rangefinders readings)
 
     bool forcedRTHActivated;
-    bool forcedEmergLandActivated;          // CR49
+    bool forcedEmergLandingActivated;          // CR49
     bool wpMissionPlannerActive;            // Activation status of in flight WP mission planner  // CR32
 
     /* Landing detector */

@@ -482,7 +482,7 @@ void failsafeUpdateState(void)
                             failsafeActivate(FAILSAFE_LANDING);
 // CR49
 #if defined(USE_NAV)
-                            activateForcedEmergLand();
+                            activateForcedEmergLanding();
 #endif
 // CR49
                             break;
@@ -574,7 +574,7 @@ void failsafeUpdateState(void)
             case FAILSAFE_LANDING:
                 if (receivingRxDataAndNotFailsafeMode && sticksAreMoving) {
 #if defined(USE_NAV)
-                    abortForcedEmergLand();
+                    abortForcedEmergLanding();
 #endif
                     failsafeState.phase = FAILSAFE_RX_LOSS_RECOVERED;
                     reprocessState = true;
@@ -584,18 +584,18 @@ void failsafeUpdateState(void)
                     }
 #if defined(USE_NAV)
                     bool emergLanded = false;
-                    switch (getStateOfForcedEmergLand()) {
-                        case EMERGLAND_IN_PROGRESS:
+                    switch (getStateOfForcedEmergLanding()) {
+                        case EMERG_LAND_IN_PROGRESS:
                             break;
 
-                        case EMERGLAND_HAS_LANDED:
+                        case EMERG_LAND_HAS_LANDED:
                             emergLanded = true;
                             break;
 
-                        case EMERGLAND_IDLE:
+                        case EMERG_LAND_IDLE:
                         default:
-                            // This shouldn't happen. If emergency landing was somehow aborted during failsafe - fallback to FAILSAFE_LANDING procedure
-                            abortForcedEmergLand();
+                            // If emergency landing was somehow aborted during failsafe - fallback to FAILSAFE_PROCEDURE_DROP_IT
+                            abortForcedEmergLanding();
                             failsafeSetActiveProcedure(FAILSAFE_PROCEDURE_DROP_IT);
                             failsafeActivate(FAILSAFE_LANDED);
                             reprocessState = true;

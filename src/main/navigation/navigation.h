@@ -548,9 +548,9 @@ void abortForcedRTH(void);
 rthState_e getStateOfForcedRTH(void);
 // CR49
 /* Failsafe-forced Emergency Landing mode */
-void activateForcedEmergLand(void);
-void abortForcedEmergLand(void);
-emergLandState_e getStateOfForcedEmergLand(void);
+void activateForcedEmergLanding(void);
+void abortForcedEmergLanding(void);
+emergLandState_e getStateOfForcedEmergLanding(void);
 // CR49
 
 /* Getter functions which return data about the state of the navigation system */
