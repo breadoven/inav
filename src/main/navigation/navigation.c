@@ -3847,7 +3847,7 @@ void navigationInit(void)
     posControl.wpPlannerActiveWPIndex = 0;     // CR32
     posControl.flags.wpMissionPlannerActive = false;   //CR32
     // CR21
-    #if defined(NAV_NON_VOLATILE_WAYPOINT_STORAGE)
+#if defined(NAV_NON_VOLATILE_WAYPOINT_STORAGE)
         uint8_t savedMultiMissionIndex = navConfig()->general.waypoint_multi_mission_index;
         if (!navConfig()->general.waypoint_load_on_boot) {
             navConfigMutable()->general.waypoint_multi_mission_index = 0;
@@ -3856,7 +3856,7 @@ void navigationInit(void)
         loadNonVolatileWaypointList();
 
         navConfigMutable()->general.waypoint_multi_mission_index = savedMultiMissionIndex > posControl.multiMissionCount ? 1 : savedMultiMissionIndex;
-    #endif
+#endif
 
     /* Set initial surface invalid */
     posControl.actualState.surfaceMin = -1.0f;

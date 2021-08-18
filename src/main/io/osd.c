@@ -3739,11 +3739,14 @@ static void osdShowArmed(void)
         y += 1;
     }
     // CR21
+#if defined(USE_NAV)
     if (posControl.waypointListValid && posControl.waypointCount > 0) {
         tfp_sprintf(buf, "MISSION %u/%u (%u WP)", posControl.loadedMultiMissionIndex, posControl.multiMissionCount, posControl.waypointCount);
         displayWrite(osdDisplayPort, 6, y, buf);
     }
     y += 1;
+#endif
+    // CR21
 #if defined(USE_GPS)
     if (feature(FEATURE_GPS)) {
         if (STATE(GPS_FIX_HOME)) {

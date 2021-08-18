@@ -259,7 +259,7 @@ void processRcStickPositions(throttleStatus_e throttleStatus)
     }
 
 
-#if defined(NAV_NON_VOLATILE_WAYPOINT_STORAGE)
+#if defined(NAV) && defined(NAV_NON_VOLATILE_WAYPOINT_STORAGE)  // CR21
     // Save waypoint list
     if (rcSticks == THR_LO + YAW_CE + PIT_HI + ROL_LO) {
         const bool success = saveNonVolatileWaypointList();
@@ -286,9 +286,8 @@ void processRcStickPositions(throttleStatus_e throttleStatus)
         rcDelayCommand = 0;
         return;
     }
-    // CR21
 #endif
-
+    // CR21
     // Multiple configuration profiles
     if (feature(FEATURE_TX_PROF_SEL)) {
 
