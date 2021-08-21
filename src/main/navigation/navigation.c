@@ -3939,7 +3939,7 @@ void activateForcedEmergLanding(void)
 
 void abortForcedEmergLanding(void)
 {
-    // Disable failsafe emergency landing and make sure we back out of navigation mode to IDLE
+    // Disable forced emergency landing and make sure we back out of navigation mode to IDLE
     // If any navigation mode was active prior to emergency landing it will be re-enabled with next RX update
     posControl.flags.forcedEmergLandingActivated = false;
     navProcessFSMEvents(NAV_FSM_EVENT_SWITCH_TO_IDLE);
