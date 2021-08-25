@@ -662,13 +662,10 @@ int16_t getThrottlePercent(void)
 
 motorStatus_e getMotorStatus(void)
 {
-    // CR49
-#if !defined(USE_NAV)
     if (failsafeRequiresMotorStop()) {
         return MOTOR_STOPPED_AUTO;
     }
-#endif
-    // CR49
+
     if (!failsafeIsActive() && STATE(NAV_MOTOR_STOP_OR_IDLE)) {
         return MOTOR_STOPPED_AUTO;
     }

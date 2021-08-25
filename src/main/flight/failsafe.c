@@ -89,7 +89,9 @@ PG_RESET_TEMPLATE(failsafeConfig_t, failsafeConfig,
 typedef enum {
     FAILSAFE_CHANNEL_HOLD,      // Hold last known good value
     FAILSAFE_CHANNEL_NEUTRAL,   // RPY = zero, THR = zero
+#if !defined(USE_NAV)    // CR49
     FAILSAFE_CHANNEL_AUTO,      // Defined by failsafe configured values
+#endif  // CR49
 } failsafeChannelBehavior_e;
 
 typedef struct {
@@ -100,17 +102,6 @@ typedef struct {
 
 static const failsafeProcedureLogic_t failsafeProcedureLogic[] = {
     // CR49
-    // [FAILSAFE_PROCEDURE_AUTO_LANDING] = {
-            // .bypassNavigation = true,
-            // .forceAngleMode = true,
-            // .channelBehavior = {
-                // FAILSAFE_CHANNEL_AUTO,          // ROLL
-                // FAILSAFE_CHANNEL_AUTO,          // PITCH
-                // FAILSAFE_CHANNEL_AUTO,          // YAW
-                // FAILSAFE_CHANNEL_AUTO           // THROTTLE
-            // }
-    // },
-
     [FAILSAFE_PROCEDURE_AUTO_LANDING] = {
             .forceAngleMode = true,
 #if defined(USE_NAV)
@@ -238,16 +229,23 @@ bool failsafeRequiresAngleMode(void)
            failsafeState.controlling &&
            failsafeProcedureLogic[failsafeState.activeProcedure].forceAngleMode;
 }
-// CR49
-#if !defined(USE_NAV)
+
 bool failsafeRequiresMotorStop(void)
 {
+// CR49
+#if defined(USE_NAV)
+    return failsafeState.active &&
+           failsafeState.activeProcedure == FAILSAFE_PROCEDURE_AUTO_LANDING &&
+           posControl.flags.estAltStatus < EST_USABLE &&
+           currentBatteryProfile->failsafe_throttle < getThrottleIdleValue();
+#else
     return failsafeState.active &&
            failsafeState.activeProcedure == FAILSAFE_PROCEDURE_AUTO_LANDING &&
            currentBatteryProfile->failsafe_throttle < getThrottleIdleValue();
-}
 #endif
 // CR49
+}
+
 void failsafeStartMonitoring(void)
 {
     failsafeState.monitoring = true;
@@ -285,6 +283,7 @@ void failsafeUpdateRcCommandValues(void)
 
 void failsafeApplyControlInput(void)
 {
+#if !defined(USE_NAV)   // CR49
     // Prepare FAILSAFE_CHANNEL_AUTO values for rcCommand
     int16_t autoRcCommand[4];
     if (STATE(FIXED_WING_LEGACY)) {
@@ -299,7 +298,7 @@ void failsafeApplyControlInput(void)
         }
         autoRcCommand[THROTTLE] = currentBatteryProfile->failsafe_throttle;
     }
-
+#endif  // CR49
     // Apply channel values
     for (int idx = 0; idx < 4; idx++) {
         switch (failsafeProcedureLogic[failsafeState.activeProcedure].channelBehavior[idx]) {
@@ -321,9 +320,11 @@ void failsafeApplyControlInput(void)
                 }
                 break;
 
+#if !defined(USE_NAV)   // CR49
             case FAILSAFE_CHANNEL_AUTO:
                 rcCommand[idx] = autoRcCommand[idx];
                 break;
+#endif  // CR49
         }
     }
 }
