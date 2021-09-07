@@ -85,7 +85,7 @@
 #define OSD_MSG_STARTING_RTH        "STARTING RTH"
 #define OSD_MSG_RTH_CLIMB           "ADJUSTING RTH ALTITUDE"
 #define OSD_MSG_HEADING_HOME        "EN ROUTE TO HOME"
-#define OSD_MSG_WP_FINISHED         "WP END>HOLDING POSITION"  // CR33
+#define OSD_MSG_WP_FINISHED         "WP END>HOLDING POSITION"
 #define OSD_MSG_PREPARE_NEXT_WP     "PREPARING FOR NEXT WAYPOINT"
 #define OSD_MSG_WP_RTH_CANCEL       "CANCEL WP TO EXIT RTH"
 #define OSD_MSG_EMERG_LANDING       "EMERGENCY LANDING"
@@ -99,6 +99,7 @@
 #define OSD_MSG_ALTITUDE_HOLD       "(ALTITUDE HOLD)"
 #define OSD_MSG_AUTOTRIM            "(AUTOTRIM)"
 #define OSD_MSG_AUTOTUNE            "(AUTOTUNE)"
+#define OSD_MSG_AUTOTUNE_ACRO       "SWITCH TO ACRO"
 #define OSD_MSG_HEADFREE            "(HEADFREE)"
 #define OSD_MSG_UNABLE_ARM          "UNABLE TO ARM"
 #define OSD_MSG_COMPASS_ERROR       "COMPASS ERROR !"     // CR27
@@ -245,9 +246,11 @@ typedef enum {
 typedef enum {
     OSD_UNIT_IMPERIAL,
     OSD_UNIT_METRIC,
-    OSD_UNIT_UK, // Show speed in mp/h, other values in metric
+    OSD_UNIT_METRIC_MPH, // Old UK units, all metric except speed in mph
+    OSD_UNIT_UK, // Show everything in imperial, temperature in C
+    OSD_UNIT_GA, // General Aviation: Knots, Nautical Miles, Feet, Degrees C
 
-    OSD_UNIT_MAX = OSD_UNIT_UK,
+    OSD_UNIT_MAX = OSD_UNIT_GA,
 } osd_unit_e;
 
 typedef enum {
@@ -360,7 +363,7 @@ typedef struct osdConfig_s {
     uint8_t units;                       // from osd_unit_e
     uint8_t stats_energy_unit;           // from osd_stats_energy_unit_e
     uint8_t stats_min_voltage_unit;      // from osd_stats_min_voltage_unit_e
-    uint8_t stats_page_auto_swap_time;   // stats page auto swap cycle time (seconds) CR25
+    uint8_t stats_page_auto_swap_time;   // stats page auto swap interval time (seconds)
 
 #ifdef USE_WIND_ESTIMATOR
     bool    estimations_wind_compensation; // use wind compensation for estimated remaining flight/distance

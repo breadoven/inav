@@ -208,7 +208,7 @@ navigationPosControl_t  posControl;
 navSystemStatus_t       NAV_Status;
 EXTENDED_FASTRAM multicopterPosXyCoefficients_t multicopterPosXyCoefficients;
 
-#if defined(NAV_BLACKBOX)
+// Blackbox states
 int16_t navCurrentState;
 int16_t navActualVelocity[3];
 int16_t navDesiredVelocity[3];
@@ -221,7 +221,7 @@ uint16_t navFlags;
 uint16_t navEPH;
 uint16_t navEPV;
 int16_t navAccNEU[3];
-#endif
+//End of blackbox states
 
 static fpVector3_t * rthGetHomeTargetPosition(rthTargetMode_e mode);
 static void updateDesiredRTHAltitude(void);
@@ -2029,12 +2029,11 @@ void updateActualHorizontalPositionAndVelocity(bool estPosValid, bool estVelVali
         posControl.flags.horizontalPositionDataNew = 0;
     }
 
-#if defined(NAV_BLACKBOX)
+    //Update blackbox data
     navLatestActualPosition[X] = newX;
     navLatestActualPosition[Y] = newY;
     navActualVelocity[X] = constrain(newVelX, -32678, 32767);
     navActualVelocity[Y] = constrain(newVelY, -32678, 32767);
-#endif
 }
 
 /*-----------------------------------------------------------
@@ -2084,10 +2083,9 @@ void updateActualAltitudeAndClimbRate(bool estimateValid, float newAltitude, flo
         posControl.actualState.surfaceMin = -1;
     }
 
-#if defined(NAV_BLACKBOX)
+    //Update blackbox data
     navLatestActualPosition[Z] = navGetCurrentActualPositionAndVelocity()->pos.z;
     navActualVelocity[Z] = constrain(navGetCurrentActualPositionAndVelocity()->vel.z, -32678, 32767);
-#endif
 }
 
 /*-----------------------------------------------------------
@@ -3005,13 +3003,13 @@ void selectMultiMissionIndex(int8_t increment)
 // CR21
 
 #ifdef NAV_NON_VOLATILE_WAYPOINT_STORAGE
-bool loadNonVolatileWaypointList(void)
+bool loadNonVolatileWaypointList(bool clearIfLoaded)
 {
     if (ARMING_FLAG(ARMED) || posControl.wpPlannerActiveWPIndex) // prevent EEPROM load if mission planner WP count > 0  CR32
         return false;
 
-    // if waypoints are already loaded, just unload them.
-    if (navConfig()->general.waypoint_multi_mission_index == posControl.loadedMultiMissionIndex && posControl.waypointCount > 0) {   // CR21
+    // if forced and waypoints are already loaded, just unload them.
+    if (clearIfLoaded && navConfig()->general.waypoint_multi_mission_index == posControl.loadedMultiMissionIndex && posControl.waypointCount > 0) {   // CR21
         resetWaypointList();
         return false;
     }
@@ -3227,7 +3225,7 @@ void applyWaypointNavigationAndAltitudeHold(void)
 {
     const timeUs_t currentTimeUs = micros();
 
-#if defined(NAV_BLACKBOX)
+    //Updata blackbox data
     navFlags = 0;
     if (posControl.flags.estAltStatus == EST_TRUSTED)       navFlags |= (1 << 0);
     if (posControl.flags.estAglStatus == EST_TRUSTED)       navFlags |= (1 << 1);
@@ -3237,7 +3235,6 @@ void applyWaypointNavigationAndAltitudeHold(void)
     if (isGPSGlitchDetected())                              navFlags |= (1 << 4);
 #endif
     if (posControl.flags.estHeadingStatus == EST_TRUSTED)   navFlags |= (1 << 5);
-#endif
 
     // Reset all navigation requests - NAV controllers will set them if necessary
     DISABLE_STATE(NAV_MOTOR_STOP_OR_IDLE);
@@ -3274,8 +3271,7 @@ void applyWaypointNavigationAndAltitudeHold(void)
     if (posControl.flags.verticalPositionDataConsumed)
         posControl.flags.verticalPositionDataNew = 0;
 
-
-#if defined(NAV_BLACKBOX)
+    //Update blackbox data
     if (posControl.flags.isAdjustingPosition)       navFlags |= (1 << 6);
     if (posControl.flags.isAdjustingAltitude)       navFlags |= (1 << 7);
     if (posControl.flags.isAdjustingHeading)        navFlags |= (1 << 8);
@@ -3283,7 +3279,6 @@ void applyWaypointNavigationAndAltitudeHold(void)
     navTargetPosition[X] = lrintf(posControl.desiredState.pos.x);
     navTargetPosition[Y] = lrintf(posControl.desiredState.pos.y);
     navTargetPosition[Z] = lrintf(posControl.desiredState.pos.z);
-#endif
 }
 
 /*-----------------------------------------------------------
@@ -3727,9 +3722,8 @@ void updateWaypointsAndNavigationMode(void)
     // Plan WP Mission on the fly CR32
     updateWpMissionPlanner();
 
-#if defined(NAV_BLACKBOX)
+    //Update Blackbox data
     navCurrentState = (int16_t)posControl.navPersistentId;
-#endif
 }
 
 /*-----------------------------------------------------------

@@ -69,9 +69,6 @@ bool findNearestSafeHome(void);                  // Find nearest safehome
 #endif // defined(USE_SAFE_HOME)
 
 #if defined(USE_NAV)
-#if defined(USE_BLACKBOX)
-#define NAV_BLACKBOX
-#endif
 
 #ifndef NAV_MAX_WAYPOINTS
 #define NAV_MAX_WAYPOINTS 15
@@ -492,7 +489,7 @@ bool isWaypointListValid(void);
 void getWaypoint(uint8_t wpNumber, navWaypoint_t * wpData);
 void setWaypoint(uint8_t wpNumber, const navWaypoint_t * wpData);
 void resetWaypointList(void);
-bool loadNonVolatileWaypointList(void);
+bool loadNonVolatileWaypointList(bool);
 bool saveNonVolatileWaypointList(void);
 void selectMultiMissionIndex(int8_t increment);   // CR21
 

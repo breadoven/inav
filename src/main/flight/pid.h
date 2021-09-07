@@ -144,7 +144,8 @@ typedef struct pidProfile_s {
     uint8_t mc_vel_xy_accel_tweak;          // CR47
 
 #ifdef USE_D_BOOST
-    float dBoostFactor;
+    float dBoostMin;
+    float dBoostMax;
     float dBoostMaxAtAlleceleration;
     uint8_t dBoostGyroDeltaLpfHz;
 #endif
@@ -190,7 +191,7 @@ const pidBank_t * pidBank(void);
 pidBank_t * pidBankMutable(void);
 
 extern int16_t axisPID[];
-extern int32_t axisPID_P[], axisPID_I[], axisPID_D[], axisPID_Setpoint[];
+extern int32_t axisPID_P[], axisPID_I[], axisPID_D[], axisPID_F[], axisPID_Setpoint[];
 
 void pidInit(void);
 bool pidInitFilters(void);
