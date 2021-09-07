@@ -2909,7 +2909,7 @@ static bool osdDrawSingleElement(uint8_t item)
             } else {
             // CR32
                 if (ARMING_FLAG(ARMED)){
-                    tfp_sprintf(buff, "M%u", posControl.loadedMultiMissionIndex);  // Limit field size when Armed, only show selected mission
+                    tfp_sprintf(buff, "M%u       ", posControl.loadedMultiMissionIndex);  // Limit field size when Armed, only show selected mission
                 } else {
                     if (posControl.multiMissionCount && navConfig()->general.waypoint_multi_mission_index != posControl.loadedMultiMissionIndex) {
                         tfp_sprintf(buff, "M%u/%u>LOAD", navConfig()->general.waypoint_multi_mission_index, posControl.multiMissionCount);

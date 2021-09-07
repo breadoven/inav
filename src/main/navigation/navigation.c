@@ -3413,7 +3413,7 @@ static navigationFSMEvent_t selectNavEventFromBoxModeInput(bool launchBypass)
         const bool blockWPFallback = IS_RC_MODE_ACTIVE(BOXMANUAL) || posControl.flags.wpMissionPlannerActive;  // CR32
         if (IS_RC_MODE_ACTIVE(BOXNAVRTH) || (IS_RC_MODE_ACTIVE(BOXNAVWP) && !canActivateWaypoint && !blockWPFallback)) { // CR32
             // Check for isExecutingRTH to prevent switching our from RTH in case of a brief GPS loss
-            // If don't keep this, loss of any of the canActivateNavigation && canActivateAltHold
+            // If don't keep this, loss of any of the canActivateNavigation && canActivateAltHold   CR44
             // will kick us out of RTH state machine via NAV_FSM_EVENT_SWITCH_TO_IDLE and will prevent any of the fall-back
             // logic to kick in (waiting for GPS on airplanes, switch to emergency landing etc)
             // if (isExecutingRTH || (canActivatePosHold && canActivateNavigation && canActivateAltHold && STATE(GPS_FIX_HOME))) {  // CR44
