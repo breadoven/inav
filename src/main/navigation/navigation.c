@@ -787,13 +787,13 @@ static const navigationFSMStateDescriptor_t navFSM[NAV_STATE_COUNT] = {
     [NAV_STATE_WAYPOINT_FINISHED] = {
         .persistentId = NAV_PERSISTENT_ID_WAYPOINT_FINISHED,
         .onEntry = navOnEnteringState_NAV_STATE_WAYPOINT_FINISHED,
-        .timeoutMs = 10,    // CR44
+        .timeoutMs = 10,
         .stateFlags = NAV_CTL_ALT | NAV_CTL_POS | NAV_CTL_YAW | NAV_REQUIRE_ANGLE | NAV_REQUIRE_MAGHOLD | NAV_REQUIRE_THRTILT | NAV_AUTO_WP | NAV_AUTO_WP_DONE,
         .mapToFlightModes = NAV_WP_MODE | NAV_ALTHOLD_MODE,
         .mwState = MW_NAV_STATE_WP_ENROUTE,
         .mwError = MW_NAV_ERROR_FINISH,
         .onEvent = {
-            [NAV_FSM_EVENT_TIMEOUT]                        = NAV_STATE_WAYPOINT_FINISHED,   // re-process state  CR44
+            [NAV_FSM_EVENT_TIMEOUT]                        = NAV_STATE_WAYPOINT_FINISHED,   // re-process state
             [NAV_FSM_EVENT_SWITCH_TO_IDLE]                 = NAV_STATE_IDLE,
             [NAV_FSM_EVENT_SWITCH_TO_ALTHOLD]              = NAV_STATE_ALTHOLD_INITIALIZE,
             [NAV_FSM_EVENT_SWITCH_TO_POSHOLD_3D]           = NAV_STATE_POSHOLD_3D_INITIALIZE,
@@ -817,11 +817,9 @@ static const navigationFSMStateDescriptor_t navFSM[NAV_STATE_COUNT] = {
             [NAV_FSM_EVENT_SUCCESS]                        = NAV_STATE_EMERGENCY_LANDING_IN_PROGRESS,
             [NAV_FSM_EVENT_ERROR]                          = NAV_STATE_IDLE,
             [NAV_FSM_EVENT_SWITCH_TO_IDLE]                 = NAV_STATE_IDLE,
-            // CR44
             [NAV_FSM_EVENT_SWITCH_TO_ALTHOLD]              = NAV_STATE_ALTHOLD_INITIALIZE,
             [NAV_FSM_EVENT_SWITCH_TO_RTH]                  = NAV_STATE_RTH_INITIALIZE,
             [NAV_FSM_EVENT_SWITCH_TO_WAYPOINT]             = NAV_STATE_WAYPOINT_INITIALIZE,
-            // CR44
         }
     },
 
@@ -837,11 +835,9 @@ static const navigationFSMStateDescriptor_t navFSM[NAV_STATE_COUNT] = {
             [NAV_FSM_EVENT_TIMEOUT]                        = NAV_STATE_EMERGENCY_LANDING_IN_PROGRESS,    // re-process the state
             [NAV_FSM_EVENT_SUCCESS]                        = NAV_STATE_EMERGENCY_LANDING_FINISHED,
             [NAV_FSM_EVENT_SWITCH_TO_IDLE]                 = NAV_STATE_IDLE,
-            // CR44
             [NAV_FSM_EVENT_SWITCH_TO_ALTHOLD]              = NAV_STATE_ALTHOLD_INITIALIZE,
             [NAV_FSM_EVENT_SWITCH_TO_RTH]                  = NAV_STATE_RTH_INITIALIZE,
             [NAV_FSM_EVENT_SWITCH_TO_WAYPOINT]             = NAV_STATE_WAYPOINT_INITIALIZE,
-            // CR44
         }
     },
 
@@ -1136,9 +1132,9 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_INITIALIZE(navigati
 {
     navigationFSMStateFlags_t prevFlags = navGetStateFlags(previousState);
 
-    if ((posControl.flags.estHeadingStatus == EST_NONE) || (posControl.flags.estAltStatus == EST_NONE) || !STATE(GPS_FIX_HOME)) {   // CR44
+    if ((posControl.flags.estHeadingStatus == EST_NONE) || (posControl.flags.estAltStatus == EST_NONE) || !STATE(GPS_FIX_HOME)) {
         // Heading sensor, altitude sensor and HOME fix are mandatory for RTH. If not satisfied - switch to emergency landing
-        // Relevant to failsafe forced RTH only. Switched RTH blocked in selectNavEventFromBoxModeInput if sensors unavailanle. CR44
+        // Relevant to failsafe forced RTH only. Switched RTH blocked in selectNavEventFromBoxModeInput if sensors unavailanle.
         // If we are in dead-reckoning mode - also fail, since coordinates may be unreliable
         return NAV_FSM_EVENT_SWITCH_TO_EMERGENCY_LANDING;
     }
@@ -1195,7 +1191,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_INITIALIZE(navigati
         }
     }
     /* Position sensor failure timeout - land */
-    else if (checkForPositionSensorTimeout() || (!navConfig()->general.pos_failure_timeout && posControl.flags.forcedRTHActivated)) {  // CR44
+    else if (checkForPositionSensorTimeout() || (!navConfig()->general.pos_failure_timeout && posControl.flags.forcedRTHActivated)) {
         return NAV_FSM_EVENT_SWITCH_TO_EMERGENCY_LANDING;
     }
     /* No valid POS sensor but still within valid timeout - wait */
@@ -1605,8 +1601,8 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_WAYPOINT_IN_PROGRESS(na
                 UNREACHABLE();
         }
     }
-    /* No pos sensor available for NAV_WAIT_FOR_GPS_TIMEOUT_MS - land */
-    else if (checkForPositionSensorTimeout() || (posControl.flags.estHeadingStatus == EST_NONE)) {   // CR44
+    /* If position sensors unavailable - land immediately (wait for timeout on GPS) */
+    else if (checkForPositionSensorTimeout() || (posControl.flags.estHeadingStatus == EST_NONE)) {
         return NAV_FSM_EVENT_SWITCH_TO_EMERGENCY_LANDING;
     }
     // CR44
@@ -1647,12 +1643,10 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_WAYPOINT_REACHED(naviga
 static navigationFSMEvent_t navOnEnteringState_NAV_STATE_WAYPOINT_HOLD_TIME(navigationFSMState_t previousState)
 {
     UNUSED(previousState);
-    // CR44
     /* If position sensors unavailable - land immediately (wait for timeout on GPS) */
     if (posControl.flags.estHeadingStatus == EST_NONE || checkForPositionSensorTimeout()) {
         return NAV_FSM_EVENT_SWITCH_TO_EMERGENCY_LANDING;
     }
-    // CR44
 
     timeMs_t currentTime = millis();
     // CR44
@@ -3339,7 +3333,6 @@ static navigationFSMEvent_t selectNavEventFromBoxModeInput(bool launchBypass)
             return NAV_FSM_EVENT_SWITCH_TO_EMERGENCY_LANDING;
         }
         // CR49
-        // CR44
         /* Keep Emergency landing mode active once triggered. Is deactivated when landing in progress if WP or RTH cancelled
          * or position sensors working again or if Manual or Althold modes selected.
          * Remains active if landing finished regardless of sensor status or if WP or RTH modes still selected */
@@ -3351,7 +3344,6 @@ static navigationFSMEvent_t selectNavEventFromBoxModeInput(bool launchBypass)
                 return NAV_FSM_EVENT_SWITCH_TO_EMERGENCY_LANDING;
             }
         }
-        // CR44
         // Keep canActivateWaypoint flag at FALSE if there is no mission loaded
         // Also block WP mission if we are executing RTH
         if (!isWaypointMissionValid() || isExecutingRTH) {
@@ -3847,7 +3839,7 @@ void navigationInit(void)
             navConfigMutable()->general.waypoint_multi_mission_index = 0;
         }
 
-        loadNonVolatileWaypointList();
+        loadNonVolatileWaypointList(false);
 
         navConfigMutable()->general.waypoint_multi_mission_index = savedMultiMissionIndex > posControl.multiMissionCount ? 1 : savedMultiMissionIndex;
 #endif

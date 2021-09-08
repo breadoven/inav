@@ -2051,10 +2051,7 @@ static bool osdDrawSingleElement(uint8_t item)
         {
             vtxDeviceOsdInfo_t osdInfo;
             vtxCommonGetOsdInfo(vtxCommonDevice(), &osdInfo);
-            // CR3 xxxxxxxxxxxxxxxxxxxxxxxx
-            buff[0] = SYM_HUD_SIGNAL_4;
-            tfp_sprintf(buff+1, "%c", osdInfo.powerIndexLetter);
-            // xxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+            tfp_sprintf(buff, "%c", osdInfo.powerIndexLetter);
             if (isAdjustmentFunctionSelected(ADJUSTMENT_VTX_POWER_LEVEL)) TEXT_ATTRIBUTES_ADD_BLINK(elemAttr);
             displayWriteWithAttr(osdDisplayPort, elemPosX, elemPosY, buff, elemAttr);
             return true;
@@ -4042,7 +4039,6 @@ static void osdRefresh(timeUs_t currentTimeUs)
         // or THR is high or PITCH is high, resume refreshing.
         // Clear the screen first to erase other elements which
         // might have been drawn while the OSD wasn't refreshing.
-        // CR25
         if (statsPageAutoSwapCntl != 2) {
             if (STATS_PAGE1 || STATS_PAGE2) {
                 statsPageAutoSwapCntl = 2;
@@ -4060,7 +4056,6 @@ static void osdRefresh(timeUs_t currentTimeUs)
                 }
             }
         }
-        // CR25
 
         // auto swap stats pages when first shown
         // auto swap cancelled using roll stick
@@ -4274,19 +4269,16 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
             // messages to show.
             const char *messages[5];
             unsigned messageCount = 0;
-            const char *failsafeInfoMessage = NULL; // CR51
+            const char *failsafeInfoMessage = NULL;
 
-            // CR51
             if (FLIGHT_MODE(FAILSAFE_MODE) || FLIGHT_MODE(NAV_RTH_MODE) || FLIGHT_MODE(NAV_WP_MODE) || navigationIsExecutingAnEmergencyLanding()) {
                 if (isWaypointMissionRTHActive()) {
                     // if RTH activated whilst WP mode selected, remind pilot to cancel WP mode to exit RTH
                     messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_WP_RTH_CANCEL);
                 }
-                // CR33
                 if (navGetCurrentStateFlags() & NAV_AUTO_WP_DONE) {
                     messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_WP_FINISHED);
                 } else if (NAV_Status.state == MW_NAV_STATE_WP_ENROUTE) {
-                // CR33
                     // Countdown display for remaining Waypoints
                     char buf[6];
                     osdFormatDistanceSymbol(buf, posControl.wpDistance, 0);
@@ -4315,8 +4307,7 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
                 if (FLIGHT_MODE(FAILSAFE_MODE)) {
                     // In FS mode while being armed too
                     const char *failsafePhaseMessage = osdFailsafePhaseMessage();
-                    failsafeInfoMessage = osdFailsafeInfoMessage(); // CR51
-                    // const char *navStateFSMessage = navigationStateMessage();    // CR51
+                    failsafeInfoMessage = osdFailsafeInfoMessage();
 
                     if (failsafePhaseMessage) {
                         messages[messageCount++] = failsafePhaseMessage;
@@ -4324,72 +4315,8 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
                     if (failsafeInfoMessage) {
                         messages[messageCount++] = failsafeInfoMessage;
                     }
-                    // CR51
-                    // if (navStateFSMessage) {
-                        // messages[messageCount++] = navStateFSMessage;
-                    // }
-    // #if defined(USE_SAFE_HOME)
-                    // const char *safehomeMessage = divertingToSafehomeMessage();
-                    // if (safehomeMessage) {
-                        // messages[messageCount++] = safehomeMessage;
-                    // }
-    // #endif
-                    // CR51
-                    // if (messageCount > 0) {
-                        // message = messages[OSD_ALTERNATING_CHOICES(systemMessageCycleTime(messageCount, messages), messageCount)];    // CR18
-                        // if (message == failsafeInfoMessage) {
-                            // // failsafeInfoMessage is not useful for recovering
-                            // // a lost model, but might help avoiding a crash.
-                            // // Blink to grab user attention.
-                            // TEXT_ATTRIBUTES_ADD_BLINK(elemAttr);
-                        // }
-                        // // We're shoing either failsafePhaseMessage or
-                        // // navStateFSMessage. Don't BLINK here since
-                        // // having this text available might be crucial
-                        // // during a lost aircraft recovery and blinking
-                        // // will cause it to be missing from some frames.
-                    // }
                 }
             } else {
-                // if (FLIGHT_MODE(NAV_RTH_MODE) || FLIGHT_MODE(NAV_WP_MODE) || navigationIsExecutingAnEmergencyLanding()) {
-                    // if (isWaypointMissionRTHActive()) {
-                        // // if RTH activated whilst WP mode selected, remind pilot to cancel WP mode to exit RTH
-                        // messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_WP_RTH_CANCEL);
-                    // }
-                    // CR33
-                    // if (navGetCurrentStateFlags() & NAV_AUTO_WP_DONE) {
-                        // messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_WP_FINISHED);
-                    // } else if (NAV_Status.state == MW_NAV_STATE_WP_ENROUTE) {
-                    // // CR33
-                        // // Countdown display for remaining Waypoints
-                        // char buf[6];
-                        // osdFormatDistanceSymbol(buf, posControl.wpDistance, 0);
-                        // tfp_sprintf(messageBuf, "TO WP %u/%u (%s)", getGeoWaypointNumber(posControl.activeWaypointIndex), posControl.geoWaypointCount, buf);
-                        // messages[messageCount++] = messageBuf;
-                    // } else if (NAV_Status.state == MW_NAV_STATE_HOLD_TIMED) {
-                        // // WP hold time countdown in seconds
-                        // timeMs_t currentTime = millis();
-                        // int holdTimeRemaining = posControl.waypointList[posControl.activeWaypointIndex].p1 - (int)((currentTime - posControl.wpReachedTime)/1000);
-                        // if (holdTimeRemaining >=0) {
-                            // tfp_sprintf(messageBuf, "HOLDING WP FOR %2u S", holdTimeRemaining);
-                            // messages[messageCount++] = messageBuf;
-                        // }
-                    // if (NAV_Status.state == MW_NAV_STATE_WP_ENROUTE || NAV_Status.state == MW_NAV_STATE_HOLD_TIMED) {
-                        // getDynamicNavMessage(messageBuf);
-                        // messages[messageCount++] = messageBuf;
-                    // } else {
-                        // const char *navStateMessage = navigationStateMessage();
-                        // if (navStateMessage) {
-                            // messages[messageCount++] = navStateMessage;
-                        // }
-                    // }
-// #if defined(USE_SAFE_HOME)
-					// const char *safehomeMessage = divertingToSafehomeMessage();
-					// if (safehomeMessage) {
-						// messages[messageCount++] = safehomeMessage;
-					// }
-// #endif
-                // CR51
                 if (STATE(FIXED_WING_LEGACY) && (navGetCurrentStateFlags() & NAV_CTL_LAUNCH)) {
                         messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_AUTOLAUNCH);
                         const char *launchStateMessage = fixedWingLaunchStateMessage();
@@ -4440,16 +4367,12 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
                     // CR44
                 }
             }
-            // CR51
             // CR27
             if (posControl.flags.compassGpsCogMismatchError) {
                 messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_COMPASS_ERROR);
             }
             // CR27
             // Pick one of the available messages.
-            // if (messageCount > 0) {
-                // message = messages[OSD_ALTERNATING_CHOICES(systemMessageCycleTime(messageCount, messages), messageCount)];   // CR18
-            // }
             if (messageCount > 0) {
                 message = messages[OSD_ALTERNATING_CHOICES(systemMessageCycleTime(messageCount, messages), messageCount)];    // CR18
                 if (message == failsafeInfoMessage) {
@@ -4464,8 +4387,6 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
                 // during a lost aircraft recovery and blinking
                 // will cause it to be missing from some frames.
             }
-            // }
-            // CR51
         } else if (ARMING_FLAG(ARMING_DISABLED_ALL_FLAGS)) {
             unsigned invalidIndex;
             // Check if we're unable to arm for some reason
