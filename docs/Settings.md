@@ -632,6 +632,16 @@ Defines debug values exposed in debug variables (developer / debugging setting)
 
 ---
 
+### disable_motor_output
+
+Disables motors always - for developer test use
+
+| Default | Min | Max |
+| --- | --- | --- |
+| OFF |  |  |
+
+---
+
 ### disarm_kill_switch
 
 Disarms the motors independently of throttle value. Setting to OFF reverts to the old behaviour of disarming only when the throttle is low. Only applies when arming and disarming with an AUX channel.
@@ -914,7 +924,7 @@ Time in deciseconds to wait before activating failsafe when signal is lost. See 
 
 ### failsafe_fw_pitch_angle
 
-Amount of dive/climb when `SET-THR` failsafe is active on a fixed-wing machine. In 1/10 deg (deci-degrees). Negative values = climb
+Amount of dive/climb when `LAND` failsafe is active on a fixed-wing machine. In 1/10 deg (deci-degrees). Negative values = climb
 
 | Default | Min | Max |
 | --- | --- | --- |
@@ -924,7 +934,7 @@ Amount of dive/climb when `SET-THR` failsafe is active on a fixed-wing machine. 
 
 ### failsafe_fw_roll_angle
 
-Amount of banking when `SET-THR` failsafe is active on a fixed-wing machine. In 1/10 deg (deci-degrees). Negative values = left roll
+Amount of banking when `LAND` failsafe is active on a fixed-wing machine. In 1/10 deg (deci-degrees). Negative values = left roll
 
 | Default | Min | Max |
 | --- | --- | --- |
@@ -934,7 +944,7 @@ Amount of banking when `SET-THR` failsafe is active on a fixed-wing machine. In 
 
 ### failsafe_fw_yaw_rate
 
-Requested yaw rate to execute when `SET-THR` failsafe is active on a fixed-wing machine. In deg/s. Negative values = left turn
+Requested yaw rate to execute when `LAND` failsafe is active on a fixed-wing machine. In deg/s. Negative values = left turn
 
 | Default | Min | Max |
 | --- | --- | --- |
@@ -1018,7 +1028,7 @@ What failsafe procedure to initiate in Stage 2. See [Failsafe documentation](Fai
 
 | Default | Min | Max |
 | --- | --- | --- |
-| SET-THR |  |  |
+| LAND |  |  |
 
 ---
 
@@ -2924,7 +2934,7 @@ Maximum climb/descent rate that UAV is allowed to reach during navigation modes.
 
 ### nav_auto_speed
 
-Speed in fully autonomous modes (RTH, WP) [cm/s]. Used for WP mode when no specific WP velocity set. [Multirotor only]
+Speed in fully autonomous modes (RTH, WP) [cm/s]. Used for WP mode when no specific WP speed set. [Multirotor only]
 
 | Default | Min | Max |
 | --- | --- | --- |
@@ -3659,6 +3669,16 @@ P gain of altitude PID controller (Multirotor)
 | Default | Min | Max |
 | --- | --- | --- |
 | 50 | 0 | 255 |
+
+---
+
+### nav_mc_vel_xy_accel_tweak
+
+Fiddle factor to tune bank angle response to specific quad performance
+
+| Default | Min | Max |
+| --- | --- | --- |
+| 100 | 10 | 100 |
 
 ---
 
