@@ -879,6 +879,13 @@ groups:
         min: 4
         max: 255
         default_value: 14
+        # CR53
+      - name: disable_motor_output
+        description: "Disables motors always - for developer test use"
+        default_value: OFF
+        field: disableMotorOutput
+        type: bool
+        # CR53
 
   - name: PG_FAILSAFE_CONFIG
     type: failsafeConfig_t

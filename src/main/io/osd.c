@@ -4376,6 +4376,11 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
                 messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_COMPASS_ERROR);
             }
             // CR27
+            // CR53
+            if (motorConfig()->disableMotorOutput) {
+                messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_MOTORS_DISABLED);
+            }
+            // CR53
             // Pick one of the available messages.
             if (messageCount > 0) {
                 message = messages[OSD_ALTERNATING_CHOICES(systemMessageCycleTime(messageCount, messages), messageCount)];    // CR18

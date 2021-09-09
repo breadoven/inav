@@ -109,7 +109,8 @@ PG_RESET_TEMPLATE(motorConfig_t, motorConfig,
     .motorPwmRate = SETTING_MOTOR_PWM_RATE_DEFAULT,
     .maxthrottle = SETTING_MAX_THROTTLE_DEFAULT,
     .mincommand = SETTING_MIN_COMMAND_DEFAULT,
-    .motorPoleCount = SETTING_MOTOR_POLES_DEFAULT,            // Most brushless motors that we use are 14 poles
+    .motorPoleCount = SETTING_MOTOR_POLES_DEFAULT,                  // Most brushless motors that we use are 14 poles
+    .disableMotorOutput = SETTING_DISABLE_MOTOR_OUTPUT_DEFAULT,     // disables motors (for dev use)    CR53
 );
 
 PG_REGISTER_ARRAY(motorMixer_t, MAX_SUPPORTED_MOTORS, primaryMotorMixer, PG_MOTOR_MIXER, 0);
@@ -594,6 +595,11 @@ void FAST_CODE mixTable()
             if (currentMotorStatus != MOTOR_RUNNING) {
                 motor[i] = motorValueWhenStopped;
             }
+            // CR53
+            if (motorConfig()->disableMotorOutput) {
+                motor[i] = motorZeroCommand;
+            }
+            // CR53
         }
     } else {
         for (int i = 0; i < motorCount; i++) {
