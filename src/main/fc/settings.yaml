@@ -882,6 +882,7 @@ groups:
         # CR53
       - name: disable_motor_output
         description: "Disables motors always - for developer test use"
+        condition: USE_DEV_TOOLS
         default_value: OFF
         field: disableMotorOutput
         type: bool

@@ -4377,9 +4377,11 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
             }
             // CR27
             // CR53
+#ifdef USE_DEV_TOOLS
             if (motorConfig()->disableMotorOutput) {
                 messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_MOTORS_DISABLED);
             }
+#endif
             // CR53
             // Pick one of the available messages.
             if (messageCount > 0) {

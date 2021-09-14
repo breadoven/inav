@@ -110,7 +110,9 @@ PG_RESET_TEMPLATE(motorConfig_t, motorConfig,
     .maxthrottle = SETTING_MAX_THROTTLE_DEFAULT,
     .mincommand = SETTING_MIN_COMMAND_DEFAULT,
     .motorPoleCount = SETTING_MOTOR_POLES_DEFAULT,                  // Most brushless motors that we use are 14 poles
-    .disableMotorOutput = SETTING_DISABLE_MOTOR_OUTPUT_DEFAULT,     // disables motors (for dev use)    CR53
+#ifdef USE_DEV_TOOLS    // CR53
+    .disableMotorOutput = SETTING_DISABLE_MOTOR_OUTPUT_DEFAULT,     // disables motors (for dev use)
+#endif      // CR53
 );
 
 PG_REGISTER_ARRAY(motorMixer_t, MAX_SUPPORTED_MOTORS, primaryMotorMixer, PG_MOTOR_MIXER, 0);
@@ -596,9 +598,11 @@ void FAST_CODE mixTable()
                 motor[i] = motorValueWhenStopped;
             }
             // CR53
+#ifdef USE_DEV_TOOLS
             if (motorConfig()->disableMotorOutput) {
                 motor[i] = motorZeroCommand;
             }
+#endif
             // CR53
         }
     } else {
