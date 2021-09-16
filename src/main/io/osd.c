@@ -156,6 +156,8 @@ static float GForce, GForceAxis[XYZ_AXIS_COUNT];
 
 typedef struct statistic_s {
     uint16_t max_speed;
+    uint16_t max_3D_speed;
+    uint16_t max_air_speed;
     uint16_t min_voltage; // /100
     int16_t max_current;
     int32_t max_power;
@@ -421,9 +423,11 @@ static int32_t osdConvertVelocityToUnit(int32_t vel)
 
 /**
  * Converts velocity into a string based on the current unit system.
- * @param alt Raw velocity (i.e. as taken from gpsSol.groundSpeed in centimeters/seconds)
+ * @param vel Raw velocity (i.e. as taken from gpsSol.groundSpeed in centimeters/seconds)
+ * @param _3D is a 3D velocity
+ * @param _max is a maximum velocity
  */
-void osdFormatVelocityStr(char* buff, int32_t vel, bool _3D)
+void osdFormatVelocityStr(char* buff, int32_t vel, bool _3D, bool _max)
 {
     switch ((osd_unit_e)osdConfig()->units) {
     case OSD_UNIT_UK:
@@ -431,15 +435,35 @@ void osdFormatVelocityStr(char* buff, int32_t vel, bool _3D)
     case OSD_UNIT_METRIC_MPH:
         FALLTHROUGH;
     case OSD_UNIT_IMPERIAL:
-        tfp_sprintf(buff, "%3d%c", (int)osdConvertVelocityToUnit(vel), (_3D ? SYM_3D_MPH : SYM_MPH));
+        if (_max) {
+            tfp_sprintf(buff, "%c%3d%c", SYM_MAX, (int)osdConvertVelocityToUnit(vel), (_3D ? SYM_3D_MPH : SYM_MPH));
+        } else {
+            tfp_sprintf(buff, "%3d%c", (int)osdConvertVelocityToUnit(vel), (_3D ? SYM_3D_MPH : SYM_MPH));
+        }
         break;
     case OSD_UNIT_METRIC:
-        tfp_sprintf(buff, "%3d%c", (int)osdConvertVelocityToUnit(vel), (_3D ? SYM_3D_KMH : SYM_KMH));
+        if (_max) {
+            tfp_sprintf(buff, "%c%3d%c", SYM_MAX, (int)osdConvertVelocityToUnit(vel), (_3D ? SYM_3D_KMH : SYM_KMH));
+        } else {
+            tfp_sprintf(buff, "%3d%c", (int)osdConvertVelocityToUnit(vel), (_3D ? SYM_3D_KMH : SYM_KMH));
+        }
         break;
     case OSD_UNIT_GA:
-        tfp_sprintf(buff, "%3d%c", (int)osdConvertVelocityToUnit(vel), (_3D ? SYM_3D_KT : SYM_KT));
+        if (_max) {
+            tfp_sprintf(buff, "%c%3d%c", SYM_MAX, (int)osdConvertVelocityToUnit(vel), (_3D ? SYM_3D_KT : SYM_KT));
+        } else {
+            tfp_sprintf(buff, "%3d%c", (int)osdConvertVelocityToUnit(vel), (_3D ? SYM_3D_KT : SYM_KT));
+        }
         break;
     }
+}
+
+/**
+ * Returns the average velocity. This always uses stats, so can be called as an OSD element later if wanted, to show a real time average
+ */
+static void osdGenerateAverageVelocityStr(char* buff) {
+    uint32_t cmPerSec = getTotalTravelDistance() / getFlightTime();
+    osdFormatVelocityStr(buff, cmPerSec, false, false);
 }
 
 /**
@@ -1622,7 +1646,8 @@ static bool osdDrawSingleElement(uint8_t item)
         break;
 
     case OSD_BATTERY_REMAINING_PERCENT:
-        tfp_sprintf(buff, "%3d%%", calculateBatteryPercentage());
+        osdFormatBatteryChargeSymbol(buff);
+        tfp_sprintf(buff + 1, "%3d%%", calculateBatteryPercentage());
         osdUpdateBatteryCapacityOrVoltageTextAttributes(&elemAttr);
         break;
 
@@ -1649,14 +1674,20 @@ static bool osdDrawSingleElement(uint8_t item)
         break;
 
     case OSD_GPS_SPEED:
-        osdFormatVelocityStr(buff, gpsSol.groundSpeed, false);
+        osdFormatVelocityStr(buff, gpsSol.groundSpeed, false, false);
+        break;
+
+    case OSD_GPS_MAX_SPEED:
+        osdFormatVelocityStr(buff, stats.max_speed, false, true);
         break;
 
     case OSD_3D_SPEED:
-        {
-            osdFormatVelocityStr(buff, osdGet3DSpeed(), true);
-            break;
-        }
+        osdFormatVelocityStr(buff, osdGet3DSpeed(), true, false);
+        break;
+
+    case OSD_3D_MAX_SPEED:
+        osdFormatVelocityStr(buff, stats.max_3D_speed, true, true);
+        break;
 
     case OSD_GLIDESLOPE:
         {
@@ -2051,13 +2082,13 @@ static bool osdDrawSingleElement(uint8_t item)
         {
             vtxDeviceOsdInfo_t osdInfo;
             vtxCommonGetOsdInfo(vtxCommonDevice(), &osdInfo);
-            // CR54
+
             tfp_sprintf(buff, "%c", SYM_VTX_POWER);
             displayWrite(osdDisplayPort, elemPosX, elemPosY, buff);
-            // CR54
+
             tfp_sprintf(buff, "%c", osdInfo.powerIndexLetter);
             if (isAdjustmentFunctionSelected(ADJUSTMENT_VTX_POWER_LEVEL)) TEXT_ATTRIBUTES_ADD_BLINK(elemAttr);
-            displayWriteWithAttr(osdDisplayPort, elemPosX + 1, elemPosY, buff, elemAttr);   // CR54
+            displayWriteWithAttr(osdDisplayPort, elemPosX+1, elemPosY, buff, elemAttr);
             return true;
         }
 
@@ -2507,7 +2538,19 @@ static bool osdDrawSingleElement(uint8_t item)
         {
         #ifdef USE_PITOT
             buff[0] = SYM_AIR;
-            osdFormatVelocityStr(buff + 1, pitot.airSpeed, false);
+            osdFormatVelocityStr(buff + 1, pitot.airSpeed, false, false);
+        #else
+            return false;
+        #endif
+            break;
+        }
+
+    case OSD_AIR_MAX_SPEED:
+        {
+        #ifdef USE_PITOT
+            buff[0] = SYM_MAX;
+            buff[1] = SYM_AIR;
+            osdFormatVelocityStr(buff + 2, stats.max_air_speed, false, false);
         #else
             return false;
         #endif
@@ -3610,6 +3653,8 @@ static void osdResetStats(void)
     stats.max_current = 0;
     stats.max_power = 0;
     stats.max_speed = 0;
+    stats.max_3D_speed = 0;
+    stats.max_air_speed = 0;
     stats.min_voltage = 5000;
     stats.min_rssi = 99;
     stats.min_lq = 300;
@@ -3623,8 +3668,14 @@ static void osdUpdateStats(void)
 
     if (feature(FEATURE_GPS)) {
         value = osdGet3DSpeed();
-        if (stats.max_speed < value)
-            stats.max_speed = value;
+        if (stats.max_3D_speed < value)
+            stats.max_3D_speed = value;
+
+        if (stats.max_speed < gpsSol.groundSpeed)
+            stats.max_speed = gpsSol.groundSpeed;
+
+        if (stats.max_air_speed < pitot.airSpeed)
+            stats.max_air_speed = pitot.airSpeed;
 
         if (stats.max_distance < GPS_distanceToHome)
             stats.max_distance = GPS_distanceToHome;
@@ -3684,7 +3735,12 @@ static void osdShowStatsPage1(void)
     //CR4 xxxxxxxxxxxxxxxxxxxxxxx
     if (feature(FEATURE_GPS)) {
         displayWrite(osdDisplayPort, statNameX, top, "MAX SPEED        :");
-        osdFormatVelocityStr(buff, stats.max_speed, true);
+        osdFormatVelocityStr(buff, stats.max_3D_speed, true, false);
+        osdLeftAlignString(buff);
+        displayWrite(osdDisplayPort, statValuesX, top++, buff);
+
+        displayWrite(osdDisplayPort, statNameX, top, "AVG SPEED        :");
+        osdGenerateAverageVelocityStr(buff);
         osdLeftAlignString(buff);
         displayWrite(osdDisplayPort, statValuesX, top++, buff);
 
@@ -4320,13 +4376,13 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
                         messages[messageCount++] = failsafeInfoMessage;
                     }
                 }
-            } else {
+            } else {    /* messages shown only when Failsafe, WP, RTH or Emergency Landing not active */
                 if (STATE(FIXED_WING_LEGACY) && (navGetCurrentStateFlags() & NAV_CTL_LAUNCH)) {
-                        messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_AUTOLAUNCH);
-                        const char *launchStateMessage = fixedWingLaunchStateMessage();
-                        if (launchStateMessage) {
-                            messages[messageCount++] = launchStateMessage;
-                        }
+                    messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_AUTOLAUNCH);
+                    const char *launchStateMessage = fixedWingLaunchStateMessage();
+                    if (launchStateMessage) {
+                        messages[messageCount++] = launchStateMessage;
+                    }
                 } else {
                     if (FLIGHT_MODE(NAV_ALTHOLD_MODE) && !navigationRequiresAngleMode()) {
                         // ALTHOLD might be enabled alongside ANGLE/HORIZON/ACRO
@@ -4393,7 +4449,7 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
                     TEXT_ATTRIBUTES_ADD_BLINK(elemAttr);
                 }
                 // We're shoing either failsafePhaseMessage or
-                // navStateFSMessage. Don't BLINK here since
+                // navStateMessage. Don't BLINK here since
                 // having this text available might be crucial
                 // during a lost aircraft recovery and blinking
                 // will cause it to be missing from some frames.

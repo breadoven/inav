@@ -48,7 +48,6 @@ typedef struct failsafeConfig_s {
 PG_DECLARE(failsafeConfig_t, failsafeConfig);
 
 typedef enum {
-    // CR49
     FAILSAFE_IDLE = 0,
     /* Failsafe mode is not active. All other
      * phases indicate that the failsafe flight
@@ -82,7 +81,7 @@ typedef enum {
      */
 #endif
     FAILSAFE_LANDING,
-    /* Pergorms Emergency Landing if NAV available.
+    /* Pergorms NAV Emergency Landing if USE_NAV defined.
      * Otherwise Failsafe mode performs a simplified landing procedure.
      * This is done by setting throttle and roll/pitch/yaw controls
      * to a pre-configured values that will allow aircraft
@@ -110,7 +109,6 @@ typedef enum {
      * it will immediately transition out of failsafe mode (phase will
      * transition to FAILSAFE_IDLE.)
      */
-    // CR49
 } failsafePhase_e;
 
 typedef enum {
@@ -124,7 +122,6 @@ typedef enum {
     FAILSAFE_PROCEDURE_RTH,
     FAILSAFE_PROCEDURE_NONE
 } failsafeProcedure_e;
-// CR49
 #if defined(USE_NAV)
 typedef enum {
     RTH_IDLE = 0,               // RTH is waiting
@@ -138,7 +135,6 @@ typedef enum {
     EMERG_LAND_HAS_LANDED       // Emergency landing is active and has landed.
 } emergLandState_e;
 #endif
-// CR49
 
 typedef struct failsafeState_s {
     int16_t events;

@@ -39,7 +39,7 @@ tables:
   - name: servo_protocol
     values: ["PWM", "SERVO_DRIVER", "SBUS", "SBUS_PWM"]
   - name: failsafe_procedure
-    values: ["LAND", "DROP", "RTH", "NONE"]     # CR49
+    values: ["LAND", "DROP", "RTH", "NONE"]
   - name: current_sensor
     values: ["NONE", "ADC", "VIRTUAL", "ESC"]
     enum: currentSensor_e
@@ -312,7 +312,7 @@ groups:
       - name: gyro_to_use
         condition: USE_DUAL_GYRO
         min: 0
-        max: 1
+        max: 2
         default_value: 0
       - name: gyro_abg_alpha
         description: "Alpha factor for Gyro Alpha-Beta-Gamma filter"
@@ -914,7 +914,7 @@ groups:
         max: 300
       - name: failsafe_procedure
         description: "What failsafe procedure to initiate in Stage 2. See [Failsafe documentation](Failsafe.md#failsafe_throttle)."
-        default_value: "LAND"   # CR49
+        default_value: "LAND"
         table: failsafe_procedure
       - name: failsafe_stick_threshold
         description: "Threshold for stick motion to consider failsafe condition resolved. If non-zero failsafe won't clear even if RC link is restored - you have to move sticks to exit failsafe."
@@ -923,17 +923,17 @@ groups:
         min: 0
         max: 500
       - name: failsafe_fw_roll_angle
-        description: "Amount of banking when `LAND` failsafe is active on a fixed-wing machine. In 1/10 deg (deci-degrees). Negative values = left roll"    # CR49
+        description: "Amount of banking when `LAND` (or old `SET-THR`) failsafe is active on a fixed-wing machine. In 1/10 deg (deci-degrees). Negative values = left roll"
         default_value: -200
         min: -800
         max: 800
       - name: failsafe_fw_pitch_angle
-        description: "Amount of dive/climb when `LAND` failsafe is active on a fixed-wing machine. In 1/10 deg (deci-degrees). Negative values = climb" # CR49
+        description: "Amount of dive/climb when `LAND` (or old `SET-THR`) failsafe is active on a fixed-wing machine. In 1/10 deg (deci-degrees). Negative values = climb"
         default_value: 100
         min: -800
         max: 800
       - name: failsafe_fw_yaw_rate
-        description: "Requested yaw rate to execute when `LAND` failsafe is active on a fixed-wing machine. In deg/s. Negative values = left turn"  # CR49
+        description: "Requested yaw rate to execute when `LAND` (or old `SET-THR`) failsafe is active on a fixed-wing machine. In deg/s. Negative values = left turn"
         default_value: -45
         min: -1000
         max: 1000

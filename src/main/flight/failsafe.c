@@ -89,9 +89,9 @@ PG_RESET_TEMPLATE(failsafeConfig_t, failsafeConfig,
 typedef enum {
     FAILSAFE_CHANNEL_HOLD,      // Hold last known good value
     FAILSAFE_CHANNEL_NEUTRAL,   // RPY = zero, THR = zero
-#if !defined(USE_NAV)    // CR49
+#if !defined(USE_NAV)
     FAILSAFE_CHANNEL_AUTO,      // Defined by failsafe configured values
-#endif  // CR49
+#endif
 } failsafeChannelBehavior_e;
 
 typedef struct {
@@ -232,7 +232,6 @@ bool failsafeRequiresAngleMode(void)
 
 bool failsafeRequiresMotorStop(void)
 {
-// CR49
 #if defined(USE_NAV)
     return failsafeState.active &&
            failsafeState.activeProcedure == FAILSAFE_PROCEDURE_AUTO_LANDING &&
@@ -243,7 +242,6 @@ bool failsafeRequiresMotorStop(void)
            failsafeState.activeProcedure == FAILSAFE_PROCEDURE_AUTO_LANDING &&
            currentBatteryProfile->failsafe_throttle < getThrottleIdleValue();
 #endif
-// CR49
 }
 
 void failsafeStartMonitoring(void)
@@ -283,7 +281,7 @@ void failsafeUpdateRcCommandValues(void)
 
 void failsafeApplyControlInput(void)
 {
-#if !defined(USE_NAV)   // CR49
+#if !defined(USE_NAV)
     // Prepare FAILSAFE_CHANNEL_AUTO values for rcCommand
     int16_t autoRcCommand[4];
     if (STATE(FIXED_WING_LEGACY)) {
@@ -298,7 +296,7 @@ void failsafeApplyControlInput(void)
         }
         autoRcCommand[THROTTLE] = currentBatteryProfile->failsafe_throttle;
     }
-#endif  // CR49
+#endif
     // Apply channel values
     for (int idx = 0; idx < 4; idx++) {
         switch (failsafeProcedureLogic[failsafeState.activeProcedure].channelBehavior[idx]) {
@@ -319,12 +317,11 @@ void failsafeApplyControlInput(void)
                         break;
                 }
                 break;
-
-#if !defined(USE_NAV)   // CR49
+#if !defined(USE_NAV)
             case FAILSAFE_CHANNEL_AUTO:
                 rcCommand[idx] = autoRcCommand[idx];
                 break;
-#endif  // CR49
+#endif
         }
     }
 }
@@ -479,13 +476,11 @@ void failsafeUpdateState(void)
 
                     switch (failsafeState.activeProcedure) {
                         case FAILSAFE_PROCEDURE_AUTO_LANDING:
-                            // Use Emergency Landing if Nav defined. Ootherwise stabilize, and set Throttle to specified level.     // CR49
+                            // Use Emergency Landing if Nav defined (otherwise stabilize and set Throttle to specified level).
                             failsafeActivate(FAILSAFE_LANDING);
-// CR49
 #if defined(USE_NAV)
                             activateForcedEmergLanding();
 #endif
-// CR49
                             break;
 
                         case FAILSAFE_PROCEDURE_DROP_IT:
