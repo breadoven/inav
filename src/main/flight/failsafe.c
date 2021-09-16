@@ -101,7 +101,6 @@ typedef struct {
 } failsafeProcedureLogic_t;
 
 static const failsafeProcedureLogic_t failsafeProcedureLogic[] = {
-    // CR49
     [FAILSAFE_PROCEDURE_AUTO_LANDING] = {
             .forceAngleMode = true,
 #if defined(USE_NAV)
@@ -122,7 +121,6 @@ static const failsafeProcedureLogic_t failsafeProcedureLogic[] = {
             }
 #endif
     },
-    // CR49
 
     [FAILSAFE_PROCEDURE_DROP_IT] = {
             .bypassNavigation = true,
@@ -249,7 +247,7 @@ void failsafeStartMonitoring(void)
     failsafeState.monitoring = true;
 }
 
-static bool failsafeShouldHaveCausedLandingByNow(void)  // CR49 probably still needed
+static bool failsafeShouldHaveCausedLandingByNow(void)
 {
     return failsafeConfig()->failsafe_off_delay && (millis() > failsafeState.landingShouldBeFinishedAt);
 }
@@ -552,21 +550,6 @@ void failsafeUpdateState(void)
                 break;
 #endif
 
-            // case FAILSAFE_LANDING:
-                // if (receivingRxDataAndNotFailsafeMode && sticksAreMoving) {
-                    // failsafeState.phase = FAILSAFE_RX_LOSS_RECOVERED;
-                    // reprocessState = true;
-                // }
-                // if (armed) {
-                    // beeperMode = BEEPER_RX_LOST_LANDING;
-                // }
-                // if (failsafeShouldHaveCausedLandingByNow() || !armed) {
-                    // failsafeState.receivingRxDataPeriodPreset = PERIOD_OF_30_SECONDS; // require 30 seconds of valid rxData
-                    // failsafeState.phase = FAILSAFE_LANDED;
-                    // reprocessState = true;
-                // }
-                // break;
-                // CR49
             case FAILSAFE_LANDING:
                 if (receivingRxDataAndNotFailsafeMode && sticksAreMoving) {
 #if defined(USE_NAV)
@@ -607,7 +590,7 @@ void failsafeUpdateState(void)
                     }
                 }
                 break;
-                // CR49
+
             case FAILSAFE_LANDED:
                 ENABLE_ARMING_FLAG(ARMING_DISABLED_FAILSAFE_SYSTEM); // To prevent accidently rearming by an intermittent rx link
                 disarm(DISARM_FAILSAFE);

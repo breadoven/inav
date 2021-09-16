@@ -543,12 +543,6 @@ uint32_t distanceToFirstWP(void);
 void activateForcedRTH(void);
 void abortForcedRTH(void);
 rthState_e getStateOfForcedRTH(void);
-// CR49
-/* Failsafe-forced Emergency Landing mode */
-void activateForcedEmergLanding(void);
-void abortForcedEmergLanding(void);
-emergLandState_e getStateOfForcedEmergLanding(void);
-// CR49
 
 /* Failsafe-forced Emergency Landing mode */
 void activateForcedEmergLanding(void);
