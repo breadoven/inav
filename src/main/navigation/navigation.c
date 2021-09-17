@@ -3338,18 +3338,20 @@ static navigationFSMEvent_t selectNavEventFromBoxModeInput(bool launchBypass)
         if (posControl.flags.forcedEmergLandingActivated) {
             return NAV_FSM_EVENT_SWITCH_TO_EMERGENCY_LANDING;
         }
+        // CR55
+        /* Keep Emergency landing mode active once triggered. Is cancelled when landing in progress if position sensors working again.
+         * If failsafe RTH not active landing also cancelled if WP or RTH deselected or if Manual or Althold modes selected
+         * Remains active if landing finished regardless of sensor status or flight mode selection */
+        bool autonomousNavNotPossible = !(canActivateNavigation && canActivateAltHold && STATE(GPS_FIX_HOME));
+        bool emergLandingCancel = IS_RC_MODE_ACTIVE(BOXMANUAL) || (IS_RC_MODE_ACTIVE(BOXNAVALTHOLD) && canActivateAltHold) ||
+                                  !(IS_RC_MODE_ACTIVE(BOXNAVWP) || IS_RC_MODE_ACTIVE(BOXNAVRTH));
 
-        /* Keep Emergency landing mode active once triggered. Is deactivated when landing in progress if WP or RTH cancelled
-         * or position sensors working again or if Manual or Althold modes selected.
-         * Remains active if landing finished regardless of sensor status or if WP or RTH modes still selected */
         if (navigationIsExecutingAnEmergencyLanding()) {
-            if (!(canActivateNavigation && canActivateAltHold && STATE(GPS_FIX_HOME)) &&
-                !IS_RC_MODE_ACTIVE(BOXMANUAL) &&
-                !(IS_RC_MODE_ACTIVE(BOXNAVALTHOLD) && canActivateAltHold) &&
-                (IS_RC_MODE_ACTIVE(BOXNAVWP) || IS_RC_MODE_ACTIVE(BOXNAVRTH))) {
+            if (autonomousNavNotPossible && (!emergLandingCancel || posControl.flags.forcedRTHActivated)) { // CR55
                 return NAV_FSM_EVENT_SWITCH_TO_EMERGENCY_LANDING;
             }
         }
+        // CR55
 
         // Keep canActivateWaypoint flag at FALSE if there is no mission loaded
         // Also block WP mission if we are executing RTH
