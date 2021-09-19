@@ -632,16 +632,6 @@ Defines debug values exposed in debug variables (developer / debugging setting)
 
 ---
 
-### disable_motor_output
-
-Disables motors always - for developer test use
-
-| Default | Min | Max |
-| --- | --- | --- |
-| OFF |  |  |
-
----
-
 ### disarm_kill_switch
 
 Disarms the motors independently of throttle value. Setting to OFF reverts to the old behaviour of disarming only when the throttle is low. Only applies when arming and disarming with an AUX channel.
@@ -1545,6 +1535,16 @@ Which SBAS mode to be used
 ### gps_ublox_use_galileo
 
 Enable use of Galileo satellites. This is at the expense of other regional constellations, so benefit may also be regional. Requires M8N and Ublox firmware 3.x (or later) [OFF/ON].
+
+| Default | Min | Max |
+| --- | --- | --- |
+| OFF |  |  |
+
+---
+
+### ground_test_mode
+
+For developer ground test use. Disables motors, sets heading status = Trusted on FW.
 
 | Default | Min | Max |
 | --- | --- | --- |
