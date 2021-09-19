@@ -4434,8 +4434,8 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
             // CR27
             // CR53
 #ifdef USE_DEV_TOOLS
-            if (motorConfig()->disableMotorOutput) {
-                messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_MOTORS_DISABLED);
+            if (systemConfig()->groundTestMode) {
+                messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_GRD_TEST_MODE);
             }
 #endif
             // CR53

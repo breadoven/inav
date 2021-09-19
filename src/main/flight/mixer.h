@@ -82,9 +82,6 @@ typedef struct motorConfig_s {
     uint8_t  motorPwmProtocol;
     uint16_t digitalIdleOffsetValue;
     uint8_t motorPoleCount;                 // Magnetic poles in the motors for calculating actual RPM from eRPM provided by ESC telemetry
-#ifdef USE_DEV_TOOLS    // CR53
-    bool disableMotorOutput;                // Disables motor oupt always (for dev use)
-#endif      // CR53
 } motorConfig_t;
 
 PG_DECLARE(motorConfig_t, motorConfig);

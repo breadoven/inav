@@ -2106,8 +2106,15 @@ void updateActualHeading(bool headingValid, int32_t newHeading)
         }
     }
     // CR27
-    navigationEstimateStatus_e newEstHeading = headingValid ? EST_TRUSTED : EST_NONE;
 
+    navigationEstimateStatus_e newEstHeading = headingValid ? EST_TRUSTED : EST_NONE;
+    // CR53
+#ifdef USE_DEV_TOOLS
+    if (systemConfig()->groundTestMode && STATE(AIRPLANE)) {
+        newEstHeading = EST_TRUSTED;
+    }
+#endif
+    // CR53
     if (newEstHeading >= EST_USABLE && posControl.flags.estHeadingStatus < EST_USABLE &&
         (posControl.rthState.homeFlags & (NAV_HOME_VALID_XY | NAV_HOME_VALID_Z)) &&
         (posControl.rthState.homeFlags & NAV_HOME_VALID_HEADING) == 0) {

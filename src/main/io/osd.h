@@ -106,7 +106,7 @@
 #define OSD_MSG_MISSION_PLANNER     "(WP MISSION PLANNER)"     // CR32
 #define OSD_MSG_NAV_SOARING         "(SOARING)"     // CR36
 #ifdef USE_DEV_TOOLS    // CR53
-#define OSD_MSG_MOTORS_DISABLED     "MOTORS DISABLED"
+#define OSD_MSG_GRD_TEST_MODE       "GRD TEST > MOTORS DISABLED"
 #endif      // CR53
 
 #if defined(USE_SAFE_HOME)
