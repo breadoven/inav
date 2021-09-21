@@ -669,7 +669,6 @@ bool isFixedWingLandingDetected(void)
 /*-----------------------------------------------------------
  * FixedWing emergency landing
  *-----------------------------------------------------------*/
-// CR50
 void applyFixedWingEmergencyLandingController(timeUs_t currentTimeUs)
 {
     rcCommand[ROLL] = pidAngleToRcCommand(failsafeConfig()->failsafe_fw_roll_angle, pidProfile()->max_angle_inclination[FD_ROLL]);
@@ -680,14 +679,11 @@ void applyFixedWingEmergencyLandingController(timeUs_t currentTimeUs)
         updateClimbRateToAltitudeController(-1.0f * navConfig()->general.emerg_descent_rate, ROC_TO_ALT_NORMAL);
         applyFixedWingAltitudeAndThrottleController(currentTimeUs);
 
-        // if (isPitchAdjustmentValid) {
         int16_t pitchCorrection = constrain(posControl.rcAdjustment[PITCH], -DEGREES_TO_DECIDEGREES(navConfig()->fw.max_dive_angle), DEGREES_TO_DECIDEGREES(navConfig()->fw.max_climb_angle));
         rcCommand[PITCH] = -pidAngleToRcCommand(pitchCorrection, pidProfile()->max_angle_inclination[FD_PITCH]);
-        // }
     } else {
         rcCommand[PITCH] = pidAngleToRcCommand(failsafeConfig()->failsafe_fw_pitch_angle, pidProfile()->max_angle_inclination[FD_PITCH]);
     }
-    // CR50
 }
 
 /*-----------------------------------------------------------
@@ -710,7 +706,7 @@ void applyFixedWingNavigationController(navigationFSMStateFlags_t navStateFlags,
         applyFixedWingLaunchController(currentTimeUs);
     }
     else if (navStateFlags & NAV_CTL_EMERG) {
-        applyFixedWingEmergencyLandingController(currentTimeUs);    // CR50
+        applyFixedWingEmergencyLandingController(currentTimeUs);
     }
     else {
 #ifdef NAV_FW_LIMIT_MIN_FLY_VELOCITY
