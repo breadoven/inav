@@ -1649,11 +1649,6 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_WAYPOINT_HOLD_TIME(navi
         return NAV_FSM_EVENT_SWITCH_TO_EMERGENCY_LANDING;
     }
 
-    /* If position sensors unavailable - land immediately (wait for timeout on GPS) */
-    if (posControl.flags.estHeadingStatus == EST_NONE || checkForPositionSensorTimeout()) {
-        return NAV_FSM_EVENT_SWITCH_TO_EMERGENCY_LANDING;
-    }
-
     timeMs_t currentTime = millis();
     // CR44
     // if (posControl.waypointList[posControl.activeWaypointIndex].p1 <= 0) {
