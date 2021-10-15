@@ -3004,7 +3004,7 @@ void selectMultiMissionIndex(int8_t increment)
 // CR21
 
 #ifdef NAV_NON_VOLATILE_WAYPOINT_STORAGE
-bool loadNonVolatileWaypointList(bool clearIfLoaded)
+bool loadNonVolatileWaypointList(bool clearIfLoaded, bool mspActive)    // CR21 x
 {
     if (ARMING_FLAG(ARMED) || posControl.wpPlannerActiveWPIndex) // prevent EEPROM load if mission planner WP count > 0  CR32
         return false;
@@ -3023,7 +3023,7 @@ bool loadNonVolatileWaypointList(bool clearIfLoaded)
 
     // if in CLI mode load all WPs in NVM so all multi mission WP entries are visible using "WP" command
     for (int i = 0; i < NAV_MAX_WAYPOINTS; i++) {
-        if ((posControl.multiMissionCount + 1 == navConfig()->general.waypoint_multi_mission_index) || cliMode) {
+        if ((posControl.multiMissionCount + 1 == navConfig()->general.waypoint_multi_mission_index) || cliMode || mspActive) {  // CR21 x
             // Load waypoints
             setWaypoint(i + 1 - WPCounter, nonVolatileWaypointList(i));
         } else {
@@ -3850,7 +3850,7 @@ void navigationInit(void)
             navConfigMutable()->general.waypoint_multi_mission_index = 0;
         }
 
-        loadNonVolatileWaypointList(false);
+        loadNonVolatileWaypointList(false, false);  // CR21 x
 
         navConfigMutable()->general.waypoint_multi_mission_index = savedMultiMissionIndex > posControl.multiMissionCount ? 1 : savedMultiMissionIndex;
 #endif
