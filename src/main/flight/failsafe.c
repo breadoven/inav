@@ -393,7 +393,7 @@ static bool failsafeCheckStickMotion(void)
 
 static failsafeProcedure_e failsafeChooseFailsafeProcedure(void)
 {
-    if ((FLIGHT_MODE(NAV_WP_MODE) || isWaypointMissionRTHActive()) && !failsafeConfig()->failsafe_mission) {     // CR56
+    if ((FLIGHT_MODE(NAV_WP_MODE) || isWaypointMissionRTHActive()) && !failsafeConfig()->failsafe_mission) {
         return FAILSAFE_PROCEDURE_NONE;
     }
 
