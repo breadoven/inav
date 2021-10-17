@@ -192,7 +192,7 @@
 //#define USE_MSP_RC_OVERRIDE
 #define USE_SERIALRX_CRSF
 #define USE_SERIAL_PASSTHROUGH
-#define NAV_MAX_WAYPOINTS       60
+#define NAV_MAX_WAYPOINTS       120
 #define USE_RCDEVICE
 
 //Enable VTX control

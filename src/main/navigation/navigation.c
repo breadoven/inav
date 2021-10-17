@@ -3342,7 +3342,7 @@ static navigationFSMEvent_t selectNavEventFromBoxModeInput(bool launchBypass)
         }
 
         /* Keep Emergency landing mode active once triggered. Is cancelled when landing in progress if position sensors working again.
-         * If failsafe not active landing also cancelled if WP or RTH deselected or if Manual or Althold modes selected
+         * If failsafe not active landing also cancelled if WP or RTH deselected or if Manual or Althold modes selected.
          * Remains active if landing finished regardless of sensor status or flight mode selection */
         bool autonomousNavNotPossible = !(canActivateNavigation && canActivateAltHold && STATE(GPS_FIX_HOME));
         bool emergLandingCancel = IS_RC_MODE_ACTIVE(BOXMANUAL) || (IS_RC_MODE_ACTIVE(BOXNAVALTHOLD) && canActivateAltHold) ||
