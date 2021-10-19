@@ -368,7 +368,6 @@ typedef struct {
     bool                        wpMissionRestart;           // mission restart from first waypoint  CR29
 
     int8_t                      multiMissionCount;          // CR21 number of missions in multi mission file
-    int8_t                      multiMissionTotalWPCount;   // CR21 total number of WPs in multi mission file
     int8_t                      loadedMultiMissionIndex;    // Index of currently loaded mission  CR21
 
     int8_t                      wpMissionPlannerStatus;     // WP save status for setting in flight WP mission planner  // CR32
