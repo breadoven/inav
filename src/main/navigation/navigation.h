@@ -489,9 +489,10 @@ bool isWaypointListValid(void);
 void getWaypoint(uint8_t wpNumber, navWaypoint_t * wpData);
 void setWaypoint(uint8_t wpNumber, const navWaypoint_t * wpData);
 void resetWaypointList(void);
-bool loadNonVolatileWaypointList(bool clearIfLoaded, bool mspActive);   // CR21 x
+bool loadNonVolatileWaypointList(bool clearIfLoaded);   // CR21 x
 bool saveNonVolatileWaypointList(void);
 void selectMultiMissionIndex(int8_t increment);   // CR21
+void setMultiMissionOnArm(void);                 // CE21 x
 
 float getFinalRTHAltitude(void);
 int16_t fixedWingPitchToThrottleCorrection(int16_t pitch, timeUs_t currentTimeUs);

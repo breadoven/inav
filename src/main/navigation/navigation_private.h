@@ -367,8 +367,11 @@ typedef struct {
     int8_t                      geoWaypointCount;           // total geospatial WPs in mission // CR8
     bool                        wpMissionRestart;           // mission restart from first waypoint  CR29
 
-    int8_t                      multiMissionCount;          // CR21 number of missions in multi mission file
-    int8_t                      loadedMultiMissionIndex;    // Index of currently loaded mission  CR21
+    int8_t                      multiMissionCount;          // number of missions in multi mission file  CR21
+    int8_t                      loadedMultiMissionIndex;    // index of currently loaded mission  CR21
+    int8_t                      multiMissionStartWP;        // selected mission start WP    CR21 x
+    int8_t                      multiMissionEndWP;          // selected mission end WP  CR21 x
+    int8_t                      selectedMissionWPCount;     // number of WPs in selected multi mission   CR21 x
 
     int8_t                      wpMissionPlannerStatus;     // WP save status for setting in flight WP mission planner  // CR32
     int8_t                      wpPlannerActiveWPIndex;     // CR32

@@ -515,6 +515,8 @@ void releaseSharedTelemetryPorts(void) {
 
 void tryArm(void)
 {
+    setMultiMissionOnArm(); // CR21 x
+
     updateArmingStatus();
 
 #ifdef USE_DSHOT
