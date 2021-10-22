@@ -3005,16 +3005,14 @@ void selectMultiMissionIndex(int8_t increment)
 void setMultiMissionOnArm(void)
 {
     if (posControl.multiMissionCount > 1) {
-        posControl.waypointCount = posControl.selectedMissionWPCount;
+        posControl.waypointCount = posControl.loadedMultiMissionWPCount;
 
         for (int i = 0; i < NAV_MAX_WAYPOINTS; i++) {
-            posControl.waypointList[i] = posControl.waypointList[i + posControl.multiMissionStartWP];
-            // const navWaypoint_t *wpData = &posControl.waypointList[i + posControl.multiMissionStartWP];
-            // setWaypoint(i + 1, wpData);
+            posControl.waypointList[i] = posControl.waypointList[i + posControl.loadedMultiMissionStartWP];
             if (i == posControl.waypointCount - 1) break;
         }
 
-        posControl.multiMissionStartWP = 0;
+        posControl.loadedMultiMissionStartWP = 0;
     }
 }
 // CR21 x
@@ -3034,9 +3032,8 @@ bool loadNonVolatileWaypointList(bool clearIfLoaded)    // CR21 x
 
     // CR21
     posControl.multiMissionCount = 0;
-    // int8_t WPCounter = 0;    // CR21 x
-    posControl.multiMissionStartWP = -1;   // CR21 x
-    int8_t multiMissionGeoWPCount;   //CR21 x
+    posControl.loadedMultiMissionStartWP = -1;   // CR21 x
+    int8_t loadedMultiMissionGeoWPCount;   //CR21 x
     // CR21 x
     // if in CLI mode load all WPs in NVM so all multi mission WP entries are visible using "WP" command  CR21 x delete
     for (int i = 0; i < NAV_MAX_WAYPOINTS; i++) {
@@ -3045,12 +3042,12 @@ bool loadNonVolatileWaypointList(bool clearIfLoaded)    // CR21 x
 
             if ((posControl.multiMissionCount + 1 == navConfig()->general.waypoint_multi_mission_index)) {
                 // Mark start and end of selected mission
-                if (posControl.multiMissionStartWP == -1) {
-                    posControl.multiMissionStartWP = i;
-                    multiMissionGeoWPCount = posControl.geoWaypointCount;
+                if (posControl.loadedMultiMissionStartWP == -1) {
+                    posControl.loadedMultiMissionStartWP = i;
+                    loadedMultiMissionGeoWPCount = posControl.geoWaypointCount;
                 } else if (posControl.waypointList[i].flag == NAV_WP_FLAG_LAST) {
-                    posControl.multiMissionEndWP = i;
-                    multiMissionGeoWPCount = posControl.geoWaypointCount - multiMissionGeoWPCount + 1;
+                    posControl.loadedMultiMissionWPCount = i - posControl.loadedMultiMissionStartWP + 1;
+                    loadedMultiMissionGeoWPCount = posControl.geoWaypointCount - loadedMultiMissionGeoWPCount + 1;
                 }
             }
         }
@@ -3066,11 +3063,8 @@ bool loadNonVolatileWaypointList(bool clearIfLoaded)    // CR21 x
         }
         // CR21
     }
-
-    posControl.geoWaypointCount = multiMissionGeoWPCount;   // CR21 x
-    posControl.selectedMissionWPCount = posControl.multiMissionEndWP - posControl.multiMissionStartWP + 1; // CR21 x
-
-    posControl.loadedMultiMissionIndex = posControl.multiMissionCount > 0 ? navConfig()->general.waypoint_multi_mission_index : 0;    // CR21
+    posControl.geoWaypointCount = loadedMultiMissionGeoWPCount;   // CR21 x
+    posControl.loadedMultiMissionIndex = posControl.multiMissionCount ? navConfig()->general.waypoint_multi_mission_index : 0;    // CR21
 
     // Mission sanity check failed - reset the list
     if (!posControl.waypointListValid) {
@@ -3566,7 +3560,7 @@ bool navigationTerrainFollowingEnabled(void)
 uint32_t distanceToFirstWP(void)
 {
     fpVector3_t startingWaypointPos;
-    mapWaypointToLocalPosition(&startingWaypointPos, &posControl.waypointList[posControl.multiMissionStartWP], GEO_ALT_RELATIVE);  // CR21 x
+    mapWaypointToLocalPosition(&startingWaypointPos, &posControl.waypointList[posControl.loadedMultiMissionStartWP], GEO_ALT_RELATIVE);  // CR21 x
     return calculateDistanceToDestination(&startingWaypointPos);
 }
 
@@ -3614,12 +3608,8 @@ navArmingBlocker_e navigationIsBlockingArming(bool *usedBypass)
          * Can't jump beyond WP list
          * Only jump to geo-referenced WP types
          */
-    if (posControl.waypointCount > 0) {
-        // CR21 x
-        uint8_t startWP = posControl.multiMissionStartWP;
-        // for (uint8_t wp = 0; wp < posControl.waypointCount ; wp++){
-        for (uint8_t wp = startWP; wp < startWP + posControl.selectedMissionWPCount; wp++){
-        // CR21 x
+    if (posControl.waypointCount && !posControl.loadedMultiMissionStartWP) {    // CR21 x
+        for (uint8_t wp = 0; wp < posControl.waypointCount; wp++){
             if (posControl.waypointList[wp].action == NAV_WP_ACTION_JUMP){
                 if ((wp == 0) || ((posControl.waypointList[wp].p1 > (wp-2)) && (posControl.waypointList[wp].p1 < (wp+2)) ) || (posControl.waypointList[wp].p1 >=  posControl.waypointCount) || (posControl.waypointList[wp].p2 < -1)) {
                     return NAV_ARMING_BLOCKER_JUMP_WAYPOINT_ERROR;

@@ -3081,8 +3081,8 @@ static bool osdDrawSingleElement(uint8_t item)
                     if (posControl.multiMissionCount && navConfig()->general.waypoint_multi_mission_index != posControl.loadedMultiMissionIndex) {
                         tfp_sprintf(buff, "M%u/%u>LOAD", navConfig()->general.waypoint_multi_mission_index, posControl.multiMissionCount);
                     } else {
-                        if (posControl.waypointListValid && posControl.selectedMissionWPCount > 0) {    // CR21 x
-                            tfp_sprintf(buff, "M%u/%u>%2uWP", posControl.loadedMultiMissionIndex, posControl.multiMissionCount, posControl.selectedMissionWPCount); // CR21 x
+                        if (posControl.waypointListValid && posControl.loadedMultiMissionWPCount > 0) {    // CR21 x
+                            tfp_sprintf(buff, "M%u/%u>%2uWP", posControl.loadedMultiMissionIndex, posControl.multiMissionCount, posControl.loadedMultiMissionWPCount); // CR21 x
                         } else {
                             tfp_sprintf(buff, "M0/%u> 0WP", posControl.multiMissionCount);
                         }

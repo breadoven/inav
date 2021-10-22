@@ -369,9 +369,8 @@ typedef struct {
 
     int8_t                      multiMissionCount;          // number of missions in multi mission file  CR21
     int8_t                      loadedMultiMissionIndex;    // index of currently loaded mission  CR21
-    int8_t                      multiMissionStartWP;        // selected mission start WP    CR21 x
-    int8_t                      multiMissionEndWP;          // selected mission end WP  CR21 x
-    int8_t                      selectedMissionWPCount;     // number of WPs in selected multi mission   CR21 x
+    int8_t                      loadedMultiMissionStartWP;  // selected mission start WP    CR21 x
+    int8_t                      loadedMultiMissionWPCount;  // number of WPs in selected multi mission   CR21 x
 
     int8_t                      wpMissionPlannerStatus;     // WP save status for setting in flight WP mission planner  // CR32
     int8_t                      wpPlannerActiveWPIndex;     // CR32
