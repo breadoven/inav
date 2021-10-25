@@ -515,7 +515,7 @@ void releaseSharedTelemetryPorts(void) {
 
 void tryArm(void)
 {
-    setMultiMissionOnArm(); // CR21 x
+    setMultiMissionOnArm(); // CR21
 
     updateArmingStatus();
 
