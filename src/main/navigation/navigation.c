@@ -3000,8 +3000,7 @@ void selectMultiMissionIndex(int8_t increment)
 {
     navConfigMutable()->general.waypoint_multi_mission_index = constrain(navConfigMutable()->general.waypoint_multi_mission_index + increment, 0, posControl.multiMissionCount);
 }
-// CR21
-// CR21 x
+
 void setMultiMissionOnArm(void)
 {
     if (posControl.multiMissionCount > 1) {
@@ -3015,9 +3014,9 @@ void setMultiMissionOnArm(void)
         posControl.loadedMultiMissionStartWP = 0;
     }
 }
-// CR21 x
+// CR21
 #ifdef NAV_NON_VOLATILE_WAYPOINT_STORAGE
-bool loadNonVolatileWaypointList(bool clearIfLoaded)    // CR21 x
+bool loadNonVolatileWaypointList(bool clearIfLoaded)
 {
     if (ARMING_FLAG(ARMED) || posControl.wpPlannerActiveWPIndex) // prevent EEPROM load if mission planner WP count > 0  CR32
         return false;
@@ -3032,10 +3031,9 @@ bool loadNonVolatileWaypointList(bool clearIfLoaded)    // CR21 x
 
     // CR21
     posControl.multiMissionCount = 0;
-    posControl.loadedMultiMissionStartWP = -1;   // CR21 x
-    int8_t loadedMultiMissionGeoWPCount;   //CR21 x
-    // CR21 x
-    // if in CLI mode load all WPs in NVM so all multi mission WP entries are visible using "WP" command  CR21 x delete
+    posControl.loadedMultiMissionStartWP = -1;
+    int8_t loadedMultiMissionGeoWPCount;
+
     for (int i = 0; i < NAV_MAX_WAYPOINTS; i++) {
         if (navConfig()->general.waypoint_multi_mission_index) {
             setWaypoint(i + 1, nonVolatileWaypointList(i));
@@ -3051,7 +3049,7 @@ bool loadNonVolatileWaypointList(bool clearIfLoaded)    // CR21 x
                 }
             }
         }
-        // CR21 x
+
         // Check if this is the last waypoint
         if (nonVolatileWaypointList(i)->flag == NAV_WP_FLAG_LAST) {
             posControl.multiMissionCount += 1;  // count up no missions in multi mission WP file
@@ -3061,11 +3059,10 @@ bool loadNonVolatileWaypointList(bool clearIfLoaded)    // CR21 x
                 }
             }
         }
-        // CR21
     }
-    posControl.geoWaypointCount = loadedMultiMissionGeoWPCount;   // CR21 x
-    posControl.loadedMultiMissionIndex = posControl.multiMissionCount ? navConfig()->general.waypoint_multi_mission_index : 0;    // CR21
-
+    posControl.geoWaypointCount = loadedMultiMissionGeoWPCount;
+    posControl.loadedMultiMissionIndex = posControl.multiMissionCount ? navConfig()->general.waypoint_multi_mission_index : 0;
+    // CR21
     // Mission sanity check failed - reset the list
     if (!posControl.waypointListValid) {
         resetWaypointList();
@@ -3560,7 +3557,7 @@ bool navigationTerrainFollowingEnabled(void)
 uint32_t distanceToFirstWP(void)
 {
     fpVector3_t startingWaypointPos;
-    mapWaypointToLocalPosition(&startingWaypointPos, &posControl.waypointList[posControl.loadedMultiMissionStartWP], GEO_ALT_RELATIVE);  // CR21 x
+    mapWaypointToLocalPosition(&startingWaypointPos, &posControl.waypointList[posControl.loadedMultiMissionStartWP], GEO_ALT_RELATIVE);  // CR21
     return calculateDistanceToDestination(&startingWaypointPos);
 }
 
@@ -3608,7 +3605,7 @@ navArmingBlocker_e navigationIsBlockingArming(bool *usedBypass)
          * Can't jump beyond WP list
          * Only jump to geo-referenced WP types
          */
-    if (posControl.waypointCount && !posControl.loadedMultiMissionStartWP) {    // CR21 x
+    if (posControl.waypointCount && !posControl.loadedMultiMissionStartWP) {    // CR21
         for (uint8_t wp = 0; wp < posControl.waypointCount; wp++){
             if (posControl.waypointList[wp].action == NAV_WP_ACTION_JUMP){
                 if ((wp == 0) || ((posControl.waypointList[wp].p1 > (wp-2)) && (posControl.waypointList[wp].p1 < (wp+2)) ) || (posControl.waypointList[wp].p1 >=  posControl.waypointCount) || (posControl.waypointList[wp].p2 < -1)) {
@@ -3870,7 +3867,7 @@ void navigationInit(void)
             navConfigMutable()->general.waypoint_multi_mission_index = 0;
         }
 
-        loadNonVolatileWaypointList(true);  // CR21 x
+        loadNonVolatileWaypointList(true);
 
         navConfigMutable()->general.waypoint_multi_mission_index = savedMultiMissionIndex > posControl.multiMissionCount ? 1 : savedMultiMissionIndex;
 #endif
