@@ -3003,7 +3003,7 @@ void selectMultiMissionIndex(int8_t increment)
 
 void setMultiMissionOnArm(void)
 {
-    if (posControl.multiMissionCount > 1) {
+    if (posControl.multiMissionCount > 1 && posControl.loadedMultiMissionWPCount) {
         posControl.waypointCount = posControl.loadedMultiMissionWPCount;
 
         for (int i = 0; i < NAV_MAX_WAYPOINTS; i++) {
@@ -3030,8 +3030,14 @@ bool loadNonVolatileWaypointList(bool clearIfLoaded)
     resetWaypointList();
 
     // CR21
+    /* Reset multi mission index to 1 if exceeds number of available missions */
+    if (navConfig()->general.waypoint_multi_mission_index > posControl.multiMissionCount) {
+        navConfigMutable()->general.waypoint_multi_mission_index = 1;
+    }
+
     posControl.multiMissionCount = 0;
     posControl.loadedMultiMissionStartWP = -1;
+    posControl.loadedMultiMissionWPCount = 0;
     int8_t loadedMultiMissionGeoWPCount;
 
     for (int i = 0; i < NAV_MAX_WAYPOINTS; i++) {
@@ -3064,7 +3070,8 @@ bool loadNonVolatileWaypointList(bool clearIfLoaded)
     posControl.loadedMultiMissionIndex = posControl.multiMissionCount ? navConfig()->general.waypoint_multi_mission_index : 0;
     // CR21
     // Mission sanity check failed - reset the list
-    if (!posControl.waypointListValid) {
+    // Also reset if no multi mission found to load (shouldn't happen)
+    if (!posControl.waypointListValid || !posControl.loadedMultiMissionWPCount) {   // CR21
         resetWaypointList();
     }
 
