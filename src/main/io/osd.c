@@ -3098,20 +3098,24 @@ static bool osdDrawSingleElement(uint8_t item)
                 tfp_sprintf(buff, "%s>%2uWP", buf, posControl.wpPlannerActiveWPIndex);
             } else if (posControl.wpPlannerActiveWPIndex){
                 tfp_sprintf(buff, "PLAN>%2uWP", posControl.waypointCount);
-            } else {
             // CR32
+            } else {
                 if (ARMING_FLAG(ARMED)){
-                    tfp_sprintf(buff, "M%u       ", posControl.loadedMultiMissionIndex);  // Limit field size when Armed, only show selected mission
-                } else {
-                    if (posControl.multiMissionCount && navConfig()->general.waypoint_multi_mission_index != posControl.loadedMultiMissionIndex) {
+                    // Limit field size when Armed, only show selected mission
+                    tfp_sprintf(buff, "M%u       ", posControl.loadedMultiMissionIndex);
+                } else if (posControl.multiMissionCount && navConfig()->general.waypoint_multi_mission_index){
+                    if (navConfig()->general.waypoint_multi_mission_index != posControl.loadedMultiMissionIndex) {
                         tfp_sprintf(buff, "M%u/%u>LOAD", navConfig()->general.waypoint_multi_mission_index, posControl.multiMissionCount);
                     } else {
-                        if (posControl.waypointListValid && posControl.loadedMultiMissionWPCount > 0) {    // CR21
-                            tfp_sprintf(buff, "M%u/%u>%2uWP", posControl.loadedMultiMissionIndex, posControl.multiMissionCount, posControl.loadedMultiMissionWPCount); // CR21
+                        int8_t wpCount = posControl.loadedMultiMissionWPCount ? posControl.loadedMultiMissionWPCount : posControl.waypointCount;
+                        if (posControl.waypointListValid && wpCount > 0) {
+                            tfp_sprintf(buff, "M%u/%u>%2uWP", posControl.loadedMultiMissionIndex, posControl.multiMissionCount, wpCount);
                         } else {
                             tfp_sprintf(buff, "M0/%u> 0WP", posControl.multiMissionCount);
                         }
                     }
+                } else {
+                    tfp_sprintf(buff, "GSTN>%2uWP", posControl.waypointCount);
                 }
             }
             displayWrite(osdDisplayPort, elemPosX, elemPosY, buff);

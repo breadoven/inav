@@ -2955,6 +2955,11 @@ void setWaypoint(uint8_t wpNumber, const navWaypoint_t * wpData)
             static int8_t nonGeoWaypointCount = 0;
 
             if (wpNumber == (posControl.waypointCount + 1) || wpNumber == 1) {
+                // CR21 x
+                if (wpNumber == 1) {
+                    resetWaypointList();
+                }
+                // CR21 x
                 posControl.waypointList[wpNumber - 1] = *wpData;
                 if(wpData->action == NAV_WP_ACTION_SET_POI || wpData->action == NAV_WP_ACTION_SET_HEAD || wpData->action == NAV_WP_ACTION_JUMP) {
                     nonGeoWaypointCount += 1;
@@ -2982,6 +2987,8 @@ void resetWaypointList(void)
         posControl.waypointListValid = false;
         posControl.geoWaypointCount = 0;
         posControl.loadedMultiMissionIndex = 0;  // CR21
+        posControl.loadedMultiMissionStartWP = 0;   // CR21 x
+        posControl.loadedMultiMissionWPCount = 0;   // CR21 x
     }
 }
 
@@ -3006,71 +3013,79 @@ void setMultiMissionOnArm(void)
     if (posControl.multiMissionCount > 1 && posControl.loadedMultiMissionWPCount) {
         posControl.waypointCount = posControl.loadedMultiMissionWPCount;
 
-        for (int i = 0; i < NAV_MAX_WAYPOINTS; i++) {
+        for (int8_t i = 0; i < NAV_MAX_WAYPOINTS; i++) {
             posControl.waypointList[i] = posControl.waypointList[i + posControl.loadedMultiMissionStartWP];
             if (i == posControl.waypointCount - 1) break;
         }
 
         posControl.loadedMultiMissionStartWP = 0;
+        posControl.loadedMultiMissionWPCount = 0;
     }
 }
+bool checkMissionCount(int8_t waypoint)
+{
+    if (nonVolatileWaypointList(waypoint)->flag == NAV_WP_FLAG_LAST) {
+        posControl.multiMissionCount += 1;  // count up no missions in multi mission WP file
+        if (waypoint != NAV_MAX_WAYPOINTS - 1) {
+            return (nonVolatileWaypointList(waypoint + 1)->flag == NAV_WP_FLAG_LAST && nonVolatileWaypointList(waypoint + 1)->action ==NAV_WP_ACTION_RTH);
+            // end of multi mission file if successive NAV_WP_FLAG_LAST and default action (RTH)
+        }
+    }
+    return false;
+}
+
 // CR21
 #ifdef NAV_NON_VOLATILE_WAYPOINT_STORAGE
 bool loadNonVolatileWaypointList(bool clearIfLoaded)
 {
-    if (ARMING_FLAG(ARMED) || posControl.wpPlannerActiveWPIndex) // prevent EEPROM load if mission planner WP count > 0  CR32
+    // prevent EEPROM load if mission planner WP count > 0
+    if (ARMING_FLAG(ARMED) || posControl.wpPlannerActiveWPIndex || !navConfig()->general.waypoint_multi_mission_index)   // CR32
         return false;
 
     // if forced and waypoints are already loaded, just unload them.
-    if (clearIfLoaded && navConfig()->general.waypoint_multi_mission_index == posControl.loadedMultiMissionIndex && posControl.waypointCount > 0) {   // CR21
+    if (clearIfLoaded && posControl.waypointCount > 0) {   // CR21
         resetWaypointList();
         return false;
     }
 
-    resetWaypointList();
-
-    // CR21
-    /* Reset multi mission index to 1 if exceeds number of available missions */
+    /* Reset multi mission index if exceeds number of available missions */
     if (navConfig()->general.waypoint_multi_mission_index > posControl.multiMissionCount) {
         navConfigMutable()->general.waypoint_multi_mission_index = 1;
     }
 
     posControl.multiMissionCount = 0;
-    posControl.loadedMultiMissionStartWP = -1;
     posControl.loadedMultiMissionWPCount = 0;
     int8_t loadedMultiMissionGeoWPCount;
 
     for (int i = 0; i < NAV_MAX_WAYPOINTS; i++) {
-        if (navConfig()->general.waypoint_multi_mission_index) {
-            setWaypoint(i + 1, nonVolatileWaypointList(i));
+        setWaypoint(i + 1, nonVolatileWaypointList(i));
 
-            if ((posControl.multiMissionCount + 1 == navConfig()->general.waypoint_multi_mission_index)) {
-                // Mark start and end of selected mission
-                if (posControl.loadedMultiMissionStartWP == -1) {
-                    posControl.loadedMultiMissionStartWP = i;
-                    loadedMultiMissionGeoWPCount = posControl.geoWaypointCount;
-                } else if (posControl.waypointList[i].flag == NAV_WP_FLAG_LAST) {
-                    posControl.loadedMultiMissionWPCount = i - posControl.loadedMultiMissionStartWP + 1;
-                    loadedMultiMissionGeoWPCount = posControl.geoWaypointCount - loadedMultiMissionGeoWPCount + 1;
-                }
+        if ((posControl.multiMissionCount + 1 == navConfig()->general.waypoint_multi_mission_index)) {
+            // store details of selected mission
+            if (posControl.loadedMultiMissionWPCount == 0) {
+                posControl.loadedMultiMissionWPCount = 1;
+                posControl.loadedMultiMissionStartWP = i;
+                loadedMultiMissionGeoWPCount = posControl.geoWaypointCount;
+            }
+            if (posControl.waypointList[i].flag == NAV_WP_FLAG_LAST) {
+                posControl.loadedMultiMissionWPCount = i - posControl.loadedMultiMissionStartWP + 1;
+                loadedMultiMissionGeoWPCount = posControl.geoWaypointCount - loadedMultiMissionGeoWPCount + 1;
             }
         }
 
-        // Check if this is the last waypoint
-        if (nonVolatileWaypointList(i)->flag == NAV_WP_FLAG_LAST) {
-            posControl.multiMissionCount += 1;  // count up no missions in multi mission WP file
-            if (i != NAV_MAX_WAYPOINTS - 1) {
-                if (nonVolatileWaypointList(i + 1)->flag == NAV_WP_FLAG_LAST && nonVolatileWaypointList(i + 1)->action == NAV_WP_ACTION_RTH) {
-                    break;      // end of multi mission file if successive NAV_WP_FLAG_LAST and default action (RTH)
-                }
-            }
+        // count up number of missions
+        if (checkMissionCount(i)) {
+            break;
         }
     }
+    DEBUG_SET(DEBUG_CRUISE, 0, posControl.loadedMultiMissionWPCount);
+    DEBUG_SET(DEBUG_CRUISE, 1, posControl.waypointCount);
+    DEBUG_SET(DEBUG_CRUISE, 2, posControl.loadedMultiMissionStartWP);
     posControl.geoWaypointCount = loadedMultiMissionGeoWPCount;
     posControl.loadedMultiMissionIndex = posControl.multiMissionCount ? navConfig()->general.waypoint_multi_mission_index : 0;
     // CR21
     // Mission sanity check failed - reset the list
-    // Also reset if no multi mission found to load (shouldn't happen)
+    // Also reset if no multi mission loaded
     if (!posControl.waypointListValid || !posControl.loadedMultiMissionWPCount) {   // CR21
         resetWaypointList();
     }
@@ -3863,20 +3878,11 @@ void navigationInit(void)
     posControl.waypointCount = 0;
     posControl.activeWaypointIndex = 0;
     posControl.waypointListValid = false;
+    posControl.multiMissionCount = 0;  // CR21 x
+    posControl.loadedMultiMissionStartWP = 0;   // CR21
     posControl.wpPlannerActiveWPIndex = 0;     // CR32
     posControl.flags.wpMissionPlannerActive = false;   //CR32
-    // CR21
-#if defined(NAV_NON_VOLATILE_WAYPOINT_STORAGE)
-        uint8_t savedMultiMissionIndex = navConfig()->general.waypoint_multi_mission_index;
-        if (!navConfig()->general.waypoint_load_on_boot) {
-            navConfigMutable()->general.waypoint_multi_mission_index = 0;
-        }
 
-        loadNonVolatileWaypointList(true);
-
-        navConfigMutable()->general.waypoint_multi_mission_index = savedMultiMissionIndex > posControl.multiMissionCount ? 1 : savedMultiMissionIndex;
-#endif
-    // CR21
     /* Set initial surface invalid */
     posControl.actualState.surfaceMin = -1.0f;
 
@@ -3895,6 +3901,23 @@ void navigationInit(void)
     } else {
         DISABLE_STATE(FW_HEADING_USE_YAW);
     }
+    // CR21
+#if defined(NAV_NON_VOLATILE_WAYPOINT_STORAGE)
+    /* configure WP missions at boot */
+    for (int8_t i = 0; i < NAV_MAX_WAYPOINTS; i++) {
+        if (checkMissionCount(i)) {
+            break;
+        }
+    }
+    if (navConfig()->general.waypoint_multi_mission_index > posControl.multiMissionCount) {
+        navConfigMutable()->general.waypoint_multi_mission_index = 1;
+    }
+
+    if (navConfig()->general.waypoint_load_on_boot) {
+        loadNonVolatileWaypointList(false);
+    }
+#endif
+    // CR21
 }
 
 /*-----------------------------------------------------------
