@@ -622,7 +622,7 @@ static void updatePositionAccelController_MC(timeDelta_t deltaMicros, float maxA
     const float speedError = fabsf(posControl.actualState.velXY - setpointXY);
     if (speedError < 300.0f) {
         uint8_t tweakScaled = scaleRange(speedError, 0, 300, pidProfile()->mc_vel_xy_accel_tweak, 100);
-        DEBUG_SET(DEBUG_CRUISE, 6, tweakScaled);
+        // DEBUG_SET(DEBUG_CRUISE, 6, tweakScaled);
         accelForward = accelForward * (tweakScaled / 100.0f);
     }
     // CR47
@@ -635,8 +635,8 @@ static void updatePositionAccelController_MC(timeDelta_t deltaMicros, float maxA
     posControl.rcAdjustment[PITCH] = constrain(RADIANS_TO_DECIDEGREES(desiredPitch), -maxBankAngle, maxBankAngle);
 
     // DEBUG_SET(DEBUG_CRUISE, 0, speedError * 1000);
-    DEBUG_SET(DEBUG_CRUISE, 4, accelForward * 1000);
-    DEBUG_SET(DEBUG_CRUISE, 5, posControl.rcAdjustment[PITCH]);
+    // DEBUG_SET(DEBUG_CRUISE, 4, accelForward * 1000);
+    // DEBUG_SET(DEBUG_CRUISE, 5, posControl.rcAdjustment[PITCH]);
 }
 
 static void applyMulticopterPositionController(timeUs_t currentTimeUs)
