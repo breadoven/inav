@@ -2466,7 +2466,7 @@ groups:
         max: 65000
         # CR21
       - name: nav_wp_multi_mission_index
-        description: "Index of mission selected from multi mission WP entry. 1 is the first useable WP mission in the entry. Limited to a maximum of 9 missions. Set index to 0 to load an empty mission."
+        description: "Index of mission selected from multi mission WP entry. 1 is the first useable WP mission in the entry. Limited to a maximum of 9 missions. Set index to 0 to display missions loaded via telemetry in OSD Mission field."
         default_value: 1
         field: general.waypoint_multi_mission_index
         min: 0

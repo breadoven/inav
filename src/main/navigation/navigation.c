@@ -3005,7 +3005,9 @@ int getWaypointCount(void)
 // CR21
 void selectMultiMissionIndex(int8_t increment)
 {
-    navConfigMutable()->general.waypoint_multi_mission_index = constrain(navConfigMutable()->general.waypoint_multi_mission_index + increment, 0, posControl.multiMissionCount);
+    if (posControl.multiMissionCount > 1) {     // CR21x
+        navConfigMutable()->general.waypoint_multi_mission_index = constrain(navConfigMutable()->general.waypoint_multi_mission_index + increment, 0, posControl.multiMissionCount);
+    }
 }
 
 void setMultiMissionOnArm(void)
