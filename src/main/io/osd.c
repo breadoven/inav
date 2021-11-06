@@ -3115,7 +3115,7 @@ static bool osdDrawSingleElement(uint8_t item)
                         }
                     }
                 } else {
-                    tfp_sprintf(buff, "GSTN>%2uWP", posControl.waypointCount);
+                    tfp_sprintf(buff, "WP CNT>%2u", posControl.waypointCount);
                 }
             }
             displayWrite(osdDisplayPort, elemPosX, elemPosY, buff);
@@ -4483,13 +4483,6 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
                 messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_COMPASS_ERROR);
             }
             // CR27
-            // CR53
-#ifdef USE_DEV_TOOLS
-            if (systemConfig()->groundTestMode) {
-                messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_GRD_TEST_MODE);
-            }
-#endif
-            // CR53
         } else if (ARMING_FLAG(ARMING_DISABLED_ALL_FLAGS)) {
             unsigned invalidIndex;
 
@@ -4516,7 +4509,14 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
                 messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_WP_MISSION_LOADED);
             }
         }
-
+        // CR53
+        /* Messages that are shown regardless of Arming state */
+#ifdef USE_DEV_TOOLS
+        if (systemConfig()->groundTestMode) {
+            messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_GRD_TEST_MODE);
+        }
+#endif
+        // CR53
         if (messageCount > 0) {
             message = messages[OSD_ALTERNATING_CHOICES(systemMessageCycleTime(messageCount, messages), messageCount)];    // CR18
             if (message == failsafeInfoMessage) {
