@@ -87,6 +87,7 @@
 #define OSD_MSG_HEADING_HOME        "EN ROUTE TO HOME"
 #define OSD_MSG_WP_FINISHED         "WP END>HOLDING POSITION"
 #define OSD_MSG_PREPARE_NEXT_WP     "PREPARING FOR NEXT WAYPOINT"
+#define OSD_MSG_MISSION_PLANNER     "(WP MISSION PLANNER)"
 #define OSD_MSG_WP_RTH_CANCEL       "CANCEL WP TO EXIT RTH"
 #define OSD_MSG_WP_MISSION_LOADED   "* MISSION LOADED *"
 #define OSD_MSG_EMERG_LANDING       "EMERGENCY LANDING"
@@ -245,7 +246,7 @@ typedef enum {
     OSD_3D_MAX_SPEED,
     OSD_AIR_MAX_SPEED,
     OSD_ACTIVE_PROFILE,
-    OSD_MISSION,    // 129  CR21
+    OSD_MISSION,
     OSD_INFO_CYCLE, // 130  CR22
     OSD_STATUS,     // 131  CR27
     OSD_ITEM_COUNT // MUST BE LAST
@@ -339,6 +340,10 @@ typedef struct osdConfig_s {
 #endif
 #ifdef USE_TEMPERATURE_SENSOR
     osd_alignment_e temp_label_align;
+#endif
+#ifdef USE_PITOT
+    float airspeed_alarm_min;
+    float airspeed_alarm_max;
 #endif
 
     videoSystem_e video_system;

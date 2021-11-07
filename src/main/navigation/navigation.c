@@ -39,7 +39,7 @@
 #include "fc/rc_controls.h"
 #include "fc/rc_modes.h"
 #include "fc/runtime_config.h"
-#include "fc/cli.h"     // CR21
+#include "fc/cli.h"
 #include "fc/settings.h"
 
 #include "flight/imu.h"
@@ -115,8 +115,8 @@ PG_RESET_TEMPLATE(navConfig_t, navConfig,
             .rth_alt_control_override = SETTING_NAV_RTH_ALT_CONTROL_OVERRIDE_DEFAULT, // Override RTH Altitude and Climb First using Pitch and Roll stick
             .nav_overrides_motor_stop = SETTING_NAV_OVERRIDES_MOTOR_STOP_DEFAULT,
             .safehome_usage_mode = SETTING_SAFEHOME_USAGE_MODE_DEFAULT,
-            .waypoint_mission_restart = SETTING_NAV_WP_MISSION_RESTART_DEFAULT,       // CR29
-            .mission_planner_reset = SETTING_NAV_MISSION_PLANNER_RESET_DEFAULT,       // Allow mode switch toggle to reset Mission Planner WPs  CR32
+            .mission_planner_reset = SETTING_NAV_MISSION_PLANNER_RESET_DEFAULT,       // Allow mode switch toggle to reset Mission Planner WPs
+            .waypoint_mission_restart = SETTING_NAV_WP_MISSION_RESTART_DEFAULT,       // WP mission restart action
             .soaring_motor_stop = SETTING_NAV_FW_SOARING_MOTOR_STOP_DEFAULT,          // stops motor when Saoring mode enabled  CR36
         },
 
@@ -124,8 +124,8 @@ PG_RESET_TEMPLATE(navConfig_t, navConfig,
         .pos_failure_timeout = SETTING_NAV_POSITION_TIMEOUT_DEFAULT,                  // 5 sec
         .waypoint_radius = SETTING_NAV_WP_RADIUS_DEFAULT,                             // 2m diameter
         .waypoint_safe_distance = SETTING_NAV_WP_SAFE_DISTANCE_DEFAULT,               // centimeters - first waypoint should be closer than this
-        .waypoint_multi_mission_index = SETTING_NAV_WP_MULTI_MISSION_INDEX_DEFAULT,   // mission index selected from multi mission WP file CR21
-        .waypoint_load_on_boot = SETTING_NAV_WP_LOAD_ON_BOOT_DEFAULT,                 // load waypoints automatically during boot
+        .waypoint_multi_mission_index = SETTING_NAV_WP_MULTI_MISSION_INDEX_DEFAULT,   // mission index selected from multi mission WP entry
+        .waypoint_load_on_boot = SETTING_NAV_WP_LOAD_ON_BOOT_DEFAULT,               // load waypoints automatically during boot
         .auto_speed = SETTING_NAV_AUTO_SPEED_DEFAULT,                                 // speed in autonomous modes (3 m/s = 10.8 km/h)
         .max_auto_speed = SETTING_NAV_MAX_AUTO_SPEED_DEFAULT,                         // max allowed speed autonomous modes
         .max_auto_climb_rate = SETTING_NAV_AUTO_CLIMB_RATE_DEFAULT,                   // 5 m/s
@@ -244,7 +244,7 @@ static bool isWaypointPositionReached(const fpVector3_t * pos, const bool isWayp
 static void mapWaypointToLocalPosition(fpVector3_t * localPos, const navWaypoint_t * waypoint, geoAltitudeConversionMode_e altConv);
 static navigationFSMEvent_t nextForNonGeoStates(void);
 static bool isWaypointMissionValid(void);
-void missionPlannerSetWaypoint(void);  // CR32
+void missionPlannerSetWaypoint(void);
 
 void initializeRTHSanityChecker(const fpVector3_t * pos);
 bool validateRTHSanityChecker(void);
@@ -793,7 +793,7 @@ static const navigationFSMStateDescriptor_t navFSM[NAV_STATE_COUNT] = {
         .mwState = MW_NAV_STATE_WP_ENROUTE,
         .mwError = MW_NAV_ERROR_FINISH,
         .onEvent = {
-            [NAV_FSM_EVENT_TIMEOUT]                        = NAV_STATE_WAYPOINT_FINISHED,
+            [NAV_FSM_EVENT_TIMEOUT]                        = NAV_STATE_WAYPOINT_FINISHED,   // re-process state
             [NAV_FSM_EVENT_SWITCH_TO_IDLE]                 = NAV_STATE_IDLE,
             [NAV_FSM_EVENT_SWITCH_TO_ALTHOLD]              = NAV_STATE_ALTHOLD_INITIALIZE,
             [NAV_FSM_EVENT_SWITCH_TO_POSHOLD_3D]           = NAV_STATE_POSHOLD_3D_INITIALIZE,
@@ -1134,7 +1134,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_INITIALIZE(navigati
 
     if ((posControl.flags.estHeadingStatus == EST_NONE) || (posControl.flags.estAltStatus == EST_NONE) || !STATE(GPS_FIX_HOME)) {
         // Heading sensor, altitude sensor and HOME fix are mandatory for RTH. If not satisfied - switch to emergency landing
-        // Relevant to failsafe forced RTH only. Switched RTH blocked in selectNavEventFromBoxModeInput if sensors unavailanle.
+        // Relevant to failsafe forced RTH only. Switched RTH blocked in selectNavEventFromBoxModeInput if sensors unavailable.
         // If we are in dead-reckoning mode - also fail, since coordinates may be unreliable
         return NAV_FSM_EVENT_SWITCH_TO_EMERGENCY_LANDING;
     }
@@ -1195,24 +1195,20 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_INITIALIZE(navigati
         return NAV_FSM_EVENT_SWITCH_TO_EMERGENCY_LANDING;
     }
     /* No valid POS sensor but still within valid timeout - wait */
-    // CR44
-    // else {
-        return NAV_FSM_EVENT_NONE;
-    // }
-    // CR44
+    return NAV_FSM_EVENT_NONE;
 }
 
 static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_CLIMB_TO_SAFE_ALT(navigationFSMState_t previousState)
 {
     UNUSED(previousState);
-    // CR44
-     if (!STATE(ALTITUDE_CONTROL)) {
+
+    if (!STATE(ALTITUDE_CONTROL)) {
         //If altitude control is not a thing, switch to RTH in progress instead
         return NAV_FSM_EVENT_SUCCESS; //Will cause NAV_STATE_RTH_HEAD_HOME
     }
-    // CR44
+
     rthAltControlStickOverrideCheck(PITCH);
-    // CR44
+
     /* Position sensor failure timeout and not configured to ignore GPS loss - land */
     if ((posControl.flags.estHeadingStatus == EST_NONE) ||
         (checkForPositionSensorTimeout() && !navConfig()->general.flags.rth_climb_ignore_emerg)) {
@@ -1276,7 +1272,6 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_CLIMB_TO_SAFE_ALT(n
 
         return NAV_FSM_EVENT_NONE;
     }
-    // CR44
 }
 
 static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_HEAD_HOME(navigationFSMState_t previousState)
@@ -1285,7 +1280,8 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_HEAD_HOME(navigatio
 
     rthAltControlStickOverrideCheck(PITCH);
 
-    if ((posControl.flags.estHeadingStatus == EST_NONE) || !validateRTHSanityChecker()) {   // CR44
+    /* If position sensors unavailable - land immediately */
+    if ((posControl.flags.estHeadingStatus == EST_NONE) || !validateRTHSanityChecker()) {
         return NAV_FSM_EVENT_SWITCH_TO_EMERGENCY_LANDING;
     }
 
@@ -1297,14 +1293,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_HEAD_HOME(navigatio
             // Successfully reached position target - update XYZ-position
             setDesiredPosition(tmpHomePos, posControl.rthState.homePosition.yaw, NAV_POS_UPDATE_XY | NAV_POS_UPDATE_Z | NAV_POS_UPDATE_HEADING);
             return NAV_FSM_EVENT_SUCCESS;       // NAV_STATE_RTH_HOVER_PRIOR_TO_LANDING
-        }
-        // CR44
-        // else if (!validateRTHSanityChecker()) {
-            // // Sanity check of RTH
-            // return NAV_FSM_EVENT_SWITCH_TO_EMERGENCY_LANDING;
-        // }
-        // CR44
-        else {
+        } else {
             setDesiredPosition(tmpHomePos, 0, NAV_POS_UPDATE_Z | NAV_POS_UPDATE_XY);
             return NAV_FSM_EVENT_NONE;
         }
@@ -1314,22 +1303,18 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_HEAD_HOME(navigatio
         return NAV_FSM_EVENT_SWITCH_TO_EMERGENCY_LANDING;
     }
     /* No valid POS sensor but still within valid timeout - wait */
-    // CR44
-    // else {
-        return NAV_FSM_EVENT_NONE;
-    // }
-    // CR44
+    return NAV_FSM_EVENT_NONE;
 }
 
 static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_HOVER_PRIOR_TO_LANDING(navigationFSMState_t previousState)
 {
     UNUSED(previousState);
-    // CR44
     //On ROVER and BOAT we immediately switch to the next event
     if (!STATE(ALTITUDE_CONTROL)) {
         return NAV_FSM_EVENT_SUCCESS;
     }
 
+    /* If position sensors unavailable - land immediately (wait for timeout on GPS) */
     if ((posControl.flags.estHeadingStatus == EST_NONE) || checkForPositionSensorTimeout() || !validateRTHSanityChecker()) {
         return NAV_FSM_EVENT_SWITCH_TO_EMERGENCY_LANDING;
     }
@@ -1337,32 +1322,25 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_HOVER_PRIOR_TO_LAND
     // If position ok OR within valid timeout - continue
     // Wait until target heading is reached for MR (with 15 deg margin for error), or continue for Fixed Wing
     if ((ABS(wrap_18000(posControl.rthState.homePosition.yaw - posControl.actualState.yaw)) < DEGREES_TO_CENTIDEGREES(15)) || STATE(FIXED_WING_LEGACY)) {
-        resetLandingDetector();   // force reset landing detector just in case  CR15
+        resetLandingDetector();
         updateClimbRateToAltitudeController(0, ROC_TO_ALT_RESET);
         return navigationRTHAllowsLanding() ? NAV_FSM_EVENT_SUCCESS : NAV_FSM_EVENT_SWITCH_TO_RTH_HOVER_ABOVE_HOME; // success = land
-    }
-    // CR44
-    // else if (!validateRTHSanityChecker()) {
-        // // Continue to check for RTH sanity during pre-landing hover
-        // return NAV_FSM_EVENT_SWITCH_TO_EMERGENCY_LANDING;
-    // }
-    // CR44
-    else {
+    } else {
         fpVector3_t * tmpHomePos = rthGetHomeTargetPosition(RTH_HOME_ENROUTE_FINAL);
         setDesiredPosition(tmpHomePos, posControl.rthState.homePosition.yaw, NAV_POS_UPDATE_XY | NAV_POS_UPDATE_Z | NAV_POS_UPDATE_HEADING);
         return NAV_FSM_EVENT_NONE;
     }
-    // CR44
 }
 
 static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_HOVER_ABOVE_HOME(navigationFSMState_t previousState)
 {
     UNUSED(previousState);
-    // CR44
+
+    /* If position sensors unavailable - land immediately (wait for timeout on GPS) */
     if (posControl.flags.estHeadingStatus == EST_NONE || checkForPositionSensorTimeout() || !validateRTHSanityChecker()) {
         return NAV_FSM_EVENT_SWITCH_TO_EMERGENCY_LANDING;
     }
-    // CR44
+
     fpVector3_t * tmpHomePos = rthGetHomeTargetPosition(RTH_HOME_FINAL_HOVER);
 
     if (navConfig()->general.rth_home_altitude) {
@@ -1391,7 +1369,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_LANDING(navigationF
     if (!STATE(ALTITUDE_CONTROL)) {
         return NAV_FSM_EVENT_SUCCESS;
     }
-    // CR44
+
     if (!ARMING_FLAG(ARMED) || STATE(LANDING_DETECTED)) {   // CR15
         return NAV_FSM_EVENT_SUCCESS;
     }
@@ -1421,7 +1399,6 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_LANDING(navigationF
     updateClimbRateToAltitudeController(-descentVelLimited, ROC_TO_ALT_NORMAL);
 
     return NAV_FSM_EVENT_NONE;
-    // CR44
 }
 
 static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_FINISHING(navigationFSMState_t previousState)
@@ -1468,7 +1445,6 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_WAYPOINT_INITIALIZE(nav
   Use p3 as the volatile jump counter, allowing embedded, rearmed jumps
   Using p3 minimises the risk of saving an invalid counter if a mission is aborted.
 */
-        // CR29
         if (posControl.activeWaypointIndex == 0 || posControl.wpMissionRestart) {
             setupJumpCounters();
             posControl.activeWaypointIndex = 0;
@@ -1482,7 +1458,6 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_WAYPOINT_INITIALIZE(nav
         }
 
         return NAV_FSM_EVENT_SUCCESS;   // will switch to NAV_STATE_WAYPOINT_PRE_ACTION
-        // CR29
     }
 }
 
@@ -1551,7 +1526,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_WAYPOINT_PRE_ACTION(nav
             return nextForNonGeoStates();
 
         case NAV_WP_ACTION_RTH:
-            posControl.wpMissionRestart = true; // CR29
+            posControl.wpMissionRestart = true;
             return NAV_FSM_EVENT_SWITCH_TO_RTH;
     };
 
@@ -1606,13 +1581,8 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_WAYPOINT_IN_PROGRESS(na
     else if (checkForPositionSensorTimeout() || (posControl.flags.estHeadingStatus == EST_NONE)) {
         return NAV_FSM_EVENT_SWITCH_TO_EMERGENCY_LANDING;
     }
-    // CR44
-    // else {
-        return NAV_FSM_EVENT_NONE;      // will re-process state in >10ms
-    // }
 
-    // UNREACHABLE();
-    // CR44
+    return NAV_FSM_EVENT_NONE;      // will re-process state in >10ms
 }
 
 static navigationFSMEvent_t navOnEnteringState_NAV_STATE_WAYPOINT_REACHED(navigationFSMState_t previousState)
@@ -1650,14 +1620,10 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_WAYPOINT_HOLD_TIME(navi
     }
 
     timeMs_t currentTime = millis();
-    // CR44
-    // if (posControl.waypointList[posControl.activeWaypointIndex].p1 <= 0) {
-        // return NAV_FSM_EVENT_SUCCESS;       // NAV_STATE_WAYPOINT_NEXT
-    // }
 
-    if (posControl.waypointList[posControl.activeWaypointIndex].p1 <= 0 ||  // CR44
+    if (posControl.waypointList[posControl.activeWaypointIndex].p1 <= 0 ||
         (posControl.wpReachedTime != 0 && currentTime - posControl.wpReachedTime >= (timeMs_t)posControl.waypointList[posControl.activeWaypointIndex].p1*1000L)) {
-        return NAV_FSM_EVENT_SUCCESS;   // NAV_STATE_WAYPOINT_NEXT
+        return NAV_FSM_EVENT_SUCCESS;
     }
 
     return NAV_FSM_EVENT_NONE;      // will re-process state in >10ms
@@ -1701,21 +1667,14 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_WAYPOINT_FINISHED(navig
     UNUSED(previousState);
 
     clearJumpCounters();
-    posControl.wpMissionRestart = true;   // CR29
+    posControl.wpMissionRestart = true;
 
-    // CR44
-    // If no position sensor available for NAV_WAIT_FOR_GPS_TIMEOUT_MS - land immediately
+    /* If position sensors unavailable - land immediately (wait for timeout on GPS) */
     if (posControl.flags.estHeadingStatus == EST_NONE || checkForPositionSensorTimeout()) {
         return NAV_FSM_EVENT_SWITCH_TO_EMERGENCY_LANDING;
     }
-    // /* No pos sensor available for NAV_WAIT_FOR_GPS_TIMEOUT_MS - land */
-    // else if (checkForPositionSensorTimeout()) {
-        // return NAV_FSM_EVENT_SWITCH_TO_EMERGENCY_LANDING;
-    // }
-    // else {
-        return NAV_FSM_EVENT_NONE;      // will re-process state in >10ms
-    // }
-    // CR44
+
+    return NAV_FSM_EVENT_NONE;      // will re-process state in >10ms
 }
 
 static navigationFSMEvent_t navOnEnteringState_NAV_STATE_EMERGENCY_LANDING_INITIALIZE(navigationFSMState_t previousState)
@@ -2007,21 +1966,21 @@ void updateActualHorizontalPositionAndVelocity(bool estPosValid, bool estVelVali
     if (estPosValid && estVelValid && !IS_RC_MODE_ACTIVE(BOXBEEPERON)) {   // CR52
         posControl.flags.estPosStatus = EST_TRUSTED;
         posControl.flags.estVelStatus = EST_TRUSTED;
-        posControl.flags.horizontalPositionDataNew = 1;
+        posControl.flags.horizontalPositionDataNew = true;
         posControl.lastValidPositionTimeMs = millis();
     }
     // CASE 1: POS invalid, VEL valid
     else if (!estPosValid && estVelValid && !IS_RC_MODE_ACTIVE(BOXBEEPERON)) { // CR52
         posControl.flags.estPosStatus = EST_USABLE;     // Pos usable, but not trusted
         posControl.flags.estVelStatus = EST_TRUSTED;
-        posControl.flags.horizontalPositionDataNew = 1;
+        posControl.flags.horizontalPositionDataNew = true;
         posControl.lastValidPositionTimeMs = millis();
     }
     // CASE 3: can't use pos/vel data
     else {
         posControl.flags.estPosStatus = EST_NONE;
         posControl.flags.estVelStatus = EST_NONE;
-        posControl.flags.horizontalPositionDataNew = 0;
+        posControl.flags.horizontalPositionDataNew = false;
     }
     //Update blackbox data
     navLatestActualPosition[X] = newX;
@@ -2054,13 +2013,13 @@ void updateActualAltitudeAndClimbRate(bool estimateValid, float newAltitude, flo
 
         posControl.flags.estAglStatus = surfaceStatus;  // Could be TRUSTED or USABLE
         posControl.flags.estAltStatus = EST_TRUSTED;
-        posControl.flags.verticalPositionDataNew = 1;
+        posControl.flags.verticalPositionDataNew = true;
         posControl.lastValidAltitudeTimeMs = millis();
     }
     else {
         posControl.flags.estAltStatus = EST_NONE;
         posControl.flags.estAglStatus = EST_NONE;
-        posControl.flags.verticalPositionDataNew = 0;
+        posControl.flags.verticalPositionDataNew = false;
     }
 
     if (ARMING_FLAG(ARMED)) {
@@ -2134,8 +2093,6 @@ void updateActualHeading(bool headingValid, int32_t newHeading)
     /* Precompute sin/cos of yaw angle */
     posControl.actualState.sinYaw = sin_approx(CENTIDEGREES_TO_RADIANS(newHeading));
     posControl.actualState.cosYaw = cos_approx(CENTIDEGREES_TO_RADIANS(newHeading));
-
-    posControl.flags.headingDataNew = 1;
 }
 
 /*-----------------------------------------------------------
@@ -2955,11 +2912,9 @@ void setWaypoint(uint8_t wpNumber, const navWaypoint_t * wpData)
             static int8_t nonGeoWaypointCount = 0;
 
             if (wpNumber == (posControl.waypointCount + 1) || wpNumber == 1) {
-                // CR21 x
                 if (wpNumber == 1) {
                     resetWaypointList();
                 }
-                // CR21 x
                 posControl.waypointList[wpNumber - 1] = *wpData;
                 if(wpData->action == NAV_WP_ACTION_SET_POI || wpData->action == NAV_WP_ACTION_SET_HEAD || wpData->action == NAV_WP_ACTION_JUMP) {
                     nonGeoWaypointCount += 1;
@@ -2986,9 +2941,9 @@ void resetWaypointList(void)
         posControl.waypointCount = 0;
         posControl.waypointListValid = false;
         posControl.geoWaypointCount = 0;
-        posControl.loadedMultiMissionIndex = 0;  // CR21
-        posControl.loadedMultiMissionStartWP = 0;   // CR21 x
-        posControl.loadedMultiMissionWPCount = 0;   // CR21 x
+        posControl.loadedMultiMissionIndex = 0;
+        posControl.loadedMultiMissionStartWP = 0;
+        posControl.loadedMultiMissionWPCount = 0;
     }
 }
 
@@ -3002,10 +2957,9 @@ int getWaypointCount(void)
     return posControl.waypointCount;
 }
 
-// CR21
 void selectMultiMissionIndex(int8_t increment)
 {
-    if (posControl.multiMissionCount > 1) {     // CR21x
+    if (posControl.multiMissionCount > 1) {     // stick selection only active when multi mission loaded
         navConfigMutable()->general.waypoint_multi_mission_index = constrain(navConfigMutable()->general.waypoint_multi_mission_index + increment, 0, posControl.multiMissionCount);
     }
 }
@@ -3017,32 +2971,37 @@ void setMultiMissionOnArm(void)
 
         for (int8_t i = 0; i < NAV_MAX_WAYPOINTS; i++) {
             posControl.waypointList[i] = posControl.waypointList[i + posControl.loadedMultiMissionStartWP];
-            if (i == posControl.waypointCount - 1) break;
+            if (i == posControl.waypointCount - 1) {
+                break;
+            }
         }
 
         posControl.loadedMultiMissionStartWP = 0;
         posControl.loadedMultiMissionWPCount = 0;
     }
 }
+
 bool checkMissionCount(int8_t waypoint)
 {
     if (nonVolatileWaypointList(waypoint)->flag == NAV_WP_FLAG_LAST) {
         posControl.multiMissionCount += 1;  // count up no missions in multi mission WP file
         if (waypoint != NAV_MAX_WAYPOINTS - 1) {
-            return (nonVolatileWaypointList(waypoint + 1)->flag == NAV_WP_FLAG_LAST && nonVolatileWaypointList(waypoint + 1)->action ==NAV_WP_ACTION_RTH);
+            return (nonVolatileWaypointList(waypoint + 1)->flag == NAV_WP_FLAG_LAST &&
+                    nonVolatileWaypointList(waypoint + 1)->action ==NAV_WP_ACTION_RTH);
             // end of multi mission file if successive NAV_WP_FLAG_LAST and default action (RTH)
         }
     }
     return false;
 }
 
-// CR21
 #ifdef NAV_NON_VOLATILE_WAYPOINT_STORAGE
 bool loadNonVolatileWaypointList(bool clearIfLoaded)
 {
-    // prevent EEPROM load if mission planner WP count > 0
-    if (ARMING_FLAG(ARMED) || posControl.wpPlannerActiveWPIndex || !navConfig()->general.waypoint_multi_mission_index)   // CR32
+    /* multi_mission_index 0 only used for non NVM missions - don't load.
+     * Don't load if mission planner WP count > 0 */
+    if (ARMING_FLAG(ARMED) || !navConfig()->general.waypoint_multi_mission_index || posControl.wpPlannerActiveWPIndex) {
         return false;
+    }
 
     // if forced and waypoints are already loaded, just unload them.
     if (clearIfLoaded && posControl.waypointCount > 0) {   // CR21
@@ -3050,11 +3009,10 @@ bool loadNonVolatileWaypointList(bool clearIfLoaded)
         return false;
     }
 
-    /* Reset multi mission index if exceeds number of available missions */
+    /* Reset multi mission index to 1 if exceeds number of available missions */
     if (navConfig()->general.waypoint_multi_mission_index > posControl.multiMissionCount) {
         navConfigMutable()->general.waypoint_multi_mission_index = 1;
     }
-
     posControl.multiMissionCount = 0;
     posControl.loadedMultiMissionWPCount = 0;
     int8_t loadedMultiMissionGeoWPCount;
@@ -3062,33 +3020,33 @@ bool loadNonVolatileWaypointList(bool clearIfLoaded)
     for (int i = 0; i < NAV_MAX_WAYPOINTS; i++) {
         setWaypoint(i + 1, nonVolatileWaypointList(i));
 
+        /* store details of selected mission */
         if ((posControl.multiMissionCount + 1 == navConfig()->general.waypoint_multi_mission_index)) {
-            // store details of selected mission
+            // mission start WP
             if (posControl.loadedMultiMissionWPCount == 0) {
-                posControl.loadedMultiMissionWPCount = 1;
+                posControl.loadedMultiMissionWPCount = 1;   // start marker only, value here unimportant (but not 0)
                 posControl.loadedMultiMissionStartWP = i;
                 loadedMultiMissionGeoWPCount = posControl.geoWaypointCount;
             }
+            // mission end WP
             if (posControl.waypointList[i].flag == NAV_WP_FLAG_LAST) {
                 posControl.loadedMultiMissionWPCount = i - posControl.loadedMultiMissionStartWP + 1;
                 loadedMultiMissionGeoWPCount = posControl.geoWaypointCount - loadedMultiMissionGeoWPCount + 1;
             }
         }
 
-        // count up number of missions
+        /* count up number of missions */
         if (checkMissionCount(i)) {
             break;
         }
     }
-    DEBUG_SET(DEBUG_CRUISE, 0, posControl.loadedMultiMissionWPCount);
-    DEBUG_SET(DEBUG_CRUISE, 1, posControl.waypointCount);
-    DEBUG_SET(DEBUG_CRUISE, 2, posControl.loadedMultiMissionStartWP);
+
     posControl.geoWaypointCount = loadedMultiMissionGeoWPCount;
     posControl.loadedMultiMissionIndex = posControl.multiMissionCount ? navConfig()->general.waypoint_multi_mission_index : 0;
-    // CR21
-    // Mission sanity check failed - reset the list
-    // Also reset if no multi mission loaded
-    if (!posControl.waypointListValid || !posControl.loadedMultiMissionWPCount) {   // CR21
+
+    /* Mission sanity check failed - reset the list
+     * Also reset if no selected mission loaded (shouldn't happen) */
+    if (!posControl.waypointListValid || !posControl.loadedMultiMissionWPCount) {
         resetWaypointList();
     }
 
@@ -3104,8 +3062,7 @@ bool saveNonVolatileWaypointList(void)
         getWaypoint(i + 1, nonVolatileWaypointListMutable(i));
     }
 
-    navConfigMutable()->general.waypoint_multi_mission_index = 1;    // reset selected mission to 1 when new data loaded   CR21
-
+    navConfigMutable()->general.waypoint_multi_mission_index = 1;    // reset selected mission to 1 when new entries saved
     saveConfigAndNotify();
 
     return true;
@@ -3285,7 +3242,7 @@ void applyWaypointNavigationAndAltitudeHold(void)
         // If we are disarmed, abort forced RTH or Emergency Landing
         posControl.flags.forcedRTHActivated = false;
         posControl.flags.forcedEmergLandingActivated = false;
-        // ensure missions always restart from first waypoint after disarm CR29
+        //  ensure WP missions always restart from first waypoint after disarm
         posControl.activeWaypointIndex = 0;
         return;
     }
@@ -3307,10 +3264,10 @@ void applyWaypointNavigationAndAltitudeHold(void)
 
     /* Consume position data */
     if (posControl.flags.horizontalPositionDataConsumed)
-        posControl.flags.horizontalPositionDataNew = 0;
+        posControl.flags.horizontalPositionDataNew = false;
 
     if (posControl.flags.verticalPositionDataConsumed)
-        posControl.flags.verticalPositionDataNew = 0;
+        posControl.flags.verticalPositionDataNew = false;
 
     //Update blackbox data
     if (posControl.flags.isAdjustingPosition)       navFlags |= (1 << 6);
@@ -3445,15 +3402,15 @@ static navigationFSMEvent_t selectNavEventFromBoxModeInput(bool launchBypass)
             return NAV_FSM_EVENT_SWITCH_TO_RTH;
         }
 
-        // Pilot-triggered RTH (overrides MANUAL), also fall-back for WP if there is no mission loaded
-        // Prevent MANUAL falling back to RTH if selected during active mission (canActivateWaypoint is set false on MANUAL selection)
-        const bool blockWPFallback = IS_RC_MODE_ACTIVE(BOXMANUAL) || posControl.flags.wpMissionPlannerActive;  // CR32
-        if (IS_RC_MODE_ACTIVE(BOXNAVRTH) || (IS_RC_MODE_ACTIVE(BOXNAVWP) && !canActivateWaypoint && !blockWPFallback)) { // CR32
+        /* Pilot-triggered RTH (can override MANUAL), also fall-back for WP if there is no mission loaded
+         * Prevent MANUAL falling back to RTH if selected during active mission (canActivateWaypoint is set false on MANUAL selection)
+         * Also prevent WP falling back to RTH if WP mission planner is active */
+        const bool blockWPFallback = IS_RC_MODE_ACTIVE(BOXMANUAL) || posControl.flags.wpMissionPlannerActive;
+        if (IS_RC_MODE_ACTIVE(BOXNAVRTH) || (IS_RC_MODE_ACTIVE(BOXNAVWP) && !canActivateWaypoint && !blockWPFallback)) {
             // Check for isExecutingRTH to prevent switching our from RTH in case of a brief GPS loss
-            // If don't keep this, loss of any of the canActivateNavigation && canActivateAltHold   CR44
+            // If don't keep this, loss of any of the canActivateNavigation && canActivateAltHold
             // will kick us out of RTH state machine via NAV_FSM_EVENT_SWITCH_TO_IDLE and will prevent any of the fall-back
             // logic to kick in (waiting for GPS on airplanes, switch to emergency landing etc)
-            // if (isExecutingRTH || (canActivatePosHold && canActivateNavigation && canActivateAltHold && STATE(GPS_FIX_HOME))) {  // CR44
             if (isExecutingRTH || (canActivateNavigation && canActivateAltHold && STATE(GPS_FIX_HOME))) {
                 return NAV_FSM_EVENT_SWITCH_TO_RTH;
             }
@@ -3465,10 +3422,9 @@ static navigationFSMEvent_t selectNavEventFromBoxModeInput(bool launchBypass)
             return NAV_FSM_EVENT_SWITCH_TO_IDLE;
         }
 
-        // Pilot-activated waypoint mission. Fall-back to RTH in case of no mission loaded.
-        // Block activation if using WP Mission Planner // CR32
-        if (IS_RC_MODE_ACTIVE(BOXNAVWP) && !posControl.flags.wpMissionPlannerActive) {  // CR32
-            // if (FLIGHT_MODE(NAV_WP_MODE) || (canActivateWaypoint && canActivatePosHold && canActivateNavigation && canActivateAltHold && STATE(GPS_FIX_HOME)))       // CR44
+        // Pilot-activated waypoint mission. Fall-back to RTH in case of no mission loaded
+        // Block activation if using WP Mission Planner
+        if (IS_RC_MODE_ACTIVE(BOXNAVWP) && !posControl.flags.wpMissionPlannerActive) {
             if (FLIGHT_MODE(NAV_WP_MODE) || (canActivateWaypoint && canActivateNavigation && canActivateAltHold && STATE(GPS_FIX_HOME)))
                 return NAV_FSM_EVENT_SWITCH_TO_WAYPOINT;
         }
@@ -3579,7 +3535,7 @@ bool navigationTerrainFollowingEnabled(void)
 uint32_t distanceToFirstWP(void)
 {
     fpVector3_t startingWaypointPos;
-    mapWaypointToLocalPosition(&startingWaypointPos, &posControl.waypointList[posControl.loadedMultiMissionStartWP], GEO_ALT_RELATIVE);  // CR21
+    mapWaypointToLocalPosition(&startingWaypointPos, &posControl.waypointList[posControl.loadedMultiMissionStartWP], GEO_ALT_RELATIVE);
     return calculateDistanceToDestination(&startingWaypointPos);
 }
 
@@ -3626,8 +3582,10 @@ navArmingBlocker_e navigationIsBlockingArming(bool *usedBypass)
          * Can't jump to immediately adjacent WPs (pointless)
          * Can't jump beyond WP list
          * Only jump to geo-referenced WP types
+         *
+         * Only perform check when mission loaded at start of posControl.waypointList
          */
-    if (posControl.waypointCount && !posControl.loadedMultiMissionStartWP) {    // CR21
+    if (posControl.waypointCount && !posControl.loadedMultiMissionStartWP) {
         for (uint8_t wp = 0; wp < posControl.waypointCount; wp++){
             if (posControl.waypointList[wp].action == NAV_WP_ACTION_JUMP){
                 if ((wp == 0) || ((posControl.waypointList[wp].p1 > (wp-2)) && (posControl.waypointList[wp].p1 < (wp+2)) ) || (posControl.waypointList[wp].p1 >=  posControl.waypointCount) || (posControl.waypointList[wp].p2 < -1)) {
@@ -3672,11 +3630,10 @@ void updateFlightBehaviorModifiers(void)
 
     posControl.flags.isGCSAssistedNavigationEnabled = IS_RC_MODE_ACTIVE(BOXGCSNAV);
 }
-// CR32
+
 /* On the fly WP mission planner mode allows WP missions to be setup during navigation.
  * Uses the WP mode switch to save WP at current location (WP mode disabled when active)
- * Mission can be flown after mission planner mode switched off. Missions
- * can be saved after disarm. */
+ * Mission can be flown after mission planner mode switched off and saved after disarm. */
 
 void updateWpMissionPlanner(void)
 {
@@ -3686,7 +3643,7 @@ void updateWpMissionPlanner(void)
 
         posControl.flags.wpMissionPlannerActive = true;
         if (millis() - resetTimerStart < 1000 && navConfig()->general.flags.mission_planner_reset) {
-            posControl.waypointCount = posControl.geoWaypointCount = posControl.wpPlannerActiveWPIndex = 0;
+            posControl.waypointCount = posControl.wpPlannerActiveWPIndex = 0;
             posControl.waypointListValid = false;
             posControl.wpMissionPlannerStatus = WP_PLAN_WAIT;
         }
@@ -3706,14 +3663,14 @@ void missionPlannerSetWaypoint(void)
 {
     static bool boxWPModeIsReset = true;
 
-    boxWPModeIsReset = !boxWPModeIsReset ? !IS_RC_MODE_ACTIVE(BOXNAVWP) : boxWPModeIsReset; // able to save new WP only when WP mode reset
+    boxWPModeIsReset = !boxWPModeIsReset ? !IS_RC_MODE_ACTIVE(BOXNAVWP) : boxWPModeIsReset; // only able to save new WP when WP mode reset
     posControl.wpMissionPlannerStatus = boxWPModeIsReset ? boxWPModeIsReset : posControl.wpMissionPlannerStatus;  // hold save status until WP mode reset
 
     if (!boxWPModeIsReset || !IS_RC_MODE_ACTIVE(BOXNAVWP)) {
         return;
     }
 
-    if (!posControl.wpPlannerActiveWPIndex) {   // reset any existing mission data before adding first WP
+    if (!posControl.wpPlannerActiveWPIndex) {   // reset existing mission data before adding first WP
         resetWaypointList();
     }
 
@@ -3725,7 +3682,7 @@ void missionPlannerSetWaypoint(void)
     posControl.waypointList[posControl.wpPlannerActiveWPIndex].lon = wpLLH.lon;
     posControl.waypointList[posControl.wpPlannerActiveWPIndex].alt = wpLLH.alt;
     posControl.waypointList[posControl.wpPlannerActiveWPIndex].p1 = posControl.waypointList[posControl.wpPlannerActiveWPIndex].p2 = 0;
-    posControl.waypointList[posControl.wpPlannerActiveWPIndex].p3 = 1;           // use absolute altitude datum
+    posControl.waypointList[posControl.wpPlannerActiveWPIndex].p3 = 1;                      // use absolute altitude datum
     posControl.waypointList[posControl.wpPlannerActiveWPIndex].flag = NAV_WP_FLAG_LAST;
     posControl.waypointListValid = true;
 
@@ -3734,11 +3691,11 @@ void missionPlannerSetWaypoint(void)
     }
 
     posControl.wpPlannerActiveWPIndex += 1;
-    posControl.waypointCount = posControl.geoWaypointCount = posControl.wpPlannerActiveWPIndex;
+    posControl.waypointCount = posControl.geoWaypointCount = posControl.wpPlannerActiveWPIndex;     // CR32
     posControl.wpMissionPlannerStatus = posControl.waypointCount == NAV_MAX_WAYPOINTS ? WP_PLAN_FULL : WP_PLAN_OK;
     boxWPModeIsReset = false;
 }
-// CR32
+
 /**
  * Process NAV mode transition and WP/RTH state machine
  *  Update rate: RX (data driven or 50Hz)
@@ -3766,7 +3723,7 @@ void updateWaypointsAndNavigationMode(void)
     // Map navMode back to enabled flight modes
     switchNavigationFlightModes();
 
-    // Plan WP Mission on the fly CR32
+    // Update WP mission planner
     updateWpMissionPlanner();
 
     //Update Blackbox data
@@ -3869,9 +3826,8 @@ void navigationInit(void)
     /* Initial state */
     posControl.navState = NAV_STATE_IDLE;
 
-    posControl.flags.horizontalPositionDataNew = 0;
-    posControl.flags.verticalPositionDataNew = 0;
-    posControl.flags.headingDataNew = 0;
+    posControl.flags.horizontalPositionDataNew = false;
+    posControl.flags.verticalPositionDataNew = false;
 
     posControl.flags.estAltStatus = EST_NONE;
     posControl.flags.estPosStatus = EST_NONE;
@@ -3885,10 +3841,10 @@ void navigationInit(void)
     posControl.waypointCount = 0;
     posControl.activeWaypointIndex = 0;
     posControl.waypointListValid = false;
-    posControl.multiMissionCount = 0;  // CR21 x
-    posControl.loadedMultiMissionStartWP = 0;   // CR21
-    posControl.wpPlannerActiveWPIndex = 0;     // CR32
-    posControl.flags.wpMissionPlannerActive = false;   //CR32
+    posControl.wpPlannerActiveWPIndex = 0;
+    posControl.flags.wpMissionPlannerActive = false;
+    posControl.multiMissionCount = 0;
+    posControl.loadedMultiMissionStartWP = 0;
 
     /* Set initial surface invalid */
     posControl.actualState.surfaceMin = -1.0f;
@@ -3908,23 +3864,22 @@ void navigationInit(void)
     } else {
         DISABLE_STATE(FW_HEADING_USE_YAW);
     }
-    // CR21
 #if defined(NAV_NON_VOLATILE_WAYPOINT_STORAGE)
     /* configure WP missions at boot */
-    for (int8_t i = 0; i < NAV_MAX_WAYPOINTS; i++) {
+    for (int8_t i = 0; i < NAV_MAX_WAYPOINTS; i++) {    // check number missions in NVM
         if (checkMissionCount(i)) {
             break;
         }
     }
+    /* set index to 1 if saved mission index > available missions */
     if (navConfig()->general.waypoint_multi_mission_index > posControl.multiMissionCount) {
         navConfigMutable()->general.waypoint_multi_mission_index = 1;
     }
-
+    /* load mission on boot */
     if (navConfig()->general.waypoint_load_on_boot) {
         loadNonVolatileWaypointList(false);
     }
 #endif
-    // CR21
 }
 
 /*-----------------------------------------------------------

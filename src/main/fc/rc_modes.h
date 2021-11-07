@@ -72,7 +72,7 @@ typedef enum {
     BOXTURTLE        = 43,
     BOXNAVCRUISE     = 44,
     BOXAUTOLEVEL     = 45,
-    BOXPLANWPMISSION = 46,   // CR32
+    BOXPLANWPMISSION = 46,
     BOXSOARING       = 47,   // CR36
     CHECKBOX_ITEM_COUNT
 } boxId_e;

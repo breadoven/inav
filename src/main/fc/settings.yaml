@@ -178,11 +178,9 @@ tables:
   - name: nav_rth_climb_first
     enum: navRTHClimbFirst_e
     values: ["OFF", "ON", "ON_FW_SPIRAL"]
-    # CR29
   - name: nav_wp_mission_restart
     enum: navMissionRestart_e
     values: ["START", "RESUME", "SWITCH"]
-    # CR29
   - name: djiRssiSource
     values: ["RSSI", "CRSF_LQ"]
     enum: djiRssiSource_e
@@ -237,15 +235,6 @@ groups:
         default_value: 32
         field: gyroMovementCalibrationThreshold
         max: 128
-      - name: gyro_notch_hz
-        field: gyro_notch_hz
-        max: 500
-        default_value: 0
-      - name: gyro_notch_cutoff
-        field: gyro_notch_cutoff
-        min: 1
-        max: 500
-        default_value: 1
       - name: gyro_main_lpf_hz
         description: "Software based gyro main lowpass filter. Value is cutoff frequency (Hz)"
         default_value: 60
@@ -2464,21 +2453,17 @@ groups:
         default_value: 10000
         field: general.waypoint_safe_distance
         max: 65000
-        # CR21
-      - name: nav_wp_multi_mission_index
-        description: "Index of mission selected from multi mission WP entry. 1 is the first useable WP mission in the entry. Limited to a maximum of 9 missions. Set index to 0 to display missions loaded via telemetry in OSD Mission field."
-        default_value: 1
-        field: general.waypoint_multi_mission_index
-        min: 0
-        max: 9
-        # CR21
-        # CR29
       - name: nav_wp_mission_restart
         description: "Sets restart behaviour for a WP mission when interrupted mid mission. START from first WP, RESUME from last active WP or SWITCH between START and RESUME each time WP Mode is reselected ON. SWITCH effectively allows resuming once only from a previous mid mission waypoint after which the mission will restart from the first waypoint."
         default_value: "RESUME"
         field: general.flags.waypoint_mission_restart
         table: nav_wp_mission_restart
-        # CR29
+      - name: nav_wp_multi_mission_index
+        description: "Index of mission selected from multi mission WP entry loaded in flight controller. 1 is the first useable WP mission in the entry. Limited to a maximum of 9 missions. Set index to 0 to display current active WP count in OSD Mission field."
+        default_value: 1
+        field: general.waypoint_multi_mission_index
+        min: 0
+        max: 9
       - name: nav_auto_speed
         description: "Speed in fully autonomous modes (RTH, WP) [cm/s]. Used for WP mode when no specific WP speed set. [Multirotor only]"
         default_value: 300
@@ -2631,13 +2616,11 @@ groups:
         default_value: "RTH"
         field: general.flags.safehome_usage_mode
         table: safehome_usage_mode
-        # CR32
       - name: nav_mission_planner_reset
-        description: "With Reset enabled waypoints entered using WP Mission Planner can be reset to 0 by toggling the mode switch ON-OFF-ON within 1s."
+        description: "With Reset ON WP Mission Planner waypoint count can be reset to 0 by toggling the mode switch ON-OFF-ON."
         default_value: ON
         field: general.flags.mission_planner_reset
         type: bool
-        # CR32
       - name: nav_mc_bank_angle
         description: "Maximum banking angle (deg) that multicopter navigation is allowed to set. Machine must be able to satisfy this angle without loosing altitude"
         default_value: 30
@@ -3285,7 +3268,20 @@ groups:
         condition: USE_TEMPERATURE_SENSOR
         table: osd_alignment
         type: uint8_t
-
+      - name: osd_airspeed_alarm_min
+        condition: USE_PITOT
+        description: "Airspeed under which the airspeed OSD element will start blinking (cm/s)"
+        default_value: 0
+        field: airspeed_alarm_min
+        min: 0
+        max: 27000 # (1000km/h * 1000 * 100 / 60 / 60)
+      - name: osd_airspeed_alarm_max
+        condition: USE_PITOT
+        description: "Airspeed above which the airspeed OSD element will start blinking (cm/s)"
+        default_value: 0
+        field: airspeed_alarm_max
+        min: 0
+        max: 27000 # (1000km/h * 1000 * 100 / 60 / 60)
       - name: osd_ahi_reverse_roll
         field: ahi_reverse_roll
         type: bool

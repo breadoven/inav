@@ -481,7 +481,12 @@ static void dumpPgValue(const setting_t *value, uint8_t dumpMask)
         settingGetName(value, name);
         if (dumpMask & SHOW_DEFAULTS && !equalsDefault) {
             cliPrintf(defaultFormat, name);
-            printValuePointer(value, defaultValuePointer, 0);
+            // if the craftname has a leading space, then enclose the name in quotes
+            if (strcmp(name, "name") == 0 && ((const char *)valuePointer)[0] == ' ') {
+                cliPrintf("\"%s\"", (const char *)valuePointer);
+            } else {
+                printValuePointer(value, valuePointer, 0);
+            }
             cliPrintLinefeed();
         }
         cliPrintf(format, name);
@@ -1390,7 +1395,7 @@ static void printWaypoints(uint8_t dumpMask, const navWaypoint_t *navWaypoint, c
 
 static void cliWaypoints(char *cmdline)
 {
-    static int8_t multiMissionWPCounter = 0;      // CR21
+    static int8_t multiMissionWPCounter = 0;
 
     if (isEmpty(cmdline)) {
         printWaypoints(DUMP_MASTER, posControl.waypointList, NULL);
@@ -1403,17 +1408,14 @@ static void cliWaypoints(char *cmdline)
         for (int i = 0; i < NAV_MAX_WAYPOINTS; i++) {
             if (!(posControl.waypointList[i].action == NAV_WP_ACTION_WAYPOINT || posControl.waypointList[i].action == NAV_WP_ACTION_JUMP || posControl.waypointList[i].action == NAV_WP_ACTION_RTH || posControl.waypointList[i].action == NAV_WP_ACTION_HOLD_TIME || posControl.waypointList[i].action == NAV_WP_ACTION_LAND || posControl.waypointList[i].action == NAV_WP_ACTION_SET_POI || posControl.waypointList[i].action == NAV_WP_ACTION_SET_HEAD)) break;
             if (posControl.waypointList[i].flag == NAV_WP_FLAG_LAST) {
-                // DEBUG_SET(DEBUG_CRUISE, 0, posControl.multiMissionCount);
-                if (posControl.multiMissionCount == 1) {  // CR21
+                if (posControl.multiMissionCount == 1) {
                     posControl.waypointCount = i + 1;
                     posControl.waypointListValid = true;
-                // CR21
                     multiMissionWPCounter = 0;
                     posControl.multiMissionCount = 0;
                     break;
                 } else {
                     posControl.multiMissionCount -= 1;
-                // CR21
                 }
             }
         }
@@ -1429,7 +1431,7 @@ static void cliWaypoints(char *cmdline)
         uint8_t validArgumentCount = 0;
         const char *ptr = cmdline;
         i = fastA2I(ptr);
-        if (i + multiMissionWPCounter >= 0 && i + multiMissionWPCounter < NAV_MAX_WAYPOINTS) {  // CR21
+        if (i + multiMissionWPCounter >= 0 && i + multiMissionWPCounter < NAV_MAX_WAYPOINTS) {
             ptr = nextArg(ptr);
             if (ptr) {
                 action = fastA2I(ptr);
@@ -1482,7 +1484,6 @@ static void cliWaypoints(char *cmdline)
             } else if (!(action == 0 || action == NAV_WP_ACTION_WAYPOINT || action == NAV_WP_ACTION_RTH || action == NAV_WP_ACTION_JUMP || action == NAV_WP_ACTION_HOLD_TIME || action == NAV_WP_ACTION_LAND || action == NAV_WP_ACTION_SET_POI || action == NAV_WP_ACTION_SET_HEAD) || !(flag == 0 || flag == NAV_WP_FLAG_LAST || flag == NAV_WP_FLAG_HOME)) {     // CR21 + CR28
                 cliShowParseError();
             } else {
-                // CR21
                 if (i + multiMissionWPCounter == 0) {
                     posControl.multiMissionCount = 0;
                 }
@@ -1496,14 +1497,12 @@ static void cliWaypoints(char *cmdline)
                 posControl.waypointList[i + multiMissionWPCounter].p3 = p3;
                 posControl.waypointList[i + multiMissionWPCounter].flag = flag;
 
-                // Process WP entries made up of multiple successive WP missions (multiple EOF flags NAV_WP_FLAG_LAST).
-                // Individial missions extracted when loaded at runtime, number defined by setting nav_waypoint_multi_mission_index
+                // Process WP entries made up of multiple successive WP missions (multiple NAV_WP_FLAG_LAST entries)
+                // Individial missions loaded at runtime, mission selected nav_waypoint_multi_mission_index
                 if (flag == NAV_WP_FLAG_LAST) {
                     multiMissionWPCounter += i + 1;
                     posControl.multiMissionCount += 1;
                 }
-                // DEBUG_SET(DEBUG_CRUISE, 1, posControl.multiMissionCount);
-                // CR21
             }
         } else {
             cliShowArgumentRangeError("wp index", 0, NAV_MAX_WAYPOINTS - 1);
@@ -3161,7 +3160,13 @@ static void cliGet(char *cmdline)
         val = settingGet(i);
         if (settingNameContains(val, name, cmdline)) {
             cliPrintf("%s = ", name);
-            cliPrintVar(val, 0);
+            if (strcmp(name, "name") == 0) {
+                // if the craftname has a leading space, then enclose the name in quotes
+                const char * v = (const char *)settingGetValuePointer(val);
+                cliPrintf(v[0] == ' ' ? "\"%s\"" : "%s", v);
+            } else {
+                cliPrintVar(val, 0);
+            }
             cliPrintLinefeed();
             cliPrintVarRange(val);
             cliPrintLinefeed();
@@ -3219,7 +3224,12 @@ static void cliSet(char *cmdline)
             if (settingNameIsExactMatch(val, name, cmdline, variableNameLength)) {
                 const setting_type_e type = SETTING_TYPE(val);
                 if (type == VAR_STRING) {
-                    settingSetString(val, eqptr, strlen(eqptr));
+                    // if setting the craftname, remove any quotes around the name.  This allows leading spaces in the name
+                    if (strcmp(name, "name") == 0 && eqptr[0] == '"' && eqptr[strlen(eqptr)-1] == '"') {
+                        settingSetString(val, eqptr + 1, strlen(eqptr)-2);
+                    } else {
+                        settingSetString(val, eqptr, strlen(eqptr));
+                    }
                     return;
                 }
                 const setting_mode_e mode = SETTING_MODE(val);

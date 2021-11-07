@@ -92,7 +92,7 @@ static const box_t boxes[CHECKBOX_ITEM_COUNT + 1] = {
     { BOXTURTLE, "TURTLE", 52 },
     { BOXNAVCRUISE, "NAV CRUISE", 53 },
     { BOXAUTOLEVEL, "AUTO LEVEL", 54 },
-    { BOXPLANWPMISSION, "WP PLANNER", 55 },   // CR32
+    { BOXPLANWPMISSION, "WP PLANNER", 55 },
     { BOXSOARING, "SOARING", 56 },   // CR36
     { CHECKBOX_ITEM_COUNT, NULL, 0xFF }
 };
@@ -219,9 +219,9 @@ void initActiveBoxIds(void)
         activeBoxIds[activeBoxIdCount++] = BOXNAVRTH;
         activeBoxIds[activeBoxIdCount++] = BOXNAVWP;
         activeBoxIds[activeBoxIdCount++] = BOXHOMERESET;
-        activeBoxIds[activeBoxIdCount++] = BOXPLANWPMISSION;     // CR32
         // CR36
         activeBoxIds[activeBoxIdCount++] = BOXGCSNAV;
+        activeBoxIds[activeBoxIdCount++] = BOXPLANWPMISSION;
 
         if (STATE(AIRPLANE)) {
             activeBoxIds[activeBoxIdCount++] = BOXNAVCOURSEHOLD;
@@ -390,6 +390,7 @@ void packBoxModeFlags(boxBitmask_t * mspBoxModeFlags)
 #endif
     CHECK_ACTIVE_BOX(IS_ENABLED(IS_RC_MODE_ACTIVE(BOXAUTOLEVEL)),       BOXAUTOLEVEL);
     CHECK_ACTIVE_BOX(IS_ENABLED(IS_RC_MODE_ACTIVE(BOXSOARING)),         BOXSOARING);  // CR36
+    CHECK_ACTIVE_BOX(IS_ENABLED(IS_RC_MODE_ACTIVE(BOXPLANWPMISSION)),   BOXPLANWPMISSION);
 
     memset(mspBoxModeFlags, 0, sizeof(boxBitmask_t));
     for (uint32_t i = 0; i < activeBoxIdCount; i++) {

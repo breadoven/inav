@@ -1622,26 +1622,6 @@ Defines the type of the main gyro LPF filter. Possible values: `PT1`, `BIQUAD`. 
 
 ---
 
-### gyro_notch_cutoff
-
-_// TODO_
-
-| Default | Min | Max |
-| --- | --- | --- |
-| 1 | 1 | 500 |
-
----
-
-### gyro_notch_hz
-
-_// TODO_
-
-| Default | Min | Max |
-| --- | --- | --- |
-| 0 |  | 500 |
-
----
-
 ### gyro_to_use
 
 _// TODO_
@@ -3774,7 +3754,7 @@ Minimum distance from homepoint when RTH full procedure will be activated [cm]. 
 
 ### nav_mission_planner_reset
 
-With Reset enabled waypoints entered using WP Mission Planner can be reset to 0 by toggling the mode switch ON-OFF-ON within 1s.
+With Reset ON WP Mission Planner waypoint count can be reset to 0 by toggling the mode switch ON-OFF-ON.
 
 | Default | Min | Max |
 | --- | --- | --- |
@@ -3944,7 +3924,7 @@ Sets restart behaviour for a WP mission when interrupted mid mission. START from
 
 ### nav_wp_multi_mission_index
 
-Index of mission selected from multi mission WP entry. 1 is the first useable WP mission in the entry. Limited to a maximum of 9 missions. Set index to 0 to display missions loaded via telemetry in OSD Mission field.
+Index of mission selected from multi mission WP entry loaded in flight controller. 1 is the first useable WP mission in the entry. Limited to a maximum of 9 missions. Set index to 0 to display current active WP count in OSD Mission field.
 
 | Default | Min | Max |
 | --- | --- | --- |
@@ -4079,6 +4059,26 @@ AHI width in pixels (pixel OSD only)
 | Default | Min | Max |
 | --- | --- | --- |
 | 132 |  | 255 |
+
+---
+
+### osd_airspeed_alarm_max
+
+Airspeed above which the airspeed OSD element will start blinking (cm/s)
+
+| Default | Min | Max |
+| --- | --- | --- |
+| 0 | 0 | 27000 |
+
+---
+
+### osd_airspeed_alarm_min
+
+Airspeed under which the airspeed OSD element will start blinking (cm/s)
+
+| Default | Min | Max |
+| --- | --- | --- |
+| 0 | 0 | 27000 |
 
 ---
 
