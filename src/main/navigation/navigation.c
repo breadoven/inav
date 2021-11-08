@@ -1222,7 +1222,6 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_CLIMB_TO_SAFE_ALT(n
 
     // If we reached desired initial RTH altitude or we don't want to climb first
     if (((navGetCurrentActualPositionAndVelocity()->pos.z - posControl.rthState.rthInitialAltitude) > -rthAltitudeMargin) || (navConfig()->general.flags.rth_climb_first == OFF) || rthAltControlStickOverrideCheck(ROLL) || rthClimbStageActiveAndComplete()) {
-
         // Delayed initialization for RTH sanity check on airplanes - allow to finish climb first as it can take some distance
         if (STATE(FIXED_WING_LEGACY)) {
             initializeRTHSanityChecker(&navGetCurrentActualPositionAndVelocity()->pos);
