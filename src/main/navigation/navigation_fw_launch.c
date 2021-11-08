@@ -604,21 +604,6 @@ uint8_t fixedWingLaunchStatus(void)
 {
     return fwLaunch.currentState;
 }
-// bool fixedWingLaunchStatus(navFwLaunchStatus_e statusCheck)
-// {
-    // switch (statusCheck){
-    // case FW_LAUNCH_DETECTED:
-        // return fwLaunch.currentState >= FW_LAUNCH_STATE_DETECTED;
-        // break;
-    // case FW_LAUNCH_ABORTED:
-        // return fwLaunch.currentState == FW_LAUNCH_STATE_ABORTED;
-        // break;
-    // case FW_LAUNCH_FLYING:
-        // return fwLaunch.currentState == FW_LAUNCH_STATE_FLYING;
-    // }
-
-    // return false;
-// }
 // CR38
 // CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 bool isFixedWingLaunchFinishedThrottleLow(void)

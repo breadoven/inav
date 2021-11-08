@@ -577,7 +577,6 @@ bool isNavLaunchEnabled(void);
 // CR38
 // bool isFixedWingLaunchDetected(void);
 // bool isFixedWingLaunchFinishedOrAborted(void);
-// bool fixedWingLaunchStatus(navFwLaunchStatus_e statusCheck);
 uint8_t fixedWingLaunchStatus(void);
 // CR38
 // CR38

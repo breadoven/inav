@@ -250,7 +250,6 @@ void missionPlannerSetWaypoint(void);
 
 void initializeRTHSanityChecker(const fpVector3_t * pos);
 bool validateRTHSanityChecker(void);
-static bool rthAltControlStickOverrideCheck(unsigned axis);
 
 static navigationFSMEvent_t selectNavEventFromBoxModeInput(bool launchBypass);  //CR6
 void updateHomePosition(void);
@@ -1552,8 +1551,8 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_WAYPOINT_IN_PROGRESS(na
                     tmpWaypoint.x = posControl.activeWaypoint.pos.x;
                     tmpWaypoint.y = posControl.activeWaypoint.pos.y;
                     tmpWaypoint.z = scaleRangef(constrainf(posControl.wpDistance, posControl.wpInitialDistance / 10.0f, posControl.wpInitialDistance),
-                                    posControl.wpInitialDistance, posControl.wpInitialDistance / 10.0f,
-                                    posControl.wpInitialAltitude, posControl.activeWaypoint.pos.z);
+                        posControl.wpInitialDistance, posControl.wpInitialDistance / 10.0f,
+                        posControl.wpInitialAltitude, posControl.activeWaypoint.pos.z);
                     setDesiredPosition(&tmpWaypoint, 0, NAV_POS_UPDATE_XY | NAV_POS_UPDATE_Z | NAV_POS_UPDATE_BEARING);
                     if(STATE(MULTIROTOR)) {
                         switch (wpHeadingControl.mode) {
@@ -1729,8 +1728,6 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_LAUNCH_WAIT(navigationF
     const timeUs_t currentTimeUs = micros();
     UNUSED(previousState);
 
-    // if (isFixedWingLaunchDetected()) {
-    // if (fixedWingLaunchStatus(FW_LAUNCH_DETECTED)) {  // CR38
     if (fixedWingLaunchStatus() == FW_LAUNCH_DETECTED) {  // CR38
         enableFixedWingLaunchController(currentTimeUs);
         return NAV_FSM_EVENT_SUCCESS;   // NAV_STATE_LAUNCH_IN_PROGRESS
@@ -1755,8 +1752,6 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_LAUNCH_IN_PROGRESS(navi
 {
     UNUSED(previousState);
 
-    // if (isFixedWingLaunchFinishedOrAborted()) {
-    // if (fixedWingLaunchStatus(FW_LAUNCH_ABORTED) || fixedWingLaunchStatus(FW_LAUNCH_FLYING)) {  // CR38
     if (fixedWingLaunchStatus() >= FW_LAUNCH_ABORTED) {  // CR38
         return NAV_FSM_EVENT_SUCCESS;
     }

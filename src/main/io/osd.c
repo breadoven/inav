@@ -4014,7 +4014,6 @@ static void osdShowArmed(void)
     if (strlen(systemConfig()->name) > 0) {
         osdFormatCraftName(craftNameBuf);
         displayWrite(osdDisplayPort, (osdDisplayPort->cols - strlen(systemConfig() -> name)) / 2, y, craftNameBuf );
-        // y += 2;
         y += 1;
     }
 #if defined(USE_NAV)

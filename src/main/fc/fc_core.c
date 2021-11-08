@@ -339,7 +339,7 @@ static void updateArmingStatus(void)
         // If arming is disabled and the ARM switch is on
         // Note that this should be last check so all other blockers could be cleared correctly
         // if blocking modes are linked to the same RC channel
-        if ((isArmingDisabled()) && IS_RC_MODE_ACTIVE(BOXARM)) {
+        if (isArmingDisabled() && IS_RC_MODE_ACTIVE(BOXARM)) {
             ENABLE_ARMING_FLAG(ARMING_DISABLED_ARM_SWITCH);
         } else if (!IS_RC_MODE_ACTIVE(BOXARM)) {
             DISABLE_ARMING_FLAG(ARMING_DISABLED_ARM_SWITCH);
@@ -801,6 +801,7 @@ void processRx(timeUs_t currentTimeUs)
         }
     }
     else if (rcControlsConfig()->airmodeHandlingType == THROTTLE_THRESHOLD) {
+        DISABLE_STATE(ANTI_WINDUP);
         //This case applies only to MR when Airmode management is throttle threshold activated
         if (throttleStatus == THROTTLE_LOW && !STATE(AIRMODE_ACTIVE)) {
             pidResetErrorAccumulators();
