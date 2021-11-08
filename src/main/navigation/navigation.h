@@ -224,7 +224,6 @@ typedef struct navConfig_s {
             uint8_t soaring_motor_stop;         // stop motor when Soaring mode enabled
             uint8_t mission_planner_reset;      // Allow WP Mission Planner reset using mode toggle (resets WPs to 0)
             uint8_t waypoint_mission_restart;   // Waypoint mission restart action
-            uint8_t soaring_motor_stop;         // stop motor when Soaring mode enabled   CR36
         } flags;
 
         uint8_t  pos_failure_timeout;               // Time to wait before switching to emergency landing (0 - disable)

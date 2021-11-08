@@ -2059,7 +2059,7 @@ static bool osdDrawSingleElement(uint8_t item)
             else if (FLIGHT_MODE(NAV_COURSE_HOLD_MODE))
                 p = "CRSH";
             else if (FLIGHT_MODE(NAV_WP_MODE))
-                p = FLIGHT_MODE(SOARING_MODE) ? "WP-S" : " WP ";    // CR36
+                p = FLIGHT_MODE(SOARING_MODE) ? "WP-S" : " WP ";    // CR36 not used in release
                 // p = " WP ";
             else if (FLIGHT_MODE(NAV_ALTHOLD_MODE) && navigationRequiresAngleMode()) {
                 // If navigationRequiresAngleMode() returns false when ALTHOLD is active,
@@ -4468,11 +4468,6 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
                         messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_MISSION_PLANNER);
                     }
 #endif
-                    // CR36
-                    if (FLIGHT_MODE(SOARING_MODE)) {
-                        messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_NAV_SOARING);
-                    }
-                    // CR36
                     // CR15
                     if (STATE(LANDING_DETECTED)) {
                         messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_LANDED);

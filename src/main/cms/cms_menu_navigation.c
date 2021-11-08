@@ -184,7 +184,7 @@ static const CMS_Menu cmsx_menuFWSettings = {
     .onGlobalExit = NULL,
     .entries = cmsx_menuFWSettingsEntries
 };
-// CR37
+
 static const OSD_Entry cmsx_menuMissionSettingsEntries[] =
 {
     OSD_LABEL_ENTRY("-- MISSIONS --"),
@@ -210,7 +210,7 @@ static const CMS_Menu cmsx_menuMissionSettings = {
     .onGlobalExit = NULL,
     .entries = cmsx_menuMissionSettingsEntries
 };
-// CR37
+
 static const OSD_Entry cmsx_menuNavigationEntries[] =
 {
     OSD_LABEL_ENTRY("-- NAVIGATION --"),
@@ -218,7 +218,7 @@ static const OSD_Entry cmsx_menuNavigationEntries[] =
     OSD_SUBMENU_ENTRY("BASIC SETTINGS", &cmsx_menuNavSettings),
     OSD_SUBMENU_ENTRY("RTH", &cmsx_menuRTH),
     OSD_SUBMENU_ENTRY("FIXED WING", &cmsx_menuFWSettings),
-    OSD_SUBMENU_ENTRY("MISSIONS", &cmsx_menuMissionSettings),  // CR37
+    OSD_SUBMENU_ENTRY("MISSIONS", &cmsx_menuMissionSettings),
 
     OSD_BACK_AND_END_ENTRY,
 };
