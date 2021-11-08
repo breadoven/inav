@@ -580,9 +580,8 @@ static float calcHorizonRateMagnitude(void)
 
     return horizonRateMagnitude;
 }
-// CR36
-/* ANGLE freefloat deadband. Angle inactive within deadband -> servo centered.
- * Angle error only starts to increase when atttiude outside deadband. */
+
+/* ANGLE freefloat deadband (degs).Angle error only starts to increase if atttiude outside deadband. */
 int16_t angleFreefloatDeadband(int16_t deadband, flight_dynamics_index_t axis)
 {
     int16_t levelDatum = axis == FD_PITCH ? attitude.raw[axis] + DEGREES_TO_DECIDEGREES(fixedWingLevelTrim) : attitude.raw[axis];
@@ -592,7 +591,7 @@ int16_t angleFreefloatDeadband(int16_t deadband, flight_dynamics_index_t axis)
         return 0;
     }
 }
-// CR36
+
 static void pidLevel(pidState_t *pidState, flight_dynamics_index_t axis, float horizonRateMagnitude, float dT)
 {
     // This is ROLL/PITCH, run ANGLE/HORIZON controllers
@@ -634,12 +633,12 @@ static void pidLevel(pidState_t *pidState, flight_dynamics_index_t axis, float h
         actual = attitude.raw[axis];
     }
 
-    float angleErrorDeg = DECIDEGREES_TO_DEGREES(angleTarget - actual);   // del const CR36
+    float angleErrorDeg = DECIDEGREES_TO_DEGREES(angleTarget - actual);
 #else
-    float angleErrorDeg = DECIDEGREES_TO_DEGREES(angleTarget - attitude.raw[axis]);   // del const CR36
+    float angleErrorDeg = DECIDEGREES_TO_DEGREES(angleTarget - attitude.raw[axis]);
 #endif
-    // CR36
-    // Soaring mode deadband inactive if pitch/roll stick not centered - to maintain RC stick adjustment
+
+    // Soaring mode deadband inactive if pitch/roll stick not centered to allow RC stick adjustment
     if (FLIGHT_MODE(SOARING_MODE) && axis == FD_PITCH && calculateRollPitchCenterStatus() == CENTERED) {
         angleErrorDeg = DECIDEGREES_TO_DEGREES((float)angleFreefloatDeadband(DEGREES_TO_DECIDEGREES(navConfig()->fw.soaring_pitch_deadband), FD_PITCH));
         if (!angleErrorDeg) {
@@ -647,8 +646,6 @@ static void pidLevel(pidState_t *pidState, flight_dynamics_index_t axis, float h
             pidState->errorGyroIfLimit = 0.0f;
         }
     }
-    // DEBUG_SET(DEBUG_CRUISE, 2, axisPID[PITCH]);
-    // CR36
 
     float angleRateTarget = constrainf(angleErrorDeg * (pidBank()->pid[PID_LEVEL].P / FP_PID_LEVEL_P_MULTIPLIER), -currentControlRateProfile->stabilized.rates[axis] * 10.0f, currentControlRateProfile->stabilized.rates[axis] * 10.0f);
 
@@ -743,7 +740,7 @@ static float dTermProcess(pidState_t *pidState, float dT) {
         newDTerm = 0;
     } else {
         float delta = pidState->previousRateGyro - pidState->gyroRate;
-        
+
         delta = dTermLpfFilterApplyFn((filter_t *) &pidState->dtermLpfState, delta);
         delta = dTermLpf2FilterApplyFn((filter_t *) &pidState->dtermLpf2State, delta);
 
@@ -789,14 +786,13 @@ static void NOINLINE pidApplyFixedWingRateController(pidState_t *pidState, fligh
     }
 
     axisPID[axis] = constrainf(newPTerm + newFFTerm + pidState->errorGyroIf + newDTerm, -pidState->pidSumLimit, +pidState->pidSumLimit);
-    // CR36
+
     if (FLIGHT_MODE(SOARING_MODE) && axis == FD_PITCH && calculateRollPitchCenterStatus() == CENTERED) {
         if (!angleFreefloatDeadband(DEGREES_TO_DECIDEGREES(navConfig()->fw.soaring_pitch_deadband), FD_PITCH)) {
-            axisPID[FD_PITCH] = 0;  // center pitch servo if pitch attitude within soaring deadband
+            axisPID[FD_PITCH] = 0;  // center pitch servo if pitch attitude within soaring mode deadband
         }
     }
-    // DEBUG_SET(DEBUG_CRUISE, 3, axisPID[PITCH]);
-    // CR36
+
 #ifdef USE_AUTOTUNE_FIXED_WING
     if (FLIGHT_MODE(AUTO_TUNE) && !FLIGHT_MODE(MANUAL_MODE)) {
         autotuneFixedWingUpdate(axis, pidState->rateTarget, pidState->gyroRate, constrainf(newPTerm + newFFTerm, -pidState->pidSumLimit, +pidState->pidSumLimit));
@@ -1214,7 +1210,7 @@ void pidInit(void)
     for (uint8_t axis = FD_ROLL; axis <= FD_YAW; axis++) {
 
     #ifdef USE_D_BOOST
-        // Rate * 10 * 10. First 10 is to convert stick to DPS. Second 10 is to convert target to acceleration. 
+        // Rate * 10 * 10. First 10 is to convert stick to DPS. Second 10 is to convert target to acceleration.
         // We assume, max acceleration is when pilot deflects the stick fully in 100ms
         pidState[axis].dBoostTargetAcceleration = currentControlRateProfile->stabilized.rates[axis] * 10 * 10;
     #endif
@@ -1314,7 +1310,7 @@ void updateFixedWingLevelTrim(timeUs_t currentTimeUs)
         !IS_RC_MODE_ACTIVE(BOXAUTOLEVEL) ||
         areSticksDeflected() ||
         (!FLIGHT_MODE(ANGLE_MODE) && !FLIGHT_MODE(HORIZON_MODE)) ||
-        FLIGHT_MODE(SOARING_MODE) ||   // CR36
+        FLIGHT_MODE(SOARING_MODE) ||
         navigationIsControllingAltitude()
     ) {
         flags |= PID_FREEZE_INTEGRATOR;

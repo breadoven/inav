@@ -103,6 +103,7 @@
 #define OSD_MSG_AUTOTUNE            "(AUTOTUNE)"
 #define OSD_MSG_AUTOTUNE_ACRO       "SWITCH TO ACRO"
 #define OSD_MSG_HEADFREE            "(HEADFREE)"
+#define OSD_MSG_NAV_SOARING         "(SOARING)"
 #define OSD_MSG_UNABLE_ARM          "UNABLE TO ARM"
 #define OSD_MSG_COMPASS_ERROR       "COMPASS ERROR !"     // CR27
 #define OSD_MSG_NAV_SOARING         "(SOARING)"     // CR36

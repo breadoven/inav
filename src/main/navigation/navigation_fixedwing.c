@@ -720,9 +720,8 @@ void applyFixedWingNavigationController(navigationFSMStateFlags_t navStateFlags,
         if (true) {
 #endif
             if (navStateFlags & NAV_CTL_ALT) {
-                if (getMotorStatus() == MOTOR_STOPPED_USER || FLIGHT_MODE(SOARING_MODE)) {  // CR36
-                    // Motor has been stopped by user or soaring mode used to override altitude control (gliders)   CR36
-                    // Update target altitude and bypass navigation pitch/throttle control
+                if (getMotorStatus() == MOTOR_STOPPED_USER || FLIGHT_MODE(SOARING_MODE)) {
+                    // Motor has been stopped by user or soaring mode enabled to override altitude control
                     resetFixedWingAltitudeController();
                     setDesiredPosition(&navGetCurrentActualPositionAndVelocity()->pos, posControl.actualState.yaw, NAV_POS_UPDATE_Z);
                 } else {
@@ -747,11 +746,10 @@ void applyFixedWingNavigationController(navigationFSMStateFlags_t navStateFlags,
         if ((navStateFlags & NAV_CTL_ALT) || (navStateFlags & NAV_CTL_POS)) {
             applyFixedWingPitchRollThrottleController(navStateFlags, currentTimeUs);
         }
-        // CR36
+
         if (FLIGHT_MODE(SOARING_MODE) && navConfig()->general.flags.soaring_motor_stop) {
             ENABLE_STATE(NAV_MOTOR_STOP_OR_IDLE);
         }
-        // CR36
     }
 }
 

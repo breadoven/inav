@@ -3344,7 +3344,7 @@ Stops motor when Soaring mode enabled.
 
 ### nav_fw_soaring_pitch_deadband
 
-Pitch angle deadband when soaring mode enabled (degrees). Angle mode only active outside deadband.
+Pitch Angle deadband when soaring mode enabled (deg). Angle mode inactive within deadband allowing pitch to free float whilst soaring.
 
 | Default | Min | Max |
 | --- | --- | --- |
@@ -3839,6 +3839,26 @@ If set to ON or ON_FW_SPIRAL aircraft will climb to nav_rth_altitude first befor
 | Default | Min | Max |
 | --- | --- | --- |
 | ON |  |  |
+
+---
+
+### nav_rth_climb_first_stage_altitude
+
+The altitude [cm] at which climb first will transition to turn first. How the altitude is used, is determined by nav_rth_climb_first_stage_mode. Default=0; feature disabled.
+
+| Default | Min | Max |
+| --- | --- | --- |
+| 0 |  | 65000 |
+
+---
+
+### nav_rth_climb_first_stage_mode
+
+This determines how rth_climb_first_stage_altitude is used. Default is AT_LEAST.
+
+| Default | Min | Max |
+| --- | --- | --- |
+| AT_LEAST |  |  |
 
 ---
 
