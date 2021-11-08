@@ -290,23 +290,7 @@ void processRcStickPositions(throttleStatus_e throttleStatus)
         resetWaypointList();
         beeper(BEEPER_ACTION_FAIL); // The above cannot fail, but traditionally, we play FAIL for not-loading
     }
-
-    // CR21
-    // Increment multi missiom loaded mission index up
-    if (rcSticks == THR_LO + YAW_CE + PIT_CE + ROL_HI) {
-        selectMultiMissionIndex(1);
-        rcDelayCommand = 0;
-        return;
-    }
-
-    // Increment multi missiom loaded mission index down
-    if (rcSticks == THR_LO + YAW_CE + PIT_CE + ROL_LO) {
-        selectMultiMissionIndex(-1);
-        rcDelayCommand = 0;
-        return;
-    }
 #endif
-    // CR21
     // Multiple configuration profiles
     if (feature(FEATURE_TX_PROF_SEL)) {
 

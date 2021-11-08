@@ -3004,7 +3004,7 @@ bool loadNonVolatileWaypointList(bool clearIfLoaded)
     }
 
     // if forced and waypoints are already loaded, just unload them.
-    if (clearIfLoaded && posControl.waypointCount > 0) {   // CR21
+    if (clearIfLoaded && posControl.waypointCount > 0) {
         resetWaypointList();
         return false;
     }
@@ -3691,7 +3691,7 @@ void missionPlannerSetWaypoint(void)
     }
 
     posControl.wpPlannerActiveWPIndex += 1;
-    posControl.waypointCount = posControl.geoWaypointCount = posControl.wpPlannerActiveWPIndex;     // CR32
+    posControl.waypointCount = posControl.geoWaypointCount = posControl.wpPlannerActiveWPIndex;
     posControl.wpMissionPlannerStatus = posControl.waypointCount == NAV_MAX_WAYPOINTS ? WP_PLAN_FULL : WP_PLAN_OK;
     boxWPModeIsReset = false;
 }
