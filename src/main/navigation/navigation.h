@@ -579,7 +579,6 @@ bool isNavLaunchEnabled(void);
 // bool isFixedWingLaunchFinishedOrAborted(void);
 uint8_t fixedWingLaunchStatus(void);
 // CR38
-// CR38
 bool isFixedWingLaunchFinishedThrottleLow(void);    // CR6
 const char * fixedWingLaunchStateMessage(void);
 
