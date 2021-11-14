@@ -49,7 +49,9 @@ When deciding what altitude to maintain, RTH has 6 different modes of operation 
 * 4 (NAV_RTH_AT_LEAST_ALT) - same as 2 (NAV_RTH_CONST_ALT), but only climb, do not descend
 * 5 (NAV_RTH_AT_LEAST_ALT_LINEAR_DESCENT) - Same as 4 (NAV_RTH_AT_LEAST_ALT). But, if above the RTH Altitude, the aircraft will gradually descend to the RTH Altitude. The target is to reach the RTH Altitude as it arrives at the home point. This is to save energy during the RTH.
 
-## CLI command `wp` to manage waypoints
+## NAV WP - Waypoint mode
+
+### CLI command `wp` to manage waypoints
 
 `wp` - List all waypoints.
 
@@ -88,7 +90,6 @@ Parameters:
 `wp reset` - Resets the list, sets the number of waypoints to 0 and marks the list as invalid (but doesn't delete the waypoint definitions).
 
 ### `wp` example
-
 ```
 # wp load
 
@@ -109,5 +110,46 @@ wp 11 0 0 0 0 0 0 0 0
 ...
 wp 59 0 0 0 0 0 0 0 0
 ```
-
 Note that the `wp` CLI command shows waypoint list indices, while the MW-XML definition used by mwp, ezgui and the configurator use WP numbers.
+
+**INAV 4.0 Multi Missions**\
+Multi missions allows up to 9 missions to be stored in the FC at the same time. It is possible to load them into the FC using the CLI. In this case single missions stored in the CLI format as shown below can be loaded consecutively into the CLI followed by `wp save` **after** the final mission has been entered. All missions will then be saved as a Multi Mission in the FC. Saved multi missions display consecutive WP indices from 0 to the last WP in the last mission.
+
+E.g. to enter 3 missions in the CLI enter each mission as a single mission (first WP index for each mission starting at 0).
+```
+wp 0 1 545722109 -32869291 5000 0 0 0 0
+wp 1 1 545708178 -32642698 5000 0 0 0 0
+wp 2 1 545698227 -32385206 5000 0 0 0 165
+...
+wp 0 1 545599696 -32958555 5000 0 0 0 0
+wp 1 1 545537978 -32958555 5000 0 0 0 0
+wp 2 1 545547933 -32864141 5000 0 0 0 0
+wp 3 1 545597705 -32695913 5000 0 0 0 0
+wp 4 1 545552910 -32598066 5000 0 0 0 0
+wp 5 6 0 0 0 0 0 0 165
+...
+wp 0 1 545714148 -32501936 5000 0 0 0 165
+
+# wp save
+```
+
+Multi Mission after saving:
+```
+# wp
+# wp 10 valid
+wp 0 1 545722109 -32869291 5000 0 0 0 0
+wp 1 1 545708178 -32642698 5000 0 0 0 0
+wp 2 1 545698227 -32385206 5000 0 0 0 165
+wp 3 1 545599696 -32958555 5000 0 0 0 0
+wp 4 1 545537978 -32958555 5000 0 0 0 0
+wp 5 1 545547933 -32864141 5000 0 0 0 0
+wp 6 1 545597705 -32695913 5000 0 0 0 0
+wp 7 1 545552910 -32598066 5000 0 0 0 0
+wp 8 6 0 0 0 0 0 0 165
+wp 9 1 545714148 -32501936 5000 0 0 0 165
+wp 10 0 0 0 0 0 0 0 0
+wp 11 0 0 0 0 0 0 0 0
+wp 12 0 0 0 0 0 0 0 0
+...
+wp 59 0 0 0 0 0 0 0 0
+```

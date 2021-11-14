@@ -184,23 +184,29 @@ void initActiveBoxIds(void)
     }
 
     activeBoxIds[activeBoxIdCount++] = BOXHEADINGHOLD;
-
-    if ((sensors(SENSOR_ACC) || sensors(SENSOR_MAG)) && STATE(MULTIROTOR)) {    // CR43
-        activeBoxIds[activeBoxIdCount++] = BOXHEADFREE;
-        activeBoxIds[activeBoxIdCount++] = BOXHEADADJ;
-    }
-
-    if (STATE(ALTITUDE_CONTROL)) {
+    // CR43
+    if (STATE(MULTIROTOR)) {
+        if ((sensors(SENSOR_ACC) || sensors(SENSOR_MAG))) {
+            activeBoxIds[activeBoxIdCount++] = BOXHEADFREE;
+            activeBoxIds[activeBoxIdCount++] = BOXHEADADJ;
+        }
+        if (sensors(SENSOR_RANGEFINDER) && sensors(SENSOR_OPFLOW)) {
+            activeBoxIds[activeBoxIdCount++] = BOXSURFACE;
+        }
         activeBoxIds[activeBoxIdCount++] = BOXFPVANGLEMIX;
     }
 
+    // if (STATE(ALTITUDE_CONTROL)) {
+        // activeBoxIds[activeBoxIdCount++] = BOXFPVANGLEMIX;
+    // }
+    // CR43
     //Camstab mode is enabled always
     activeBoxIds[activeBoxIdCount++] = BOXCAMSTAB;
 
 #ifdef USE_GPS
     if (STATE(ALTITUDE_CONTROL) && (sensors(SENSOR_BARO) || (feature(FEATURE_GPS) && (STATE(AIRPLANE) || positionEstimationConfig()->use_gps_no_baro)))) {
         activeBoxIds[activeBoxIdCount++] = BOXNAVALTHOLD;
-        activeBoxIds[activeBoxIdCount++] = BOXSURFACE;
+        // activeBoxIds[activeBoxIdCount++] = BOXSURFACE;   // CR43
     }
 
     const bool navReadyMultirotor = STATE(MULTIROTOR) && (getHwCompassStatus() != HW_SENSOR_NONE) && sensors(SENSOR_ACC) && feature(FEATURE_GPS);
