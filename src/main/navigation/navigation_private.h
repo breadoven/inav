@@ -19,8 +19,6 @@
 
 #define DISTANCE_BETWEEN_TWO_LONGITUDE_POINTS_AT_EQUATOR    1.113195f  // MagicEarthNumber from APM
 
-#if defined(USE_NAV)
-
 #include "common/axis.h"
 #include "common/maths.h"
 #include "common/filter.h"
@@ -481,11 +479,8 @@ void calculateFixedWingInitialHoldPosition(fpVector3_t * pos);
 
 /* Fixed-wing launch controller */
 void resetFixedWingLaunchController(timeUs_t currentTimeUs);
-// bool isFixedWingLaunchDetected(void);
-void enableFixedWingLaunchController(timeUs_t currentTimeUs);
-// bool isFixedWingLaunchFinishedOrAborted(void);
-// bool fixedWingLaunchStatus(navFwLaunchStatus_e statusCheck); // CR38
 // bool isFixedWingLaunchFinishedThrottleLow(void);    // CR6
+void enableFixedWingLaunchController(timeUs_t currentTimeUs);
 void abortFixedWingLaunch(void);
 void applyFixedWingLaunchController(timeUs_t currentTimeUs);
 
@@ -493,5 +488,3 @@ void applyFixedWingLaunchController(timeUs_t currentTimeUs);
  * Rover specific functions
  */
 void applyRoverBoatNavigationController(navigationFSMStateFlags_t navStateFlags, timeUs_t currentTimeUs);
-
-#endif

@@ -68,8 +68,6 @@ bool findNearestSafeHome(void);                  // Find nearest safehome
 
 #endif // defined(USE_SAFE_HOME)
 
-#if defined(USE_NAV)
-
 #ifndef NAV_MAX_WAYPOINTS
 #define NAV_MAX_WAYPOINTS 15
 #endif
@@ -146,6 +144,12 @@ typedef enum {
     ON,
     ON_FW_SPIRAL,
 } navRTHClimbFirst_e;
+
+typedef enum {  // keep aligned with fixedWingLaunchState_t
+    FW_LAUNCH_DETECTED = 4,
+    FW_LAUNCH_ABORTED = 9,
+    FW_LAUNCH_FLYING = 10,
+} navFwLaunchStatus_e;
 
 typedef enum {
     WP_PLAN_WAIT,
@@ -574,12 +578,8 @@ bool isWaypointMissionRTHActive(void);
 bool rthClimbStageActiveAndComplete(void);
 
 bool isNavLaunchEnabled(void);
-// CR38
-// bool isFixedWingLaunchDetected(void);
-// bool isFixedWingLaunchFinishedOrAborted(void);
-uint8_t fixedWingLaunchStatus(void);
-// CR38
 bool isFixedWingLaunchFinishedThrottleLow(void);    // CR6
+uint8_t fixedWingLaunchStatus(void);
 const char * fixedWingLaunchStateMessage(void);
 
 float calculateAverageSpeed(void);
@@ -612,15 +612,3 @@ extern uint16_t navFlags;
 extern uint16_t navEPH;
 extern uint16_t navEPV;
 extern int16_t navAccNEU[3];
-
-#else
-
-#define navigationRequiresAngleMode() (0)
-#define navigationGetHeadingControlState() (0)
-#define navigationRequiresThrottleTiltCompensation() (0)
-#define getEstimatedActualVelocity(axis) (0)
-#define navigationIsControllingThrottle() (0)
-#define navigationRTHAllowsLanding() (0)
-#define navigationGetHomeHeading() (0)
-
-#endif  // NAV

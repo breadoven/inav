@@ -39,9 +39,7 @@
 #include "rx/rx.h"
 
 static uint8_t specifiedConditionCountPerMode[CHECKBOX_ITEM_COUNT];
-#ifdef USE_NAV
 static bool isUsingNAVModes = false;
-#endif
 
 boxBitmask_t rcModeActivationMask; // one bit per mode defined in boxId_e
 
@@ -115,13 +113,10 @@ void processAirmode(void) {
 
 }
 
-#if defined(USE_NAV)
 bool isUsingNavigationModes(void)
 {
     return isUsingNAVModes;
 }
-#endif
-
 
 bool IS_RC_MODE_ACTIVE(boxId_e boxId)
 {
@@ -204,13 +199,11 @@ void updateUsedModeActivationConditionFlags(void)
         }
     }
 
-#ifdef USE_NAV
     isUsingNAVModes = isModeActivationConditionPresent(BOXNAVPOSHOLD) ||
                         isModeActivationConditionPresent(BOXNAVRTH) ||
                         isModeActivationConditionPresent(BOXNAVCOURSEHOLD) ||
                         isModeActivationConditionPresent(BOXNAVCRUISE) ||
                         isModeActivationConditionPresent(BOXNAVWP);
-#endif
 }
 
 void configureModeActivationCondition(int macIndex, boxId_e modeId, uint8_t auxChannelIndex, uint16_t startPwm, uint16_t endPwm)

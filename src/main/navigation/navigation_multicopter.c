@@ -21,8 +21,6 @@
 
 #include "platform.h"
 
-#if defined(USE_NAV)
-
 #include "build/build_config.h"
 #include "build/debug.h"
 
@@ -862,4 +860,3 @@ void applyMulticopterNavigationController(navigationFSMStateFlags_t navStateFlag
             applyMulticopterHeadingController();
     }
 }
-#endif  // NAV
