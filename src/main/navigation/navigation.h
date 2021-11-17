@@ -145,25 +145,19 @@ typedef enum {
     ON_FW_SPIRAL,
 } navRTHClimbFirst_e;
 
-typedef enum {  // keep aligned with fixedWingLaunchState_t
-    FW_LAUNCH_DETECTED = 4,
-    FW_LAUNCH_ABORTED = 9,
-    FW_LAUNCH_FLYING = 10,
-} navFwLaunchStatus_e;
-
 typedef enum {
     WP_PLAN_WAIT,
     WP_PLAN_SAVE,
     WP_PLAN_OK,
     WP_PLAN_FULL,
 } wpMissionPlannerStatus_e;
-// CR38
+
 typedef enum {  // keep aligned with fixedWingLaunchState_t
     FW_LAUNCH_DETECTED = 4,
     FW_LAUNCH_ABORTED = 10,
     FW_LAUNCH_FLYING = 11,
 } navFwLaunchStatus_e;
-// CR38
+
 typedef enum {
     WP_MISSION_START,
     WP_MISSION_RESUME,

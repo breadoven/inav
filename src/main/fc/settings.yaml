@@ -2016,7 +2016,6 @@ groups:
       - name: nav_mc_vel_xy_accel_tweak
         description: "Fiddle factor to tune bank angle response to specific quad performance"
         field: mc_vel_xy_accel_tweak
-        condition: USE_NAV
         default_value: 100
         min: 10
         max: 100

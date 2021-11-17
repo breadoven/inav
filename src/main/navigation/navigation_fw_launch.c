@@ -200,7 +200,7 @@ static const fixedWingLaunchStateDescriptor_t launchStateMachine[FW_LAUNCH_STATE
         .onEntry                                    = fwLaunchState_FW_LAUNCH_STATE_FINISH,
         .onEvent = {
             [FW_LAUNCH_EVENT_SUCCESS]               = FW_LAUNCH_STATE_FLYING,
-            [FW_LAUNCH_EVENT_ABORT]                 = FW_LAUNCH_STATE_FLYING,
+            // [FW_LAUNCH_EVENT_ABORT]                 = FW_LAUNCH_STATE_FLYING,
             // CR6
             [FW_LAUNCH_EVENT_FINISH_THR_LOW]        = FW_LAUNCH_STATE_FINISH_THR_LOW
             // CR6
@@ -463,7 +463,7 @@ static fixedWingLaunchEvent_t fwLaunchState_FW_LAUNCH_STATE_FINISH(timeUs_t curr
     const timeMs_t endTimeMs = navConfig()->fw.launch_end_time;
 
     if (isRollPitchStickDeflected()) {
-        return FW_LAUNCH_EVENT_ABORT; // cancel the launch and do the FW_LAUNCH_STATE_IDLE state
+        return FW_LAUNCH_EVENT_SUCCESS; // cancel the launch and do the FW_LAUNCH_STATE_FLYING state
     }
     // CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
     if (navConfig()->fw.launch_allow_throttle_low && isThrottleLow()) {
@@ -499,7 +499,7 @@ static fixedWingLaunchEvent_t fwLaunchState_FW_LAUNCH_STATE_FINISH_THR_LOW(timeU
     const timeMs_t endTimeMs = 1000;
 
     if (isRollPitchStickDeflected()) {
-        return FW_LAUNCH_EVENT_SUCCESS;     // end the launch and go to FW_LAUNCH_STATE_IDLE
+        return FW_LAUNCH_EVENT_SUCCESS;     // end the launch and go to FW_LAUNCH_STATE_FLYING
     }
 
     if (isThrottleLow()) {
