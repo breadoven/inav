@@ -3085,7 +3085,9 @@ static bool osdDrawSingleElement(uint8_t item)
                 tfp_sprintf(buff, "%s>%2uWP", buf, posControl.wpPlannerActiveWPIndex);
             } else if (posControl.wpPlannerActiveWPIndex){
                 tfp_sprintf(buff, "PLAN>%2uWP", posControl.waypointCount);  // mission planner mision active
-            } else {
+            }
+#ifdef USE_MULTI_MISSION
+            else {
                 if (ARMING_FLAG(ARMED)){
                     // Limit field size when Armed, only show selected mission
                     tfp_sprintf(buff, "M%u       ", posControl.loadedMultiMissionIndex);
@@ -3105,6 +3107,7 @@ static bool osdDrawSingleElement(uint8_t item)
                     tfp_sprintf(buff, "WP CNT>%2u", posControl.waypointCount);
                 }
             }
+#endif
             displayWrite(osdDisplayPort, elemPosX, elemPosY, buff);
             return true;
         }
@@ -3999,8 +4002,12 @@ static void osdShowArmed(void)
         y += 1;
     }
     if (posControl.waypointListValid && posControl.waypointCount > 0) {
+#ifdef USE_MULTI_MISSION
         tfp_sprintf(buf, "MISSION %u/%u (%u WP)", posControl.loadedMultiMissionIndex, posControl.multiMissionCount, posControl.waypointCount);
         displayWrite(osdDisplayPort, 6, y, buf);
+#else
+        displayWrite(osdDisplayPort, 7, y, "*MISSION LOADED*");
+#endif
     }
     y += 1;
 
