@@ -51,9 +51,9 @@ When deciding what altitude to maintain, RTH has 6 different modes of operation 
 
 ## NAV WP - Waypoint mode
 
-NAV WP allows the craft to autonomously navigate a set route defined by waypoints that are entered into the FC as a predefined mission. The mission can be run in flight by selecting WP mode.
+NAV WP allows the craft to autonomously navigate a set route defined by waypoints that are loaded into the FC as a predefined mission.
 
-### CLI command `wp` to manage waypoints
+## CLI command `wp` to manage waypoints
 
 `wp` - List all waypoints.
 
@@ -85,7 +85,7 @@ Parameters:
 
   * `<p3>` - Reserved for future use. If `p2` is provided, then `p3` is also required.
 
-  * `<flag>` - Last waypoint in mission must have `flag` set to 165 (0xA5).
+  * `<flag>` - Last waypoint must have `flag` set to 165 (0xA5).
 
 `wp save` - Checks list of waypoints and save from FC to EEPROM (warning: it also saves all unsaved CLI settings like normal `save`).
 
@@ -117,7 +117,7 @@ Note that the `wp` CLI command shows waypoint list indices, while the MW-XML def
 **Multi-missions**\
 Multi-missions allows up to 9 missions to be stored in the FC at the same time. It is possible to load them into the FC using the CLI. This is acheived by entering single missions into the CLI followed by `wp save` **after** the final mission has been entered (the single missions can be entered one after the other or as a single block entry, it doesn't matter). All missions will then be saved as a Multi Mission in the FC. Saved multi missions display consecutive WP indices from 0 to the last WP in the last mission when displayed using the `wp` command.
 
-E.g. to enter 3 missions in the CLI enter each mission as a single mission (first WP index for each mission starting at 0).
+E.g. to enter 3 missions in the CLI enter each mission as a single mission (start WP index for each mission must be 0).
 ```
 wp 0 1 545722109 -32869291 5000 0 0 0 0
 wp 1 1 545708178 -32642698 5000 0 0 0 0
