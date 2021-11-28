@@ -4388,13 +4388,20 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
                     tfp_sprintf(messageBuf, "TO WP %u/%u (%s)", getGeoWaypointNumber(posControl.activeWaypointIndex), posControl.geoWaypointCount, buf);
                     messages[messageCount++] = messageBuf;
                 } else if (NAV_Status.state == MW_NAV_STATE_HOLD_TIMED) {
-                    // WP hold time countdown in seconds
-                    timeMs_t currentTime = millis();
-                    int holdTimeRemaining = posControl.waypointList[posControl.activeWaypointIndex].p1 - (int)((currentTime - posControl.wpReachedTime)/1000);
-                    if (holdTimeRemaining >=0) {
-                        tfp_sprintf(messageBuf, "HOLDING WP FOR %2u S", holdTimeRemaining);
+                    // CR57
+                    if (navConfig()->general.flags.waypoint_capture_altitude && !posControl.wpAltitudeReached) {
+                        messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_ADJUSTING_WP_ALT);
+                    } else {
+                        // WP hold time countdown in seconds
+                        timeMs_t currentTime = millis();
+                        int holdTimeRemaining = posControl.waypointList[posControl.activeWaypointIndex].p1 - (int)(MS2S(currentTime - posControl.wpReachedTime));
+                        holdTimeRemaining = holdTimeRemaining >= 0 ? holdTimeRemaining : 0;
+                        // if (holdTimeRemaining >=0) {
+                            tfp_sprintf(messageBuf, "HOLDING WP FOR %2u S", holdTimeRemaining);
+                        // }
+                        messages[messageCount++] = messageBuf;
                     }
-                    messages[messageCount++] = messageBuf;
+                    // CR57
                 } else {
                     const char *navStateMessage = navigationStateMessage();
                     if (navStateMessage) {

@@ -211,7 +211,7 @@ typedef struct navConfig_s {
             uint8_t user_control_mode;          // NAV_GPS_ATTI or NAV_GPS_CRUISE
             uint8_t rth_alt_control_mode;       // Controls the logic for choosing the RTH altitude
             uint8_t rth_climb_first;            // Controls the logic for initial RTH climbout
-            uint8_t rth_climb_first_stage_mode;  // To determine how rth_climb_first_stage_altitude is used
+            uint8_t rth_climb_first_stage_mode; // To determine how rth_climb_first_stage_altitude is used
             uint8_t rth_tail_first;             // Return to home tail first
             uint8_t disarm_on_landing;          //
             uint8_t rth_allow_landing;          // Enable landing as last stage of RTH. Use constants in navRTHAllowLanding_e.
@@ -222,6 +222,7 @@ typedef struct navConfig_s {
             uint8_t soaring_motor_stop;         // stop motor when Soaring mode enabled
             uint8_t mission_planner_reset;      // Allow WP Mission Planner reset using mode toggle (resets WPs to 0)
             uint8_t waypoint_mission_restart;   // Waypoint mission restart action
+            uint8_t waypoint_capture_altitude;  // Forces waypoint altitude to be acheived  CR57
         } flags;
 
         uint8_t  pos_failure_timeout;               // Time to wait before switching to emergency landing (0 - disable)
