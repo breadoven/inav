@@ -428,7 +428,7 @@ bool isWaypointReached(const navWaypointPosition_t * waypoint, const bool isWayp
 bool isWaypointMissed(const navWaypointPosition_t * waypoint);
 // CR58
 // bool isWaypointWait(void);
-bool isApproachingLoiterPosition(void);
+bool isApproachingHoldPosition(void);
 bool isLastMissionWaypoint(void);
 // CR58
 float getActiveWaypointSpeed(void);
