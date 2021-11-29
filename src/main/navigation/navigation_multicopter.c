@@ -445,7 +445,10 @@ static void updatePositionVelocityController_MC(const float maxSpeed)
      */
     if (
         (navGetCurrentStateFlags() & NAV_AUTO_WP &&
-        !isApproachingLastWaypoint() &&
+        // CR58
+        !isLastMissionWaypoint() &&
+        // !isApproachingLastWaypoint() &&
+        // CR58
         newVelTotal < maxSpeed &&
         !navConfig()->mc.slowDownForTurning
         ) || newVelTotal > maxSpeed

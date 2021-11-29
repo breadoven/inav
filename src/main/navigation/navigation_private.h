@@ -426,8 +426,11 @@ void updateClimbRateToAltitudeController(float desiredClimbRate, climbRateToAlti
 
 bool isWaypointReached(const navWaypointPosition_t * waypoint, const bool isWaypointHome);
 bool isWaypointMissed(const navWaypointPosition_t * waypoint);
-bool isWaypointWait(void);
-bool isApproachingLastWaypoint(void);
+// CR58
+// bool isWaypointWait(void);
+bool isApproachingLoiterPosition(void);
+bool isLastMissionWaypoint(void);
+// CR58
 float getActiveWaypointSpeed(void);
 
 void updateActualHeading(bool headingValid, int32_t newHeading);
