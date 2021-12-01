@@ -934,6 +934,8 @@ navigationFSMStateFlags_t navGetCurrentStateFlags(void)
 	// DEBUG_SET(DEBUG_CRUISE, 0, posControl.flags.missionResume);
     // DEBUG_SET(DEBUG_CRUISE, 2, 55);
     // DEBUG_SET(DEBUG_CRUISE, 2, 77);
+        DEBUG_SET(DEBUG_CRUISE, 0, throttleStickMixedValue());
+        DEBUG_SET(DEBUG_CRUISE, 1, currentBatteryProfile->nav.fw.launch_idle_throttle);
 
     return navGetStateFlags(posControl.navState);
 }
@@ -1766,7 +1768,13 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_LAUNCH_INITIALIZE(navig
 
     return NAV_FSM_EVENT_SUCCESS;   // NAV_STATE_LAUNCH_WAIT
 }
-
+// CR59
+bool abortLaunchAllowed(void)
+{
+    throttleStatus_e throttleStatus = calculateThrottleStatus(THROTTLE_STATUS_TYPE_RC);
+    return throttleStatus == THROTTLE_LOW || throttleStickMixedValue() < currentBatteryProfile->nav.fw.launch_idle_throttle;
+}
+// CR59
 static navigationFSMEvent_t navOnEnteringState_NAV_STATE_LAUNCH_WAIT(navigationFSMState_t previousState)
 {
     const timeUs_t currentTimeUs = micros();
@@ -1776,18 +1784,27 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_LAUNCH_WAIT(navigationF
         enableFixedWingLaunchController(currentTimeUs);
         return NAV_FSM_EVENT_SUCCESS;   // NAV_STATE_LAUNCH_IN_PROGRESS
     }
-
+        // CR59
     // allow to leave NAV_LAUNCH_MODE if it has being enabled as feature by moving sticks with low throttle.
     // also allow switched launch mode to be cancelled by moving sticks if launch allowed with throttle low
     // CR6 xxxxxxxxxxxxxxxxxxxxxxxx
-    if (feature(FEATURE_FW_LAUNCH) || (navConfig()->fw.launch_allow_throttle_low && IS_RC_MODE_ACTIVE(BOXNAVLAUNCH))) {
+    // if (feature(FEATURE_FW_LAUNCH) || (navConfig()->fw.launch_allow_throttle_low && IS_RC_MODE_ACTIVE(BOXNAVLAUNCH))) {
     // CR6 xxxxxxxxxxxxxxxxxxxxxxxxx
-        throttleStatus_e throttleStatus = calculateThrottleStatus(THROTTLE_STATUS_TYPE_RC);
-        if ((throttleStatus == THROTTLE_LOW) && (isRollPitchStickDeflected())) {
+
+        // throttleStatus_e throttleStatus = calculateThrottleStatus(THROTTLE_STATUS_TYPE_RC);
+        // bool abortLaunchAllowed = throttleStatus == THROTTLE_LOW || throttleStickMixedValue() < currentBatteryProfile->nav.fw.launch_idle_throttle;
+        if (abortLaunchAllowed() && isRollPitchStickDeflected()) {
             abortFixedWingLaunch();
             return NAV_FSM_EVENT_SWITCH_TO_IDLE;
         }
-    }
+
+        // CR59
+        // throttleStatus_e throttleStatus = calculateThrottleStatus(THROTTLE_STATUS_TYPE_RC);
+        // if ((throttleStatus == THROTTLE_LOW) && (isRollPitchStickDeflected())) {
+            // abortFixedWingLaunch();
+            // return NAV_FSM_EVENT_SWITCH_TO_IDLE;
+        // }
+    // }
 
     return NAV_FSM_EVENT_NONE;
 }
@@ -3481,11 +3498,18 @@ static navigationFSMEvent_t selectNavEventFromBoxModeInput(bool launchBypass)
             else {
                 // If we were in LAUNCH mode - force switch to IDLE only if the throttle is low
                 if (FLIGHT_MODE(NAV_LAUNCH_MODE)) {
-                    throttleStatus_e throttleStatus = calculateThrottleStatus(THROTTLE_STATUS_TYPE_RC);
-                    if (throttleStatus != THROTTLE_LOW)
-                        return NAV_FSM_EVENT_NONE;
-                    else
+                    // CR59
+                    if (abortLaunchAllowed()) {
                         return NAV_FSM_EVENT_SWITCH_TO_IDLE;
+                    } else {
+                        return NAV_FSM_EVENT_NONE;
+                    }
+                    // throttleStatus_e throttleStatus = calculateThrottleStatus(THROTTLE_STATUS_TYPE_RC);
+                    // if (throttleStatus != THROTTLE_LOW)
+                        // return NAV_FSM_EVENT_NONE;
+                    // else
+                        // return NAV_FSM_EVENT_SWITCH_TO_IDLE;
+                    // CR59
                 }
             }
 
