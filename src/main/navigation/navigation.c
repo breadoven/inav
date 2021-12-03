@@ -1768,13 +1768,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_LAUNCH_INITIALIZE(navig
 
     return NAV_FSM_EVENT_SUCCESS;   // NAV_STATE_LAUNCH_WAIT
 }
-// CR59
-bool abortLaunchAllowed(void)
-{
-    throttleStatus_e throttleStatus = calculateThrottleStatus(THROTTLE_STATUS_TYPE_RC);
-    return throttleStatus == THROTTLE_LOW || throttleStickMixedValue() < currentBatteryProfile->nav.fw.launch_idle_throttle;
-}
-// CR59
+
 static navigationFSMEvent_t navOnEnteringState_NAV_STATE_LAUNCH_WAIT(navigationFSMState_t previousState)
 {
     const timeUs_t currentTimeUs = micros();
@@ -4158,7 +4152,13 @@ bool isNavLaunchEnabled(void)
 {
     return IS_RC_MODE_ACTIVE(BOXNAVLAUNCH) || feature(FEATURE_FW_LAUNCH);
 }
-
+// CR59
+bool abortLaunchAllowed(void)
+{
+    throttleStatus_e throttleStatus = calculateThrottleStatus(THROTTLE_STATUS_TYPE_RC);
+    return throttleStatus == THROTTLE_LOW || throttleStickMixedValue() < currentBatteryProfile->nav.fw.launch_idle_throttle;
+}
+// CR59
 int32_t navigationGetHomeHeading(void)
 {
     return posControl.rthState.homePosition.yaw;
