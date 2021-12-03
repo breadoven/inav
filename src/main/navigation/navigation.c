@@ -259,6 +259,7 @@ bool validateRTHSanityChecker(void);
 
 static navigationFSMEvent_t selectNavEventFromBoxModeInput(bool launchBypass);  //CR6
 void updateHomePosition(void);
+bool abortLaunchAllowed(void);  // CR59
 
 static bool rthAltControlStickOverrideCheck(unsigned axis);
 
@@ -3230,7 +3231,6 @@ bool isApproachingHoldPosition(void)
     // RTH spiral climb and Home positions and POSHOLD position
     return FLIGHT_MODE(NAV_RTH_MODE) || FLIGHT_MODE(NAV_POSHOLD_MODE);
 }
-// CR58
 // CR58
 /**
  * Returns TRUE if we are in WP mode and executing last waypoint on the list, or in RTH mode, or in PH mode
