@@ -1788,7 +1788,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_LAUNCH_WAIT(navigationF
 
         // throttleStatus_e throttleStatus = calculateThrottleStatus(THROTTLE_STATUS_TYPE_RC);
         // bool abortLaunchAllowed = throttleStatus == THROTTLE_LOW || throttleStickMixedValue() < currentBatteryProfile->nav.fw.launch_idle_throttle;
-        if (abortLaunchAllowed() && isRollPitchStickDeflected()) {
+        if (abortLaunchAllowed() && isRollPitchStickDeflected(LAUNCH_ABORT_STICK_DEADBAND)) {
             abortFixedWingLaunch();
             return NAV_FSM_EVENT_SWITCH_TO_IDLE;
         }
@@ -3222,8 +3222,8 @@ bool isLastMissionWaypoint(void)
             (posControl.waypointList[posControl.activeWaypointIndex].flag == NAV_WP_FLAG_LAST));
 }
 
-/* Checks if approaching hold position requiring fixed wing circling loiter */
-bool isApproachingHoldPosition(void)
+/* Checks if Nav hold position is active */
+bool isNavHoldPositionActive(void)
 {
     if (FLIGHT_MODE(NAV_WP_MODE)) {     // WP mode last WP hold and Timed hold positions
         return isLastMissionWaypoint() || NAV_Status.state == MW_NAV_STATE_HOLD_TIMED;

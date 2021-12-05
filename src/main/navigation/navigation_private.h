@@ -35,6 +35,8 @@
 
 #define INAV_SURFACE_MAX_DISTANCE           40
 
+#define LAUNCH_ABORT_STICK_DEADBAND         250     // pitch/roll stick deflection for lanch abort (us)  CR60
+
 #define MAX_POSITION_UPDATE_INTERVAL_US     HZ2US(MIN_POSITION_UPDATE_RATE_HZ)        // convenience macro
 _Static_assert(MAX_POSITION_UPDATE_INTERVAL_US <= TIMEDELTA_MAX, "deltaMicros can overflow!");
 
@@ -428,7 +430,7 @@ bool isWaypointReached(const navWaypointPosition_t * waypoint, const bool isWayp
 bool isWaypointMissed(const navWaypointPosition_t * waypoint);
 // CR58
 // bool isWaypointWait(void);
-bool isApproachingHoldPosition(void);
+bool isNavHoldPositionActive(void);
 bool isLastMissionWaypoint(void);
 // CR58
 float getActiveWaypointSpeed(void);
