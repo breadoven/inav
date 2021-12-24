@@ -185,34 +185,35 @@ void initActiveBoxIds(void)
 
     activeBoxIds[activeBoxIdCount++] = BOXHEADINGHOLD;
     // CR43
+    //Camstab mode is enabled always
+    activeBoxIds[activeBoxIdCount++] = BOXCAMSTAB;
+
     if (STATE(MULTIROTOR)) {
         if ((sensors(SENSOR_ACC) || sensors(SENSOR_MAG))) {
             activeBoxIds[activeBoxIdCount++] = BOXHEADFREE;
             activeBoxIds[activeBoxIdCount++] = BOXHEADADJ;
         }
-        if (sensors(SENSOR_RANGEFINDER) && sensors(SENSOR_OPFLOW)) {
+        if (sensors(SENSOR_BARO) && sensors(SENSOR_RANGEFINDER) && sensors(SENSOR_OPFLOW)) {
             activeBoxIds[activeBoxIdCount++] = BOXSURFACE;
         }
         activeBoxIds[activeBoxIdCount++] = BOXFPVANGLEMIX;
     }
 
-    // if (STATE(ALTITUDE_CONTROL)) {
-        // activeBoxIds[activeBoxIdCount++] = BOXFPVANGLEMIX;
-    // }
     // CR43
-    //Camstab mode is enabled always
-    activeBoxIds[activeBoxIdCount++] = BOXCAMSTAB;
-
+    bool navReadyAltControl = false;
+    if (STATE(ALTITUDE_CONTROL) && sensors(SENSOR_BARO)) {
+        navReadyAltControl = true;
+    }
 #ifdef USE_GPS
-    if (STATE(ALTITUDE_CONTROL) && (sensors(SENSOR_BARO) || (feature(FEATURE_GPS) && (STATE(AIRPLANE) || positionEstimationConfig()->use_gps_no_baro)))) {
-        activeBoxIds[activeBoxIdCount++] = BOXNAVALTHOLD;
-        // activeBoxIds[activeBoxIdCount++] = BOXSURFACE;   // CR43
+    if ((feature(FEATURE_GPS) && (STATE(AIRPLANE) || positionEstimationConfig()->use_gps_no_baro))) {
+        navReadyAltControl = true;
     }
 
-    const bool navReadyMultirotor = STATE(MULTIROTOR) && (getHwCompassStatus() != HW_SENSOR_NONE) && sensors(SENSOR_ACC) && feature(FEATURE_GPS);
-    const bool navReadyOther = !STATE(MULTIROTOR) && sensors(SENSOR_ACC) && feature(FEATURE_GPS);
+    const bool navReadyBaseline = sensors(SENSOR_ACC) && feature(FEATURE_GPS);
+    const bool navReadyMultirotor = STATE(MULTIROTOR) && (getHwCompassStatus() != HW_SENSOR_NONE) && navReadyBaseline;
     const bool navFlowDeadReckoning = sensors(SENSOR_OPFLOW) && sensors(SENSOR_ACC) && positionEstimationConfig()->allow_dead_reckoning;
-    if (navFlowDeadReckoning || navReadyMultirotor || navReadyOther) {
+
+    if (navReadyAltControl && (navReadyMultirotor || navReadyBaseline || navFlowDeadReckoning)) {
         if (!STATE(ROVER) && !STATE(BOAT)) {
             activeBoxIds[activeBoxIdCount++] = BOXNAVPOSHOLD;
         }
@@ -221,27 +222,31 @@ void initActiveBoxIds(void)
         }
     }
 
-    if (navReadyMultirotor || navReadyOther) {
-        activeBoxIds[activeBoxIdCount++] = BOXNAVRTH;
-        activeBoxIds[activeBoxIdCount++] = BOXNAVWP;
-        activeBoxIds[activeBoxIdCount++] = BOXHOMERESET;
-        activeBoxIds[activeBoxIdCount++] = BOXGCSNAV;
-        activeBoxIds[activeBoxIdCount++] = BOXPLANWPMISSION;
-
-        if (STATE(AIRPLANE)) {
+    if (navReadyMultirotor || navReadyBaseline) {
+        if (navReadyAltControl) {
+            activeBoxIds[activeBoxIdCount++] = BOXNAVRTH;
+            activeBoxIds[activeBoxIdCount++] = BOXNAVWP;
+            activeBoxIds[activeBoxIdCount++] = BOXHOMERESET;
+            activeBoxIds[activeBoxIdCount++] = BOXGCSNAV;
+            activeBoxIds[activeBoxIdCount++] = BOXPLANWPMISSION;
+            if (STATE(AIRPLANE)) {
+                activeBoxIds[activeBoxIdCount++] = BOXNAVCRUISE;
+            }
+        } else if (STATE(AIRPLANE)) {
             activeBoxIds[activeBoxIdCount++] = BOXNAVCOURSEHOLD;
-            activeBoxIds[activeBoxIdCount++] = BOXNAVCRUISE;
             activeBoxIds[activeBoxIdCount++] = BOXSOARING;
         }
     }
 
 #ifdef USE_MR_BRAKING_MODE
-    if (mixerConfig()->platformType == PLATFORM_MULTIROTOR) {
-        activeBoxIds[activeBoxIdCount++] = BOXBRAKING;
+        if (mixerConfig()->platformType == PLATFORM_MULTIROTOR) {
+            activeBoxIds[activeBoxIdCount++] = BOXBRAKING;
+        }
+#endif
+#endif  // GPS
+    if (navReadyAltControl) {
+        activeBoxIds[activeBoxIdCount++] = BOXNAVALTHOLD;
     }
-#endif
-
-#endif
 
     if (STATE(AIRPLANE) || STATE(ROVER) || STATE(BOAT)) {
         activeBoxIds[activeBoxIdCount++] = BOXMANUAL;
