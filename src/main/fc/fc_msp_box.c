@@ -199,51 +199,45 @@ void initActiveBoxIds(void)
         activeBoxIds[activeBoxIdCount++] = BOXFPVANGLEMIX;
     }
 
-    bool navReadyAltControl = false;
-    if (sensors(SENSOR_BARO)) {
-        navReadyAltControl = true;
-    }
+    bool navReadyAltControl = sensors(SENSOR_BARO);
 #ifdef USE_GPS
-    if ((feature(FEATURE_GPS) && (STATE(AIRPLANE) || positionEstimationConfig()->use_gps_no_baro))) {
-        navReadyAltControl = true;
+    navReadyAltControl = navReadyAltControl || (feature(FEATURE_GPS) && (STATE(AIRPLANE) || positionEstimationConfig()->use_gps_no_baro));
+
+    const bool navFlowDeadReckoning = sensors(SENSOR_OPFLOW) && sensors(SENSOR_ACC) && positionEstimationConfig()->allow_dead_reckoning;
+    bool navReadyPosControl = sensors(SENSOR_ACC) && feature(FEATURE_GPS);
+    if (STATE(MULTIROTOR)) {
+        navReadyPosControl = navReadyPosControl && getHwCompassStatus() != HW_SENSOR_NONE;
     }
 
-    const bool navReadyBaseline = sensors(SENSOR_ACC) && feature(FEATURE_GPS);
-    const bool navReadyMultirotor = navReadyBaseline && STATE(MULTIROTOR) && getHwCompassStatus() != HW_SENSOR_NONE;
-    const bool navFlowDeadReckoning = sensors(SENSOR_OPFLOW) && sensors(SENSOR_ACC) && positionEstimationConfig()->allow_dead_reckoning;
-
-    if (STATE(ALTITUDE_CONTROL) && navReadyAltControl && (navReadyMultirotor || navReadyBaseline || navFlowDeadReckoning)) {
+    if (STATE(ALTITUDE_CONTROL) && navReadyAltControl && (navReadyPosControl || navFlowDeadReckoning)) {
         activeBoxIds[activeBoxIdCount++] = BOXNAVPOSHOLD;
         if (STATE(AIRPLANE)) {
             activeBoxIds[activeBoxIdCount++] = BOXLOITERDIRCHN;
         }
     }
 
-    if (navReadyMultirotor || navReadyBaseline) {
+    if (navReadyPosControl) {
         if (!STATE(ALTITUDE_CONTROL) || (STATE(ALTITUDE_CONTROL) && navReadyAltControl)) {
             activeBoxIds[activeBoxIdCount++] = BOXNAVRTH;
             activeBoxIds[activeBoxIdCount++] = BOXNAVWP;
             activeBoxIds[activeBoxIdCount++] = BOXHOMERESET;
             activeBoxIds[activeBoxIdCount++] = BOXGCSNAV;
             activeBoxIds[activeBoxIdCount++] = BOXPLANWPMISSION;
-            if (STATE(AIRPLANE)) {
-                activeBoxIds[activeBoxIdCount++] = BOXNAVCRUISE;
-            }
         }
 
         if (STATE(AIRPLANE)) {
+            activeBoxIds[activeBoxIdCount++] = BOXNAVCRUISE;
             activeBoxIds[activeBoxIdCount++] = BOXNAVCOURSEHOLD;
             activeBoxIds[activeBoxIdCount++] = BOXSOARING;
         }
     }
-    // CR43
+
 #ifdef USE_MR_BRAKING_MODE
         if (mixerConfig()->platformType == PLATFORM_MULTIROTOR) {
             activeBoxIds[activeBoxIdCount++] = BOXBRAKING;
         }
 #endif
 #endif  // GPS
-    // CR43
     if (STATE(ALTITUDE_CONTROL) && navReadyAltControl) {
         activeBoxIds[activeBoxIdCount++] = BOXNAVALTHOLD;
     }
