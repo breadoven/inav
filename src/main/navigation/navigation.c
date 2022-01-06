@@ -2334,6 +2334,8 @@ bool validateRTHSanityChecker(void)
     if ((currentTimeMs - posControl.rthSanityChecker.lastCheckTime) > 100) {
         const float currentDistanceToHome = calculateDistanceToDestination(&posControl.rthState.homePosition.pos);
 
+        posControl.rthSanityChecker.lastCheckTime = currentTimeMs;      // CR61
+
         if (currentDistanceToHome < posControl.rthSanityChecker.minimalDistanceToHome) {
             posControl.rthSanityChecker.minimalDistanceToHome = currentDistanceToHome;
         }
@@ -2342,7 +2344,7 @@ bool validateRTHSanityChecker(void)
             checkResult = false;
         }
 
-        posControl.rthSanityChecker.lastCheckTime = currentTimeMs;
+        // posControl.rthSanityChecker.lastCheckTime = currentTimeMs;   // CR61
     }
 
     return checkResult;
@@ -3455,13 +3457,15 @@ static navigationFSMEvent_t selectNavEventFromBoxModeInput(bool launchBypass)
 
         /* Keep Emergency landing mode active once triggered. Is cancelled when landing in progress if position sensors working again.
          * If failsafe not active landing also cancelled if WP or RTH deselected or if Manual or Althold modes selected.
-         * Remains active if landing finished regardless of sensor status or flight mode selection */
+         * Remains active if landing finished regardless of sensor status or flight mode selection
+         * If RTH Sanity Check caused emergency landing, keep checking sanity status, end landing if heading home */    // CR61
         bool autonomousNavNotPossible = !(canActivateNavigation && canActivateAltHold && STATE(GPS_FIX_HOME));
         bool emergLandingCancel = IS_RC_MODE_ACTIVE(BOXMANUAL) || (IS_RC_MODE_ACTIVE(BOXNAVALTHOLD) && canActivateAltHold) ||
                                   !(IS_RC_MODE_ACTIVE(BOXNAVWP) || IS_RC_MODE_ACTIVE(BOXNAVRTH));
+        bool rthSanityCheckFailed = millis() - posControl.rthSanityChecker.lastCheckTime < 100 ? !validateRTHSanityChecker() : false;  // CR61
 
         if (navigationIsExecutingAnEmergencyLanding()) {
-            if (autonomousNavNotPossible && (!emergLandingCancel || FLIGHT_MODE(FAILSAFE_MODE))) {
+            if ((rthSanityCheckFailed || autonomousNavNotPossible) && (!emergLandingCancel || FLIGHT_MODE(FAILSAFE_MODE))) {     // CR61
                 return NAV_FSM_EVENT_SWITCH_TO_EMERGENCY_LANDING;
             }
         }
