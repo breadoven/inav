@@ -254,7 +254,8 @@ static navigationFSMEvent_t nextForNonGeoStates(void);
 static bool isWaypointMissionValid(void);
 void missionPlannerSetWaypoint(void);
 
-void initializeRTHSanityChecker(const fpVector3_t * pos);
+void initializeRTHSanityChecker(void);
+// void initializeRTHSanityChecker(const fpVector3_t * pos);   // CR61
 bool validateRTHSanityChecker(void);
 
 static navigationFSMEvent_t selectNavEventFromBoxModeInput(bool launchBypass);  //CR6
@@ -1192,7 +1193,8 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_INITIALIZE(navigati
 
                 // Initialize RTH sanity check to prevent fly-aways on RTH
                 // For airplanes this is delayed until climb-out is finished
-                initializeRTHSanityChecker(&targetHoldPos);
+                initializeRTHSanityChecker();
+                // initializeRTHSanityChecker(&targetHoldPos); // CR61
             }
 
             setDesiredPosition(&targetHoldPos, posControl.actualState.yaw, NAV_POS_UPDATE_XY | NAV_POS_UPDATE_HEADING);
@@ -1233,7 +1235,8 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_CLIMB_TO_SAFE_ALT(n
 
         // Delayed initialization for RTH sanity check on airplanes - allow to finish climb first as it can take some distance
         if (STATE(FIXED_WING_LEGACY)) {
-            initializeRTHSanityChecker(&navGetCurrentActualPositionAndVelocity()->pos);
+            initializeRTHSanityChecker();
+            // initializeRTHSanityChecker(&navGetCurrentActualPositionAndVelocity()->pos);     // CR61
         }
 
         // Save initial home distance for future use
@@ -2311,19 +2314,20 @@ static void updateDesiredRTHAltitude(void)
 /*-----------------------------------------------------------
  * RTH sanity test logic
  *-----------------------------------------------------------*/
-void initializeRTHSanityChecker(const fpVector3_t * pos)
+void initializeRTHSanityChecker(void)   // CR61
 {
     const timeMs_t currentTimeMs = millis();
 
     posControl.rthSanityChecker.lastCheckTime = currentTimeMs;
-    posControl.rthSanityChecker.initialPosition = *pos;
+    // posControl.rthSanityChecker.initialPosition = *pos;  // CR61
+    posControl.rthSanityChecker.rthSanityOK = true;  // CR61
     posControl.rthSanityChecker.minimalDistanceToHome = calculateDistanceToDestination(&posControl.rthState.homePosition.pos);
 }
 
-bool validateRTHSanityChecker(void)
+bool validateRTHSanityChecker(void)     // CR61
 {
     const timeMs_t currentTimeMs = millis();
-    bool checkResult = true;    // Between the checks return the "good" status
+    // bool checkResult = true;    // Between the checks return the "good" status   // CR61
 
     // Ability to disable this
     if (navConfig()->general.rth_abort_threshold == 0) {
@@ -2335,19 +2339,23 @@ bool validateRTHSanityChecker(void)
         const float currentDistanceToHome = calculateDistanceToDestination(&posControl.rthState.homePosition.pos);
 
         posControl.rthSanityChecker.lastCheckTime = currentTimeMs;      // CR61
-
-        if (currentDistanceToHome < posControl.rthSanityChecker.minimalDistanceToHome) {
+        // CR61
+        // if (currentDistanceToHome < posControl.rthSanityChecker.minimalDistanceToHome) {
+        if (posControl.rthSanityChecker.minimalDistanceToHome - currentDistanceToHome > 100) {
             posControl.rthSanityChecker.minimalDistanceToHome = currentDistanceToHome;
-        }
-        else if ((currentDistanceToHome - posControl.rthSanityChecker.minimalDistanceToHome) > navConfig()->general.rth_abort_threshold) {
+            posControl.rthSanityChecker.rthSanityOK = true;
+        } else {
             // If while doing RTH we got even farther away from home - RTH is doing something crazy
-            checkResult = false;
+            posControl.rthSanityChecker.rthSanityOK = (currentDistanceToHome - posControl.rthSanityChecker.minimalDistanceToHome) < navConfig()->general.rth_abort_threshold;
+            // checkResult = false;
         }
 
-        // posControl.rthSanityChecker.lastCheckTime = currentTimeMs;   // CR61
+        // posControl.rthSanityChecker.lastCheckTime = currentTimeMs;
+        // CR61
     }
 
-    return checkResult;
+    return posControl.rthSanityChecker.rthSanityOK;
+    // return checkResult;  // CR61
 }
 
 /*-----------------------------------------------------------
@@ -3462,10 +3470,10 @@ static navigationFSMEvent_t selectNavEventFromBoxModeInput(bool launchBypass)
         bool autonomousNavNotPossible = !(canActivateNavigation && canActivateAltHold && STATE(GPS_FIX_HOME));
         bool emergLandingCancel = IS_RC_MODE_ACTIVE(BOXMANUAL) || (IS_RC_MODE_ACTIVE(BOXNAVALTHOLD) && canActivateAltHold) ||
                                   !(IS_RC_MODE_ACTIVE(BOXNAVWP) || IS_RC_MODE_ACTIVE(BOXNAVRTH));
-        bool rthSanityCheckFailed = millis() - posControl.rthSanityChecker.lastCheckTime < 100 ? !validateRTHSanityChecker() : false;  // CR61
+        bool rthSanityFailureIsActive = millis() - posControl.rthSanityChecker.lastCheckTime < 100 ? !validateRTHSanityChecker() : false;  // CR61
 
         if (navigationIsExecutingAnEmergencyLanding()) {
-            if ((rthSanityCheckFailed || autonomousNavNotPossible) && (!emergLandingCancel || FLIGHT_MODE(FAILSAFE_MODE))) {     // CR61
+            if ((rthSanityFailureIsActive || autonomousNavNotPossible) && (!emergLandingCancel || FLIGHT_MODE(FAILSAFE_MODE))) {     // CR61
                 return NAV_FSM_EVENT_SWITCH_TO_EMERGENCY_LANDING;
             }
         }
