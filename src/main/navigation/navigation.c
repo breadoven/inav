@@ -2317,6 +2317,7 @@ void initializeRTHSanityChecker(void)   // CR61
     // posControl.rthSanityChecker.initialPosition = *pos;  // CR61
     posControl.rthSanityChecker.rthSanityOK = true;  // CR61
     posControl.rthSanityChecker.minimalDistanceToHome = calculateDistanceToDestination(&posControl.rthState.homePosition.pos);
+    posControl.rthSanityChecker.lastDistanceToHome = posControl.rthSanityChecker.minimalDistanceToHome;
 }
 
 bool validateRTHSanityChecker(void)     // CR61
@@ -2332,19 +2333,22 @@ bool validateRTHSanityChecker(void)     // CR61
     // Check at 10Hz rate
     if ((currentTimeMs - posControl.rthSanityChecker.lastCheckTime) > 100) {
         const float currentDistanceToHome = calculateDistanceToDestination(&posControl.rthState.homePosition.pos);
-
         posControl.rthSanityChecker.lastCheckTime = currentTimeMs;      // CR61
         // CR61
-        // if (currentDistanceToHome < posControl.rthSanityChecker.minimalDistanceToHome) {
-        if (posControl.rthSanityChecker.minimalDistanceToHome - currentDistanceToHome > 100) {
-            posControl.rthSanityChecker.minimalDistanceToHome = currentDistanceToHome;
+        if (posControl.rthSanityChecker.lastDistanceToHome - currentDistanceToHome > 100){
+            if (currentDistanceToHome < posControl.rthSanityChecker.minimalDistanceToHome) {
+                posControl.rthSanityChecker.minimalDistanceToHome = currentDistanceToHome;
+            }
+            posControl.rthSanityChecker.lastDistanceToHome = currentDistanceToHome;
             posControl.rthSanityChecker.rthSanityOK = true;
-        } else {
+        } else if (currentDistanceToHome > posControl.rthSanityChecker.lastDistanceToHome){
+            posControl.rthSanityChecker.lastDistanceToHome = currentDistanceToHome;
             // If while doing RTH we got even farther away from home - RTH is doing something crazy
             posControl.rthSanityChecker.rthSanityOK = (currentDistanceToHome - posControl.rthSanityChecker.minimalDistanceToHome) < navConfig()->general.rth_abort_threshold;
             // checkResult = false;
         }
 
+        // posControl.rthSanityChecker.lastDistanceToHome = currentDistanceToHome > posControl.rthSanityChecker.lastDistanceToHome ? currentDistanceToHome : posControl.rthSanityChecker.lastDistanceToHome;
         // posControl.rthSanityChecker.lastCheckTime = currentTimeMs;
         // CR61
     }
