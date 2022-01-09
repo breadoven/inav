@@ -61,8 +61,7 @@
 #include "sensors/boardalignment.h"
 #include "sensors/battery.h" // CR15
 
-#define WP_ALTITUDE_MARGIN_CM   100      // WP altitude capture tolerance when altitude setting enforced for WP reached    CR57
-
+#define WP_ALTITUDE_MARGIN_CM   100      // WP enforce altitude tolerance, used when WP altitude setting enforced when WP reached   CR57
 // Multirotors:
 #define MR_RTH_CLIMB_OVERSHOOT_CM   100  // target this amount of cm *above* the target altitude to ensure it is actually reached (Vz > 0 at target alt)
 #define MR_RTH_CLIMB_MARGIN_MIN_CM  100  // start cruising home this amount of cm *before* reaching the cruise altitude (while continuing the ascend)
@@ -99,7 +98,7 @@ STATIC_ASSERT(NAV_MAX_WAYPOINTS < 254, NAV_MAX_WAYPOINTS_exceeded_allowable_rang
 PG_REGISTER_ARRAY(navWaypoint_t, NAV_MAX_WAYPOINTS, nonVolatileWaypointList, PG_WAYPOINT_MISSION_STORAGE, 1);
 #endif
 
-PG_REGISTER_WITH_RESET_TEMPLATE(navConfig_t, navConfig, PG_NAV_CONFIG, 14);
+PG_REGISTER_WITH_RESET_TEMPLATE(navConfig_t, navConfig, PG_NAV_CONFIG, 15);
 
 PG_RESET_TEMPLATE(navConfig_t, navConfig,
     .general = {
@@ -121,7 +120,7 @@ PG_RESET_TEMPLATE(navConfig_t, navConfig,
             .mission_planner_reset = SETTING_NAV_MISSION_PLANNER_RESET_DEFAULT,       // Allow mode switch toggle to reset Mission Planner WPs
             .waypoint_mission_restart = SETTING_NAV_WP_MISSION_RESTART_DEFAULT,       // WP mission restart action
             .soaring_motor_stop = SETTING_NAV_FW_SOARING_MOTOR_STOP_DEFAULT,          // stops motor when Saoring mode enabled
-            .waypoint_capture_altitude = SETTING_NAV_WP_CAPTURE_ALTITUDE_DEFAULT,     // Forces set wp altitude to be achieved    CR57
+            .waypoint_enforce_altitude = SETTING_NAV_WP_ENFORCE_ALTITUDE_DEFAULT,     // Forces set wp altitude to be achieved  CR57
         },
 
         // General navigation parameters
@@ -1604,7 +1603,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_WAYPOINT_REACHED(naviga
     UNUSED(previousState);
 
     // CR57
-    if (navConfig()->general.flags.waypoint_capture_altitude) {
+    if (navConfig()->general.flags.waypoint_enforce_altitude) {
         posControl.wpAltitudeReached = isWaypointAltitudeReached();
     }
     // CR57
@@ -1612,13 +1611,12 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_WAYPOINT_REACHED(naviga
     switch ((navWaypointActions_e)posControl.waypointList[posControl.activeWaypointIndex].action) {
         case NAV_WP_ACTION_WAYPOINT:
             // CR57
-            if (navConfig()->general.flags.waypoint_capture_altitude && !posControl.wpAltitudeReached) {
+            if (navConfig()->general.flags.waypoint_enforce_altitude && !posControl.wpAltitudeReached) {
                 return NAV_FSM_EVENT_SWITCH_TO_WAYPOINT_HOLD_TIME;
             } else {
                 return NAV_FSM_EVENT_SUCCESS;   // NAV_STATE_WAYPOINT_NEXT
             }
             // CR57
-            // return NAV_FSM_EVENT_SUCCESS;   // NAV_STATE_WAYPOINT_NEXT
 
         case NAV_WP_ACTION_JUMP:
         case NAV_WP_ACTION_SET_HEAD:
@@ -1647,7 +1645,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_WAYPOINT_HOLD_TIME(navi
     }
 
     // CR57
-    if (navConfig()->general.flags.waypoint_capture_altitude && !posControl.wpAltitudeReached) {
+    if (navConfig()->general.flags.waypoint_enforce_altitude && !posControl.wpAltitudeReached) {
         // Adjust altitude to waypoint setting
         if (STATE(AIRPLANE)) {
             int8_t altitudeChangeDirection = posControl.activeWaypoint.pos.z > navGetCurrentActualPositionAndVelocity()->pos.z ? 1 : -1;

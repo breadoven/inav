@@ -3892,9 +3892,9 @@ Defines how Pitch/Roll input from RC receiver affects flight in POSHOLD mode: AT
 
 ---
 
-### nav_wp_capture_altitude
+### nav_wp_enforce_altitude
 
-Forces craft to acheive the set WP altitude as well as position before moving on to next WP. Position is held and altitude adjusted as required before moving on.
+Forces craft to achieve the set WP altitude as well as position before moving to next WP. Position is held and altitude adjusted as required before moving on.
 
 | Default | Min | Max |
 | --- | --- | --- |

@@ -2409,10 +2409,10 @@ groups:
         min: 10
         max: 10000
         # CR57
-      - name: nav_wp_capture_altitude
-        description: "Forces craft to acheive the set WP altitude as well as position before moving on to next WP. Position is held and altitude adjusted as required before moving on."
+      - name: nav_wp_enforce_altitude
+        description: "Forces craft to achieve the set WP altitude as well as position before moving to next WP. Position is held and altitude adjusted as required before moving on."
         default_value: OFF
-        field: general.flags.waypoint_capture_altitude
+        field: general.flags.waypoint_enforce_altitude
         type: bool
         # CR57
       - name: nav_wp_safe_distance
