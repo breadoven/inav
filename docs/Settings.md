@@ -1508,7 +1508,7 @@ For developer ground test use. Disables motors, sets heading status = Trusted on
 
 | Default | Min | Max |
 | --- | --- | --- |
-| OFF |  |  |
+| OFF | OFF | ON |
 
 ---
 
@@ -3008,7 +3008,7 @@ Allow launch sequence with throttle maintained low throughout. When main launch 
 
 | Default | Min | Max |
 | --- | --- | --- |
-| OFF |  |  |
+| OFF | OFF | ON |
 
 ---
 
@@ -3898,7 +3898,7 @@ Forces craft to acheive the set WP altitude as well as position before moving on
 
 | Default | Min | Max |
 | --- | --- | --- |
-| OFF |  |  |
+| OFF | OFF | ON |
 
 ---
 
