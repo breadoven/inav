@@ -15,16 +15,16 @@
  * along with Cleanflight.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#pragma once
-
 #include <stdint.h>
-#include "drivers/osd_symbols.h"
 
-typedef struct displayCanvas_s displayCanvas_t;
+#include "platform.h"
 
+#include "fc/fc_msp_box.h"
+#include "fc/config.h"
 
-void osdHudClear(void);
-void osdHudDrawCrosshair(displayCanvas_t *canvas, uint8_t px, uint8_t py);
-void osdHudDrawHoming(uint8_t px, uint8_t py);
-void osdHudDrawPoi(uint32_t poiDistance, int16_t poiDirection, int32_t poiAltitude, uint8_t poiType, uint16_t poiSymbol, int16_t poiP1, int16_t poiP2);
-int8_t radarGetNearestPOI(void);
+#include "io/piniobox.h"
+
+void targetConfiguration(void)
+{
+    pinioBoxConfigMutable()->permanentId[0] = BOX_PERMANENT_ID_USER1;
+}

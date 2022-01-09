@@ -1696,8 +1696,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_WAYPOINT_NEXT(navigatio
 {
     UNUSED(previousState);
 
-    if (isLastMissionWaypoint()) {
-        // Last waypoint reached
+    if (isLastMissionWaypoint()) {      // Last waypoint reached
         return NAV_FSM_EVENT_SWITCH_TO_WAYPOINT_FINISHED;
     }
     else {
@@ -2280,6 +2279,9 @@ static void updateDesiredRTHAltitude(void)
 
                 case NAV_RTH_MAX_ALT:
                     posControl.rthState.rthInitialAltitude = MAX(posControl.rthState.rthInitialAltitude, posControl.actualState.abs.pos.z);
+                    if (navConfig()->general.rth_altitude > 0) {
+                        posControl.rthState.rthInitialAltitude = MAX(posControl.rthState.rthInitialAltitude, posControl.rthState.homePosition.pos.z + navConfig()->general.rth_altitude);
+                    }
                     posControl.rthState.rthFinalAltitude = posControl.rthState.rthInitialAltitude;
                     break;
 
@@ -3339,8 +3341,8 @@ void applyWaypointNavigationAndAltitudeHold(void)
     }
 
     /* Reset flags */
-    posControl.flags.horizontalPositionDataConsumed = 0;
-    posControl.flags.verticalPositionDataConsumed = 0;
+    posControl.flags.horizontalPositionDataConsumed = false;
+    posControl.flags.verticalPositionDataConsumed = false;
 
     /* Process controllers */
     navigationFSMStateFlags_t navStateFlags = navGetStateFlags(posControl.navState);
@@ -3944,7 +3946,7 @@ void navigationInit(void)
     posControl.flags.estAglStatus = EST_NONE;
     posControl.flags.compassGpsCogMismatchError = false;    // CR27
 
-    posControl.flags.forcedRTHActivated = 0;
+    posControl.flags.forcedRTHActivated = false;
     posControl.flags.forcedEmergLandingActivated = false;
     posControl.waypointCount = 0;
     posControl.activeWaypointIndex = 0;

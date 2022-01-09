@@ -234,7 +234,7 @@ static void applyMulticopterAltitudeController(timeUs_t currentTimeUs)
         }
 
         // Indicate that information is no longer usable
-        posControl.flags.verticalPositionDataConsumed = 1;
+        posControl.flags.verticalPositionDataConsumed = true;
     }
 
     // Update throttle controller
@@ -668,7 +668,7 @@ static void applyMulticopterPositionController(timeUs_t currentTimeUs)
             }
 
             // Indicate that information is no longer usable
-            posControl.flags.horizontalPositionDataConsumed = 1;
+            posControl.flags.horizontalPositionDataConsumed = true;
         }
     }
     else {
@@ -815,7 +815,7 @@ static void applyMulticopterEmergencyLandingController(timeUs_t currentTimeUs)
         }
 
         // Indicate that information is no longer usable
-        posControl.flags.verticalPositionDataConsumed = 1;
+        posControl.flags.verticalPositionDataConsumed = true;
     }
 
     // Update throttle controller

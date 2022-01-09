@@ -4,7 +4,7 @@ tables:
   - name: gyro_lpf
     values: ["256HZ", "188HZ", "98HZ", "42HZ", "20HZ", "10HZ"]
   - name: acc_hardware
-    values: ["NONE", "AUTO", "MPU6050", "LSM303DLHC", "MPU6000", "MPU6500", "MPU9250", "BMI160", "ICM20689", "BMI088", "ICM42605", "BMI270", "FAKE"]
+    values: ["NONE", "AUTO", "MPU6050", "MPU6000", "MPU6500", "MPU9250", "BMI160", "ICM20689", "BMI088", "ICM42605", "BMI270", "FAKE"]
     enum: accelerationSensor_e
   - name: rangefinder_hardware
     values: ["NONE", "SRF10", "VL53L0X", "MSP", "BENEWAKE", "VL53L1X", "US42", "TOF10120_I2C"]
@@ -3238,6 +3238,20 @@ groups:
         field: rssi_dbm_alarm
         min: -130
         max: 0
+      - name: osd_rssi_dbm_max
+        condition: USE_SERIALRX_CRSF
+        description: "RSSI dBm upper end of curve. Perfect rssi (max) = 100%"
+        default_value: -30
+        field: rssi_dbm_max
+        min: -50
+        max: 0
+      - name: osd_rssi_dbm_min
+        condition: USE_SERIALRX_CRSF
+        description: "RSSI dBm lower end of curve or RX sensitivity level. Worst rssi (min) = 0%"
+        default_value: -120
+        field: rssi_dbm_min
+        min: -130
+        max: 0
       - name: osd_temp_label_align
         description: "Allows to chose between left and right alignment for the OSD temperature sensor labels. Valid values are `LEFT` and `RIGHT`"
         default_value: "LEFT"
@@ -3351,12 +3365,6 @@ groups:
         field: hud_radar_range_max
         min: 100
         max: 9990
-      - name: osd_hud_radar_nearest
-        description: "To display an extra bar of informations at the bottom of the hud area for the closest radar aircraft found, if closest than the set value, in meters. Shows relative altitude (meters or feet, with an up or down arrow to indicate if above or below), speed (in m/s or f/s), and absolute heading (in °, 0 is north, 90 is east, 180 is south, 270 is west). Set to 0 (zero) to disable."
-        default_value: 0
-        field: hud_radar_nearest
-        min: 0
-        max: 4000
       - name: osd_hud_wp_disp
         description: "How many navigation waypoints are displayed, set to 0 (zero) to disable. As sample, if set to 2, and you just passed the 3rd waypoint of the mission, you'll see markers for the 4th waypoint (marked 1) and the 5th waypoint (marked 2)"
         default_value: 0
@@ -3649,6 +3657,11 @@ groups:
         description: "Enable workaround for early AKK SAudio-enabled VTX bug."
         default_value: ON
         field: smartAudioEarlyAkkWorkaroundEnable
+        type: bool
+      - name: vtx_smartaudio_alternate_softserial_method
+        description: "Enable the alternate softserial method. This is the method used in iNav 3.0 and ealier."
+        default_value: ON
+        field: smartAudioAltSoftSerialMethod
         type: bool
 
   - name: PG_VTX_SETTINGS_CONFIG
