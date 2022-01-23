@@ -302,7 +302,6 @@ typedef struct {
     // fpVector3_t     initialPosition;    // CR61
     bool            rthSanityOK;      // CR61
     float           minimalDistanceToHome;
-    float           lastDistanceToHome;  // CR61
 } rthSanityChecker_t;
 
 typedef struct {
