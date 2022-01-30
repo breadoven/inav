@@ -1210,7 +1210,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_INITIALIZE(navigati
 static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_CLIMB_TO_SAFE_ALT(navigationFSMState_t previousState)
 {
     UNUSED(previousState);
-DEBUG_SET(DEBUG_CRUISE, 6, 300);
+
     if (!STATE(ALTITUDE_CONTROL)) {
         //If altitude control is not a thing, switch to RTH in progress instead
         return NAV_FSM_EVENT_SUCCESS; //Will cause NAV_STATE_RTH_HEAD_HOME
@@ -1725,7 +1725,6 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_EMERGENCY_LANDING_INITI
     // Emergency landing MAY use common altitude controller if vertical position is valid - initialize it
     // Make sure terrain following is not enabled
     resetAltitudeController(false);
-    DEBUG_SET(DEBUG_CRUISE, 6, 700);
 
     return NAV_FSM_EVENT_SUCCESS;
 }
@@ -1839,34 +1838,21 @@ static void navProcessFSMEvents(navigationFSMEvent_t injectedEvent)
     static timeMs_t lastStateProcessTime = 0;
 
     // CR61
-    /* Inject new event */
+    /* Process new injected event if event defined.
+     * Otherwise process timeout event if defined */
     if (injectedEvent != NAV_FSM_EVENT_NONE && navFSM[posControl.navState].onEvent[injectedEvent] != NAV_STATE_UNDEFINED) {
         /* Update state */
         previousState = navSetNewFSMState(navFSM[posControl.navState].onEvent[injectedEvent]);
-
-        /* Call new state's entry function */
-        while (navFSM[posControl.navState].onEntry) {
-            navigationFSMEvent_t newEvent = navFSM[posControl.navState].onEntry(previousState);
-
-            if ((newEvent != NAV_FSM_EVENT_NONE) && (navFSM[posControl.navState].onEvent[newEvent] != NAV_STATE_UNDEFINED)) {
-                previousState = navSetNewFSMState(navFSM[posControl.navState].onEvent[newEvent]);
-            }
-            else {
-                break;
-            }
-        }
-
-        lastStateProcessTime  = currentMillis;
-    }
-    // CR61
-
-    /* If timeout event defined and timeout reached - switch state */
-    if ((navFSM[posControl.navState].timeoutMs > 0) && (navFSM[posControl.navState].onEvent[NAV_FSM_EVENT_TIMEOUT] != NAV_STATE_UNDEFINED) &&
+        DEBUG_SET(DEBUG_CRUISE, 2, previousState);
+    } else if ((navFSM[posControl.navState].timeoutMs > 0) && (navFSM[posControl.navState].onEvent[NAV_FSM_EVENT_TIMEOUT] != NAV_STATE_UNDEFINED) &&
             ((currentMillis - lastStateProcessTime) >= navFSM[posControl.navState].timeoutMs)) {
         /* Update state */
         previousState = navSetNewFSMState(navFSM[posControl.navState].onEvent[NAV_FSM_EVENT_TIMEOUT]);
+        DEBUG_SET(DEBUG_CRUISE, 1, previousState);
+    }
+DEBUG_SET(DEBUG_CRUISE, 3, previousState);
 
-        /* Call new state's entry function */
+    if (previousState) {    /* If state updated call new state's entry function */
         while (navFSM[posControl.navState].onEntry) {
             navigationFSMEvent_t newEvent = navFSM[posControl.navState].onEntry(previousState);
 
@@ -1878,10 +1864,32 @@ static void navProcessFSMEvents(navigationFSMEvent_t injectedEvent)
             }
         }
 
-        lastStateProcessTime  = currentMillis;
+        lastStateProcessTime = currentMillis;
     }
+    // CR61
 
     // CR61
+    // /* If timeout event defined and timeout reached - switch state */
+    // if ((navFSM[posControl.navState].timeoutMs > 0) && (navFSM[posControl.navState].onEvent[NAV_FSM_EVENT_TIMEOUT] != NAV_STATE_UNDEFINED) &&
+            // ((currentMillis - lastStateProcessTime) >= navFSM[posControl.navState].timeoutMs)) {
+        // /* Update state */
+        // previousState = navSetNewFSMState(navFSM[posControl.navState].onEvent[NAV_FSM_EVENT_TIMEOUT]);
+
+        // /* Call new state's entry function */
+        // while (navFSM[posControl.navState].onEntry) {
+            // navigationFSMEvent_t newEvent = navFSM[posControl.navState].onEntry(previousState);
+
+            // if ((newEvent != NAV_FSM_EVENT_NONE) && (navFSM[posControl.navState].onEvent[newEvent] != NAV_STATE_UNDEFINED)) {
+                // previousState = navSetNewFSMState(navFSM[posControl.navState].onEvent[newEvent]);
+            // }
+            // else {
+                // break;
+            // }
+        // }
+
+        // lastStateProcessTime = currentMillis;
+    // }
+
     // /* Inject new event */
     // if (injectedEvent != NAV_FSM_EVENT_NONE && navFSM[posControl.navState].onEvent[injectedEvent] != NAV_STATE_UNDEFINED) {
         // /* Update state */
@@ -1901,6 +1909,7 @@ static void navProcessFSMEvents(navigationFSMEvent_t injectedEvent)
 
         // lastStateProcessTime  = currentMillis;
     // }
+    // CR61
 
     /* Update public system state information */
     NAV_Status.mode = MW_GPS_MODE_NONE;
@@ -2357,7 +2366,6 @@ bool validateRTHSanityChecker(void)     // CR61
     if ((currentTimeMs - posControl.rthSanityChecker.lastCheckTime) > 100) {
         const float currentDistanceToHome = calculateDistanceToDestination(&posControl.rthState.homePosition.pos);
         posControl.rthSanityChecker.lastCheckTime = currentTimeMs;      // CR61
-	DEBUG_SET(DEBUG_CRUISE, 0, currentDistanceToHome);
 
         // CR61
         if (currentDistanceToHome < posControl.rthSanityChecker.minimalDistanceToHome) {
@@ -2371,8 +2379,7 @@ bool validateRTHSanityChecker(void)     // CR61
         // posControl.rthSanityChecker.lastCheckTime = currentTimeMs;
         // CR61
     }
-    DEBUG_SET(DEBUG_CRUISE, 2, posControl.rthSanityChecker.minimalDistanceToHome);
-    DEBUG_SET(DEBUG_CRUISE, 3, posControl.rthSanityChecker.rthSanityOK);
+
     return posControl.rthSanityChecker.rthSanityOK;
     // return checkResult;  // CR61
 }
@@ -3570,13 +3577,11 @@ static navigationFSMEvent_t selectNavEventFromBoxModeInput(bool launchBypass)
         // PH has priority over COURSE_HOLD
         // CRUISE has priority on AH
         if (IS_RC_MODE_ACTIVE(BOXNAVCOURSEHOLD)) {
-
             if (IS_RC_MODE_ACTIVE(BOXNAVALTHOLD) && ((FLIGHT_MODE(NAV_COURSE_HOLD_MODE) && FLIGHT_MODE(NAV_ALTHOLD_MODE)) || (canActivatePosHold && canActivateAltHold)))
                 return NAV_FSM_EVENT_SWITCH_TO_CRUISE;
 
             if (FLIGHT_MODE(NAV_COURSE_HOLD_MODE) || (canActivatePosHold))
                 return NAV_FSM_EVENT_SWITCH_TO_COURSE_HOLD;
-
         }
 
         if (IS_RC_MODE_ACTIVE(BOXNAVALTHOLD)) {
