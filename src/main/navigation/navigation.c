@@ -3305,6 +3305,7 @@ static void processNavigationRCAdjustments(void)
 {
     /* Process pilot's RC input. Disable all pilot's input when in FAILSAFE_MODE */
     navigationFSMStateFlags_t navStateFlags = navGetStateFlags(posControl.navState);
+
     if ((navStateFlags & NAV_RC_ALT) && (!FLIGHT_MODE(FAILSAFE_MODE))) {
         posControl.flags.isAdjustingAltitude = adjustAltitudeFromRCInput();
     }
@@ -3313,13 +3314,11 @@ static void processNavigationRCAdjustments(void)
     }
 
     if (navStateFlags & NAV_RC_POS) {
-        if (!FLIGHT_MODE(FAILSAFE_MODE)) {
-            posControl.flags.isAdjustingPosition = adjustPositionFromRCInput();
-        }
-        else {
-            if (!STATE(FIXED_WING_LEGACY)) {
-                resetMulticopterBrakingMode();
-            }
+        // CR62
+        posControl.flags.isAdjustingPosition = adjustPositionFromRCInput() && !FLIGHT_MODE(FAILSAFE_MODE);
+        if (FLIGHT_MODE(FAILSAFE_MODE) && STATE(MULTIROTOR)) {
+            resetMulticopterBrakingMode();
+        // CR62
         }
     }
     else {
