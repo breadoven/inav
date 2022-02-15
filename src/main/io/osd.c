@@ -4383,7 +4383,6 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
                     tfp_sprintf(messageBuf, "TO WP %u/%u (%s)", getGeoWaypointNumber(posControl.activeWaypointIndex), posControl.geoWaypointCount, buf);
                     messages[messageCount++] = messageBuf;
                 } else if (NAV_Status.state == MW_NAV_STATE_HOLD_TIMED) {
-                    // CR57
                     if (navConfig()->general.flags.waypoint_enforce_altitude && !posControl.wpAltitudeReached) {
                         messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_ADJUSTING_WP_ALT);
                     } else {
@@ -4395,7 +4394,6 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
 
                         messages[messageCount++] = messageBuf;
                     }
-                    // CR57
                 } else {
                     const char *navStateMessage = navigationStateMessage();
                     if (navStateMessage) {
