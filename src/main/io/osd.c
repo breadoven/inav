@@ -3332,7 +3332,7 @@ PG_RESET_TEMPLATE(osdConfig_t, osdConfig,
     .osd_home_position_arm_screen = SETTING_OSD_HOME_POSITION_ARM_SCREEN_DEFAULT,
     .pan_servo_index = SETTING_OSD_PAN_SERVO_INDEX_DEFAULT,
     .pan_servo_pwm2centideg = SETTING_OSD_PAN_SERVO_PWM2CENTIDEG_DEFAULT,
-    .system_msg_display_time = SETTING_OSD_SYSTEM_MSG_DISPLAY_TIME_DEFAULT,    // CR18
+    .system_msg_display_time = SETTING_OSD_SYSTEM_MSG_DISPLAY_TIME_DEFAULT,
     .infocycle_interval_time = SETTING_OSD_INFOCYCLE_INTERVAL_TIME_DEFAULT,    // CR22
     .esc_rpm_precision = SETTING_OSD_ESC_RPM_PRECISION_DEFAULT,
 
@@ -4340,8 +4340,9 @@ displayCanvas_t *osdGetDisplayPortCanvas(void)
 #endif
     return NULL;
 }
-// CR18
-timeMs_t systemMessageCycleTime(unsigned messageCount, const char **messages){
+
+timeMs_t systemMessageCycleTime(unsigned messageCount, const char **messages)
+{
     uint8_t i = 0;
     float factor = 1.0f;
     while (i < messageCount) {
@@ -4353,7 +4354,7 @@ timeMs_t systemMessageCycleTime(unsigned messageCount, const char **messages){
     // DEBUG_SET(DEBUG_CRUISE, 0, osdConfig()->system_msg_display_time * factor);
     return osdConfig()->system_msg_display_time * factor;
 }
-// CR18
+
 textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenteredText)
 {
     textAttributes_t elemAttr = TEXT_ATTRIBUTES_NONE;
@@ -4504,7 +4505,7 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
 #endif
         // CR53
         if (messageCount > 0) {
-            message = messages[OSD_ALTERNATING_CHOICES(systemMessageCycleTime(messageCount, messages), messageCount)];    // CR18
+            message = messages[OSD_ALTERNATING_CHOICES(systemMessageCycleTime(messageCount, messages), messageCount)];
             if (message == failsafeInfoMessage) {
                 // failsafeInfoMessage is not useful for recovering
                 // a lost model, but might help avoiding a crash.
