@@ -101,14 +101,10 @@ typedef struct navigationFlags_s {
     bool forcedRTHActivated;
     bool forcedEmergLandingActivated;
 
-
     /* Landing detector */
     bool resetLandingDetector;  // CR15
 
     bool wpMissionPlannerActive;               // Activation status of WP mission planner
-
-    /* Landing detector */
-    bool resetLandingDetector;
 } navigationFlags_t;
 
 typedef struct {
@@ -423,6 +419,7 @@ uint32_t calculateDistanceToDestination(const fpVector3_t * destinationPos);
 int32_t calculateBearingToDestination(const fpVector3_t * destinationPos);
 
 bool isLandingDetected(void);
+void resetLandingDetector(void);
 // CR15
 bool isFlightDetected(void);
 bool isFixedWingFlying(void);
