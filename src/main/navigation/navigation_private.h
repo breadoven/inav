@@ -39,7 +39,7 @@
 
 #define MC_LAND_CHECK_VEL_XY_MOVING 100.0f // cm/s
 #define MC_LAND_CHECK_VEL_Z_MOVING 25.0f   // cm/s
-#define MC_LAND_THR_SUM_RATE 1             // hz
+#define MC_LAND_THR_STABILISE_DELAY 1      // seconds
 #define MC_LAND_DESCEND_THROTTLE 40        // uS
 #define MC_LAND_SAFE_SURFACE 5.0f          // cm
 
@@ -106,6 +106,9 @@ typedef struct navigationFlags_s {
     bool resetLandingDetector;  // CR15
 
     bool wpMissionPlannerActive;               // Activation status of WP mission planner
+
+    /* Landing detector */
+    bool resetLandingDetector;
 } navigationFlags_t;
 
 typedef struct {
@@ -418,7 +421,7 @@ const navEstimatedPosVel_t * navGetCurrentActualPositionAndVelocity(void);
 bool isThrustFacingDownwards(void);
 uint32_t calculateDistanceToDestination(const fpVector3_t * destinationPos);
 int32_t calculateBearingToDestination(const fpVector3_t * destinationPos);
-void resetLandingDetector(void);
+
 bool isLandingDetected(void);
 // CR15
 bool isFlightDetected(void);

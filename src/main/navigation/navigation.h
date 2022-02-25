@@ -303,6 +303,7 @@ typedef struct navConfig_s {
         uint8_t  yawControlDeadband;
         uint16_t auto_disarm_delay;          // fixed wing disarm delay for landing detector  CR15
         uint8_t  soaring_pitch_deadband;     // soaring mode pitch angle deadband (deg)
+        uint16_t auto_disarm_delay;          // fixed wing disarm delay for landing detector
     } fw;
 } navConfig_t;
 

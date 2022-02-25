@@ -207,6 +207,7 @@ PG_RESET_TEMPLATE(navConfig_t, navConfig,
         .yawControlDeadband = SETTING_NAV_FW_YAW_DEADBAND_DEFAULT,
         .auto_disarm_delay = SETTING_NAV_FW_AUTO_DISARM_DELAY_DEFAULT,          // ms - time delay to disarm when auto disarm after landing enabled  CR15
         .soaring_pitch_deadband = SETTING_NAV_FW_SOARING_PITCH_DEADBAND_DEFAULT,// pitch angle mode deadband when Saoring mode enabled
+        .auto_disarm_delay = SETTING_NAV_FW_AUTO_DISARM_DELAY_DEFAULT,          // ms - time delay to disarm when auto disarm after landing enabled
     }
 );
 
@@ -1331,7 +1332,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_HOVER_PRIOR_TO_LAND
     // If position ok OR within valid timeout - continue
     // Wait until target heading is reached for MR (with 15 deg margin for error), or continue for Fixed Wing
     if ((ABS(wrap_18000(posControl.rthState.homePosition.yaw - posControl.actualState.yaw)) < DEGREES_TO_CENTIDEGREES(15)) || STATE(FIXED_WING_LEGACY)) {
-        resetLandingDetector();
+        resetLandingDetector();     // force reset landing detector just in case
         updateClimbRateToAltitudeController(0, ROC_TO_ALT_RESET);
         return navigationRTHAllowsLanding() ? NAV_FSM_EVENT_SUCCESS : NAV_FSM_EVENT_SWITCH_TO_RTH_HOVER_ABOVE_HOME; // success = land
     } else {
@@ -1735,7 +1736,6 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_EMERGENCY_LANDING_IN_PR
 
 static navigationFSMEvent_t navOnEnteringState_NAV_STATE_EMERGENCY_LANDING_FINISHED(navigationFSMState_t previousState)
 {
-    // TODO:
     UNUSED(previousState);
     // CR15
     // disarm(DISARM_NAVIGATION);
@@ -2725,7 +2725,6 @@ void updateLandingStatus(void)
         }
     } else if (isLandingDetected()) {
         ENABLE_STATE(LANDING_DETECTED);
-        // DEBUG_SET(DEBUG_CRUISE, 7, 77);
     }
 }
 // CR15
