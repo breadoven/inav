@@ -436,7 +436,7 @@ static void updatePositionVelocityController_MC(const float maxSpeed)
     float newVelY = posErrorY * posControl.pids.pos[Y].param.kP;
 
     // Scale velocity to respect max_speed
-    float newVelTotal = fast_fsqrtf(sq(newVelX) + sq(newVelY));
+    float newVelTotal = calc_length_pythagorean_2D(newVelX, newVelY);
 
     /*
      * We override computed speed with max speed in following cases:
@@ -494,7 +494,7 @@ static void updatePositionAccelController_MC(timeDelta_t deltaMicros, float maxA
 
     const float setpointX = posControl.desiredState.vel.x;
     const float setpointY = posControl.desiredState.vel.y;
-    const float setpointXY = fast_fsqrtf(powf(setpointX, 2) + powf(setpointY, 2));
+    const float setpointXY = fast_fsqrtf(sq(setpointX) + sq(setpointY));
 
     // Calculate velocity error
     const float velErrorX = setpointX - measurementX;
@@ -502,7 +502,8 @@ static void updatePositionAccelController_MC(timeDelta_t deltaMicros, float maxA
 
     // Calculate XY-acceleration limit according to velocity error limit
     float accelLimitX, accelLimitY;
-    const float velErrorMagnitude = fast_fsqrtf(sq(velErrorX) + sq(velErrorY));
+    const float velErrorMagnitude = calc_length_pythagorean_2D(velErrorX, velErrorY);
+
     if (velErrorMagnitude > 0.1f) {
         accelLimitX = maxAccelLimit / velErrorMagnitude * fabsf(velErrorX);
         accelLimitY = maxAccelLimit / velErrorMagnitude * fabsf(velErrorY);
@@ -760,7 +761,7 @@ bool isMulticopterLandingDetected(void)
         // TODO: Come up with a clever way to let sonar increase detection performance, not just add extra safety.
         // TODO: Out of range sonar may give reading that looks like we landed, find a way to check if sonar is healthy.
         // surfaceMin is our ground reference. If we are less than 5cm above the ground - we are likely landed
-        possibleLandingDetected = possibleLandingDetected && (posControl.actualState.agl.pos.z <= (posControl.actualState.surfaceMin + 5.0f));
+        possibleLandingDetected = possibleLandingDetected && (posControl.actualState.agl.pos.z <= (posControl.actualState.surfaceMin + MC_LAND_SAFE_SURFACE));
     }
 
     if (possibleLandingDetected) {

@@ -184,7 +184,7 @@ void initActiveBoxIds(void)
     }
 
     activeBoxIds[activeBoxIdCount++] = BOXHEADINGHOLD;
-    // CR43
+
     //Camstab mode is enabled always
     activeBoxIds[activeBoxIdCount++] = BOXCAMSTAB;
 
@@ -241,7 +241,7 @@ void initActiveBoxIds(void)
     if (STATE(ALTITUDE_CONTROL) && navReadyAltControl) {
         activeBoxIds[activeBoxIdCount++] = BOXNAVALTHOLD;
     }
-    // CR43
+
     if (STATE(AIRPLANE) || STATE(ROVER) || STATE(BOAT)) {
         activeBoxIds[activeBoxIdCount++] = BOXMANUAL;
     }
