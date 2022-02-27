@@ -29,11 +29,11 @@
 #endif
 #define OSD_LAYOUT_COUNT (OSD_ALTERNATE_LAYOUT_COUNT + 1)
 
-// 00vb yyyy yyxx xxxx
-// (visible)(blink)(yCoord)(xCoord)
+// 0ivb yyyy yyxx xxxx                          CR22x
+// (infocycle)(visible)(blink)(yCoord)(xCoord)  CR22x
 
 #define OSD_VISIBLE_FLAG    0x2000
-#define OSD_INFOCYCLE_FLAG  0x0400  // CR22
+#define OSD_INFOCYCLE_FLAG  0x4000  // CR22x   changed for HD system bit changes 270222
 #define OSD_VISIBLE(x)      ((x) & OSD_VISIBLE_FLAG)
 #define OSD_INFOCYCLE(x)    ((x) & OSD_INFOCYCLE_FLAG)  // CR22
 
