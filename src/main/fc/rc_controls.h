@@ -111,7 +111,7 @@ bool areSticksInApModePosition(uint16_t ap_mode);
 bool areSticksDeflected(void);
 bool isRollPitchStickDeflected(uint8_t deadband);   // CR60
 throttleStatus_e calculateThrottleStatus(throttleStatusType_e type);
-int16_t throttleStickMixedValue(void);  // CR59
+int16_t throttleStickMixedValue(void);
 rollPitchStatus_e calculateRollPitchCenterStatus(void);
 void processRcStickPositions(throttleStatus_e throttleStatus);
 

@@ -373,8 +373,6 @@ static bool emergencyArmingIsEnabled(void)
 
 void annexCode(float dT)
 {
-    // int32_t throttleValue;   CR59
-
     if (failsafeShouldApplyControlInput()) {
         // Failsafe will apply rcCommand for us
         failsafeApplyControlInput();
@@ -406,12 +404,7 @@ void annexCode(float dT)
         }
 
         //Compute THROTTLE command
-        // CR59
-        // throttleValue = constrain(rxGetChannelValue(THROTTLE), rxConfig()->mincheck, PWM_RANGE_MAX);
-        // throttleValue = (uint32_t)(throttleValue - rxConfig()->mincheck) * PWM_RANGE_MIN / (PWM_RANGE_MAX - rxConfig()->mincheck);       // [MINCHECK;2000] -> [0;1000]
-        // rcCommand[THROTTLE] = rcLookupThrottle(throttleValue);
         rcCommand[THROTTLE] = throttleStickMixedValue();
-        // CR59
 
         // Signal updated rcCommand values to Failsafe system
         failsafeUpdateRcCommandValues();
