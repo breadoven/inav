@@ -698,11 +698,9 @@ bool isMulticopterFlying(void)
  *-----------------------------------------------------------*/
 bool isMulticopterLandingDetected(void)
 {   // CR15
+    DEBUG_SET(DEBUG_LANDING, 4, 0);  // CR64
     static timeUs_t landingDetectorStartedAt;
     const bool throttleIsLow = calculateThrottleStatus(THROTTLE_STATUS_TYPE_RC) == THROTTLE_LOW;
-
-    // DEBUG_SET(DEBUG_CRUISE, 4, 22);
-    // DEBUG_SET(DEBUG_CRUISE, 1, averageAbsGyroRates());
 
     // Basic condition to start looking for landing (prevent landing detection if failsafe_mission OFF except landing states)
     bool startCondition = (navGetCurrentStateFlags() & (NAV_CTL_LAND | NAV_CTL_EMERG))
@@ -719,8 +717,8 @@ bool isMulticopterLandingDetected(void)
                         posControl.actualState.velXY < MC_LAND_CHECK_VEL_XY_MOVING;
     // check gyro rates are low (degs/s)
     bool gyroCondition = averageAbsGyroRates() < 2.0f;
-    // DEBUG_SET(DEBUG_CRUISE, 2, velCondition);
-    // DEBUG_SET(DEBUG_CRUISE, 3, gyroCondition);
+    DEBUG_SET(DEBUG_LANDING, 2, velCondition);  // CR64
+    DEBUG_SET(DEBUG_LANDING, 3, gyroCondition); // CR64
 
     bool possibleLandingDetected = false;
     const timeUs_t currentTimeUs = micros();
@@ -729,6 +727,7 @@ bool isMulticopterLandingDetected(void)
         // We have likely landed if throttle is 40 units below average descend throttle
         // We use rcCommandAdjustedThrottle to keep track of NAV corrected throttle (isLandingDetected is executed
         // from processRx() and rcCommand at that moment holds rc input, not adjusted values from NAV core)
+        DEBUG_SET(DEBUG_LANDING, 4, 1);  // CR64
 
         static int32_t landingThrSum;
         static int32_t landingThrSamples;
@@ -750,7 +749,12 @@ bool isMulticopterLandingDetected(void)
         isAtMinimalThrust = rcCommandAdjustedThrottle < (landingThrSum / landingThrSamples - MC_LAND_DESCEND_THROTTLE);
 
         possibleLandingDetected = isAtMinimalThrust && velCondition;
+
+        DEBUG_SET(DEBUG_LANDING, 4, 3);  // CR64
+        DEBUG_SET(DEBUG_LANDING, 6, rcCommandAdjustedThrottle);  // CR64
+        DEBUG_SET(DEBUG_LANDING, 7, landingThrSum / landingThrSamples - MC_LAND_DESCEND_THROTTLE);  // CR64
     } else {    // non autonomous and emergency landing
+        DEBUG_SET(DEBUG_LANDING, 4, 2);  // CR64
         if (landingDetectorStartedAt) {
             possibleLandingDetected = velCondition && gyroCondition;
         } else {
@@ -766,6 +770,7 @@ bool isMulticopterLandingDetected(void)
         // surfaceMin is our ground reference. If we are less than 5cm above the ground - we are likely landed
         possibleLandingDetected = possibleLandingDetected && (posControl.actualState.agl.pos.z <= (posControl.actualState.surfaceMin + MC_LAND_SAFE_SURFACE));
     }
+    DEBUG_SET(DEBUG_LANDING, 5, possibleLandingDetected);  // CR64
 
     if (possibleLandingDetected) {
         timeUs_t safetyTimeDelay = MS2US(2000 + navConfig()->mc.auto_disarm_delay);  // check conditions stable for 2s + optional extra delay
