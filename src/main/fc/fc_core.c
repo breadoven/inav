@@ -932,24 +932,16 @@ void taskMainPidLoop(timeUs_t currentTimeUs)
         writeMotors();
     }
 
-#if defined(USE_NAV)
-    // Check if landed, FW and MR
-    if (STATE(ALTITUDE_CONTROL)) {
-        updateLandingStatus();
-    }
-#endif
-
 #ifdef USE_BLACKBOX
     if (!cliMode && feature(FEATURE_BLACKBOX)) {
         blackboxUpdate(micros());
     }
 #endif
-    // CR15
+
     // Check if landed, FW and MR
     if (STATE(ALTITUDE_CONTROL)) {
         updateLandingStatus();
     }
-    // CR15
 }
 
 // This function is called in a busy-loop, everything called from here should do it's own

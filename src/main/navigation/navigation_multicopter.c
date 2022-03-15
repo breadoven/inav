@@ -34,7 +34,7 @@
 #include "sensors/sensors.h"
 #include "sensors/acceleration.h"
 #include "sensors/boardalignment.h"
-#include "sensors/gyro.h"   // CR15
+#include "sensors/gyro.h"
 
 #include "fc/config.h"
 #include "fc/rc_controls.h"
@@ -684,7 +684,7 @@ static void applyMulticopterPositionController(timeUs_t currentTimeUs)
         rcCommand[ROLL] = pidAngleToRcCommand(posControl.rcAdjustment[ROLL], pidProfile()->max_angle_inclination[FD_ROLL]);
     }
 }
-// CR15
+
 bool isMulticopterFlying(void)
 {
     bool throttleCondition = rcCommand[THROTTLE] > currentBatteryProfile->nav.mc.hover_throttle;
@@ -692,12 +692,12 @@ bool isMulticopterFlying(void)
 
     return throttleCondition && gyroCondition;
 }
-// CR15
+
 /*-----------------------------------------------------------
  * Multicopter land detector
  *-----------------------------------------------------------*/
 bool isMulticopterLandingDetected(void)
-{   // CR15
+{
     DEBUG_SET(DEBUG_LANDING, 4, 0);  // CR64
     static timeUs_t landingDetectorStartedAt;
     const bool throttleIsLow = calculateThrottleStatus(THROTTLE_STATUS_TYPE_RC) == THROTTLE_LOW;
@@ -779,8 +779,6 @@ bool isMulticopterLandingDetected(void)
         landingDetectorStartedAt = currentTimeUs;
         return false;
     }
-
-    // CR15 whole function changed
 }
 
 /*-----------------------------------------------------------

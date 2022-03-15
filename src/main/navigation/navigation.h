@@ -301,7 +301,7 @@ typedef struct navConfig_s {
         bool     allow_manual_thr_increase;
         bool     useFwNavYawControl;
         uint8_t  yawControlDeadband;
-        uint16_t auto_disarm_delay;          // fixed wing disarm delay for landing detector  CR15
+        uint16_t auto_disarm_delay;          // fixed wing disarm delay for landing detector
         uint8_t  soaring_pitch_deadband;     // soaring mode pitch angle deadband (deg)
     } fw;
 } navConfig_t;
@@ -582,7 +582,7 @@ const char * fixedWingLaunchStateMessage(void);
 
 float calculateAverageSpeed(void);
 
-void updateLandingStatus(void); // CR15
+void updateLandingStatus(void);
 
 const navigationPIDControllers_t* getNavigationPIDControllers(void);
 

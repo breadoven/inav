@@ -566,7 +566,7 @@ void gyroUpdateDynamicLpf(float cutoffFreq) {
         }
     }
 }
-// CR15
+
 float averageAbsGyroRates(void)
 {
     // return fabsf(gyro.gyroADCf[ROLL]) > fabsf(gyro.gyroADCf[PITCH]) && fabsf(gyro.gyroADCf[ROLL]) > fabsf(gyro.gyroADCf[YAW]) ? fabsf(gyro.gyroADCf[ROLL])
@@ -574,4 +574,3 @@ float averageAbsGyroRates(void)
            // : fabsf(gyro.gyroADCf[YAW]);
     return (fabsf(gyro.gyroADCf[ROLL]) + fabsf(gyro.gyroADCf[PITCH]) + fabsf(gyro.gyroADCf[YAW])) / 3.0f;
 }
-// CR15

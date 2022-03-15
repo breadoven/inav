@@ -102,7 +102,7 @@ typedef struct navigationFlags_s {
     bool forcedEmergLandingActivated;
 
     /* Landing detector */
-    bool resetLandingDetector;  // CR15
+    bool resetLandingDetector;
 
     bool wpMissionPlannerActive;               // Activation status of WP mission planner
 } navigationFlags_t;
@@ -420,11 +420,10 @@ int32_t calculateBearingToDestination(const fpVector3_t * destinationPos);
 
 bool isLandingDetected(void);
 void resetLandingDetector(void);
-// CR15
 bool isFlightDetected(void);
 bool isFixedWingFlying(void);
 bool isMulticopterFlying(void);
-// CR15
+
 navigationFSMStateFlags_t navGetCurrentStateFlags(void);
 
 void setHomePosition(const fpVector3_t * pos, int32_t yaw, navSetWaypointFlags_t useMask, navigationHomeFlags_t homeFlags);
@@ -460,9 +459,6 @@ bool adjustMulticopterHeadingFromRCInput(void);
 bool adjustMulticopterPositionFromRCInput(int16_t rcPitchAdjustment, int16_t rcRollAdjustment);
 
 void applyMulticopterNavigationController(navigationFSMStateFlags_t navStateFlags, timeUs_t currentTimeUs);
-
-// void resetFixedWingLandingDetector(void);   // CR15
-// void resetMulticopterLandingDetector(void); // CR15
 
 bool isMulticopterLandingDetected(void);
 

@@ -33,8 +33,8 @@
 #include "sensors/sensors.h"
 #include "sensors/acceleration.h"
 #include "sensors/boardalignment.h"
-#include "sensors/gyro.h"   // CR15
-#include "sensors/pitotmeter.h"     // CR15
+#include "sensors/gyro.h"
+#include "sensors/pitotmeter.h"
 
 #include "flight/pid.h"
 #include "flight/imu.h"
@@ -593,7 +593,7 @@ bool isFixedWingAutoThrottleManuallyIncreased()
 {
     return isAutoThrottleManuallyIncreased;
 }
-// CR15
+
 bool isFixedWingFlying(void)
 {
     float airspeed = 0;
@@ -607,7 +607,7 @@ bool isFixedWingFlying(void)
     return (isImuHeadingValid() && throttleCondition && velCondition) || launchCondition;
     // return throttleCondition;
 }
-// CR15
+
 /*-----------------------------------------------------------
  * FixedWing land detector
  *-----------------------------------------------------------*/
@@ -664,7 +664,6 @@ bool isFixedWingLandingDetected(void)
     }
 
     return false;
-    // CR15
 }
 
 /*-----------------------------------------------------------

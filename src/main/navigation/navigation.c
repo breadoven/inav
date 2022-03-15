@@ -59,7 +59,7 @@
 #include "sensors/sensors.h"
 #include "sensors/acceleration.h"
 #include "sensors/boardalignment.h"
-#include "sensors/battery.h" // CR15
+#include "sensors/battery.h"
 
 #define WP_ALTITUDE_MARGIN_CM   100      // WP enforce altitude tolerance, used when WP altitude setting enforced when WP reached
 // Multirotors:
@@ -205,7 +205,7 @@ PG_RESET_TEMPLATE(navConfig_t, navConfig,
         .allow_manual_thr_increase = SETTING_NAV_FW_ALLOW_MANUAL_THR_INCREASE_DEFAULT,
         .useFwNavYawControl = SETTING_NAV_USE_FW_YAW_CONTROL_DEFAULT,
         .yawControlDeadband = SETTING_NAV_FW_YAW_DEADBAND_DEFAULT,
-        .auto_disarm_delay = SETTING_NAV_FW_AUTO_DISARM_DELAY_DEFAULT,          // ms - time delay to disarm when auto disarm after landing enabled  CR15
+        .auto_disarm_delay = SETTING_NAV_FW_AUTO_DISARM_DELAY_DEFAULT,          // ms - time delay to disarm when auto disarm after landing enabled
         .soaring_pitch_deadband = SETTING_NAV_FW_SOARING_PITCH_DEADBAND_DEFAULT,// pitch angle mode deadband when Saoring mode enabled
     }
 );
@@ -1379,7 +1379,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_LANDING(navigationF
         return NAV_FSM_EVENT_SUCCESS;
     }
 
-    if (!ARMING_FLAG(ARMED) || STATE(LANDING_DETECTED)) {   // CR15
+    if (!ARMING_FLAG(ARMED) || STATE(LANDING_DETECTED)) {
         return NAV_FSM_EVENT_SUCCESS;
     }
 
@@ -1415,7 +1415,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_FINISHING(navigatio
     UNUSED(previousState);
 
     //On ROVER and BOAT disarm immediately
-    if (!STATE(ALTITUDE_CONTROL)) {     // CR15
+    if (!STATE(ALTITUDE_CONTROL)) {
         disarm(DISARM_NAVIGATION);
     }
 
@@ -1711,7 +1711,6 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_WAYPOINT_FINISHED(navig
 
 static navigationFSMEvent_t navOnEnteringState_NAV_STATE_EMERGENCY_LANDING_INITIALIZE(navigationFSMState_t previousState)
 {
-    // TODO:
     UNUSED(previousState);
 
     // Emergency landing MAY use common altitude controller if vertical position is valid - initialize it
@@ -1723,25 +1722,24 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_EMERGENCY_LANDING_INITI
 
 static navigationFSMEvent_t navOnEnteringState_NAV_STATE_EMERGENCY_LANDING_IN_PROGRESS(navigationFSMState_t previousState)
 {
-
     UNUSED(previousState);
-    // CR15
+
     if (STATE(LANDING_DETECTED)) {
         return NAV_FSM_EVENT_SUCCESS;
     }
-    // CR15
+
     return NAV_FSM_EVENT_NONE;
 }
 
 static navigationFSMEvent_t navOnEnteringState_NAV_STATE_EMERGENCY_LANDING_FINISHED(navigationFSMState_t previousState)
 {
     UNUSED(previousState);
-    // CR15
+
     // disarm(DISARM_NAVIGATION);
     rcCommand[THROTTLE] = getThrottleIdleValue();
     ENABLE_STATE(NAV_MOTOR_STOP_OR_IDLE);;
-    // CR15
-    return NAV_FSM_EVENT_NONE;  // CR15
+
+    return NAV_FSM_EVENT_NONE;
 }
 
 static navigationFSMEvent_t navOnEnteringState_NAV_STATE_LAUNCH_INITIALIZE(navigationFSMState_t previousState)
@@ -2673,7 +2671,6 @@ void calculateNewCruiseTarget(fpVector3_t * origin, int32_t yaw, int32_t distanc
 /*-----------------------------------------------------------
  * NAV land detector
  *-----------------------------------------------------------*/
- // CR15
 void updateLandingStatus(void)
 {
     // if (STATE(AIRPLANE) && !navConfig()->general.flags.disarm_on_landing) {
@@ -2712,26 +2709,23 @@ void updateLandingStatus(void)
         ENABLE_STATE(LANDING_DETECTED);
     }
 }
-// CR15
 
 bool isLandingDetected(void)
 {
-    return STATE(AIRPLANE) ? isFixedWingLandingDetected() : isMulticopterLandingDetected(); // CR15
+    return STATE(AIRPLANE) ? isFixedWingLandingDetected() : isMulticopterLandingDetected();
 }
 
 void resetLandingDetector(void)
 {
-    // CR15
     DISABLE_STATE(LANDING_DETECTED);
     posControl.flags.resetLandingDetector = true;
-    // CR15
 }
-// CR15
+
 bool isFlightDetected(void)
 {
-    return STATE(AIRPLANE) ? isFixedWingFlying() : isMulticopterFlying(); // CR15
+    return STATE(AIRPLANE) ? isFixedWingFlying() : isMulticopterFlying();
 }
-// CR15
+
 /*-----------------------------------------------------------
  * Z-position controller
  *-----------------------------------------------------------*/

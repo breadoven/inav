@@ -832,8 +832,8 @@ static const char * osdArmingDisabledReasonMessage(void)
         case ARMING_DISABLED_DSHOT_BEEPER:
             return OSD_MESSAGE_STR(OSD_MSG_DSHOT_BEEPER);
             // Cases without message
-        case ARMING_DISABLED_LANDING_DETECTED:  // CR15
-            FALLTHROUGH;  // CR15
+        case ARMING_DISABLED_LANDING_DETECTED:
+            FALLTHROUGH;
         case ARMING_DISABLED_CMS_MENU:
             FALLTHROUGH;
         case ARMING_DISABLED_OSD_MENU:
@@ -3747,7 +3747,7 @@ static void osdUpdateStats(void)
 
 static void osdShowStatsPage1(void)
 {
-    const char * disarmReasonStr[DISARM_REASON_COUNT] = { "UNKNOWN", "TIMEOUT", "STICKS", "SWITCH", "SWITCH", "KILLSW", "FAILSAFE", "NAV SYS", "LANDING"};  // CR15
+    const char * disarmReasonStr[DISARM_REASON_COUNT] = { "UNKNOWN", "TIMEOUT", "STICKS", "SWITCH", "SWITCH", "KILLSW", "FAILSAFE", "NAV SYS", "LANDING"};
     uint8_t top = 1;    /* first fully visible line */
     const uint8_t statNameX = 1;
     const uint8_t statValuesX = 20;
@@ -4449,11 +4449,9 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
                     if (posControl.flags.wpMissionPlannerActive) {
                         messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_MISSION_PLANNER);
                     }
-                    // CR15
                     if (STATE(LANDING_DETECTED)) {
                         messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_LANDED);
                     }
-                    // CR15
                     // CR44
                     // if (posControl.navState == NAV_STATE_IDLE && (IS_RC_MODE_ACTIVE(BOXNAVRTH) || IS_RC_MODE_ACTIVE(BOXNAVWP))) {
                         // messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_NAV_SENSOR_LOSS);
