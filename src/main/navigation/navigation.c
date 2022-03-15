@@ -2682,6 +2682,9 @@ void updateLandingStatus(void)
 
     static bool landingDetectorIsActive;
 
+    DEBUG_SET(DEBUG_LANDING, 0, landingDetectorIsActive);   // CR64
+    DEBUG_SET(DEBUG_LANDING, 1, STATE(LANDING_DETECTED));   // CR64
+
     if (!ARMING_FLAG(ARMED)) {
         resetLandingDetector();
         landingDetectorIsActive = false;
@@ -2691,8 +2694,6 @@ void updateLandingStatus(void)
         return;
     }
 
-    DEBUG_SET(DEBUG_LANDING, 0, landingDetectorIsActive);   // CR64
-    DEBUG_SET(DEBUG_LANDING, 1, STATE(LANDING_DETECTED));   // CR64
     if (!landingDetectorIsActive) {
         if (isFlightDetected()) {
             landingDetectorIsActive = true;

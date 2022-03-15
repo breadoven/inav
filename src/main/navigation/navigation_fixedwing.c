@@ -613,12 +613,6 @@ bool isFixedWingFlying(void)
  *-----------------------------------------------------------*/
 bool isFixedWingLandingDetected(void)
 {
-    // DEBUG_SET(DEBUG_CRUISE, 0, posControl.actualState.velXY);
-    // DEBUG_SET(DEBUG_CRUISE, 1, averageAbsGyroRates());
-    // DEBUG_SET(DEBUG_CRUISE, 3, fabsf(posControl.actualState.abs.vel.z));
-    // DEBUG_SET(DEBUG_CRUISE, 3, rcCommand[THROTTLE] - 20);
-    // DEBUG_SET(DEBUG_CRUISE, 0, getThrottleIdleValue());
-
     DEBUG_SET(DEBUG_LANDING, 4, 0);  // CR64
     static bool fixAxisCheck = false;
     const bool throttleIsLow = calculateThrottleStatus(THROTTLE_STATUS_TYPE_RC) == THROTTLE_LOW;
@@ -631,8 +625,8 @@ bool isFixedWingLandingDetected(void)
     if (!startCondition || posControl.flags.resetLandingDetector) {
         return fixAxisCheck = posControl.flags.resetLandingDetector = false;
     }
-
     DEBUG_SET(DEBUG_LANDING, 4, 1);  // CR64
+
     static timeMs_t fwLandingTimerStartAt;
     static int16_t fwLandSetRollDatum;
     static int16_t fwLandSetPitchDatum;
@@ -646,7 +640,6 @@ bool isFixedWingLandingDetected(void)
     DEBUG_SET(DEBUG_LANDING, 2, velCondition);  // CR64
     DEBUG_SET(DEBUG_LANDING, 3, gyroCondition); // CR64
 
-    // DEBUG_SET(DEBUG_CRUISE, 2, (currentTimeMs - fwLandingTimerStartAt) / 100);
     if (velCondition && gyroCondition){
         DEBUG_SET(DEBUG_LANDING, 4, 2);  // CR64
         DEBUG_SET(DEBUG_LANDING, 5, fixAxisCheck);  // CR64
@@ -658,8 +651,8 @@ bool isFixedWingLandingDetected(void)
         } else {
             bool isRollAxisStatic = ABS(fwLandSetRollDatum - attitude.values.roll) < 5;
             bool isPitchAxisStatic = ABS(fwLandSetPitchDatum - attitude.values.pitch) < 5;
-            DEBUG_SET(DEBUG_LANDING, 6, isRollAxisStatic);
-            DEBUG_SET(DEBUG_LANDING, 7, isPitchAxisStatic);
+            DEBUG_SET(DEBUG_LANDING, 6, isRollAxisStatic);  // CR64
+            DEBUG_SET(DEBUG_LANDING, 7, isPitchAxisStatic); // CR64
             if (isRollAxisStatic && isPitchAxisStatic) {
                 // Must have landed, low horizontal and vertical velocities and no axis rotation in Roll and Pitch
                 timeMs_t safetyTimeDelay = 2000 + navConfig()->fw.auto_disarm_delay;
