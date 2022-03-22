@@ -932,16 +932,17 @@ void taskMainPidLoop(timeUs_t currentTimeUs)
         writeMotors();
     }
 
+    // Check if landed, FW and MR
+    if (STATE(ALTITUDE_CONTROL)) {
+        updateLandingStatus();
+    }
+
 #ifdef USE_BLACKBOX
     if (!cliMode && feature(FEATURE_BLACKBOX)) {
         blackboxUpdate(micros());
     }
 #endif
 
-    // Check if landed, FW and MR
-    if (STATE(ALTITUDE_CONTROL)) {
-        updateLandingStatus();
-    }
 }
 
 // This function is called in a busy-loop, everything called from here should do it's own
