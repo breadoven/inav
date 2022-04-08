@@ -46,6 +46,7 @@ FILE_COMPILE_FOR_SPEED
 #include "fc/config.h"
 #include "fc/runtime_config.h"
 #include "fc/settings.h"
+#include "fc/rc_controls.h"
 
 #include "flight/hil.h"
 #include "flight/imu.h"
@@ -53,6 +54,8 @@ FILE_COMPILE_FOR_SPEED
 #include "flight/pid.h"
 
 #include "io/gps.h"
+
+#include "navigation/navigation_private.h"  // CR27
 
 #include "sensors/acceleration.h"
 #include "sensors/barometer.h"
@@ -91,6 +94,8 @@ STATIC_FASTRAM imuRuntimeConfig_t imuRuntimeConfig;
 STATIC_FASTRAM pt1Filter_t rotRateFilter;
 
 STATIC_FASTRAM bool gpsHeadingInitialized;
+
+FASTRAM uint16_t compassGpsCogError;                         // heading difference between compass and GPS (degrees)    // CR27
 
 PG_REGISTER_WITH_RESET_TEMPLATE(imuConfig_t, imuConfig, PG_IMU_CONFIG, 2);
 
@@ -480,19 +485,19 @@ static float imuCalculateAccelerometerWeight(const float dT)
 
     const float accWeight_Nearness = bellCurve(fast_fsqrtf(accMagnitudeSq) - 1.0f, MAX_ACC_NEARNESS);
 
-    // Experiment: if rotation rate on a FIXED_WING_LEGACY is higher than a threshold - centrifugal force messes up too much and we 
+    // Experiment: if rotation rate on a FIXED_WING_LEGACY is higher than a threshold - centrifugal force messes up too much and we
     // should not use measured accel for AHRS comp
     //      Centrifugal acceleration AccelC = Omega^2 * R = Speed^2 / R
     //          Omega = Speed / R
     //      For a banked turn R = Speed^2 / (G * tan(Roll))
-    //          Omega = G * tan(Roll) / Speed 
+    //          Omega = G * tan(Roll) / Speed
     //      Knowing the typical airspeed is around ~20 m/s we can calculate roll angles that yield certain angular rate
     //          1 deg   =>  0.49 deg/s
     //          2 deg   =>  0.98 deg/s
     //          5 deg   =>  2.45 deg/s
     //         10 deg   =>  4.96 deg/s
     //      Therefore for a typical plane a sustained angular rate of ~2.45 deg/s will yield a banking error of ~5 deg
-    //  Since we can't do proper centrifugal compensation at the moment we pass the magnitude of angular rate through an 
+    //  Since we can't do proper centrifugal compensation at the moment we pass the magnitude of angular rate through an
     //  LPF with a low cutoff and if it's larger than our threshold - invalidate accelerometer
 
     // Default - don't apply rate/ignore scaling
@@ -517,7 +522,47 @@ static float imuCalculateAccelerometerWeight(const float dT)
 
     return accWeight_Nearness * accWeight_RateIgnore;
 }
+// CR27
+#if defined(USE_MAG) && defined(USE_GPS)
+bool compassHeadingGPSCogErrorCheck(void)
+{
+    static timeMs_t timerStartMs = 0;
 
+    compassGpsCogError = 270;
+    if (!isGPSHeadingValid()) {
+        timerStartMs = 0;
+        return false;
+    }
+
+    compassGpsCogError = 260;
+    bool rcCommandCondition = ABS(rcCommand[PITCH]) > 25 || ABS(rcCommand[ROLL]) > 25 || navigationIsFlyingAutonomousMode();
+        // DEBUG_SET(DEBUG_CRUISE, 0, rcCommand[PITCH]);
+        // DEBUG_SET(DEBUG_CRUISE, 1, rcCommand[ROLL]);
+
+    if (sensors(SENSOR_MAG) && compassIsHealthy() && rcCommandCondition) {
+        static uint16_t compassGpsCogErrorPrev = 10;
+        int16_t commandCorrection = RADIANS_TO_DECIDEGREES(atan2_approx(rcCommand[ROLL], rcCommand[PITCH]));
+
+        // DEBUG_SET(DEBUG_CRUISE, 2, commandCorrection);
+
+        compassGpsCogError = ABS(gpsSol.groundCourse - (wrap_36000(10 * (attitude.values.yaw + commandCorrection))) / 10);
+        // compassGpsCogError = ABS(900 - (wrap_36000(10 * (attitude.values.yaw + commandCorrection))) / 10);
+        // DEBUG_SET(DEBUG_CRUISE, 3, compassGpsCogError);
+        compassGpsCogError = compassGpsCogError > 1800 ? ABS(compassGpsCogError - 3600) : compassGpsCogError;
+        compassGpsCogError = 0.8 * compassGpsCogErrorPrev + 0.2 * compassGpsCogError;
+        compassGpsCogErrorPrev = compassGpsCogError;
+        compassGpsCogError = compassGpsCogError / 10;
+
+        if (compassGpsCogError > 90) { // 90 for test, change for better value
+            timerStartMs = timerStartMs == 0 ? millis(): timerStartMs;
+            return millis() - timerStartMs > 10000; // 10s for test, use shorter time
+        }
+    }
+    timerStartMs = 0;
+    return false;
+}
+#endif
+// CR27
 static void imuCalculateEstimatedAttitude(float dT)
 {
 #if defined(USE_MAG)
@@ -669,6 +714,7 @@ bool isImuReady(void)
 
 bool isImuHeadingValid(void)
 {
+    // CR27 add block if compass heading mismatch with GPS heading in compassHeadingGPSCheck()
     return (sensors(SENSOR_MAG) && STATE(COMPASS_CALIBRATED)) || (STATE(FIXED_WING_LEGACY) && gpsHeadingInitialized);
 }
 

@@ -605,6 +605,7 @@ bool isFixedWingFlying(void)
     bool launchCondition = isNavLaunchEnabled() && fixedWingLaunchStatus() == FW_LAUNCH_FLYING;
 
     return (isImuHeadingValid() && throttleCondition && velCondition) || launchCondition;
+    // return throttleCondition;
 }
 
 /*-----------------------------------------------------------
@@ -653,7 +654,7 @@ bool isFixedWingLandingDetected(void)
             DEBUG_SET(DEBUG_LANDING, 6, isRollAxisStatic);
             DEBUG_SET(DEBUG_LANDING, 7, isPitchAxisStatic);
             if (isRollAxisStatic && isPitchAxisStatic) {
-                // Probably landed, low horizontal and vertical velocities and no axis rotation in Roll and Pitch
+                // Must have landed, low horizontal and vertical velocities and no axis rotation in Roll and Pitch
                 timeMs_t safetyTimeDelay = 2000 + navConfig()->fw.auto_disarm_delay;
                 return currentTimeMs - fwLandingTimerStartAt > safetyTimeDelay; // check conditions stable for 2s + optional extra delay
             } else {
@@ -661,6 +662,7 @@ bool isFixedWingLandingDetected(void)
             }
         }
     }
+
     return false;
 }
 

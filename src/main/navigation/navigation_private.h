@@ -37,11 +37,13 @@
 
 #define INAV_SURFACE_MAX_DISTANCE           40
 
-#define MC_LAND_CHECK_VEL_XY_MOVING 100.0f // cm/s
-#define MC_LAND_CHECK_VEL_Z_MOVING 25.0f   // cm/s
-#define MC_LAND_THR_STABILISE_DELAY 1      // seconds
-#define MC_LAND_DESCEND_THROTTLE 40        // uS
-#define MC_LAND_SAFE_SURFACE 5.0f          // cm
+#define LAUNCH_ABORT_STICK_DEADBAND         250     // pitch/roll stick deflection for lanch abort (us)  CR60
+
+#define MC_LAND_CHECK_VEL_XY_MOVING         100.0f  // cm/s
+#define MC_LAND_CHECK_VEL_Z_MOVING          25.0f   // cm/s
+#define MC_LAND_THR_STABILISE_DELAY         1       // seconds
+#define MC_LAND_DESCEND_THROTTLE            40      // uS
+#define MC_LAND_SAFE_SURFACE                5.0f    // cm
 
 #define MAX_POSITION_UPDATE_INTERVAL_US     HZ2US(MIN_POSITION_UPDATE_RATE_HZ)        // convenience macro
 _Static_assert(MAX_POSITION_UPDATE_INTERVAL_US <= TIMEDELTA_MAX, "deltaMicros can overflow!");
@@ -86,6 +88,7 @@ typedef struct navigationFlags_s {
     navigationEstimateStatus_e estVelStatus;        // Indicates that GPS is working (or not)
     navigationEstimateStatus_e estAglStatus;
     navigationEstimateStatus_e estHeadingStatus;    // Indicate valid heading - wither mag or GPS at certain speed on airplane
+    bool compassGpsCogMismatchError;                // mismatch between compass heading and valid GPS heading   // CR27
 
     bool isAdjustingPosition;
     bool isAdjustingAltitude;
@@ -100,10 +103,10 @@ typedef struct navigationFlags_s {
     bool forcedRTHActivated;
     bool forcedEmergLandingActivated;
 
-    bool wpMissionPlannerActive;               // Activation status of WP mission planner
-
     /* Landing detector */
     bool resetLandingDetector;
+
+    bool wpMissionPlannerActive;               // Activation status of WP mission planner
 } navigationFlags_t;
 
 typedef struct {
@@ -351,7 +354,7 @@ typedef struct {
     uint32_t                    lastValidPositionTimeMs;
     uint32_t                    lastValidAltitudeTimeMs;
 
-    /* INAV GPS origin (position where GPS fix was first acquired) */
+    /* INAV GPS origin (position where GPS fix first acquired) */
     gpsOrigin_t                 gpsOrigin;
 
     /* Home parameters (NEU coordinated), geodetic position of home (LLH) is stores in GPS_home variable */
@@ -483,6 +486,7 @@ void calculateFixedWingInitialHoldPosition(fpVector3_t * pos);
 
 /* Fixed-wing launch controller */
 void resetFixedWingLaunchController(timeUs_t currentTimeUs);
+// bool isFixedWingLaunchFinishedThrottleLow(void);    // CR6
 void enableFixedWingLaunchController(timeUs_t currentTimeUs);
 void abortFixedWingLaunch(void);
 void applyFixedWingLaunchController(timeUs_t currentTimeUs);

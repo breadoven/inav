@@ -29,11 +29,13 @@
 #endif
 #define OSD_LAYOUT_COUNT (OSD_ALTERNATE_LAYOUT_COUNT + 1)
 
-// 00vb yyyy yyxx xxxx
-// (visible)(blink)(yCoord)(xCoord)
+// 0ivb yyyy yyxx xxxx                          CR22x
+// (infocycle)(visible)(blink)(yCoord)(xCoord)  CR22x
 
 #define OSD_VISIBLE_FLAG    0x2000
+#define OSD_INFOCYCLE_FLAG  0x4000  // CR22x   changed for HD system bit changes 270222
 #define OSD_VISIBLE(x)      ((x) & OSD_VISIBLE_FLAG)
+#define OSD_INFOCYCLE(x)    ((x) & OSD_INFOCYCLE_FLAG)  // CR22
 
 #define OSD_POS(x,y)        (((x) & 0x3F) | (((y) & 0x3F) << 6))
 #define OSD_X(x)            ((x) & 0x3F)
@@ -102,8 +104,9 @@
 #define OSD_MSG_LANDING             "LANDING"
 #define OSD_MSG_LOITERING_HOME      "LOITERING AROUND HOME"
 #define OSD_MSG_HOVERING            "HOVERING"
-#define OSD_MSG_LANDED              "LANDED"
+#define OSD_MSG_LANDED              "! LANDED !"
 #define OSD_MSG_PREPARING_LAND      "PREPARING TO LAND"
+// #define OSD_MSG_NAV_SENSOR_LOSS     "NAV FAIL -> SENSOR LOSS"   // CR44
 #define OSD_MSG_AUTOLAUNCH          "AUTOLAUNCH"
 #define OSD_MSG_ALTITUDE_HOLD       "(ALTITUDE HOLD)"
 #define OSD_MSG_AUTOTRIM            "(AUTOTRIM)"
@@ -112,6 +115,7 @@
 #define OSD_MSG_HEADFREE            "(HEADFREE)"
 #define OSD_MSG_NAV_SOARING         "(SOARING)"
 #define OSD_MSG_UNABLE_ARM          "UNABLE TO ARM"
+#define OSD_MSG_COMPASS_ERROR       "COMPASS ERROR !"     // CR27
 
 #ifdef USE_DEV_TOOLS
 #define OSD_MSG_GRD_TEST_MODE       "GRD TEST > MOTORS DISABLED"
@@ -253,6 +257,8 @@ typedef enum {
     OSD_AIR_MAX_SPEED,
     OSD_ACTIVE_PROFILE,
     OSD_MISSION,
+    OSD_INFO_CYCLE, // 130  CR22
+    OSD_STATUS,     // 131  CR27
     OSD_ITEM_COUNT // MUST BE LAST
 } osd_items_e;
 
@@ -378,9 +384,9 @@ typedef struct osdConfig_s {
     uint8_t right_sidebar_scroll; // from osd_sidebar_scroll_e
     uint8_t sidebar_scroll_arrows;
 
-    uint8_t units; // from osd_unit_e
-    uint8_t stats_energy_unit; // from osd_stats_energy_unit_e
-    uint8_t stats_min_voltage_unit; // from osd_stats_min_voltage_unit_e
+    uint8_t units;                       // from osd_unit_e
+    uint8_t stats_energy_unit;           // from osd_stats_energy_unit_e
+    uint8_t stats_min_voltage_unit;      // from osd_stats_min_voltage_unit_e
     uint8_t stats_page_auto_swap_time;   // stats page auto swap interval time (seconds)
 
 #ifdef USE_WIND_ESTIMATOR
@@ -406,7 +412,9 @@ typedef struct osdConfig_s {
     int8_t pan_servo_pwm2centideg;      // Centidegrees of servo rotation per us pwm
     uint8_t crsf_lq_format;
     uint16_t system_msg_display_time;   // system message display time for multiple messages (ms)
+    uint16_t infocycle_interval_time;   // Info Cycle field item display time interval (ms)   CR22
     uint8_t sidebar_height;             // sidebar height in rows, 0 turns off sidebars leaving only level indicator arrows
+    uint8_t ahi_pitch_interval;         // redraws AHI at set pitch interval. (Not pixel OSD) // CR35
     uint8_t telemetry; 				    // use telemetry on displayed pixel line 0
     uint8_t esc_rpm_precision;          // Number of characters used for the RPM numbers.
 

@@ -90,6 +90,7 @@ PG_RESET_TEMPLATE(armingConfig_t, armingConfig,
     .fixed_wing_auto_arm = SETTING_FIXED_WING_AUTO_ARM_DEFAULT,
     .disarm_kill_switch = SETTING_DISARM_KILL_SWITCH_DEFAULT,
     .switchDisarmDelayMs = SETTING_SWITCH_DISARM_DELAY_DEFAULT,
+    .switchArmDelayMs = SETTING_SWITCH_ARM_DELAY_DEFAULT,   // CR24
     .prearmTimeoutMs = SETTING_PREARM_TIMEOUT_DEFAULT,
 );
 
@@ -103,9 +104,10 @@ bool areSticksDeflected(void)
     return (ABS(rcCommand[ROLL]) > rcControlsConfig()->control_deadband) || (ABS(rcCommand[PITCH]) > rcControlsConfig()->control_deadband) || (ABS(rcCommand[YAW]) > rcControlsConfig()->control_deadband);
 }
 
-bool isRollPitchStickDeflected(void)
+bool isRollPitchStickDeflected(uint8_t deadband)    // CR60
 {
-    return (ABS(rcCommand[ROLL]) > rcControlsConfig()->control_deadband) || (ABS(rcCommand[PITCH]) > rcControlsConfig()->control_deadband);
+    return (ABS(rcCommand[ROLL]) > deadband) || (ABS(rcCommand[PITCH]) > deadband); // CR60
+    // return (ABS(rcCommand[ROLL]) > rcControlsConfig()->control_deadband) || (ABS(rcCommand[PITCH]) > rcControlsConfig()->control_deadband);
 }
 
 throttleStatus_e FAST_CODE NOINLINE calculateThrottleStatus(throttleStatusType_e type)
@@ -186,6 +188,7 @@ void processRcStickPositions(throttleStatus_e throttleStatus)
     static uint8_t rcDelayCommand;      // this indicates the number of time (multiple of RC measurement at 50Hz) the sticks must be maintained to run or switch off motors
     static uint32_t rcSticks;           // this hold sticks position for command combos
     static timeMs_t rcDisarmTimeMs;     // this is an extra guard for disarming through switch to prevent that one frame can disarm it
+    static timeMs_t rcArmTimeMs;        // allows time for Rx signal loss after disarming to set failsafe blocker preventing rearm cr24
     const timeMs_t currentTimeMs = millis();
 
     updateRcStickPositions();
@@ -218,12 +221,18 @@ void processRcStickPositions(throttleStatus_e throttleStatus)
     else {
         if (armingSwitchIsActive) {
             rcDisarmTimeMs = currentTimeMs;
-            tryArm();
+            // CR24
+            if (!failsafeBlockChangeArmState() && currentTimeMs - rcArmTimeMs > armingConfig()->switchArmDelayMs) {
+                tryArm();
+            }
+            // CR24
         } else {
+            rcArmTimeMs = currentTimeMs;    // CR24
             // Disarming via ARM BOX
             // Don't disarm via switch if failsafe is active or receiver doesn't receive data - we can't trust receiver
             // and can't afford to risk disarming in the air
-            if (ARMING_FLAG(ARMED) && !IS_RC_MODE_ACTIVE(BOXFAILSAFE) && rxIsReceivingSignal() && !failsafeIsActive()) {
+            // if (ARMING_FLAG(ARMED) && !IS_RC_MODE_ACTIVE(BOXFAILSAFE) && rxIsReceivingSignal() && !failsafeIsActive()) {
+            if (ARMING_FLAG(ARMED) && !IS_RC_MODE_ACTIVE(BOXFAILSAFE) && !failsafeBlockChangeArmState() && !failsafeIsActive()) {  // CR24
                 const timeMs_t disarmDelay = currentTimeMs - rcDisarmTimeMs;
                 if (disarmDelay > armingConfig()->switchDisarmDelayMs) {
                     if (armingConfig()->disarm_kill_switch || (throttleStatus == THROTTLE_LOW)) {
@@ -292,7 +301,6 @@ void processRcStickPositions(throttleStatus_e throttleStatus)
         beeper(BEEPER_ACTION_FAIL); // The above cannot fail, but traditionally, we play FAIL for not-loading
     }
 #endif
-
     // Multiple configuration profiles
     if (feature(FEATURE_TX_PROF_SEL)) {
 

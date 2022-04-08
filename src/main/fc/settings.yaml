@@ -336,7 +336,7 @@ groups:
         max: INT16_MAX
       - name: ins_gravity_cmss
         description: "Calculated 1G of Acc axis Z to use in INS"
-        default_value: 0.0
+        default_value: 0
         field: gravity_cmss_cal
         min: 0
         max: 2000
@@ -1547,7 +1547,15 @@ groups:
         default_value: 250
         field: switchDisarmDelayMs
         min: 0
+        # CR24
         max: 1000
+      - name: switch_arm_delay
+        description: "Delay before arming when set by switch (ms) [0-1000]"
+        default_value: 250
+        field: switchArmDelayMs
+        min: 0
+        max: 1000
+        # CR24
       - name: prearm_timeout
         description: "Duration (ms) for which Prearm being activated is valid. after this, Prearm needs to be reset. 0 means Prearm does not timeout."
         default_value: 10000
@@ -2038,6 +2046,14 @@ groups:
         min: 0
         max: 255
         default_value: 40
+        # CR47
+      - name: nav_mc_vel_xy_accel_tweak
+        description: "Fiddle factor to tune bank angle response to specific quad performance"
+        field: mc_vel_xy_accel_tweak
+        default_value: 100
+        min: 10
+        max: 100
+        # CR47
       - name: nav_mc_heading_p
         description: "P gain of Heading Hold controller (Multirotor)"
         default_value: 60
@@ -2833,6 +2849,13 @@ groups:
         field: fw.launch_climb_angle
         min: 5
         max: 45
+        # CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+      - name: nav_fw_launch_allow_throttle_low
+        description: "Allow launch sequence with throttle maintained low throughout. When main launch sequence completes control is maintained with Nav cruise throttle until sticks moved/throttle raised or control switches to other Nav mode if preselected"
+        default_value: OFF
+        field: fw.launch_allow_throttle_low
+        type: bool
+        # CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
       - name: nav_fw_cruise_yaw_rate
         description: "Max YAW rate when NAV CRUISE mode is enabled (0=disable control via yaw stick) [dps]"
         default_value: 20
@@ -3420,6 +3443,7 @@ groups:
         default_value: 11
         min: 10
         max: 13
+
       - name: osd_plus_code_short
         description: "Number of leading digits removed from plus code. Removing 2, 4 and 6 digits requires a reference location within, respectively, ~800km, ~40 km and ~2km to recover the original coordinates."
         field: plus_code_short
@@ -3489,7 +3513,14 @@ groups:
         max: 5
         default_value: 3
         description: Height of sidebars in rows. 0 leaves only the level indicator arrows (Not for pixel OSD)
-
+        # CR35
+      - name: osd_ahi_pitch_interval
+        field: ahi_pitch_interval
+        min: 0
+        max: 30
+        default_value: 10
+        description: Draws AHI at increments of the set pitch interval over full pitch range. AHI line is drawn with ends offset when pitch first exceeds interval with offset increasing with increasing pitch. Offset direction changes between climb and dive. Set to 0 to disable (Not for pixel OSD)
+        # CR35
       - name: osd_home_position_arm_screen
         type: bool
         default_value: ON
@@ -3509,6 +3540,14 @@ groups:
         min: -36
         max: 36
 
+        # CR22
+      - name: osd_infocycle_interval_time
+        description: Info Cycle field item display time (milliseconds).
+        field: infocycle_interval_time
+        default_value: 2000
+        min: 500
+        max: 5000
+        # CR22
       - name: osd_esc_rpm_precision
         description: Number of characters used to display the RPM value.
         field: esc_rpm_precision

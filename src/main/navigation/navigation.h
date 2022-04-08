@@ -145,18 +145,18 @@ typedef enum {
     ON_FW_SPIRAL,
 } navRTHClimbFirst_e;
 
-typedef enum {  // keep aligned with fixedWingLaunchState_t
-    FW_LAUNCH_DETECTED = 4,
-    FW_LAUNCH_ABORTED = 9,
-    FW_LAUNCH_FLYING = 10,
-} navFwLaunchStatus_e;
-
 typedef enum {
     WP_PLAN_WAIT,
     WP_PLAN_SAVE,
     WP_PLAN_OK,
     WP_PLAN_FULL,
 } wpMissionPlannerStatus_e;
+
+typedef enum {  // keep aligned with fixedWingLaunchState_t
+    FW_LAUNCH_DETECTED = 4,
+    FW_LAUNCH_ABORTED = 10,
+    FW_LAUNCH_FLYING = 11,
+} navFwLaunchStatus_e;
 
 typedef enum {
     WP_MISSION_START,
@@ -211,7 +211,7 @@ typedef struct navConfig_s {
             uint8_t user_control_mode;          // NAV_GPS_ATTI or NAV_GPS_CRUISE
             uint8_t rth_alt_control_mode;       // Controls the logic for choosing the RTH altitude
             uint8_t rth_climb_first;            // Controls the logic for initial RTH climbout
-            uint8_t rth_climb_first_stage_mode;  // To determine how rth_climb_first_stage_altitude is used
+            uint8_t rth_climb_first_stage_mode; // To determine how rth_climb_first_stage_altitude is used
             uint8_t rth_tail_first;             // Return to home tail first
             uint8_t disarm_on_landing;          //
             uint8_t rth_allow_landing;          // Enable landing as last stage of RTH. Use constants in navRTHAllowLanding_e.
@@ -277,11 +277,11 @@ typedef struct navConfig_s {
         uint8_t  max_climb_angle;            // Fixed wing max banking angle (deg)
         uint8_t  max_dive_angle;             // Fixed wing max banking angle (deg)
         uint16_t cruise_speed;               // Speed at cruise throttle (cm/s), used for time/distance left before RTH
-        uint8_t control_smoothness;          // The amount of smoothing to apply to controls for navigation
+        uint8_t  control_smoothness;         // The amount of smoothing to apply to controls for navigation
         uint16_t pitch_to_throttle_smooth;   // How smoothly the autopilot makes pitch to throttle correction inside a deadband defined by pitch_to_throttle_thresh.
         uint8_t  pitch_to_throttle_thresh;   // Threshold from average pitch where momentary pitch_to_throttle correction kicks in. [decidegrees]
         uint16_t loiter_radius;              // Loiter radius when executing PH on a fixed wing
-        int8_t land_dive_angle;
+        int8_t   land_dive_angle;
         uint16_t launch_velocity_thresh;     // Velocity threshold for swing launch detection
         uint16_t launch_accel_thresh;        // Acceleration threshold for launch detection (cm/s/s)
         uint16_t launch_time_thresh;         // Time threshold for launch detection (ms)
@@ -294,12 +294,15 @@ typedef struct navConfig_s {
         uint16_t launch_max_altitude;        // cm, altitude where to consider launch ended
         uint8_t  launch_climb_angle;         // Target climb angle for launch (deg)
         uint8_t  launch_max_angle;           // Max tilt angle (pitch/roll combined) to consider launch successful. Set to 180 to disable completely [deg]
+        // CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+        bool     launch_allow_throttle_low;  // Allow launch with throttle low
+        // xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
         uint8_t  cruise_yaw_rate;            // Max yaw rate (dps) when CRUISE MODE is enabled
         bool     allow_manual_thr_increase;
         bool     useFwNavYawControl;
         uint8_t  yawControlDeadband;
-        uint8_t  soaring_pitch_deadband;     // soaring mode pitch angle deadband (deg)
         uint16_t auto_disarm_delay;          // fixed wing disarm delay for landing detector
+        uint8_t  soaring_pitch_deadband;     // soaring mode pitch angle deadband (deg)
     } fw;
 } navConfig_t;
 
@@ -556,6 +559,9 @@ emergLandState_e getStateOfForcedEmergLanding(void);
 
 /* Getter functions which return data about the state of the navigation system */
 bool navigationInAutomaticThrottleMode(void);
+// CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+bool launchAllowedWithThrottleLow(void);
+// CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 bool navigationIsControllingThrottle(void);
 bool isFixedWingAutoThrottleManuallyIncreased(void);
 bool navigationIsFlyingAutonomousMode(void);
@@ -570,6 +576,7 @@ bool isWaypointMissionRTHActive(void);
 bool rthClimbStageActiveAndComplete(void);
 
 bool isNavLaunchEnabled(void);
+bool isFixedWingLaunchFinishedThrottleLow(void);    // CR6
 uint8_t fixedWingLaunchStatus(void);
 const char * fixedWingLaunchStateMessage(void);
 
