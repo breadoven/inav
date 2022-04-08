@@ -76,7 +76,7 @@ float sqrtControllerApply(sqrt_controller_t *sqrt_controller_pointer, float targ
         // Derivative Max is zero or negative.
         correction_rate = sqrt_controller_pointer->error * sqrt_controller_pointer->kp;
     } else if (sqrt_controller_pointer->kp == 0.0f) {
-        // P term is zero but we have a Derivative Max.
+        // Proportional term is zero but we have a Derivative Max.
         if (sqrt_controller_pointer->error > 0.0f) {
             correction_rate = fast_fsqrtf(2.0f * sqrt_controller_pointer->derivative_max * (sqrt_controller_pointer->error));
         } else if (sqrt_controller_pointer->error < 0.0f) {
@@ -105,13 +105,7 @@ float sqrtControllerApply(sqrt_controller_t *sqrt_controller_pointer, float targ
 }
 
 // Sets the maximum error to limit output and derivative of output
-void sqrtControllerInit(
-    sqrt_controller_t *sqrt_controller_pointer,
-    const float kp,
-    const float output_min,
-    const float output_max,
-    const float derivative_out_max
-)
+void sqrtControllerInit(sqrt_controller_t *sqrt_controller_pointer,const float kp,const float output_min,const float output_max,const float derivative_out_max)
 {
     // Reset the variables
     sqrt_controller_pointer->kp = kp;

@@ -2064,15 +2064,13 @@ void updateActualHeading(bool headingValid, int32_t newHeading)
         }
     }
     // CR27
-
     navigationEstimateStatus_e newEstHeading = headingValid ? EST_TRUSTED : EST_NONE;
-    // CR53
+
 #ifdef USE_DEV_TOOLS
     if (systemConfig()->groundTestMode && STATE(AIRPLANE)) {
         newEstHeading = EST_TRUSTED;
     }
 #endif
-    // CR53
     if (newEstHeading >= EST_USABLE && posControl.flags.estHeadingStatus < EST_USABLE &&
         (posControl.rthState.homeFlags & (NAV_HOME_VALID_XY | NAV_HOME_VALID_Z)) &&
         (posControl.rthState.homeFlags & NAV_HOME_VALID_HEADING) == 0) {
@@ -2342,12 +2340,12 @@ void setHomePosition(const fpVector3_t * pos, int32_t yaw, navSetWaypointFlags_t
 
     // Update target RTH altitude as a waypoint above home
     updateDesiredRTHAltitude();
-    // CR65
-    // Reset RTH sanity checker for new home position if RTH active
+
+    //  Reset RTH sanity checker for new home position if RTH active
     if (FLIGHT_MODE(NAV_RTH_MODE)) {
         initializeRTHSanityChecker();
     }
-    // CR65
+
     updateHomePositionCompatibility();
     ENABLE_STATE(GPS_FIX_HOME);
 }
