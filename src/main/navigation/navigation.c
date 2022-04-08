@@ -1821,7 +1821,6 @@ static void navProcessFSMEvents(navigationFSMEvent_t injectedEvent)
         /* Update state */
         previousState = navSetNewFSMState(navFSM[posControl.navState].onEvent[NAV_FSM_EVENT_TIMEOUT]);
     }
-DEBUG_SET(DEBUG_CRUISE, 3, previousState);
 
     if (previousState) {    /* If state updated call new state's entry function */
         while (navFSM[posControl.navState].onEntry) {
