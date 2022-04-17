@@ -34,6 +34,7 @@
 #define NAV_VEL_Z_DERIVATIVE_CUT_HZ 5.0f
 #define NAV_VEL_Z_ERROR_CUT_HZ 5.0f
 #define NAV_ACCELERATION_XY_MAX             980.0f  // cm/s/s       // approx 45 deg lean angle
+#define NAV_RTH_TRACKBACK_POINTS            6      // max number RTH trackback points  CR66
 
 #define INAV_SURFACE_MAX_DISTANCE           40
 
@@ -106,7 +107,9 @@ typedef struct navigationFlags_s {
     /* Landing detector */
     bool resetLandingDetector;
 
-    bool wpMissionPlannerActive;               // Activation status of WP mission planner
+    bool wpMissionPlannerActive;            // Activation status of WP mission planner
+
+    bool rthTrackbackActive;                // Activation status of RTH trackback   CR66
 } navigationFlags_t;
 
 typedef struct {
@@ -144,22 +147,30 @@ typedef enum {
     NAV_FSM_EVENT_SWITCH_TO_ALTHOLD,
     NAV_FSM_EVENT_SWITCH_TO_POSHOLD_3D,
     NAV_FSM_EVENT_SWITCH_TO_RTH,
-    NAV_FSM_EVENT_SWITCH_TO_RTH_HOVER_ABOVE_HOME,
+    // CR66
+    // NAV_FSM_EVENT_SWITCH_TO_RTH_HOVER_ABOVE_HOME,
     NAV_FSM_EVENT_SWITCH_TO_WAYPOINT,
     NAV_FSM_EVENT_SWITCH_TO_EMERGENCY_LANDING,
     NAV_FSM_EVENT_SWITCH_TO_LAUNCH,
+    NAV_FSM_EVENT_SWITCH_TO_COURSE_HOLD,
+    NAV_FSM_EVENT_SWITCH_TO_CRUISE,
+    NAV_FSM_EVENT_SWITCH_TO_COURSE_ADJ,
 
     NAV_FSM_EVENT_STATE_SPECIFIC_1,             // State-specific event
     NAV_FSM_EVENT_STATE_SPECIFIC_2,             // State-specific event
     NAV_FSM_EVENT_STATE_SPECIFIC_3,             // State-specific event
+    NAV_FSM_EVENT_STATE_SPECIFIC_4,             // State-specific event
+    NAV_FSM_EVENT_STATE_SPECIFIC_5,             // State-specific event
     NAV_FSM_EVENT_SWITCH_TO_RTH_LANDING = NAV_FSM_EVENT_STATE_SPECIFIC_1,
     NAV_FSM_EVENT_SWITCH_TO_WAYPOINT_RTH_LAND = NAV_FSM_EVENT_STATE_SPECIFIC_1,
     NAV_FSM_EVENT_SWITCH_TO_WAYPOINT_FINISHED = NAV_FSM_EVENT_STATE_SPECIFIC_2,
     NAV_FSM_EVENT_SWITCH_TO_WAYPOINT_HOLD_TIME = NAV_FSM_EVENT_STATE_SPECIFIC_3,
-
-    NAV_FSM_EVENT_SWITCH_TO_COURSE_HOLD,
-    NAV_FSM_EVENT_SWITCH_TO_CRUISE,
-    NAV_FSM_EVENT_SWITCH_TO_COURSE_ADJ,
+    NAV_FSM_EVENT_SWITCH_TO_RTH_HOVER_ABOVE_HOME = NAV_FSM_EVENT_STATE_SPECIFIC_4,
+    NAV_FSM_EVENT_SWITCH_TO_NAV_STATE_RTH_INITIALIZE = NAV_FSM_EVENT_STATE_SPECIFIC_5,
+    // NAV_FSM_EVENT_SWITCH_TO_COURSE_HOLD,
+    // NAV_FSM_EVENT_SWITCH_TO_CRUISE,
+    // NAV_FSM_EVENT_SWITCH_TO_COURSE_ADJ,
+    // CR66
     NAV_FSM_EVENT_COUNT,
 } navigationFSMEvent_t;
 
@@ -392,7 +403,12 @@ typedef struct {
     float                       wpDistance;                 // Distance to active WP
     timeMs_t                    wpReachedTime;              // Time the waypoint was reached
     bool                        wpAltitudeReached;          // WP altitude achieved
-
+    // CR66
+    /* RTH Trackback */
+    fpVector3_t                 rthTBPointsList[NAV_RTH_TRACKBACK_POINTS];
+    int8_t                      rthTBLastSavedIndex;              // last trackback point index saved
+    int8_t                      activeRthTBPointIndex;
+    // CR66
     /* Internals & statistics */
     int16_t                     rcAdjustment[4];
     float                       totalTripDistance;
