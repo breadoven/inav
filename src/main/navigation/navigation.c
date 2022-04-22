@@ -151,7 +151,7 @@ PG_RESET_TEMPLATE(navConfig_t, navConfig,
         .max_terrain_follow_altitude = SETTING_NAV_MAX_TERRAIN_FOLLOW_ALT_DEFAULT,              // max altitude in centimeters in terrain following mode
         .safehome_max_distance = SETTING_SAFEHOME_MAX_DISTANCE_DEFAULT,                         // Max distance that a safehome is from the arming point
         .max_altitude = SETTING_NAV_MAX_ALTITUDE_DEFAULT,
-        .rth_trackback_distance = SETTING_NAV_RTH_TRACKBACK_DISTANCE_DEFAULT,                   // Max distance to record RTH trackback waypoints   CR66
+        .rth_trackback_distance = SETTING_NAV_RTH_TRACKBACK_DISTANCE_DEFAULT,                   // Max distance to record RTH trackback points   CR66
     },
 
     // MC-specific
@@ -281,6 +281,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_CRUISE_IN_PROGRESS(navi
 static navigationFSMEvent_t navOnEnteringState_NAV_STATE_CRUISE_ADJUSTING(navigationFSMState_t previousState);
 static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_INITIALIZE(navigationFSMState_t previousState);
 static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_CLIMB_TO_SAFE_ALT(navigationFSMState_t previousState);
+static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_TRACKBACK(navigationFSMState_t previousState); // CR66
 static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_HEAD_HOME(navigationFSMState_t previousState);
 static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_HOVER_PRIOR_TO_LANDING(navigationFSMState_t previousState);
 static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_HOVER_ABOVE_HOME(navigationFSMState_t previousState);
@@ -523,11 +524,12 @@ static const navigationFSMStateDescriptor_t navFSM[NAV_STATE_COUNT] = {
         .mwState = MW_NAV_STATE_RTH_START,
         .mwError = MW_NAV_ERROR_NONE,
         .onEvent = {
-            [NAV_FSM_EVENT_TIMEOUT]                        = NAV_STATE_RTH_INITIALIZE,      // re-process the state
-            [NAV_FSM_EVENT_SUCCESS]                        = NAV_STATE_RTH_CLIMB_TO_SAFE_ALT,
-            [NAV_FSM_EVENT_SWITCH_TO_EMERGENCY_LANDING]    = NAV_STATE_EMERGENCY_LANDING_INITIALIZE,
-            [NAV_FSM_EVENT_SWITCH_TO_RTH_LANDING]          = NAV_STATE_RTH_HOVER_PRIOR_TO_LANDING,
-            [NAV_FSM_EVENT_SWITCH_TO_IDLE]                 = NAV_STATE_IDLE,
+            [NAV_FSM_EVENT_TIMEOUT]                             = NAV_STATE_RTH_INITIALIZE,      // re-process the state
+            [NAV_FSM_EVENT_SUCCESS]                             = NAV_STATE_RTH_CLIMB_TO_SAFE_ALT,
+            [NAV_FSM_EVENT_SWITCH_TO_NAV_STATE_RTH_TRACKBACK]   = NAV_STATE_RTH_TRACKBACK,  // CR66
+            [NAV_FSM_EVENT_SWITCH_TO_EMERGENCY_LANDING]         = NAV_STATE_EMERGENCY_LANDING_INITIALIZE,
+            [NAV_FSM_EVENT_SWITCH_TO_RTH_LANDING]               = NAV_STATE_RTH_HOVER_PRIOR_TO_LANDING,
+            [NAV_FSM_EVENT_SWITCH_TO_IDLE]                      = NAV_STATE_IDLE,
         }
     },
 
@@ -550,7 +552,23 @@ static const navigationFSMStateDescriptor_t navFSM[NAV_STATE_COUNT] = {
             [NAV_FSM_EVENT_SWITCH_TO_CRUISE]               = NAV_STATE_CRUISE_INITIALIZE,
         }
     },
-
+    // CR66
+    [NAV_STATE_RTH_TRACKBACK] = {
+        .persistentId = NAV_PERSISTENT_ID_RTH_TRACKBACK,
+        .onEntry = navOnEnteringState_NAV_STATE_RTH_TRACKBACK,
+        .timeoutMs = 10,
+        .stateFlags = NAV_CTL_ALT | NAV_CTL_POS | NAV_CTL_YAW | NAV_REQUIRE_ANGLE | NAV_REQUIRE_MAGHOLD | NAV_REQUIRE_THRTILT | NAV_AUTO_RTH,
+        .mapToFlightModes = NAV_RTH_MODE | NAV_ALTHOLD_MODE,
+        .mwState = MW_NAV_STATE_RTH_ENROUTE,
+        .mwError = MW_NAV_ERROR_NONE,
+        .onEvent = {
+            [NAV_FSM_EVENT_TIMEOUT]                             = NAV_STATE_RTH_TRACKBACK,           // re-process the state
+            [NAV_FSM_EVENT_SWITCH_TO_NAV_STATE_RTH_INITIALIZE]  = NAV_STATE_RTH_INITIALIZE,
+            [NAV_FSM_EVENT_SWITCH_TO_EMERGENCY_LANDING]         = NAV_STATE_EMERGENCY_LANDING_INITIALIZE,
+            [NAV_FSM_EVENT_SWITCH_TO_IDLE]                      = NAV_STATE_IDLE,
+        }
+    },
+    // CR66
     [NAV_STATE_RTH_HEAD_HOME] = {
         .persistentId = NAV_PERSISTENT_ID_RTH_HEAD_HOME,
         .onEntry = navOnEnteringState_NAV_STATE_RTH_HEAD_HOME,
@@ -562,7 +580,6 @@ static const navigationFSMStateDescriptor_t navFSM[NAV_STATE_COUNT] = {
         .onEvent = {
             [NAV_FSM_EVENT_TIMEOUT]                             = NAV_STATE_RTH_HEAD_HOME,           // re-process the state
             [NAV_FSM_EVENT_SUCCESS]                             = NAV_STATE_RTH_HOVER_PRIOR_TO_LANDING,
-            [NAV_FSM_EVENT_SWITCH_TO_NAV_STATE_RTH_INITIALIZE]  = NAV_STATE_RTH_INITIALIZE,     // CR66
             [NAV_FSM_EVENT_SWITCH_TO_IDLE]                      = NAV_STATE_IDLE,
             [NAV_FSM_EVENT_SWITCH_TO_ALTHOLD]                   = NAV_STATE_ALTHOLD_INITIALIZE,
             [NAV_FSM_EVENT_SWITCH_TO_POSHOLD_3D]                = NAV_STATE_POSHOLD_3D_INITIALIZE,
@@ -936,18 +953,6 @@ static flightModeFlags_e navGetMappedFlightModes(navigationFSMState_t state)
 
 navigationFSMStateFlags_t navGetCurrentStateFlags(void)
 {
-	// General use debug
-	// DEBUG_SET(DEBUG_CRUISE, 0, posControl.flags.missionResume);
-    // DEBUG_SET(DEBUG_CRUISE, 2, 55);
-    // DEBUG_SET(DEBUG_CRUISE, 2, 77);
-    DEBUG_SET(DEBUG_CRUISE, 0, posControl.rthTBPointsList[0].x);
-    DEBUG_SET(DEBUG_CRUISE, 1, posControl.rthTBPointsList[1].x);
-    DEBUG_SET(DEBUG_CRUISE, 2, posControl.rthTBPointsList[2].x);
-    DEBUG_SET(DEBUG_CRUISE, 3, posControl.rthTBPointsList[3].x);
-    DEBUG_SET(DEBUG_CRUISE, 4, posControl.rthTBPointsList[4].x);
-    DEBUG_SET(DEBUG_CRUISE, 5, posControl.rthTBPointsList[5].x);
-    DEBUG_SET(DEBUG_CRUISE, 7, posControl.activeRthTBPointIndex);
-
     return navGetStateFlags(posControl.navState);
 }
 
@@ -1186,11 +1191,11 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_INITIALIZE(navigati
             return NAV_FSM_EVENT_SWITCH_TO_RTH_LANDING;   // NAV_STATE_RTH_HOVER_PRIOR_TO_LANDING
         }
         else {
-            // CR66
+            // Switch to RTH trackback if distance set and failsafe active CR66
             if (navConfig()->general.rth_trackback_distance && posControl.flags.forcedRTHActivated) {
                 if (posControl.activeRthTBPointIndex >= 0) {
                     posControl.flags.rthTrackbackActive = true;
-                    return NAV_FSM_EVENT_SUCCESS;
+                    return NAV_FSM_EVENT_SWITCH_TO_NAV_STATE_RTH_TRACKBACK;
                 }
             }
             // CR66
@@ -1230,7 +1235,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_CLIMB_TO_SAFE_ALT(n
 {
     UNUSED(previousState);
 
-    if (!STATE(ALTITUDE_CONTROL) || posControl.flags.rthTrackbackActive) {  // CR66
+    if (!STATE(ALTITUDE_CONTROL)) {
         //If altitude control is not a thing, switch to RTH in progress instead
         return NAV_FSM_EVENT_SUCCESS; //Will cause NAV_STATE_RTH_HEAD_HOME
     }
@@ -1306,38 +1311,84 @@ static void rthSaveTrackback(void)
 {
     if (!navConfig()->general.rth_trackback_distance || !ARMING_FLAG(ARMED) || posControl.flags.forcedRTHActivated) return;
 
-    // Record points based on distance travelled from last point and significant change in course/altitude until
+    // Record trackback points based on distance travelled from last point and significant change in course/altitude until
     // max points limit reached. Overwrite older points from then on.
-    bool saveTrackpoint = false;
-    if (posControl.activeRthTBPointIndex < 0) {
-        saveTrackpoint = posControl.homeDistance > 300;
-    } else {
-        saveTrackpoint = calculateDistanceToDestination(&posControl.rthTBPointsList[posControl.activeRthTBPointIndex]) > 300;
-    }
+    if (posControl.flags.estPosStatus >= EST_USABLE && posControl.flags.estAltStatus >= EST_USABLE) {
+        bool saveTrackpoint = false;
+        static int16_t lastCOG = 0;
 
-    if (saveTrackpoint) {
-        if (posControl.activeRthTBPointIndex == (NAV_RTH_TRACKBACK_POINTS - 1)) {
-            // memmove(response, posControl.rthTBPointsList, (forwardResponsesCount - i) * sizeof(*response));
-            for (uint8_t i = 0; i < (NAV_RTH_TRACKBACK_POINTS - 1); i++) {
-                posControl.rthTBPointsList[i] = posControl.rthTBPointsList[i + 1];
-            }
-            DEBUG_SET(DEBUG_CRUISE, 6, 7);
+        // only start recording when some distance from home
+        if (posControl.activeRthTBPointIndex < 0) {
+            saveTrackpoint = posControl.homeDistance > 500;
         } else {
-            posControl.activeRthTBPointIndex++;
-            DEBUG_SET(DEBUG_CRUISE, 6, 17);
+            const bool distChange = calculateDistanceToDestination(&posControl.rthTBPointsList[posControl.activeRthTBPointIndex]) > (METERS_TO_CENTIMETERS(navConfig()->general.rth_trackback_distance) / NAV_RTH_TRACKBACK_POINTS);
+            const bool courseChange = false;
+            // const bool courseChange = ABS((wrap_18000(10 * gpsSol.groundCourse) - wrap_18000(10 * lastCOG)) / 100) > 30;
+            const bool altChange = fabsf(posControl.rthTBPointsList[posControl.activeRthTBPointIndex].z - posControl.actualState.abs.pos.z) > 1000;
+
+            saveTrackpoint = distChange || courseChange || altChange;
         }
-        posControl.rthTBPointsList[posControl.activeRthTBPointIndex] = posControl.actualState.abs.pos;
-        posControl.rthTBLastSavedIndex = posControl.activeRthTBPointIndex;
+
+        // when trackpoint array full overwrite from start of array using rthTBWrapAroundCounter to track overwrite position
+        if (saveTrackpoint) {
+            if (posControl.activeRthTBPointIndex == (NAV_RTH_TRACKBACK_POINTS - 1)) {
+                posControl.rthTBWrapAroundCounter = posControl.activeRthTBPointIndex = 0;
+            } else {
+                posControl.activeRthTBPointIndex++;
+                if (posControl.rthTBWrapAroundCounter > -1) {
+                    posControl.rthTBWrapAroundCounter = posControl.activeRthTBPointIndex;
+                }
+            }
+            posControl.rthTBPointsList[posControl.activeRthTBPointIndex] = posControl.actualState.abs.pos;
+            posControl.rthTBLastSavedIndex = posControl.activeRthTBPointIndex;
+            lastCOG = gpsSol.groundCourse;
+        }
     }
 }
 
 static fpVector3_t * rthGetTrackbackPos(void)
 {
+    // trackback altitude never lower than altitude of start point
     if (posControl.rthTBPointsList[posControl.activeRthTBPointIndex].z < posControl.rthTBPointsList[posControl.rthTBLastSavedIndex].z) {
         posControl.rthTBPointsList[posControl.activeRthTBPointIndex].z = posControl.rthTBPointsList[posControl.rthTBLastSavedIndex].z;
     }
 
     return &posControl.rthTBPointsList[posControl.activeRthTBPointIndex];
+}
+
+static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_TRACKBACK(navigationFSMState_t previousState)
+{
+    UNUSED(previousState);
+
+    /* If position sensors unavailable - land immediately */
+    if ((posControl.flags.estHeadingStatus == EST_NONE) || checkForPositionSensorTimeout()) {
+        return NAV_FSM_EVENT_SWITCH_TO_EMERGENCY_LANDING;
+    }
+
+    if (posControl.flags.estPosStatus >= EST_USABLE) {
+        fpVector3_t * trackPointPos;
+        if (posControl.activeRthTBPointIndex > -1) {
+            trackPointPos = rthGetTrackbackPos();
+        } else {
+            posControl.flags.rthTrackbackActive = false;
+            return NAV_FSM_EVENT_SWITCH_TO_NAV_STATE_RTH_INITIALIZE;    // procede to home after final trackback point
+        }
+
+        if (isWaypointPositionReached(trackPointPos, false)) {
+            posControl.activeRthTBPointIndex--;
+
+            if (posControl.rthTBWrapAroundCounter > -1 && posControl.activeRthTBPointIndex < 0) {
+                posControl.activeRthTBPointIndex = NAV_RTH_TRACKBACK_POINTS - 1;
+            }
+            if (posControl.activeRthTBPointIndex - posControl.rthTBWrapAroundCounter == 0) {
+                posControl.rthTBWrapAroundCounter = posControl.activeRthTBPointIndex = -1;
+            }
+        } else {
+            setDesiredPosition(trackPointPos, 0, NAV_POS_UPDATE_Z | NAV_POS_UPDATE_XY);
+        }
+    }
+
+    return NAV_FSM_EVENT_NONE;
 }
 // CR66
 static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_HEAD_HOME(navigationFSMState_t previousState)
@@ -1354,27 +1405,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_HEAD_HOME(navigatio
     // If we have position sensor - continue home
     if ((posControl.flags.estPosStatus >= EST_USABLE)) {
         fpVector3_t * tmpHomePos = rthGetHomeTargetPosition(RTH_HOME_ENROUTE_PROPORTIONAL);
-        // CR66
-        bool isHeadingHome = true;
-        if (posControl.flags.rthTrackbackActive) {
-            if (posControl.activeRthTBPointIndex >= 0) {
-                tmpHomePos = rthGetTrackbackPos();
-                isHeadingHome = false;
-            } else {
-                posControl.flags.rthTrackbackActive = false;
-                return NAV_FSM_EVENT_SWITCH_TO_NAV_STATE_RTH_INITIALIZE;
-                // navSetNewFSMState(NAV_STATE_RTH_INITIALIZE);
-                // return NAV_FSM_EVENT_NONE;
-            }
-        }
-        // CR66
-        if (isWaypointPositionReached(tmpHomePos, isHeadingHome)) {
-            // CR66
-            if (posControl.flags.rthTrackbackActive) {
-                posControl.activeRthTBPointIndex--;
-                return NAV_FSM_EVENT_NONE;
-            }
-            // CR66
+        if (isWaypointPositionReached(tmpHomePos, true)) {
             // Successfully reached position target - update XYZ-position
             setDesiredPosition(tmpHomePos, posControl.rthState.homePosition.yaw, NAV_POS_UPDATE_XY | NAV_POS_UPDATE_Z | NAV_POS_UPDATE_HEADING);
             return NAV_FSM_EVENT_SUCCESS;       // NAV_STATE_RTH_HOVER_PRIOR_TO_LANDING
@@ -2445,7 +2476,13 @@ static navigationHomeFlags_t navigationActualStateHomeValidity(void)
 
 void checkSafeHomeState(bool shouldBeEnabled)
 {
-	if (navConfig()->general.flags.safehome_usage_mode == SAFEHOME_USAGE_OFF) {
+    // CR66
+    const bool safehomeNotApplicable = navConfig()->general.flags.safehome_usage_mode == SAFEHOME_USAGE_OFF ||
+                                       posControl.flags.rthTrackbackActive ||
+                                       (!safehome_applied && posControl.homeDistance < navConfig()->general.min_rth_distance);
+
+	if (safehomeNotApplicable) {
+    // CR66
 		shouldBeEnabled = false;
 	} else if (navConfig()->general.flags.safehome_usage_mode == SAFEHOME_USAGE_RTH_FS && shouldBeEnabled) {
 		// if safehomes are only used with failsafe and we're trying to enable safehome
@@ -3349,8 +3386,10 @@ void applyWaypointNavigationAndAltitudeHold(void)
         // If we are disarmed, abort forced RTH or Emergency Landing
         posControl.flags.forcedRTHActivated = false;
         posControl.flags.forcedEmergLandingActivated = false;
-        // Reset RTH trackback index to "empty"   CR66
+        // Reset RTH trackback  CR66
         posControl.activeRthTBPointIndex = -1;
+        posControl.flags.rthTrackbackActive = false;
+        posControl.rthTBWrapAroundCounter = -1;
         //  ensure WP missions always restart from first waypoint after disarm
         posControl.activeWaypointIndex = 0;
         return;
@@ -3421,10 +3460,21 @@ static bool isWaypointMissionValid(void)
 {
     return posControl.waypointListValid && (posControl.waypointCount > 0);
 }
-// CR6 xxxxxxxxxxxxxxxxxxxxx
-static navigationFSMEvent_t selectNavEventFromBoxModeInput(bool launchBypass)
-// CR6 xxxxxxxxxxxxxxxxxxxxx
+
+static navigationFSMEvent_t selectNavEventFromBoxModeInput(bool launchBypass)   // CR6
 {
+	// General use debug
+	// DEBUG_SET(DEBUG_CRUISE, 0, posControl.flags.missionResume);
+    // DEBUG_SET(DEBUG_CRUISE, 2, 55);
+    // DEBUG_SET(DEBUG_CRUISE, 2, 77);
+    DEBUG_SET(DEBUG_CRUISE, 0, posControl.rthTBPointsList[0].x);
+    DEBUG_SET(DEBUG_CRUISE, 1, posControl.rthTBPointsList[1].x);
+    DEBUG_SET(DEBUG_CRUISE, 2, posControl.rthTBPointsList[2].x);
+    DEBUG_SET(DEBUG_CRUISE, 3, posControl.rthTBPointsList[3].x);
+    DEBUG_SET(DEBUG_CRUISE, 4, posControl.rthTBPointsList[4].x);
+    DEBUG_SET(DEBUG_CRUISE, 5, posControl.rthTBPointsList[5].x);
+    DEBUG_SET(DEBUG_CRUISE, 7, posControl.activeRthTBPointIndex);
+
     static bool canActivateWaypoint = false;
     static bool canActivateLaunchMode = false;
 
@@ -3514,7 +3564,7 @@ static navigationFSMEvent_t selectNavEventFromBoxModeInput(bool launchBypass)
             // This might switch to emergency landing controller if GPS is unavailable
             return NAV_FSM_EVENT_SWITCH_TO_RTH;
         }
-        posControl.flags.rthTrackbackActive = false;    // disable rth trackback CR66
+        posControl.flags.rthTrackbackActive = false;    // deactivate rth trackback CR66
 
         /* Pilot-triggered RTH (can override MANUAL), also fall-back for WP if there is no mission loaded
          * Prevent MANUAL falling back to RTH if selected during active mission (canActivateWaypoint is set false on MANUAL selection)

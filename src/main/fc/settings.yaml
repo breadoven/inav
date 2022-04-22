@@ -2616,7 +2616,7 @@ groups:
         max: 65000
 # CR66
       - name: nav_rth_trackback_distance
-        description: "Maximum distance [m] over which trackback waypoints are recorded for RTH trackback feature. RTH trackback is disabled if set to 0."
+        description: "Maximum distance over which trackback points are recorded for RTH trackback option [m]. Set to 0 to disable RTH trackback."
         default_value: 0
         field: general.rth_trackback_distance
         max: 2000

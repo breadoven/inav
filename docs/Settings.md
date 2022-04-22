@@ -2158,7 +2158,7 @@ Calculated 1G of Acc axis Z to use in INS
 
 | Default | Min | Max |
 | --- | --- | --- |
-| 0.0 | 0 | 2000 |
+| 0 | 0 | 2000 |
 
 ---
 
@@ -3052,6 +3052,16 @@ Forward acceleration threshold for bungee launch of throw launch [cm/s/s], 1G = 
 
 ---
 
+### nav_fw_launch_allow_throttle_low
+
+Allow launch sequence with throttle maintained low throughout. When main launch sequence completes control is maintained with Nav cruise throttle until sticks moved/throttle raised or control switches to other Nav mode if preselected
+
+| Default | Min | Max |
+| --- | --- | --- |
+| OFF | OFF | ON |
+
+---
+
 ### nav_fw_launch_climb_angle
 
 Climb angle (attitude of model, not climb slope) for launch sequence (degrees), is also restrained by global max_angle_inclination_pit
@@ -3622,6 +3632,16 @@ P gain of altitude PID controller (Multirotor)
 
 ---
 
+### nav_mc_vel_xy_accel_tweak
+
+Fiddle factor to tune bank angle response to specific quad performance
+
+| Default | Min | Max |
+| --- | --- | --- |
+| 100 | 10 | 100 |
+
+---
+
 ### nav_mc_vel_xy_d
 
 D gain of Position-Rate (Velocity to Acceleration) PID controller. It can damp P and I. Increasing D might help when drone overshoots target.
@@ -3892,6 +3912,16 @@ If set to ON drone will return tail-first. Obviously meaningless for airplanes.
 
 ---
 
+### nav_rth_trackback_distance
+
+Maximum distance over which trackback points are recorded for RTH trackback option [m]. Set to 0 to disable RTH trackback.
+
+| Default | Min | Max |
+| --- | --- | --- |
+| 0 | 0 | 2000 |
+
+---
+
 ### nav_use_fw_yaw_control
 
 Enables or Disables the use of the heading PID controller on fixed wing. Heading PID controller is always enabled for rovers and boats
@@ -4039,6 +4069,16 @@ Max pitch, in degrees, for OSD artificial horizon
 | Default | Min | Max |
 | --- | --- | --- |
 | 20 | 10 | 90 |
+
+---
+
+### osd_ahi_pitch_interval
+
+Draws AHI at increments of the set pitch interval over full pitch range. AHI line is drawn with ends offset when pitch first exceeds interval with offset increasing with increasing pitch. Offset direction changes between climb and dive. Set to 0 to disable (Not for pixel OSD)
+
+| Default | Min | Max |
+| --- | --- | --- |
+| 10 | 0 | 30 |
 
 ---
 
@@ -4419,6 +4459,16 @@ Temperature under which the IMU temperature OSD element will start blinking (dec
 | Default | Min | Max |
 | --- | --- | --- |
 | -200 | -550 | 1250 |
+
+---
+
+### osd_infocycle_interval_time
+
+Info Cycle field item display time (milliseconds).
+
+| Default | Min | Max |
+| --- | --- | --- |
+| 2000 | 500 | 5000 |
 
 ---
 
@@ -5519,6 +5569,16 @@ Total flight time [in seconds]. The value is updated on every disarm when "stats
 | Default | Min | Max |
 | --- | --- | --- |
 | 0 |  | 2147483647 |
+
+---
+
+### switch_arm_delay
+
+Delay before arming when set by switch (ms) [0-1000]
+
+| Default | Min | Max |
+| --- | --- | --- |
+| 250 | 0 | 1000 |
 
 ---
 
