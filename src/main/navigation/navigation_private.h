@@ -34,7 +34,6 @@
 #define NAV_VEL_Z_DERIVATIVE_CUT_HZ 5.0f
 #define NAV_VEL_Z_ERROR_CUT_HZ 5.0f
 #define NAV_ACCELERATION_XY_MAX             980.0f  // cm/s/s       // approx 45 deg lean angle
-#define NAV_RTH_TRACKBACK_POINTS            10      // max number RTH trackback points  CR66
 
 #define INAV_SURFACE_MAX_DISTANCE           40
 
@@ -45,6 +44,8 @@
 #define MC_LAND_THR_STABILISE_DELAY         1       // seconds
 #define MC_LAND_DESCEND_THROTTLE            40      // uS
 #define MC_LAND_SAFE_SURFACE                5.0f    // cm
+
+#define NAV_RTH_TRACKBACK_POINTS            10      // max number RTH trackback points  CR66
 
 #define MAX_POSITION_UPDATE_INTERVAL_US     HZ2US(MIN_POSITION_UPDATE_RATE_HZ)        // convenience macro
 _Static_assert(MAX_POSITION_UPDATE_INTERVAL_US <= TIMEDELTA_MAX, "deltaMicros can overflow!");
