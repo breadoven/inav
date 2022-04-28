@@ -188,7 +188,11 @@ tables:
   - name: djiRssiSource
     values: ["RSSI", "CRSF_LQ"]
     enum: djiRssiSource_e
-
+    # CR66
+  - name: rth_trackback_mode
+    values: ["OFF", "ON", "FS"]
+    enum: rthTrackbackMode_e
+    # CR66
 
 constants:
   RPYL_PID_MIN: 0
@@ -2615,12 +2619,17 @@ groups:
         field: general.rth_home_altitude
         max: 65000
 # CR66
+      - name: nav_rth_trackback_mode
+        description: "Useage modes for RTH Trackback. OFF = disabled. ON = Normal and Failsafe RTH, FS = Failsafe RTH only."
+        default_value: "OFF"
+        field: general.flags.rth_trackback_mode
+        table: rth_trackback_mode
       - name: nav_rth_trackback_distance
-        description: "Maximum distance over which trackback points are recorded for RTH trackback option [m]. Set to 0 to disable RTH trackback."
-        default_value: 0
+        description: "Maximum distance over which trackback points are recorded for RTH trackback [m]."
+        default_value: 500
         field: general.rth_trackback_distance
         max: 2000
-        min: 0
+        min: 50
 # CR66
       - name: safehome_max_distance
         description: "In order for a safehome to be used, it must be less than this distance (in cm) from the arming point."
