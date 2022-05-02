@@ -1191,7 +1191,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_INITIALIZE(navigati
             return NAV_FSM_EVENT_SWITCH_TO_RTH_LANDING;   // NAV_STATE_RTH_HOVER_PRIOR_TO_LANDING
         }
         else {
-            // Switch to RTH trackback if selected  CR66
+            // Switch to RTH trackback  CR66
             if (navConfig()->general.flags.rth_trackback_mode == RTH_TRACKBACK_ON ||
                 (navConfig()->general.flags.rth_trackback_mode == RTH_TRACKBACK_FS && posControl.flags.forcedRTHActivated)) {
                 if (posControl.activeRthTBPointIndex >= 0) {
@@ -1341,7 +1341,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_TRACKBACK(navigatio
                 posControl.rthTBWrapAroundCounter = posControl.activeRthTBPointIndex = -1;
             }
         } else {
-            setDesiredPosition(rthGetTrackbackPos(), 0, NAV_POS_UPDATE_Z | NAV_POS_UPDATE_XY);
+            setDesiredPosition(rthGetTrackbackPos(), 0, NAV_POS_UPDATE_XY | NAV_POS_UPDATE_Z | NAV_POS_UPDATE_BEARING);
         }
     }
 
@@ -2160,7 +2160,20 @@ void updateActualHeading(bool headingValid, int32_t newHeading)
     posControl.actualState.sinYaw = sin_approx(CENTIDEGREES_TO_RADIANS(newHeading));
     posControl.actualState.cosYaw = cos_approx(CENTIDEGREES_TO_RADIANS(newHeading));
 }
+// CR66
+static int16_t getCourseOverGround(void)   // returns degrees
+{
+    /* Use GPS course over ground if available including for multirotor.
+     * Otherwise use gyro YAW for multirotor, apply rcCommand based YAW correction */
+    if (isGPSHeadingValid()) {
+        return DECIDEGREES_TO_DEGREES(gpsSol.groundCourse);
+    } else if (STATE(MULTIROTOR) && sensors(SENSOR_MAG) && posControl.flags.estHeadingStatus == EST_TRUSTED) {
+        return CENTIDEGREES_TO_DEGREES(wrap_36000(posControl.actualState.yaw + RADIANS_TO_CENTIDEGREES(atan2_approx(rcCommand[ROLL], rcCommand[PITCH]))));
+    }
 
+    return -1;    // no reliable COG
+}
+// CR66
 /*-----------------------------------------------------------
  * Returns pointer to currently used position (ABS or AGL) depending on surface tracking status
  *-----------------------------------------------------------*/
@@ -2616,66 +2629,70 @@ static void updateRthTrackback(void)
         return;
     }
 
-    // Record trackback points based on distance travelled from last point and significant change in course/altitude until
-    // max points limit reached. Overwrite older points from then on.
+    // Record trackback points based on significant change in course/altitude until
+    // points limit reached. Overwrite older points from then on.
     if (posControl.flags.estPosStatus >= EST_USABLE && posControl.flags.estAltStatus >= EST_USABLE) {
-        static int32_t lastTBTripDist;
-        static int32_t lastTBCourse;
-        static bool saveNewPoint;
-        int32_t currentCourse = -1;
-        bool altChange = false;
-        bool courseChange = false;
+        static int32_t previousTBTripDist;      // cm
+        static int16_t previousTBCourse;        // degrees
+        static int16_t previousTBAltitude;      // meters
+        static uint8_t distanceCounter = 0;
+        uint8_t distanceFactor = 4;             // default 5 distance increments
         bool saveTrackpoint = false;
 
-        // only start recording when some distance from home
+        // start recording when some distance from home
         if (posControl.activeRthTBPointIndex < 0) {
-            saveTrackpoint = posControl.homeDistance > 500;
-            saveNewPoint = true;
+            saveTrackpoint = posControl.homeDistance > METERS_TO_CENTIMETERS(50);    // XXXXXXXXXXXXXXXXXXXXXXX
+
+            previousTBCourse = CENTIDEGREES_TO_DEGREES(posControl.actualState.yaw);
+            previousTBAltitude = CENTIMETERS_TO_METERS(posControl.actualState.abs.pos.z);
+            previousTBTripDist = posControl.totalTripDistance;
         } else {
-            // Distance change
-            const bool distChange = posControl.totalTripDistance - lastTBTripDist > 500;
-
-            if (distChange) {
-                // Altitude change
-                altChange = fabsf(posControl.rthTBPointsList[posControl.activeRthTBPointIndex].z - posControl.actualState.abs.pos.z) > 1000;
-
-                // Course change
-                // if (isGPSHeadingValid()) {
-                if (posControl.actualState.velXY > 80) {
-                    currentCourse = wrap_36000(10 * gpsSol.groundCourse);
-                } else {
-                    currentCourse = wrap_36000(calculateBearingToDestination(&posControl.rthTBPointsList[posControl.activeRthTBPointIndex]) - 18000);
-                }
-                courseChange = currentCourse == -1 ? false : ABS((wrap_18000(currentCourse - lastTBCourse))) > 4500;
+            // Altitude change
+            if (ABS(previousTBAltitude - CENTIMETERS_TO_METERS(posControl.actualState.abs.pos.z)) > 10) {   // meters
+                saveTrackpoint = true;
+                previousTBAltitude = CENTIMETERS_TO_METERS(posControl.actualState.abs.pos.z);
             }
 
-            saveTrackpoint = distChange || altChange || courseChange;
+            // Minimum distance increment between course change track points.
+            const bool distanceIncrement = posControl.totalTripDistance - previousTBTripDist > METERS_TO_CENTIMETERS(10);    // XXXXXXXXXXXXXXXXXXXXXXX
+
+            if (distanceIncrement) {
+                // Course change
+                const int16_t courseOverGround = (getCourseOverGround());  // degrees
+                if (courseOverGround >= 0) {
+                    if (ABS(wrap_18000(DEGREES_TO_CENTIDEGREES(courseOverGround - previousTBCourse))) > DEGREES_TO_CENTIDEGREES(45)) {
+                        saveTrackpoint = true;
+                        previousTBCourse = courseOverGround;
+                    }
+                    distanceFactor = 9;     // 10 distance increments
+                }
+
+                // Distance change
+                // Distance based trackpoint logged if multiple distance increments occur without altitude or course change
+                saveTrackpoint = distanceCounter == distanceFactor ? true : saveTrackpoint;
+                distanceCounter = saveTrackpoint ? 0 : distanceCounter + 1;
+
+                previousTBTripDist = posControl.totalTripDistance;
+            }
+            DEBUG_SET(DEBUG_CRUISE, 4, gpsSol.groundCourse * 10);
+            DEBUG_SET(DEBUG_CRUISE, 5, getCourseOverGround() / 100);
+            DEBUG_SET(DEBUG_CRUISE, 3, distanceCounter);
+            DEBUG_SET(DEBUG_CRUISE, 1, posControl.actualState.yaw / 100);
         }
 
         // when trackpoint array full overwrite from start of array using rthTBWrapAroundCounter to track overwrite position
         if (saveTrackpoint) {
-            DEBUG_SET(DEBUG_CRUISE, 4, gpsSol.groundCourse * 10);
-            DEBUG_SET(DEBUG_CRUISE, 5, wrap_36000(calculateBearingToDestination(&posControl.rthTBPointsList[posControl.activeRthTBPointIndex]) - 18000));
-            DEBUG_SET(DEBUG_CRUISE, 6, currentCourse);
-            DEBUG_SET(DEBUG_CRUISE, 3, saveNewPoint);
-
-            if (saveNewPoint || altChange || courseChange) {
-                if (posControl.activeRthTBPointIndex == (NAV_RTH_TRACKBACK_POINTS - 1)) {
-                    posControl.rthTBWrapAroundCounter = posControl.activeRthTBPointIndex = 0;
-                } else {
-                    posControl.activeRthTBPointIndex++;
-                    if (posControl.rthTBWrapAroundCounter > -1) {
-                        posControl.rthTBWrapAroundCounter = posControl.activeRthTBPointIndex;
-                    }
+            if (posControl.activeRthTBPointIndex == (NAV_RTH_TRACKBACK_POINTS - 1)) {
+                posControl.rthTBWrapAroundCounter = posControl.activeRthTBPointIndex = 0;
+            } else {
+                posControl.activeRthTBPointIndex++;
+                if (posControl.rthTBWrapAroundCounter > -1) {
+                    posControl.rthTBWrapAroundCounter = posControl.activeRthTBPointIndex;
                 }
-                lastTBCourse = currentCourse;
-
-                saveNewPoint = altChange || courseChange || posControl.activeRthTBPointIndex == 0;
             }
 
             posControl.rthTBPointsList[posControl.activeRthTBPointIndex] = posControl.actualState.abs.pos;
             posControl.rthTBLastSavedIndex = posControl.activeRthTBPointIndex;
-            lastTBTripDist = posControl.totalTripDistance;
         }
     }
 }
@@ -3510,7 +3527,7 @@ static navigationFSMEvent_t selectNavEventFromBoxModeInput(bool launchBypass)   
     // DEBUG_SET(DEBUG_CRUISE, 2, 55);
     // DEBUG_SET(DEBUG_CRUISE, 2, 77);
     DEBUG_SET(DEBUG_CRUISE, 0, posControl.rthTBPointsList[0].x);
-    DEBUG_SET(DEBUG_CRUISE, 1, posControl.rthTBPointsList[1].x);
+    // DEBUG_SET(DEBUG_CRUISE, 1, posControl.rthTBPointsList[1].x);
     DEBUG_SET(DEBUG_CRUISE, 2, posControl.totalTripDistance);
     // DEBUG_SET(DEBUG_CRUISE, 3, posControl.rthTBPointsList[3].x);
     // DEBUG_SET(DEBUG_CRUISE, 4, posControl.rthTBPointsList[4].x);
