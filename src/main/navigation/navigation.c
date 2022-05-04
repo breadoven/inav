@@ -2670,12 +2670,12 @@ static void updateRthTrackback(void)
                 // Distance change
                 // Distance based trackpoint logged if multiple distance increments occur without altitude or course change
                 saveTrackpoint = distanceCounter == distanceFactor ? true : saveTrackpoint;
-                distanceCounter = saveTrackpoint ? 0 : distanceCounter + 1;
+                distanceCounter++;
 
                 previousTBTripDist = posControl.totalTripDistance;
             }
-            DEBUG_SET(DEBUG_CRUISE, 4, gpsSol.groundCourse * 10);
-            DEBUG_SET(DEBUG_CRUISE, 5, getCourseOverGround() / 100);
+            DEBUG_SET(DEBUG_CRUISE, 4, gpsSol.groundCourse / 10);
+            DEBUG_SET(DEBUG_CRUISE, 5, getCourseOverGround());
             DEBUG_SET(DEBUG_CRUISE, 3, distanceCounter);
             DEBUG_SET(DEBUG_CRUISE, 1, posControl.actualState.yaw / 100);
         }
@@ -2693,6 +2693,7 @@ static void updateRthTrackback(void)
 
             posControl.rthTBPointsList[posControl.activeRthTBPointIndex] = posControl.actualState.abs.pos;
             posControl.rthTBLastSavedIndex = posControl.activeRthTBPointIndex;
+            distanceCounter = 0;
         }
     }
 }
