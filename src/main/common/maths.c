@@ -27,7 +27,7 @@
 
 #ifdef USE_ARM_MATH
 #include "arm_math.h"
-#endif 
+#endif
 
 FILE_COMPILE_FOR_SPEED
 
@@ -527,7 +527,7 @@ float fast_fsqrtf(const double value) {
     float ret = 0.0f;
 #ifdef USE_ARM_MATH
     arm_sqrt_f32(value, &ret);
-#else 
+#else
     ret = sqrtf(value);
 #endif
     if (isnan(ret))

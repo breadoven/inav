@@ -753,3 +753,27 @@ int32_t navigationGetHeadingError(void)
 {
     return navHeadingError;
 }
+// CR67
+// function to calculate a, b, c constants for quadratic 3 point curve
+// // quadratic_t calc_quadratic_constants(const fpVector3_t firstCoord, const fpVector3_t secondCoord, const fpVector3_t thirdCoord)
+// // {
+    // // quadratic_t constants;
+    // // float X1 = firstCoord.x;
+    // // float Y1 = firstCoord.y;
+    // // float X2 = secondCoord.x;
+    // // float Y2 = secondCoord.y;
+    // // float X3 = thirdCoord.x;
+    // // float Y3 = thirdCoord.y;
+
+    // // float delta = X1*X1*X2 + X1*X3*X3 + X2*X2*X3 - X2*X3*X3 - X1*X1*X3 - X1*X2*X2;
+    // // float An = X2*Y1 + X1*Y3 + X3*Y2 - X2*Y3 - Y1*X3 - X1*Y2;
+    // // float Bn = X1*X1*Y3 + Y1*X3*X3 + X2*X2*Y3 - Y2*X3*X3 - X1*X1*Y3 - Y1*X2*X2;
+    // // float Cn = X1*X1*X2*Y3 + X1*Y2*X3*X3 + Y1*X2*X2*X3 - Y3*X2*X3*X3 - X1*X1*Y2*X3 - X1*X2*X2*Y3;
+
+    // // constants.a = An / delta;
+    // // constants.b = Bn / delta;
+    // // constants.c = Cn / delta;
+
+    // // return constants;
+// // }
+// CR67
