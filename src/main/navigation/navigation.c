@@ -2626,7 +2626,7 @@ static void updateRthTrackback(void)
         static uint8_t distanceCounter = 0;
         bool saveTrackpoint = false;
         bool GPSCourseIsValid = isGPSHeadingValid();
-        // bool GPSCourseIsValid = posControl.actualState.velXY > 80;
+        // bool GPSCourseIsValid = posControl.actualState.velXY > 60;
 
         // start recording when some distance from home
         if (posControl.activeRthTBPointIndex < 0) {
@@ -2648,15 +2648,15 @@ static void updateRthTrackback(void)
                 if (ABS(wrap_18000(DEGREES_TO_CENTIDEGREES(DECIDEGREES_TO_DEGREES(gpsSol.groundCourse) - previousTBCourse))) > DEGREES_TO_CENTIDEGREES(45)) {
                     saveTrackpoint = true;
                     DEBUG_SET(DEBUG_CRUISE, 6, 22);
-                } else if (distanceCounter >= 9) {      // Distance change
+                } else if (distanceCounter >= 9) {      // Distance change   9 XXXXXXXXXXX
                     // Distance based trackpoint logged if 10 distance increments occur without altitude or course change
-                    // and deviation from course path > 30m
+                    // and deviation from projected course path > 20m
                     fpVector3_t virtualCoursePoint;
                     int32_t distToPrevPoint = calculateDistanceToDestination(&posControl.rthTBPointsList[posControl.activeRthTBPointIndex]);
                     virtualCoursePoint.x = posControl.rthTBPointsList[posControl.activeRthTBPointIndex].x + distToPrevPoint * cos_approx(DEGREES_TO_RADIANS(previousTBCourse));
                     virtualCoursePoint.y = posControl.rthTBPointsList[posControl.activeRthTBPointIndex].y + distToPrevPoint * sin_approx(DEGREES_TO_RADIANS(previousTBCourse));
 
-                    saveTrackpoint = calculateDistanceToDestination(&virtualCoursePoint) > METERS_TO_CENTIMETERS(30);   // XXXXXXXXXXXXX
+                    saveTrackpoint = calculateDistanceToDestination(&virtualCoursePoint) > METERS_TO_CENTIMETERS(20);   // XXXXXXXXXXXXX 20
 
                     DEBUG_SET(DEBUG_CRUISE, 0, distToPrevPoint);
                     DEBUG_SET(DEBUG_CRUISE, 1, calculateDistanceToDestination(&virtualCoursePoint));

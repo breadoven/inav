@@ -294,7 +294,13 @@ static void calculateVirtualPositionTarget_FW(float trackingPeriod)
         posErrorY = loiterTargetY - navGetCurrentActualPositionAndVelocity()->pos.y;
         distanceToActualTarget = calc_length_pythagorean_2D(posErrorX, posErrorY);
     }
-
+    // CR67
+    // } else if (calc_quadratic_constants()) {
+        // posErrorX = constrainf(posErrorX / 100, 100, 1000);
+        // posErrorY = An * sq(posErrorX) + Bn * posErrorX + Cn;
+        // distanceToActualTarget = calc_length_pythagorean_2D(posErrorX, posErrorY);
+    // }
+    // CR67
     // Calculate virtual waypoint
     virtualDesiredPosition.x = navGetCurrentActualPositionAndVelocity()->pos.x + posErrorX * (trackingDistance / distanceToActualTarget);
     virtualDesiredPosition.y = navGetCurrentActualPositionAndVelocity()->pos.y + posErrorY * (trackingDistance / distanceToActualTarget);
