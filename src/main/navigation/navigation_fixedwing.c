@@ -262,7 +262,32 @@ static int8_t loiterDirection(void) {
 
     return dir;
 }
+// CR67
+// function to calculate a, b, c constants for quadratic 3 point curve
+// bool calc_quadratic_constants(quadratic_t * constants, const fpVector3_t firstCoord, const fpVector3_t secondCoord, const fpVector3_t thirdCoord)
+// {
+    // float X1 = firstCoord.x;
+    // float Y1 = firstCoord.y;
+    // float X2 = secondCoord.x;
+    // float Y2 = secondCoord.y;
+    // float X3 = thirdCoord.x;
+    // float Y3 = thirdCoord.y;
 
+    // float delta = X1*X1*X2 + X1*X3*X3 + X2*X2*X3 - X2*X3*X3 - X1*X1*X3 - X1*X2*X2;
+    // if (delta == 0.0f) {
+        // return false;
+    // }
+    // float An = X2*Y1 + X1*Y3 + X3*Y2 - X2*Y3 - Y1*X3 - X1*Y2;
+    // float Bn = X1*X1*Y3 + Y1*X3*X3 + X2*X2*Y3 - Y2*X3*X3 - X1*X1*Y3 - Y1*X2*X2;
+    // float Cn = X1*X1*X2*Y3 + X1*Y2*X3*X3 + Y1*X2*X2*X3 - Y3*X2*X3*X3 - X1*X1*Y2*X3 - X1*X2*X2*Y3;
+
+    // constants->a = An / delta;
+    // constants->b = Bn / delta;
+    // constants->c = Cn / delta;
+
+    // return true;
+// }
+// CR67
 static void calculateVirtualPositionTarget_FW(float trackingPeriod)
 {
     float posErrorX = posControl.desiredState.pos.x - navGetCurrentActualPositionAndVelocity()->pos.x;
@@ -295,10 +320,62 @@ static void calculateVirtualPositionTarget_FW(float trackingPeriod)
         distanceToActualTarget = calc_length_pythagorean_2D(posErrorX, posErrorY);
     }
     // CR67
-    // } else if (calc_quadratic_constants()) {
-        // posErrorX = constrainf(posErrorX / 100, 100, 1000);
-        // posErrorY = An * sq(posErrorX) + Bn * posErrorX + Cn;
-        // distanceToActualTarget = calc_length_pythagorean_2D(posErrorX, posErrorY);
+    // } else if (posControl.flags.rthTrackbackActive) {   // || FLIGHT_MODE(NAV_WP_MODE)) {
+        // static quadratic_t constants;
+        // static uint8_t previousIndex;
+        // static bool curveValid;
+        // fpVector3_t coords1;
+        // fpVector3_t coords2;
+        // fpVector3_t coords3;
+        // bool newCurve = false;
+
+        // // if (FLIGHT_MODE(NAV_WP_MODE)) {
+
+        // // } else
+        // if (posControl.flags.rthTrackbackActive && (posControl.rthTBWrapAroundCounter > -1 || posControl.activeRthTBPointIndex > 2)) {
+            // if (posControl.activeRthTBPointIndex == posControl.rthTBLastSavedIndex) {
+                // previousIndex = posControl.activeRthTBPointIndex;
+                // curveValid = false;
+            // } else if (posControl.activeRthTBPointIndex != previousIndex) {
+                // previousIndex = posControl.activeRthTBPointIndex;
+
+                // uint8_t startPoint = posControl.rthTBLastSavedIndex;
+                // uint8_t endPoint = 0;
+                // if (posControl.rthTBWrapAroundCounter > -1) {
+                    // startPoint = posControl.rthTBWrapAroundCounter;
+                    // endPoint = startPoint + 1;
+                // }
+
+                // if (posControl.activeRthTBPointIndex != startPoint && posControl.activeRthTBPointIndex != endPoint) {
+                    // int8_t coords1Index = posControl.activeRthTBPointIndex + 1;
+                    // if (coords1Index > NAV_RTH_TRACKBACK_POINTS - 1) coords1Index = 0;
+                    // int8_t coords3Index = posControl.activeRthTBPointIndex - 1;
+                    // if (coords3Index < 0) coords3Index = NAV_RTH_TRACKBACK_POINTS - 1;
+
+                    // coords1 = posControl.rthTBPointsList[coords1Index];
+                    // coords2 = posControl.rthTBPointsList[posControl.activeRthTBPointIndex];
+                    // coords3 = posControl.rthTBPointsList[coords3Index];
+
+                    // newCurve = true;
+                // } else {
+                    // curveValid = false;
+                // }
+            // }
+        // }
+
+        // if (newCurve) {
+            // curveValid = calc_quadratic_constants(&constants, coords1, coords2, coords3);
+            // DEBUG_SET(DEBUG_CRUISE, 4, constants.a * 1000000);
+            // DEBUG_SET(DEBUG_CRUISE, 5, constants.b * 1000);
+            // DEBUG_SET(DEBUG_CRUISE, 3, constants.c);
+        // }
+
+        // if (curveValid) {
+            // posErrorX = 100.0f * posErrorX / fabsf(posErrorX);
+            // float tempPosX = posErrorX + navGetCurrentActualPositionAndVelocity()->pos.x;
+            // posErrorY = constants.a * sq(tempPosX) + constants.b * tempPosX + constants.c - navGetCurrentActualPositionAndVelocity()->pos.y;
+            // distanceToActualTarget = calc_length_pythagorean_2D(posErrorX, posErrorY);
+        // }
     // }
     // CR67
     // Calculate virtual waypoint
@@ -759,27 +836,3 @@ int32_t navigationGetHeadingError(void)
 {
     return navHeadingError;
 }
-// CR67
-// function to calculate a, b, c constants for quadratic 3 point curve
-// // quadratic_t calc_quadratic_constants(const fpVector3_t firstCoord, const fpVector3_t secondCoord, const fpVector3_t thirdCoord)
-// // {
-    // // quadratic_t constants;
-    // // float X1 = firstCoord.x;
-    // // float Y1 = firstCoord.y;
-    // // float X2 = secondCoord.x;
-    // // float Y2 = secondCoord.y;
-    // // float X3 = thirdCoord.x;
-    // // float Y3 = thirdCoord.y;
-
-    // // float delta = X1*X1*X2 + X1*X3*X3 + X2*X2*X3 - X2*X3*X3 - X1*X1*X3 - X1*X2*X2;
-    // // float An = X2*Y1 + X1*Y3 + X3*Y2 - X2*Y3 - Y1*X3 - X1*Y2;
-    // // float Bn = X1*X1*Y3 + Y1*X3*X3 + X2*X2*Y3 - Y2*X3*X3 - X1*X1*Y3 - Y1*X2*X2;
-    // // float Cn = X1*X1*X2*Y3 + X1*Y2*X3*X3 + Y1*X2*X2*X3 - Y3*X2*X3*X3 - X1*X1*Y2*X3 - X1*X2*X2*Y3;
-
-    // // constants.a = An / delta;
-    // // constants.b = Bn / delta;
-    // // constants.c = Cn / delta;
-
-    // // return constants;
-// // }
-// CR67

@@ -347,11 +347,11 @@ typedef enum {
     RTH_HOME_FINAL_LAND,            // Home position and altitude
 } rthTargetMode_e;
 // CR67
-// // typedef struct {
-    // // float a;
-    // // float b;
-    // // float c;
-// // } quadratic_t;
+// typedef struct {
+    // float a;
+    // float b;
+    // float c;
+// } quadratic_t;
 // CR67
 typedef struct {
     /* Flags and navigation system state */
