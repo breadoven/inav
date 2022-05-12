@@ -1192,11 +1192,10 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_INITIALIZE(navigati
         }
         else {
             // Switch to RTH trackback  CR66
-            bool wpRthActive = previousState == NAV_STATE_WAYPOINT_PRE_ACTION;  // used to prevent trackback if WP RTH
             bool trackbackActive = navConfig()->general.flags.rth_trackback_mode == RTH_TRACKBACK_ON ||
                                    (navConfig()->general.flags.rth_trackback_mode == RTH_TRACKBACK_FS && posControl.flags.forcedRTHActivated);
 
-            if (trackbackActive && posControl.activeRthTBPointIndex >= 0 && !wpRthActive) {
+            if (trackbackActive && posControl.activeRthTBPointIndex >= 0 && !isWaypointMissionRTHActive()) {
                 posControl.flags.rthTrackbackActive = true;
                 calculateAndSetActiveWaypointToLocalPosition(rthGetTrackbackPos());
                 return NAV_FSM_EVENT_SWITCH_TO_NAV_STATE_RTH_TRACKBACK;
