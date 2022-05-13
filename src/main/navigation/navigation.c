@@ -2629,7 +2629,7 @@ static void updateRthTrackback(void)
 
         // start recording when some distance from home
         if (posControl.activeRthTBPointIndex < 0) {
-            saveTrackpoint = posControl.homeDistance > METERS_TO_CENTIMETERS(50);    // XXXXXXXXXXXXXXXXXXXXXXX
+            saveTrackpoint = posControl.homeDistance > METERS_TO_CENTIMETERS(50);    // 50m XXXXXXXXXXXXXXXXXXXXXXX
 
             previousTBCourse = CENTIDEGREES_TO_DEGREES(posControl.actualState.yaw);
             previousTBAltitude = CENTIMETERS_TO_METERS(posControl.actualState.abs.pos.z);
@@ -2669,8 +2669,8 @@ static void updateRthTrackback(void)
                 saveTrackpoint = calculateDistanceToDestination(&posControl.rthTBPointsList[posControl.activeRthTBPointIndex]) > METERS_TO_CENTIMETERS(20);
                 previousTBTripDist = posControl.totalTripDistance;
             }
-            DEBUG_SET(DEBUG_CRUISE, 4, gpsSol.groundCourse / 10);
-            DEBUG_SET(DEBUG_CRUISE, 5, GPSCourseIsValid);
+            // DEBUG_SET(DEBUG_CRUISE, 4, gpsSol.groundCourse / 10);
+            // DEBUG_SET(DEBUG_CRUISE, 5, GPSCourseIsValid);
             DEBUG_SET(DEBUG_CRUISE, 3, distanceCounter);
         }
 
