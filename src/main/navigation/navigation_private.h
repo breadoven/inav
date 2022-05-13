@@ -346,13 +346,7 @@ typedef enum {
     RTH_HOME_FINAL_HOVER,           // Final hover altitude (if rth_home_altitude is set)
     RTH_HOME_FINAL_LAND,            // Home position and altitude
 } rthTargetMode_e;
-// CR67
-// typedef struct {
-    // float a;
-    // float b;
-    // float c;
-// } quadratic_t;
-// CR67
+
 typedef struct {
     /* Flags and navigation system state */
     navigationFSMState_t        navState;
