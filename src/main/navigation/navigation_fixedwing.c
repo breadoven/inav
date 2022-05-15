@@ -360,7 +360,15 @@ static void updatePositionHeadingController_FW(timeUs_t currentTimeUs, timeDelta
     DEBUG_SET(DEBUG_CRUISE, 4, virtualTargetBearing);
     if ((FLIGHT_MODE(NAV_WP_MODE) && posControl.activeWaypointIndex > 0 && !isNavHoldPositionActive()) ||
         (posControl.flags.rthTrackbackActive && posControl.activeRthTBPointIndex != posControl.rthTBLastSavedIndex)) {
-        virtualTargetBearing -= wrap_18000(posControl.activeWaypoint.yaw - virtualTargetBearing);
+        // Offset WP approach to aid turn to next WP
+        // if (posControl.wpDistance < 1500 && posControl.wpDistance > 500 && ) {
+            // fpVector3_t nextWPPos;
+            // mapWaypointToLocalPosition(&nextWPPos, &posControl.waypointList[posControl.activeWaypointIndex + 1], 0);
+            // int32_t nextWPBearing = calculateBearingToDestination(&nextWPPos);
+            // virtualTargetBearing += wrap_18000(wrap_360(nextWPBearing - posControl.activeWaypoint.yaw) > 18000 ? 20 : -20);
+        // } else {
+            virtualTargetBearing -= wrap_18000(posControl.activeWaypoint.yaw - virtualTargetBearing);
+        // }
     }
     DEBUG_SET(DEBUG_CRUISE, 5, virtualTargetBearing);
     // CR67
