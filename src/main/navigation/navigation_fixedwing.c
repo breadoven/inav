@@ -356,22 +356,61 @@ static void updatePositionHeadingController_FW(timeUs_t currentTimeUs, timeDelta
 
     // We have virtual position target, calculate heading error
     int32_t virtualTargetBearing = calculateBearingToDestination(&virtualDesiredPosition);
+
     // CR67
     DEBUG_SET(DEBUG_CRUISE, 4, virtualTargetBearing);
-    if ((FLIGHT_MODE(NAV_WP_MODE) && posControl.activeWaypointIndex > 0 && !isNavHoldPositionActive()) ||
-        (posControl.flags.rthTrackbackActive && posControl.activeRthTBPointIndex != posControl.rthTBLastSavedIndex)) {
-        // Offset WP approach to aid turn to next WP
-        // if (posControl.wpDistance < 1500 && posControl.wpDistance > 500 && ) {
-            // fpVector3_t nextWPPos;
-            // mapWaypointToLocalPosition(&nextWPPos, &posControl.waypointList[posControl.activeWaypointIndex + 1], 0);
-            // int32_t nextWPBearing = calculateBearingToDestination(&nextWPPos);
-            // virtualTargetBearing += wrap_18000(wrap_360(nextWPBearing - posControl.activeWaypoint.yaw) > 18000 ? 20 : -20);
-        // } else {
-            virtualTargetBearing -= wrap_18000(posControl.activeWaypoint.yaw - virtualTargetBearing);
+    if (FLIGHT_MODE(NAV_WP_MODE) && posControl.activeWaypointIndex > 0 && !isNavHoldPositionActive()) { // ||
+        // (posControl.flags.rthTrackbackActive && posControl.activeRthTBPointIndex != posControl.rthTBLastSavedIndex)) {
+
+        fpVector3_t nextWPPos;
+        fpVector3_t currentWPPos;
+        bool finalWaypoint;
+
+        if (FLIGHT_MODE(NAV_WP_MODE)) {
+            finalWaypoint = isLastMissionWaypoint();
+            if (!finalWaypoint) {
+                mapWaypointToLocalPosition(&nextWPPos, &posControl.waypointList[posControl.activeWaypointIndex + 1], 0);
+            }
+            currentWPPos = posControl.activeWaypoint.pos;
+        } // else {
+            // nextWPPos = posControl.rthTBPointsList[posControl.activeRthTBPointIndex];
         // }
+
+        fpVector3_t virtualCoursePoint;
+        virtualCoursePoint.x = currentWPPos.x - posControl.wpDistance * cos_approx(CENTIDEGREES_TO_RADIANS(posControl.activeWaypoint.yaw));
+        virtualCoursePoint.y = currentWPPos.y - posControl.wpDistance * sin_approx(CENTIDEGREES_TO_RADIANS(posControl.activeWaypoint.yaw));
+        uint32_t distToCourseLine = calculateDistanceToDestination(&virtualCoursePoint);
+
+        uint16_t approachBiasFactor = 0;
+        // Offset WP approach to aid turn to next WP, to right if next WP to left etc. approachBiasFactor = centidegrees
+        if (!finalWaypoint && distToCourseLine < METERS_TO_CENTIMETERS(10)) {  // && posControl.wpDistance < METERS_TO_CENTIMETERS(10)) {
+            if (wrap_18000(calculateBearingToDestination(&nextWPPos) - virtualTargetBearing) < 0) {  // next WP to left of current WP
+                if (wrap_18000(posControl.activeWaypoint.yaw - virtualTargetBearing) < 0) {   // apply correction factor to move to right side
+                    approachBiasFactor = -1000;
+                }
+            } else {    // next WP to right of current WP
+                if (wrap_18000(posControl.activeWaypoint.yaw - virtualTargetBearing) >= 0) {  // apply correction factor to move to left side
+                    approachBiasFactor = 1000;
+                }
+            }
+        }
+
+        if (distToCourseLine >= METERS_TO_CENTIMETERS(5) && distToCourseLine < METERS_TO_CENTIMETERS(10) && !approachBiasFactor) {
+            virtualTargetBearing = posControl.activeWaypoint.yaw;
+        } else {
+            float courseErrorMultiplier = constrainf(1.0f + sq(ABS(posControl.activeWaypoint.yaw + approachBiasFactor - virtualTargetBearing) / 2000.0f), 1.0f, 2.0f);
+            DEBUG_SET(DEBUG_CRUISE, 1, courseErrorMultiplier * 100);
+            virtualTargetBearing = wrap_36000(virtualTargetBearing - (posControl.activeWaypoint.yaw + approachBiasFactor - virtualTargetBearing) * courseErrorMultiplier);
+        }
+        DEBUG_SET(DEBUG_CRUISE, 0, approachBiasFactor);
+        DEBUG_SET(DEBUG_CRUISE, 6, posControl.activeWaypoint.yaw);
+        DEBUG_SET(DEBUG_CRUISE, 3, distToCourseLine);
+
+        // virtualTargetBearing -= wrap_18000(posControl.activeWaypoint.yaw - virtualTargetBearing);
     }
     DEBUG_SET(DEBUG_CRUISE, 5, virtualTargetBearing);
     // CR67
+
     /*
      * Calculate NAV heading error
      * Units are centidegrees

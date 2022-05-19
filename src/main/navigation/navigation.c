@@ -252,7 +252,7 @@ void calculateFarAwayTarget(fpVector3_t * farAwayPos, int32_t yaw, int32_t dista
 void calculateNewCruiseTarget(fpVector3_t * origin, int32_t yaw, int32_t distance);
 static bool isWaypointPositionReached(const fpVector3_t * pos, const bool isWaypointHome);
 bool isWaypointAltitudeReached(void);
-static void mapWaypointToLocalPosition(fpVector3_t * localPos, const navWaypoint_t * waypoint, geoAltitudeConversionMode_e altConv);
+// static void mapWaypointToLocalPosition(fpVector3_t * localPos, const navWaypoint_t * waypoint, geoAltitudeConversionMode_e altConv); // CR67
 static navigationFSMEvent_t nextForNonGeoStates(void);
 static bool isWaypointMissionValid(void);
 void missionPlannerSetWaypoint(void);
@@ -2636,7 +2636,7 @@ static void updateRthTrackback(void)
             saveTrackpoint = posControl.homeDistance > METERS_TO_CENTIMETERS(50);    // 50m XXXXXXXXXXXXXXXXXXXXXXX
 
             previousTBCourse = CENTIDEGREES_TO_DEGREES(posControl.actualState.yaw);
-            previousTBAltitude = CENTIMETERS_TO_METERS(posControl.actualState.abs.pos.z);
+            // previousTBAltitude = CENTIMETERS_TO_METERS(posControl.actualState.abs.pos.z);
             previousTBTripDist = posControl.totalTripDistance;
         } else {
             // Minimum distance increment between course change track points if GPS course valid
@@ -2647,10 +2647,10 @@ static void updateRthTrackback(void)
                 saveTrackpoint = true;
             } else if (distanceIncrement && GPSCourseIsValid) {
                 // Course change
-                DEBUG_SET(DEBUG_CRUISE, 6, 11);
+                // DEBUG_SET(DEBUG_CRUISE, 6, 11);
                 if (ABS(wrap_18000(DEGREES_TO_CENTIDEGREES(DECIDEGREES_TO_DEGREES(gpsSol.groundCourse) - previousTBCourse))) > DEGREES_TO_CENTIDEGREES(45)) {
                     saveTrackpoint = true;
-                    DEBUG_SET(DEBUG_CRUISE, 6, 22);
+                    // DEBUG_SET(DEBUG_CRUISE, 6, 22);
                 } else if (distanceCounter >= 9) {      // Distance change   9 XXXXXXXXXXX
                     // Distance based trackpoint logged if 10 distance increments occur without altitude or course change
                     // and deviation from projected course path > 20m
@@ -2661,21 +2661,21 @@ static void updateRthTrackback(void)
 
                     saveTrackpoint = calculateDistanceToDestination(&virtualCoursePoint) > METERS_TO_CENTIMETERS(20);   // XXXXXXXXXXXXX 20
 
-                    DEBUG_SET(DEBUG_CRUISE, 0, distToPrevPoint);
-                    DEBUG_SET(DEBUG_CRUISE, 1, calculateDistanceToDestination(&virtualCoursePoint));
-                    DEBUG_SET(DEBUG_CRUISE, 6, 33);
+                    // DEBUG_SET(DEBUG_CRUISE, 0, distToPrevPoint);
+                    // DEBUG_SET(DEBUG_CRUISE, 1, calculateDistanceToDestination(&virtualCoursePoint));
+                    // DEBUG_SET(DEBUG_CRUISE, 6, 33);
                 }
                 distanceCounter++;
                 previousTBTripDist = posControl.totalTripDistance;
             } else if (!GPSCourseIsValid) {
-                DEBUG_SET(DEBUG_CRUISE, 6, 44);
+                // DEBUG_SET(DEBUG_CRUISE, 6, 44);
                 // if no reliable course revert to basic distance logging based on direct distance from last point set to 20m
                 saveTrackpoint = calculateDistanceToDestination(&posControl.rthTBPointsList[posControl.activeRthTBPointIndex]) > METERS_TO_CENTIMETERS(20);
                 previousTBTripDist = posControl.totalTripDistance;
             }
             // DEBUG_SET(DEBUG_CRUISE, 4, gpsSol.groundCourse / 10);
             // DEBUG_SET(DEBUG_CRUISE, 5, GPSCourseIsValid);
-            DEBUG_SET(DEBUG_CRUISE, 3, distanceCounter);
+            // DEBUG_SET(DEBUG_CRUISE, 3, distanceCounter);
         }
 
         // when trackpoint array full overwrite from start of array using rthTBWrapAroundCounter to track overwrite position
@@ -3298,7 +3298,7 @@ void resetSafeHomes(void)
 }
 #endif
 
-static void mapWaypointToLocalPosition(fpVector3_t * localPos, const navWaypoint_t * waypoint, geoAltitudeConversionMode_e altConv)
+void mapWaypointToLocalPosition(fpVector3_t * localPos, const navWaypoint_t * waypoint, geoAltitudeConversionMode_e altConv)    // CR67
 {
     gpsLocation_t wpLLH;
 
