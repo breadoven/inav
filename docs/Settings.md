@@ -212,16 +212,6 @@ ADC channel to use for analog pitot tube (airspeed) sensor. If board doesn't hav
 
 ---
 
-### align_acc
-
-When running on non-default hardware or adding support for new sensors/sensor boards, these values are used for sensor orientation. When carefully understood, these values can also be used to rotate (in 90deg steps) or flip the board. Possible values are: DEFAULT, CW0_DEG, CW90_DEG, CW180_DEG, CW270_DEG, CW0_DEG_FLIP, CW90_DEG_FLIP, CW180_DEG_FLIP, CW270_DEG_FLIP.
-
-| Default | Min | Max |
-| --- | --- | --- |
-| DEFAULT |  |  |
-
----
-
 ### align_board_pitch
 
 Arbitrary board rotation in deci-degrees (0.1 degree), to allow mounting it sideways / upside down / rotated etc
@@ -249,16 +239,6 @@ Arbitrary board rotation in deci-degrees (0.1 degree), to allow mounting it side
 | Default | Min | Max |
 | --- | --- | --- |
 | 0 | -1800 | 3600 |
-
----
-
-### align_gyro
-
-When running on non-default hardware or adding support for new sensors/sensor boards, these values are used for sensor orientation. When carefully understood, these values can also be used to rotate (in 90deg steps) or flip the board. Possible values are: DEFAULT, CW0_DEG, CW90_DEG, CW180_DEG, CW270_DEG, CW0_DEG_FLIP, CW90_DEG_FLIP, CW180_DEG_FLIP, CW270_DEG_FLIP.
-
-| Default | Min | Max |
-| --- | --- | --- |
-| DEFAULT |  |  |
 
 ---
 
@@ -798,7 +778,7 @@ Minimum frequency for dynamic notches. Default value of `150` works best with 5"
 
 | Default | Min | Max |
 | --- | --- | --- |
-| 50 | 30 | 1000 |
+| 50 | 30 | 250 |
 
 ---
 
@@ -1394,11 +1374,11 @@ Reference airspeed. Set this to airspeed at which PIDs were tuned. Usually shoul
 
 ### fw_tpa_time_constant
 
-TPA smoothing and delay time constant to reflect non-instant speed/throttle response of the plane. Planes with low thrust/weight ratio generally need higher time constant. Default is zero for compatibility with old setups
+TPA smoothing and delay time constant to reflect non-instant speed/throttle response of the plane. See **PID Attenuation and scaling** Wiki for full details.
 
 | Default | Min | Max |
 | --- | --- | --- |
-| 0 | 0 | 5000 |
+| 1500 | 0 | 5000 |
 
 ---
 
@@ -4502,6 +4482,16 @@ LQ % indicator blinks below this value. For Crossfire use 70%, for Tracer use 50
 
 ---
 
+### osd_mah_used_precision
+
+Number of digits used to display mAh used.
+
+| Default | Min | Max |
+| --- | --- | --- |
+| 4 | 4 | 6 |
+
+---
+
 ### osd_main_voltage_decimals
 
 Number of decimals for the battery voltages displayed in the OSD [1-2].
@@ -5434,7 +5424,7 @@ Selects the servo PWM output cutoff frequency. Value is in [Hz]
 
 ### servo_protocol
 
-An option to chose the protocol/option that would be used to output servo data. Possible options `PWM` (FC servo outputs), `SERVO_DRIVER` (I2C PCA9685 peripheral), `SBUS` (S.Bus protocol output via a configured serial port)
+An option to chose the protocol/option that would be used to output servo data. Possible options `PWM` (FC servo outputs), `SBUS` (S.Bus protocol output via a configured serial port)
 
 | Default | Min | Max |
 | --- | --- | --- |
@@ -5468,7 +5458,7 @@ Quality factor of the setpoint Kalman filter. Higher values means less filtering
 
 | Default | Min | Max |
 | --- | --- | --- |
-| 100 | 1 | 16000 |
+| 100 | 1 | 1000 |
 
 ---
 
@@ -5908,7 +5898,7 @@ Configure the VTX band. Set to zero to use `vtx_freq`. Bands: 1: A, 2: B, 3: E, 
 
 | Default | Min | Max |
 | --- | --- | --- |
-| 4 | VTX_SETTINGS_NO_BAND | VTX_SETTINGS_MAX_BAND |
+| 1 | VTX_SETTINGS_NO_BAND | VTX_SETTINGS_MAX_BAND |
 
 ---
 
@@ -5919,6 +5909,16 @@ Channel to use within the configured `vtx_band`. Valid values are [1, 8].
 | Default | Min | Max |
 | --- | --- | --- |
 | 1 | VTX_SETTINGS_MIN_CHANNEL | VTX_SETTINGS_MAX_CHANNEL |
+
+---
+
+### vtx_frequency_group
+
+VTx Frequency group to use. Frequency groups: FREQUENCYGROUP_5G8: 5.8GHz, FREQUENCYGROUP_2G4: 2.4GHz, FREQUENCYGROUP_1G3: 1.3GHz.
+
+| Default | Min | Max |
+| --- | --- | --- |
+| FREQUENCYGROUP_5G8 | 0 | 2 |
 
 ---
 
@@ -5989,6 +5989,26 @@ Enable workaround for early AKK SAudio-enabled VTX bug.
 | Default | Min | Max |
 | --- | --- | --- |
 | ON | OFF | ON |
+
+---
+
+### vtx_smartaudio_stopbits
+
+Set stopbit count for serial (TBS Sixty9 SmartAudio 2.1 require value of 1 bit)
+
+| Default | Min | Max |
+| --- | --- | --- |
+| 2 | 1 | 2 |
+
+---
+
+### vtx_softserial_shortstop
+
+Enable the 3x shorter stopbit on softserial. Need for some IRC Tramp VTXes.
+
+| Default | Min | Max |
+| --- | --- | --- |
+| OFF | OFF | ON |
 
 ---
 

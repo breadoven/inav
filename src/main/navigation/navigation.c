@@ -3402,11 +3402,9 @@ static void processNavigationRCAdjustments(void)
     }
 
     if (navStateFlags & NAV_RC_POS) {
-        // CR62
         posControl.flags.isAdjustingPosition = adjustPositionFromRCInput() && !FLIGHT_MODE(FAILSAFE_MODE);
-        if (FLIGHT_MODE(FAILSAFE_MODE) && STATE(MULTIROTOR)) {
+        if (STATE(MULTIROTOR) && FLIGHT_MODE(FAILSAFE_MODE)) {
             resetMulticopterBrakingMode();
-        // CR62
         }
     }
     else {

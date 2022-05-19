@@ -262,8 +262,10 @@ typedef enum {
     OSD_SWITCH_INDICATOR_1,
     OSD_SWITCH_INDICATOR_2,
     OSD_SWITCH_INDICATOR_3,
-    OSD_INFO_CYCLE, // 134  CR22
-    OSD_STATUS,     // 135  CR27
+    OSD_TPA_TIME_CONSTANT,
+    OSD_FW_LEVEL_TRIM,
+    OSD_INFO_CYCLE, // 136  CR22
+    OSD_STATUS,     // 137  CR27
     OSD_ITEM_COUNT // MUST BE LAST
 } osd_items_e;
 
@@ -424,6 +426,7 @@ typedef struct osdConfig_s {
     uint16_t system_msg_display_time;           // system message display time for multiple messages (ms)
     uint16_t infocycle_interval_time;           // Info Cycle field item display time interval (ms)   CR22
     uint8_t ahi_pitch_interval;                 // redraws AHI at set pitch interval. (Not pixel OSD) // CR35
+    uint8_t mAh_used_precision;                 // Number of numbers used for mAh drawn. Plently of packs now are > 9999 mAh
     char    osd_switch_indicator0_name[OSD_SWITCH_INDICATOR_NAME_LENGTH + 1];      // Name to use for switch indicator 0.
     uint8_t osd_switch_indicator0_channnel;     // RC Channel to use for switch indicator 0.
     char    osd_switch_indicator1_name[OSD_SWITCH_INDICATOR_NAME_LENGTH + 1];      // Name to use for switch indicator 1.
