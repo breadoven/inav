@@ -438,7 +438,7 @@ const navEstimatedPosVel_t * navGetCurrentActualPositionAndVelocity(void);
 bool isThrustFacingDownwards(void);
 uint32_t calculateDistanceToDestination(const fpVector3_t * destinationPos);
 int32_t calculateBearingToDestination(const fpVector3_t * destinationPos);
-void mapWaypointToLocalPosition(fpVector3_t * localPos, const navWaypoint_t * waypoint, geoAltitudeConversionMode_e altConv);    // CR67
+// void mapWaypointToLocalPosition(fpVector3_t * localPos, const navWaypoint_t * waypoint, geoAltitudeConversionMode_e altConv);    // CR67
 
 bool isLandingDetected(void);
 void resetLandingDetector(void);

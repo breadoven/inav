@@ -252,7 +252,7 @@ void calculateFarAwayTarget(fpVector3_t * farAwayPos, int32_t yaw, int32_t dista
 void calculateNewCruiseTarget(fpVector3_t * origin, int32_t yaw, int32_t distance);
 static bool isWaypointPositionReached(const fpVector3_t * pos, const bool isWaypointHome);
 bool isWaypointAltitudeReached(void);
-// static void mapWaypointToLocalPosition(fpVector3_t * localPos, const navWaypoint_t * waypoint, geoAltitudeConversionMode_e altConv); // CR67
+static void mapWaypointToLocalPosition(fpVector3_t * localPos, const navWaypoint_t * waypoint, geoAltitudeConversionMode_e altConv); // CR67
 static navigationFSMEvent_t nextForNonGeoStates(void);
 static bool isWaypointMissionValid(void);
 void missionPlannerSetWaypoint(void);
@@ -2035,14 +2035,14 @@ void updateActualHorizontalPositionAndVelocity(bool estPosValid, bool estVelVali
     posControl.actualState.velXY = calc_length_pythagorean_2D(newVelX, newVelY);
 
     // CASE 1: POS & VEL valid
-    if (estPosValid && estVelValid && !IS_RC_MODE_ACTIVE(BOXBEEPERON)) {   // CR52
+    if (estPosValid && estVelValid) {   // && !IS_RC_MODE_ACTIVE(BOXBEEPERON)) {   // CR52
         posControl.flags.estPosStatus = EST_TRUSTED;
         posControl.flags.estVelStatus = EST_TRUSTED;
         posControl.flags.horizontalPositionDataNew = true;
         posControl.lastValidPositionTimeMs = millis();
     }
     // CASE 1: POS invalid, VEL valid
-    else if (!estPosValid && estVelValid && !IS_RC_MODE_ACTIVE(BOXBEEPERON)) { // CR52
+    else if (!estPosValid && estVelValid) {     // && !IS_RC_MODE_ACTIVE(BOXBEEPERON)) { // CR52
         posControl.flags.estPosStatus = EST_USABLE;     // Pos usable, but not trusted
         posControl.flags.estVelStatus = EST_TRUSTED;
         posControl.flags.horizontalPositionDataNew = true;
@@ -3298,7 +3298,7 @@ void resetSafeHomes(void)
 }
 #endif
 
-void mapWaypointToLocalPosition(fpVector3_t * localPos, const navWaypoint_t * waypoint, geoAltitudeConversionMode_e altConv)    // CR67
+static void mapWaypointToLocalPosition(fpVector3_t * localPos, const navWaypoint_t * waypoint, geoAltitudeConversionMode_e altConv)    // CR67
 {
     gpsLocation_t wpLLH;
 
@@ -3528,7 +3528,7 @@ static navigationFSMEvent_t selectNavEventFromBoxModeInput(bool launchBypass)   
     // DEBUG_SET(DEBUG_CRUISE, 2, 77);
     // DEBUG_SET(DEBUG_CRUISE, 0, posControl.rthTBPointsList[0].x);
     // DEBUG_SET(DEBUG_CRUISE, 1, posControl.rthTBPointsList[1].x);
-    DEBUG_SET(DEBUG_CRUISE, 2, posControl.totalTripDistance);
+    // DEBUG_SET(DEBUG_CRUISE, 2, posControl.totalTripDistance);
     // DEBUG_SET(DEBUG_CRUISE, 3, posControl.rthTBPointsList[3].x);
     // DEBUG_SET(DEBUG_CRUISE, 4, posControl.rthTBPointsList[4].x);
     // DEBUG_SET(DEBUG_CRUISE, 5, posControl.rthTBPointsList[5].x);

@@ -294,6 +294,52 @@ static void calculateVirtualPositionTarget_FW(float trackingPeriod)
         posErrorY = loiterTargetY - navGetCurrentActualPositionAndVelocity()->pos.y;
         distanceToActualTarget = calc_length_pythagorean_2D(posErrorX, posErrorY);
     }
+    // CR67
+    if (FLIGHT_MODE(NAV_WP_MODE) && !needToCalculateCircularLoiter && IS_RC_MODE_ACTIVE(BOXNAVALTHOLD)) {
+        static uint8_t prevWPIndex;
+        static fpVector3_t prevWPPos;
+        static float gradient;
+        static float constant;
+        float posXTemp;
+        float posYTemp;
+        fpVector3_t currentWPPos = posControl.activeWaypoint.pos;
+
+        if (posControl.activeWaypointIndex > 0) {
+            if (currentWPPos.x == prevWPPos.x) {
+                posXTemp = currentWPPos.x;
+                posYTemp = navGetCurrentActualPositionAndVelocity()->pos.y + posErrorY * (trackingDistance / distanceToActualTarget);
+            } else if (currentWPPos.y == prevWPPos.y) {
+                posXTemp = navGetCurrentActualPositionAndVelocity()->pos.x + posErrorX * (trackingDistance / distanceToActualTarget);
+                posYTemp = currentWPPos.y;
+            } else {
+                if (prevWPIndex != posControl.activeWaypointIndex) {
+                    gradient = (currentWPPos.y - prevWPPos.y) / (currentWPPos.x - prevWPPos.x);
+                    constant = currentWPPos.y - gradient * currentWPPos.x;
+                    prevWPPos = currentWPPos;
+                    prevWPIndex = posControl.activeWaypointIndex;
+                }
+                posXTemp = navGetCurrentActualPositionAndVelocity()->pos.x + posErrorX * (trackingDistance / distanceToActualTarget);
+                posYTemp = gradient * posXTemp + constant;
+                if (fabsf(posControl.desiredState.pos.y - posYTemp) > fabsf(posErrorY)) {
+                    posYTemp = navGetCurrentActualPositionAndVelocity()->pos.y + posErrorY * (trackingDistance / distanceToActualTarget);
+                    posXTemp = (posYTemp - constant) / gradient;
+                }
+            }
+            posErrorX = posXTemp - navGetCurrentActualPositionAndVelocity()->pos.x;
+            posErrorY = posYTemp - navGetCurrentActualPositionAndVelocity()->pos.y;
+            distanceToActualTarget = calc_length_pythagorean_2D(posErrorX, posErrorY);
+        } else {
+            prevWPPos = currentWPPos;
+            prevWPIndex = 0;
+        }
+        DEBUG_SET(DEBUG_CRUISE, 0, constant);
+        DEBUG_SET(DEBUG_CRUISE, 1, gradient * 100);
+        DEBUG_SET(DEBUG_CRUISE, 3, distanceToActualTarget);
+        DEBUG_SET(DEBUG_CRUISE, 2, posControl.activeWaypoint.yaw);
+        DEBUG_SET(DEBUG_CRUISE, 5, posErrorX);
+        DEBUG_SET(DEBUG_CRUISE, 6, posErrorY);
+    }
+    // CR67
 
     // Calculate virtual waypoint
     virtualDesiredPosition.x = navGetCurrentActualPositionAndVelocity()->pos.x + posErrorX * (trackingDistance / distanceToActualTarget);
@@ -359,56 +405,47 @@ static void updatePositionHeadingController_FW(timeUs_t currentTimeUs, timeDelta
 
     // CR67
     DEBUG_SET(DEBUG_CRUISE, 4, virtualTargetBearing);
-    if (FLIGHT_MODE(NAV_WP_MODE) && posControl.activeWaypointIndex > 0 && !isNavHoldPositionActive()) { // ||
+    if (FLIGHT_MODE(NAV_WP_MODE) && posControl.activeWaypointIndex > 0 && !isNavHoldPositionActive() && !IS_RC_MODE_ACTIVE(BOXNAVALTHOLD)) { // ||
         // (posControl.flags.rthTrackbackActive && posControl.activeRthTBPointIndex != posControl.rthTBLastSavedIndex)) {
 
-        fpVector3_t nextWPPos;
         fpVector3_t currentWPPos;
-        bool finalWaypoint;
+        // fpVector3_t nextWPPos;
+        // bool finalWaypoint;
 
         if (FLIGHT_MODE(NAV_WP_MODE)) {
-            finalWaypoint = isLastMissionWaypoint();
-            if (!finalWaypoint) {
-                mapWaypointToLocalPosition(&nextWPPos, &posControl.waypointList[posControl.activeWaypointIndex + 1], 0);
-            }
+            // finalWaypoint = isLastMissionWaypoint();
+            // if (!finalWaypoint) {
+                // mapWaypointToLocalPosition(&nextWPPos, &posControl.waypointList[posControl.activeWaypointIndex + 1], 0);
+            // }
             currentWPPos = posControl.activeWaypoint.pos;
         } // else {
             // nextWPPos = posControl.rthTBPointsList[posControl.activeRthTBPointIndex];
         // }
 
-        fpVector3_t virtualCoursePoint;
-        virtualCoursePoint.x = currentWPPos.x - posControl.wpDistance * cos_approx(CENTIDEGREES_TO_RADIANS(posControl.activeWaypoint.yaw));
-        virtualCoursePoint.y = currentWPPos.y - posControl.wpDistance * sin_approx(CENTIDEGREES_TO_RADIANS(posControl.activeWaypoint.yaw));
-        uint32_t distToCourseLine = calculateDistanceToDestination(&virtualCoursePoint);
+        int32_t courseError = wrap_18000(posControl.activeWaypoint.yaw - virtualTargetBearing);
 
-        uint16_t approachBiasFactor = 0;
-        // Offset WP approach to aid turn to next WP, to right if next WP to left etc. approachBiasFactor = centidegrees
-        if (!finalWaypoint && distToCourseLine < METERS_TO_CENTIMETERS(10)) {  // && posControl.wpDistance < METERS_TO_CENTIMETERS(10)) {
-            if (wrap_18000(calculateBearingToDestination(&nextWPPos) - virtualTargetBearing) < 0) {  // next WP to left of current WP
-                if (wrap_18000(posControl.activeWaypoint.yaw - virtualTargetBearing) < 0) {   // apply correction factor to move to right side
-                    approachBiasFactor = -1000;
-                }
-            } else {    // next WP to right of current WP
-                if (wrap_18000(posControl.activeWaypoint.yaw - virtualTargetBearing) >= 0) {  // apply correction factor to move to left side
-                    approachBiasFactor = 1000;
-                }
+        if (ABS(courseError) < 4500) {
+            fpVector3_t virtualCoursePoint;
+            virtualCoursePoint.x = currentWPPos.x - posControl.wpDistance * cos_approx(CENTIDEGREES_TO_RADIANS(posControl.activeWaypoint.yaw));
+            virtualCoursePoint.y = currentWPPos.y - posControl.wpDistance * sin_approx(CENTIDEGREES_TO_RADIANS(posControl.activeWaypoint.yaw));
+            uint32_t distToCourseLine = calculateDistanceToDestination(&virtualCoursePoint);
+            DEBUG_SET(DEBUG_CRUISE, 3, distToCourseLine);
+
+            if (distToCourseLine < METERS_TO_CENTIMETERS(5) && courseError < 500) {
+                virtualTargetBearing = posControl.activeWaypoint.yaw;
+            } else {
+                // bool captureFactor = distToCourseLine < 1000 ? -1 : 1;
+                // float courseErrorMultiplier = constrainf(captureFactor * (1.0f + sq(distToCourseLine / 4000)), -2.0f, 2.0f);
+                float courseErrorMultiplier = constrainf(1.0f + sq(distToCourseLine / 4000), 1.0f, 2.0f);
+                int32_t factoredCourseError = constrain(courseErrorMultiplier * courseError, -6000, 6000);
+                virtualTargetBearing = wrap_36000(virtualTargetBearing - factoredCourseError);
+                DEBUG_SET(DEBUG_CRUISE, 1, courseErrorMultiplier * 100);
+                DEBUG_SET(DEBUG_CRUISE, 0, factoredCourseError);
             }
         }
-
-        if (distToCourseLine >= METERS_TO_CENTIMETERS(5) && distToCourseLine < METERS_TO_CENTIMETERS(10) && !approachBiasFactor) {
-            virtualTargetBearing = posControl.activeWaypoint.yaw;
-        } else {
-            float courseErrorMultiplier = constrainf(1.0f + sq(ABS(posControl.activeWaypoint.yaw + approachBiasFactor - virtualTargetBearing) / 2000.0f), 1.0f, 2.0f);
-            DEBUG_SET(DEBUG_CRUISE, 1, courseErrorMultiplier * 100);
-            virtualTargetBearing = wrap_36000(virtualTargetBearing - (posControl.activeWaypoint.yaw + approachBiasFactor - virtualTargetBearing) * courseErrorMultiplier);
-        }
-        DEBUG_SET(DEBUG_CRUISE, 0, approachBiasFactor);
         DEBUG_SET(DEBUG_CRUISE, 6, posControl.activeWaypoint.yaw);
-        DEBUG_SET(DEBUG_CRUISE, 3, distToCourseLine);
-
-        // virtualTargetBearing -= wrap_18000(posControl.activeWaypoint.yaw - virtualTargetBearing);
+        DEBUG_SET(DEBUG_CRUISE, 5, virtualTargetBearing);
     }
-    DEBUG_SET(DEBUG_CRUISE, 5, virtualTargetBearing);
     // CR67
 
     /*
