@@ -83,7 +83,8 @@ PG_RESET_TEMPLATE(failsafeConfig_t, failsafeConfig,
     .failsafe_stick_motion_threshold = SETTING_FAILSAFE_STICK_THRESHOLD_DEFAULT,
     .failsafe_min_distance = SETTING_FAILSAFE_MIN_DISTANCE_DEFAULT,                     // No minimum distance for failsafe by default
     .failsafe_min_distance_procedure = SETTING_FAILSAFE_MIN_DISTANCE_PROCEDURE_DEFAULT, // default minimum distance failsafe procedure
-    .failsafe_mission = SETTING_FAILSAFE_MISSION_DEFAULT,                               // Enable failsafe in WP mode or not
+    .failsafe_mission = SETTING_FAILSAFE_MISSION_DEFAULT,                               // WP mode failsafe ignore
+    // .failsafe_mission_delay = SETTING_FAILSAFE_MISSION_DELAY_DEFAULT,                   // WP mode failsafe procedure initiation delay    CR68
 );
 
 typedef enum {
@@ -351,6 +352,20 @@ static bool failsafeCheckStickMotion(void)
 
 static failsafeProcedure_e failsafeChooseFailsafeProcedure(void)
 {
+    // CR68
+    // static timeMs_t wpModeDelayedFailsafeStart = 0;
+    // if ((FLIGHT_MODE(NAV_WP_MODE) || isWaypointMissionRTHActive())) {
+        // if (!wpModeDelayedFailsafeStart) {
+            // wpModeDelayedFailsafeStart = millis();
+        // } else {
+            // if ((millis() - wpModeDelayedFailsafeStart <  (MILLIS_PER_SECOND * failsafeConfig()->failsafe_mission_delay)) || !failsafeConfig()->failsafe_mission_delay) {
+                // return FAILSAFE_PROCEDURE_NONE;
+            // } else {
+                // wpModeDelayedFailsafeStart = 0;
+            // }
+        // }
+    // }
+    // CR68
     if ((FLIGHT_MODE(NAV_WP_MODE) || isWaypointMissionRTHActive()) && !failsafeConfig()->failsafe_mission) {
         return FAILSAFE_PROCEDURE_NONE;
     }
