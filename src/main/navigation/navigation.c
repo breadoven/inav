@@ -265,6 +265,7 @@ void updateHomePosition(void);
 bool abortLaunchAllowed(void);
 
 static bool rthAltControlStickOverrideCheck(unsigned axis);
+static void updateRthTrackback(bool forceSavePoint); // CR66
 static fpVector3_t * rthGetTrackbackPos(void);  // CR66
 
 /*************************************************************************************************/
@@ -1200,6 +1201,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_INITIALIZE(navigati
                                    (navConfig()->general.flags.rth_trackback_mode == RTH_TRACKBACK_FS && posControl.flags.forcedRTHActivated);
 
             if (trackbackActive && posControl.activeRthTBPointIndex >= 0 && !isWaypointMissionRTHActive()) {
+                updateRthTrackback(true);       // save final point for initial altitude and distance reference
                 posControl.flags.rthTrackbackActive = true;
                 calculateAndSetActiveWaypointToLocalPosition(rthGetTrackbackPos());
                 return NAV_FSM_EVENT_SWITCH_TO_NAV_STATE_RTH_TRACKBACK;
@@ -1209,7 +1211,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_INITIALIZE(navigati
 
             if (STATE(FIXED_WING_LEGACY)) {
                 // Airplane - climbout before heading home
-                if (navConfig()->general.flags.rth_climb_first == ON_FW_SPIRAL) {
+                if (navConfig()->general.flags.rth_climb_first == RTH_CLIMB_ON_FW_SPIRAL) {
                     // Spiral climb centered at xy of RTH activation
                     calculateInitialHoldPosition(&targetHoldPos);
                 } else {
@@ -1258,7 +1260,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_CLIMB_TO_SAFE_ALT(n
     const float rthAltitudeMargin = MAX(FW_RTH_CLIMB_MARGIN_MIN_CM, (rthClimbMarginPercent/100.0) * fabsf(posControl.rthState.rthInitialAltitude - posControl.rthState.homePosition.pos.z));
 
     // If we reached desired initial RTH altitude or we don't want to climb first
-    if (((navGetCurrentActualPositionAndVelocity()->pos.z - posControl.rthState.rthInitialAltitude) > -rthAltitudeMargin) || (navConfig()->general.flags.rth_climb_first == OFF) || rthAltControlStickOverrideCheck(ROLL) || rthClimbStageActiveAndComplete()) {
+    if (((navGetCurrentActualPositionAndVelocity()->pos.z - posControl.rthState.rthInitialAltitude) > -rthAltitudeMargin) || (navConfig()->general.flags.rth_climb_first == RTH_CLIMB_OFF) || rthAltControlStickOverrideCheck(ROLL) || rthClimbStageActiveAndComplete()) {
 
         // Delayed initialization for RTH sanity check on airplanes - allow to finish climb first as it can take some distance
         if (STATE(FIXED_WING_LEGACY)) {
@@ -1290,7 +1292,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_CLIMB_TO_SAFE_ALT(n
         // Climb to safe altitude and turn to correct direction
         if (STATE(FIXED_WING_LEGACY)) {
             // change climb target from RTH Initial altitude z (rate set by pitch limit) to climb rate in m/s
-            if (navConfig()->general.flags.rth_climb_first == ON_FW_SPIRAL) {
+            if (navConfig()->general.flags.rth_climb_first == RTH_CLIMB_ON_FW_SPIRAL) {
                 float altitudeChangeDirection = (tmpHomePos->z += FW_RTH_CLIMB_OVERSHOOT_CM) > navGetCurrentActualPositionAndVelocity()->pos.z ? 1 : -1;
                 updateClimbRateToAltitudeController(altitudeChangeDirection * navConfig()->general.max_auto_climb_rate, ROC_TO_ALT_NORMAL);
             } else {
@@ -2614,7 +2616,7 @@ static bool rthAltControlStickOverrideCheck(unsigned axis)
 /* ------------------------------------------------
  * RTH Trackback
  * ------------------------------------------------ */
-static void updateRthTrackback(void)
+static void updateRthTrackback(bool forceSaveTrackPoint)
 {
     if (navConfig()->general.flags.rth_trackback_mode == RTH_TRACKBACK_OFF || FLIGHT_MODE(NAV_RTH_MODE) || !ARMING_FLAG(ARMED)) {
         return;
@@ -2627,7 +2629,7 @@ static void updateRthTrackback(void)
         static int16_t previousTBCourse;        // degrees
         static int16_t previousTBAltitude;      // meters
         static uint8_t distanceCounter = 0;
-        bool saveTrackpoint = false;
+        bool saveTrackpoint = forceSaveTrackPoint;
         bool GPSCourseIsValid = isGPSHeadingValid();
         // bool GPSCourseIsValid = posControl.actualState.velXY > 60;
 
@@ -2655,7 +2657,7 @@ static void updateRthTrackback(void)
                     // Distance based trackpoint logged if 10 distance increments occur without altitude or course change
                     // and deviation from projected course path > 20m
                     fpVector3_t virtualCoursePoint;
-                    int32_t distToPrevPoint = calculateDistanceToDestination(&posControl.rthTBPointsList[posControl.activeRthTBPointIndex]);
+                    float distToPrevPoint = calculateDistanceToDestination(&posControl.rthTBPointsList[posControl.activeRthTBPointIndex]);
                     virtualCoursePoint.x = posControl.rthTBPointsList[posControl.activeRthTBPointIndex].x + distToPrevPoint * cos_approx(DEGREES_TO_RADIANS(previousTBCourse));
                     virtualCoursePoint.y = posControl.rthTBPointsList[posControl.activeRthTBPointIndex].y + distToPrevPoint * sin_approx(DEGREES_TO_RADIANS(previousTBCourse));
 
@@ -3959,7 +3961,7 @@ void updateWaypointsAndNavigationMode(void)
     updateWpMissionPlanner();
 
     // Update RTH trackback  CR66
-    updateRthTrackback();
+    updateRthTrackback(false);
 
     //Update Blackbox data
     navCurrentState = (int16_t)posControl.navPersistentId;

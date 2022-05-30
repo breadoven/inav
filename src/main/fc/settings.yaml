@@ -2623,7 +2623,7 @@ groups:
         field: general.flags.rth_trackback_mode
         table: rth_trackback_mode
       - name: nav_rth_trackback_distance
-        description: "Maximum distance over which trackback points are recorded for RTH trackback [m]."
+        description: "Maximum straight line distance allowed for RTH trackback from start point [m]."
         default_value: 500
         field: general.rth_trackback_distance
         max: 2000
