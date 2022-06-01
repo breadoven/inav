@@ -252,7 +252,7 @@ void calculateFarAwayTarget(fpVector3_t * farAwayPos, int32_t yaw, int32_t dista
 void calculateNewCruiseTarget(fpVector3_t * origin, int32_t yaw, int32_t distance);
 static bool isWaypointPositionReached(const fpVector3_t * pos, const bool isWaypointHome);
 bool isWaypointAltitudeReached(void);
-static void mapWaypointToLocalPosition(fpVector3_t * localPos, const navWaypoint_t * waypoint, geoAltitudeConversionMode_e altConv); // CR67
+static void mapWaypointToLocalPosition(fpVector3_t * localPos, const navWaypoint_t * waypoint, geoAltitudeConversionMode_e altConv);
 static navigationFSMEvent_t nextForNonGeoStates(void);
 static bool isWaypointMissionValid(void);
 void missionPlannerSetWaypoint(void);
@@ -2159,7 +2159,8 @@ void updateActualHeading(bool headingValid, int32_t newHeading)
         }
         posControl.rthState.homeFlags |= NAV_HOME_VALID_HEADING;
     }
-    posControl.actualState.yaw = newHeading;
+    // posControl.actualState.yaw = newHeading;
+    posControl.actualState.yaw = isGPSHeadingValid() && STATE(AIRPLANE) ? gpsSol.groundCourse * 10 : newHeading;    // CR67
     posControl.flags.estHeadingStatus = newEstHeading;
 
     /* Precompute sin/cos of yaw angle */
@@ -3300,7 +3301,7 @@ void resetSafeHomes(void)
 }
 #endif
 
-static void mapWaypointToLocalPosition(fpVector3_t * localPos, const navWaypoint_t * waypoint, geoAltitudeConversionMode_e altConv)    // CR67
+static void mapWaypointToLocalPosition(fpVector3_t * localPos, const navWaypoint_t * waypoint, geoAltitudeConversionMode_e altConv)
 {
     gpsLocation_t wpLLH;
 
@@ -3387,7 +3388,13 @@ float getActiveWaypointSpeed(void)
         return waypointSpeed;
     }
 }
-
+// CR67
+bool isWaypointNavActive(void)
+{
+    return (FLIGHT_MODE(NAV_WP_MODE) && posControl.activeWaypointIndex > 0 && !isNavHoldPositionActive()) ||
+            (posControl.flags.rthTrackbackActive && posControl.activeRthTBPointIndex != posControl.rthTBLastSavedIndex);
+}
+// CR67
 /*-----------------------------------------------------------
  * Process adjustments to alt, pos and yaw controllers
  *-----------------------------------------------------------*/
@@ -3524,10 +3531,7 @@ static bool isWaypointMissionValid(void)
 
 static navigationFSMEvent_t selectNavEventFromBoxModeInput(bool launchBypass)   // CR6
 {
-	// General use debug
-	// DEBUG_SET(DEBUG_CRUISE, 0, posControl.flags.missionResume);
-    // DEBUG_SET(DEBUG_CRUISE, 2, 55);
-    // DEBUG_SET(DEBUG_CRUISE, 2, 77);
+	// General use debugs
     // DEBUG_SET(DEBUG_CRUISE, 0, posControl.rthTBPointsList[0].x);
     // DEBUG_SET(DEBUG_CRUISE, 1, posControl.rthTBPointsList[1].x);
     // DEBUG_SET(DEBUG_CRUISE, 2, posControl.totalTripDistance);
