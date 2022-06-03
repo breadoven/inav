@@ -210,6 +210,8 @@ PG_RESET_TEMPLATE(navConfig_t, navConfig,
         .yawControlDeadband = SETTING_NAV_FW_YAW_DEADBAND_DEFAULT,
         .auto_disarm_delay = SETTING_NAV_FW_AUTO_DISARM_DELAY_DEFAULT,          // ms - time delay to disarm when auto disarm after landing enabled
         .soaring_pitch_deadband = SETTING_NAV_FW_SOARING_PITCH_DEADBAND_DEFAULT,// pitch angle mode deadband when Saoring mode enabled
+        .waypoint_tracking_deadband = SETTING_NAV_FW_WP_TRACKING_DEADBAND_DEFAULT,   // 250 cm    CR67
+        .waypoint_smooth_turns = SETTING_NAV_FW_WP_SMOOTH_TURNS_DEFAULT,        // CR67
     }
 );
 
@@ -2160,7 +2162,7 @@ void updateActualHeading(bool headingValid, int32_t newHeading)
         posControl.rthState.homeFlags |= NAV_HOME_VALID_HEADING;
     }
     // posControl.actualState.yaw = newHeading;
-    posControl.actualState.yaw = isGPSHeadingValid() && STATE(AIRPLANE) ? gpsSol.groundCourse * 10 : newHeading;    // CR67
+    posControl.actualState.yaw = isGPSHeadingValid() && STATE(AIRPLANE) ? gpsSol.groundCourse * 10 : newHeading;    // CR69
     posControl.flags.estHeadingStatus = newEstHeading;
 
     /* Precompute sin/cos of yaw angle */
@@ -2206,7 +2208,15 @@ int32_t calculateBearingToDestination(const fpVector3_t * destinationPos)
 
     return calculateBearingFromDelta(deltaX, deltaY);
 }
+// CR67
+int32_t calculateBearingBetweenLocalPositions(const fpVector3_t * startPos, const fpVector3_t * endPos)
+{
+    const float deltaX = endPos->x - startPos->x;
+    const float deltaY = endPos->y - startPos->y;
 
+    return calculateBearingFromDelta(deltaX, deltaY);
+}
+// CR67
 bool navCalculatePathToDestination(navDestinationPath_t *result, const fpVector3_t * destinationPos)
 {
     if (posControl.flags.estPosStatus == EST_NONE ||
@@ -2223,7 +2233,29 @@ bool navCalculatePathToDestination(navDestinationPath_t *result, const fpVector3
     result->bearing = calculateBearingFromDelta(deltaX, deltaY);
     return true;
 }
+// CR67
+static bool getLocalPosNextWaypoint(fpVector3_t * nextWPPos)
+{
+    // Only for WP Mode not Trackback. Ignore non geo waypoints except RTH and JUMP.
+    if (FLIGHT_MODE(NAV_WP_MODE) && !isLastMissionWaypoint()) {
+        navWaypointActions_e nextWpAction = posControl.waypointList[posControl.activeWaypointIndex + 1].action;
 
+        if (!(nextWpAction == NAV_WP_ACTION_SET_POI || nextWpAction == NAV_WP_ACTION_SET_HEAD)) {
+            uint8_t nextWpIndex = posControl.activeWaypointIndex + 1;
+            if (nextWpAction == NAV_WP_ACTION_JUMP) {
+                if (posControl.waypointList[posControl.activeWaypointIndex + 1].p3 != 0 ||
+                    posControl.waypointList[posControl.activeWaypointIndex + 1].p2 == -1) {
+                    nextWpIndex = posControl.waypointList[posControl.activeWaypointIndex + 1].p1;
+                }
+            }
+            mapWaypointToLocalPosition(nextWPPos, &posControl.waypointList[nextWpIndex], 0);
+            return true;
+        }
+    }
+
+    return false;   // no position available
+}
+// CR67
 /*-----------------------------------------------------------
  * Check if waypoint is/was reached. Assume that waypoint-yaw stores initial bearing
  *-----------------------------------------------------------*/
@@ -2252,7 +2284,21 @@ static bool isWaypointPositionReached(const fpVector3_t * pos, const bool isWayp
 
 bool isWaypointReached(const navWaypointPosition_t * waypoint, const bool isWaypointHome)
 {
+    // CR67
+    if (navConfig()->fw.waypoint_smooth_turns && FLIGHT_MODE(NAV_WP_MODE) && STATE(AIRPLANE) && posControl.activeWaypointIndex > 0) {
+        fpVector3_t nextWPPos;
+        if (getLocalPosNextWaypoint(&nextWPPos)) {
+            int32_t bearingNextWP = ABS(wrap_18000(calculateBearingToDestination(&nextWPPos) - posControl.activeWaypoint.yaw));
+            int8_t turnEarlyFactor = constrain((bearingNextWP - 6000) / 500, 0, 10);
+            if (posControl.wpDistance < (turnEarlyFactor * navConfig()->general.waypoint_radius)) {
+                return true;
+            }
+            DEBUG_SET(DEBUG_CRUISE, 7, turnEarlyFactor);
+        }
+    }
+
     return isWaypointPositionReached(&waypoint->pos, isWaypointHome);
+    // CR67
 }
 
 bool isWaypointAltitudeReached(void)
@@ -3321,10 +3367,17 @@ static void mapWaypointToLocalPosition(fpVector3_t * localPos, const navWaypoint
 
 static void calculateAndSetActiveWaypointToLocalPosition(const fpVector3_t * pos)
 {
-    posControl.activeWaypoint.pos = *pos;
     // Calculate initial bearing towards waypoint and store it in waypoint yaw parameter (this will further be used to detect missed waypoints)
-    posControl.activeWaypoint.yaw = calculateBearingToDestination(pos);
+    // CR67
+    DEBUG_SET(DEBUG_CRUISE, 7, posControl.activeWaypointIndex);
+    if (isWaypointNavTrackingRoute()) {
+        posControl.activeWaypoint.yaw = calculateBearingBetweenLocalPositions(&posControl.activeWaypoint.pos, pos);
+    } else {
+        posControl.activeWaypoint.yaw = calculateBearingToDestination(pos);
+    }
 
+    posControl.activeWaypoint.pos = *pos;
+    // CR67
     // Set desired position to next waypoint (XYZ-controller)
     setDesiredPosition(&posControl.activeWaypoint.pos, posControl.activeWaypoint.yaw, NAV_POS_UPDATE_XY | NAV_POS_UPDATE_Z | NAV_POS_UPDATE_HEADING);
 }
@@ -3389,9 +3442,10 @@ float getActiveWaypointSpeed(void)
     }
 }
 // CR67
-bool isWaypointNavActive(void)
+bool isWaypointNavTrackingRoute(void)
 {
-    return (FLIGHT_MODE(NAV_WP_MODE) && posControl.activeWaypointIndex > 0 && !isNavHoldPositionActive()) ||
+    // True when established on route beyond first WP
+    return (FLIGHT_MODE(NAV_WP_MODE) && posControl.activeWaypointIndex > 0) ||
             (posControl.flags.rthTrackbackActive && posControl.activeRthTBPointIndex != posControl.rthTBLastSavedIndex);
 }
 // CR67
@@ -3538,7 +3592,7 @@ static navigationFSMEvent_t selectNavEventFromBoxModeInput(bool launchBypass)   
     // DEBUG_SET(DEBUG_CRUISE, 3, posControl.rthTBPointsList[3].x);
     // DEBUG_SET(DEBUG_CRUISE, 4, posControl.rthTBPointsList[4].x);
     // DEBUG_SET(DEBUG_CRUISE, 5, posControl.rthTBPointsList[5].x);
-    DEBUG_SET(DEBUG_CRUISE, 7, posControl.activeRthTBPointIndex);
+    // DEBUG_SET(DEBUG_CRUISE, 7, posControl.activeRthTBPointIndex);
 
     static bool canActivateWaypoint = false;
     static bool canActivateLaunchMode = false;

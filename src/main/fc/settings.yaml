@@ -2893,7 +2893,19 @@ groups:
         field: fw.yawControlDeadband
         min: 0
         max: 90
-
+        # CR67
+      - name: nav_fw_wp_smooth_turns
+        description: "Smooths waypoint turns by reaching waypoint early if turn exceeds 60 degrees up to 120 degrees. Applied as a factor of nav_wp_radius from 2 (70 degs) to 10 (120 degs), i.e. approaching 90 degree turn is reached when 6 x nav_wp_radius from waypoint."
+        default_value: OFF
+        field: fw.waypoint_smooth_turns
+        type: bool
+      - name: nav_fw_wp_tracking_deadband
+        description: "Forces craft to accurately track along waypoint course within the set tracking deadband. Deaband is the distance from waypoint course line. Set to 0 to disable course tracking."
+        default_value: 250
+        field: fw.waypoint_tracking_deadband
+        min: 0
+        max: 1000
+        # CR67
   - name: PG_TELEMETRY_CONFIG
     type: telemetryConfig_t
     headers: ["io/serial.h", "telemetry/telemetry.h", "telemetry/frsky_d.h", "telemetry/sim.h"]

@@ -73,6 +73,7 @@ static float throttleSpeedAdjustment = 0;
 static bool isAutoThrottleManuallyIncreased = false;
 static int32_t navHeadingError;
 static int8_t loiterDirYaw = 1;
+static bool needToCalculateCircularLoiter = false;  // CR67
 
 // Calculates the cutoff frequency for smoothing out roll/pitch commands
 // control_smoothness valid range from 0 to 9
@@ -277,7 +278,7 @@ static void calculateVirtualPositionTarget_FW(float trackingPeriod)
 
     // If angular visibility of a waypoint is less than 30deg, don't calculate circular loiter, go straight to the target
     #define TAN_15DEG    0.26795f
-    bool needToCalculateCircularLoiter = isNavHoldPositionActive() &&
+    needToCalculateCircularLoiter = isNavHoldPositionActive() &&   // CR67
                                             (distanceToActualTarget <= (navLoiterRadius / TAN_15DEG)) &&
                                             (distanceToActualTarget > 50.0f);
 
@@ -359,7 +360,7 @@ static void updatePositionHeadingController_FW(timeUs_t currentTimeUs, timeDelta
 
     // CR67
     DEBUG_SET(DEBUG_CRUISE, 4, virtualTargetBearing);
-    if (isWaypointNavActive() && !IS_RC_MODE_ACTIVE(BOXNAVALTHOLD)) {
+    if (navConfig()->fw.waypoint_tracking_deadband && isWaypointNavTrackingRoute() && !needToCalculateCircularLoiter && !IS_RC_MODE_ACTIVE(BOXNAVALTHOLD)) {
         if (ABS(wrap_18000(virtualTargetBearing - posControl.actualState.yaw)) < 9000 || posControl.wpDistance < 1000.0f) {
             fpVector3_t virtualCoursePoint;
             virtualCoursePoint.x = posControl.activeWaypoint.pos.x -
@@ -370,20 +371,21 @@ static void updatePositionHeadingController_FW(timeUs_t currentTimeUs, timeDelta
             DEBUG_SET(DEBUG_CRUISE, 3, distToCourseLine);
 
             int32_t courseCorrection = wrap_18000(posControl.activeWaypoint.yaw - virtualTargetBearing);
-            if (distToCourseLine < 250 && ABS(wrap_18000(posControl.activeWaypoint.yaw - posControl.actualState.yaw)) < 1000) {
+            if (distToCourseLine < navConfig()->fw.waypoint_tracking_deadband && ABS(wrap_18000(posControl.activeWaypoint.yaw - posControl.actualState.yaw)) < 1000) {
                 virtualTargetBearing = posControl.activeWaypoint.yaw;
             } else {
-                float courseCorrectionFactor = constrainf(((distToCourseLine - 250.0f) / 3000.0f), 0.0f, 1.0f);
+                float courseCorrectionFactor = constrainf((distToCourseLine - navConfig()->fw.waypoint_tracking_deadband) /
+                                                (10.0f * navConfig()->fw.waypoint_tracking_deadband), 0.0f, 1.0f);
                 courseCorrection = courseCorrection < 0 ? -8000 * courseCorrectionFactor : 8000 * courseCorrectionFactor;
                 virtualTargetBearing = wrap_36000(posControl.activeWaypoint.yaw - courseCorrection);
                 DEBUG_SET(DEBUG_CRUISE, 0, courseCorrection);
                 DEBUG_SET(DEBUG_CRUISE, 1, courseCorrectionFactor * 100);
             }
         }
-        DEBUG_SET(DEBUG_CRUISE, 6, posControl.activeWaypoint.yaw);
         DEBUG_SET(DEBUG_CRUISE, 5, virtualTargetBearing);
     }
-    DEBUG_SET(DEBUG_CRUISE, 2, gpsSol.groundCourse);
+    DEBUG_SET(DEBUG_CRUISE, 2, gpsSol.groundCourse / 10);
+    DEBUG_SET(DEBUG_CRUISE, 6, posControl.activeWaypoint.yaw);
     // CR67
 
     /*
