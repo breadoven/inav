@@ -2234,7 +2234,7 @@ bool navCalculatePathToDestination(navDestinationPath_t *result, const fpVector3
     return true;
 }
 // CR67
-static bool getLocalPosNextWaypoint(fpVector3_t * nextWPPos)
+static bool getLocalPosNextWaypoint(fpVector3_t * nextWpPos)
 {
     // Only for WP Mode not Trackback. Ignore non geo waypoints except RTH and JUMP.
     if (FLIGHT_MODE(NAV_WP_MODE) && !isLastMissionWaypoint()) {
@@ -2248,11 +2248,11 @@ static bool getLocalPosNextWaypoint(fpVector3_t * nextWPPos)
                     nextWpIndex = posControl.waypointList[posControl.activeWaypointIndex + 1].p1;
                 }
             }
-            mapWaypointToLocalPosition(nextWPPos, &posControl.waypointList[nextWpIndex], 0);
+            mapWaypointToLocalPosition(nextWpPos, &posControl.waypointList[nextWpIndex], 0);
             return true;
         }
     }
-
+// tblastpointindex = posControl.rthTBWrapAroundCounter = -1 ? 0 : posControl.rthTBLastSavedIndex == NAV_RTH_TRACKBACK_POINTS - 1 ? 0 : posControl.rthTBLastSavedIndex + 1;
     return false;   // no position available
 }
 // CR67
@@ -2285,19 +2285,22 @@ static bool isWaypointPositionReached(const fpVector3_t * pos, const bool isWayp
 bool isWaypointReached(const navWaypointPosition_t * waypoint, const bool isWaypointHome)
 {
     // CR67
+    if (isWaypointPositionReached(&waypoint->pos, isWaypointHome)) {
+        return true;
+    }
+
+    /* For fixed wing, reach waypoint earlier if turn to next waypoint is tighter. Helps avoid overshoot during turn */
     if (navConfig()->fw.waypoint_smooth_turns && FLIGHT_MODE(NAV_WP_MODE) && STATE(AIRPLANE) && posControl.activeWaypointIndex > 0) {
-        fpVector3_t nextWPPos;
-        if (getLocalPosNextWaypoint(&nextWPPos)) {
-            int32_t bearingNextWP = ABS(wrap_18000(calculateBearingToDestination(&nextWPPos) - posControl.activeWaypoint.yaw));
-            int8_t turnEarlyFactor = constrain((bearingNextWP - 6000) / 500, 0, 10);
-            if (posControl.wpDistance < (turnEarlyFactor * navConfig()->general.waypoint_radius)) {
-                return true;
-            }
+        fpVector3_t nextWpPos;
+        if (getLocalPosNextWaypoint(&nextWpPos)) {
+            int32_t bearingToNextWP = ABS(wrap_18000(calculateBearingToDestination(&nextWpPos) - posControl.activeWaypoint.yaw));
+            int8_t turnEarlyFactor = constrain((bearingToNextWP - 6000) / 500, 0, 10);
             DEBUG_SET(DEBUG_CRUISE, 7, turnEarlyFactor);
+            return posControl.wpDistance <= (turnEarlyFactor * navConfig()->general.waypoint_radius);
         }
     }
 
-    return isWaypointPositionReached(&waypoint->pos, isWaypointHome);
+    return false;
     // CR67
 }
 
@@ -3369,7 +3372,6 @@ static void calculateAndSetActiveWaypointToLocalPosition(const fpVector3_t * pos
 {
     // Calculate initial bearing towards waypoint and store it in waypoint yaw parameter (this will further be used to detect missed waypoints)
     // CR67
-    DEBUG_SET(DEBUG_CRUISE, 7, posControl.activeWaypointIndex);
     if (isWaypointNavTrackingRoute()) {
         posControl.activeWaypoint.yaw = calculateBearingBetweenLocalPositions(&posControl.activeWaypoint.pos, pos);
     } else {

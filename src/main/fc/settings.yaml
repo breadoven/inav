@@ -931,9 +931,9 @@ groups:
         type: bool
         # CR68
       # - name: failsafe_mission_delay
-        # description: "Applies when a WP mission is in progress. Sets the time delay in seconds between failsafe activating and the defined Failsafe prcedure triggering. If set to 0 the Failsafe procedure won't be triggered at all and the mission will continue until the end."
-        # default_value: 1
-        # min: 0
+        # description: "Applies when a WP mission is in progress. Sets the time delay in seconds between failsafe activating and the defined Failsafe prcedure triggering. If set to -1 the Failsafe procedure won't be triggered at all and the mission will continue until the end."
+        # default_value: 0
+        # min: -1
         # max: 600
         # CR68
 
@@ -2894,17 +2894,17 @@ groups:
         min: 0
         max: 90
         # CR67
-      - name: nav_fw_wp_smooth_turns
-        description: "Smooths waypoint turns by reaching waypoint early if turn exceeds 60 degrees up to 120 degrees. Applied as a factor of nav_wp_radius from 2 (70 degs) to 10 (120 degs), i.e. approaching 90 degree turn is reached when 6 x nav_wp_radius from waypoint."
-        default_value: OFF
-        field: fw.waypoint_smooth_turns
-        type: bool
       - name: nav_fw_wp_tracking_deadband
-        description: "Forces craft to accurately track along waypoint course within the set tracking deadband. Deaband is the distance from waypoint course line. Set to 0 to disable course tracking."
+        description: "Forces craft to rapidly move toward and accurately track along waypoint course line within the set tracking deadband. Deadband is the distance either side of the waypoint course line [cm]. If set to 0 course tracking is disabled and the craft will head directly to the next waypoint from whatever position was achieved after the last waypoint turn."
         default_value: 250
         field: fw.waypoint_tracking_deadband
         min: 0
         max: 1000
+      - name: nav_fw_wp_smooth_turns
+        description: "Smooths waypoint turns by reaching waypoint early if turn exceeds 70 degrees. Applied as a factor of nav_wp_radius from 2 (70 degs) to 10 (110 degs and over), i.e. approaching 90 degree turn is reached when 6 * nav_wp_radius from waypoint."
+        default_value: OFF
+        field: fw.waypoint_smooth_turns
+        type: bool
         # CR67
   - name: PG_TELEMETRY_CONFIG
     type: telemetryConfig_t

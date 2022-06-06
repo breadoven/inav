@@ -360,6 +360,8 @@ static void updatePositionHeadingController_FW(timeUs_t currentTimeUs, timeDelta
 
     // CR67
     DEBUG_SET(DEBUG_CRUISE, 4, virtualTargetBearing);
+    /* If waypoint tracking enabled force craft toward waypoint course line
+     * and hold within set deadband distance from line */
     if (navConfig()->fw.waypoint_tracking_deadband && isWaypointNavTrackingRoute() && !needToCalculateCircularLoiter && !IS_RC_MODE_ACTIVE(BOXNAVALTHOLD)) {
         if (ABS(wrap_18000(virtualTargetBearing - posControl.actualState.yaw)) < 9000 || posControl.wpDistance < 1000.0f) {
             fpVector3_t virtualCoursePoint;
