@@ -2246,6 +2246,12 @@ static bool getLocalPosNextWaypoint(fpVector3_t * nextWpPos)
                 if (posControl.waypointList[posControl.activeWaypointIndex + 1].p3 != 0 ||
                     posControl.waypointList[posControl.activeWaypointIndex + 1].p2 == -1) {
                     nextWpIndex = posControl.waypointList[posControl.activeWaypointIndex + 1].p1;
+                } else if (posControl.activeWaypointIndex + 2 <= posControl.waypointCount - 1) {
+                    if (posControl.waypointList[posControl.activeWaypointIndex + 2].action != NAV_WP_ACTION_JUMP) {
+                        nextWpIndex++;
+                    } else {
+                        return false;   // give up - too complicated
+                    }
                 }
             }
             mapWaypointToLocalPosition(nextWpPos, &posControl.waypointList[nextWpIndex], 0);
@@ -2293,7 +2299,7 @@ bool isWaypointReached(const navWaypointPosition_t * waypoint, const bool isWayp
     if (navConfig()->fw.waypoint_smooth_turns && FLIGHT_MODE(NAV_WP_MODE) && STATE(AIRPLANE) && posControl.activeWaypointIndex > 0) {
         fpVector3_t nextWpPos;
         if (getLocalPosNextWaypoint(&nextWpPos)) {
-            int32_t bearingToNextWP = ABS(wrap_18000(calculateBearingToDestination(&nextWpPos) - posControl.activeWaypoint.yaw));
+            int32_t bearingToNextWP = ABS(wrap_18000(calculateBearingBetweenLocalPositions(&posControl.activeWaypoint.pos, &nextWpPos) - posControl.activeWaypoint.yaw));
             int8_t turnEarlyFactor = constrain((bearingToNextWP - 6000) / 500, 0, 10);
             DEBUG_SET(DEBUG_CRUISE, 7, turnEarlyFactor);
             return posControl.wpDistance <= (turnEarlyFactor * navConfig()->general.waypoint_radius);
