@@ -4392,6 +4392,16 @@ Top and bottom margins for the hud area
 
 ---
 
+### osd_hud_radar_alt_difference_display_time
+
+Time in seconds to display the altitude difference in radar
+
+| Default | Min | Max |
+| --- | --- | --- |
+| 3 | 0 | 10 |
+
+---
+
 ### osd_hud_radar_disp
 
 Maximum count of nearby aircrafts or points of interest to display in the hud, as sent from an ESP32 LoRa module. Set to 0 to disable (show nothing). The nearby aircrafts will appear as markers A, B, C, etc
@@ -4399,6 +4409,16 @@ Maximum count of nearby aircrafts or points of interest to display in the hud, a
 | Default | Min | Max |
 | --- | --- | --- |
 | 0 | 0 | 4 |
+
+---
+
+### osd_hud_radar_distance_display_time
+
+Time in seconds to display the distance in radar
+
+| Default | Min | Max |
+| --- | --- | --- |
+| 3 | 1 | 10 |
 
 ---
 
@@ -4712,7 +4732,7 @@ Auto swap display time interval between disarm stats pages (seconds). Reverts to
 
 ---
 
-### osd_switch_indicator_one_channnel
+### osd_switch_indicator_one_channel
 
 RC Channel to use for OSD switch indicator 1.
 
@@ -4732,7 +4752,7 @@ Character to use for OSD switch incicator 1.
 
 ---
 
-### osd_switch_indicator_three_channnel
+### osd_switch_indicator_three_channel
 
 RC Channel to use for OSD switch indicator 3.
 
@@ -4752,7 +4772,7 @@ Character to use for OSD switch incicator 3.
 
 ---
 
-### osd_switch_indicator_two_channnel
+### osd_switch_indicator_two_channel
 
 RC Channel to use for OSD switch indicator 2.
 
@@ -4772,7 +4792,7 @@ Character to use for OSD switch incicator 2.
 
 ---
 
-### osd_switch_indicator_zero_channnel
+### osd_switch_indicator_zero_channel
 
 RC Channel to use for OSD switch indicator 0.
 
