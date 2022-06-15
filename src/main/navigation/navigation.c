@@ -210,8 +210,8 @@ PG_RESET_TEMPLATE(navConfig_t, navConfig,
         .yawControlDeadband = SETTING_NAV_FW_YAW_DEADBAND_DEFAULT,
         .auto_disarm_delay = SETTING_NAV_FW_AUTO_DISARM_DELAY_DEFAULT,          // ms - time delay to disarm when auto disarm after landing enabled
         .soaring_pitch_deadband = SETTING_NAV_FW_SOARING_PITCH_DEADBAND_DEFAULT,// pitch angle mode deadband when Saoring mode enabled
-        .waypoint_tracking_deadband = SETTING_NAV_FW_WP_TRACKING_DEADBAND_DEFAULT,   // 250 cm    CR67
-        .waypoint_smooth_turns = SETTING_NAV_FW_WP_SMOOTH_TURNS_DEFAULT,        // CR67
+        .waypoint_tracking_accuracy = SETTING_NAV_FW_WP_TRACKING_ACCURACY_DEFAULT,   // 0 cm    CR67
+        .waypoint_smooth_turns = SETTING_NAV_FW_WP_SMOOTH_TURNS_DEFAULT,        // OFF   CR67
     }
 );
 
@@ -3376,7 +3376,7 @@ static void mapWaypointToLocalPosition(fpVector3_t * localPos, const navWaypoint
 
 static void calculateAndSetActiveWaypointToLocalPosition(const fpVector3_t * pos)
 {
-    // Calculate initial bearing towards waypoint and store it in waypoint yaw parameter (this will further be used to detect missed waypoints)
+    // Calculate bearing towards waypoint and store it in waypoint yaw parameter (this will further be used to detect missed waypoints)
     // CR67
     if (isWaypointNavTrackingRoute()) {
         posControl.activeWaypoint.yaw = calculateBearingBetweenLocalPositions(&posControl.activeWaypoint.pos, pos);

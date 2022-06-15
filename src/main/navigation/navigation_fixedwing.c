@@ -361,8 +361,8 @@ static void updatePositionHeadingController_FW(timeUs_t currentTimeUs, timeDelta
     // CR67
     DEBUG_SET(DEBUG_CRUISE, 4, virtualTargetBearing);
     /* If waypoint tracking enabled force craft toward waypoint course line
-     * and hold within set deadband distance from line */
-    if (navConfig()->fw.waypoint_tracking_deadband && isWaypointNavTrackingRoute() && !needToCalculateCircularLoiter) {
+     * and hold within set accuracy distance from line */
+    if (navConfig()->fw.waypoint_tracking_accuracy && isWaypointNavTrackingRoute() && !needToCalculateCircularLoiter) {
         if (ABS(wrap_18000(virtualTargetBearing - posControl.actualState.yaw)) < 9000 || posControl.wpDistance < 1000.0f) {
             fpVector3_t virtualCoursePoint;
             virtualCoursePoint.x = posControl.activeWaypoint.pos.x -
@@ -373,12 +373,11 @@ static void updatePositionHeadingController_FW(timeUs_t currentTimeUs, timeDelta
             DEBUG_SET(DEBUG_CRUISE, 3, distToCourseLine);
 
             int32_t courseCorrection = wrap_18000(posControl.activeWaypoint.yaw - virtualTargetBearing);
-            if (distToCourseLine < navConfig()->fw.waypoint_tracking_deadband && ABS(wrap_18000(posControl.activeWaypoint.yaw - posControl.actualState.yaw)) < 1000) {
+            if (distToCourseLine < navConfig()->fw.waypoint_tracking_accuracy && ABS(wrap_18000(posControl.activeWaypoint.yaw - posControl.actualState.yaw)) < 1000) {
                 virtualTargetBearing = posControl.activeWaypoint.yaw;
             } else {
-                float courseCorrectionFactor = constrainf((distToCourseLine - navConfig()->fw.waypoint_tracking_deadband) /
-                                                (15.0f * navConfig()->fw.waypoint_tracking_deadband), 0.0f, 1.0f);
-                // courseCorrectionFactor = sq(courseCorrectionFactor);
+                float courseCorrectionFactor = constrainf((distToCourseLine - navConfig()->fw.waypoint_tracking_accuracy) /
+                                                (15.0f * navConfig()->fw.waypoint_tracking_accuracy), 0.0f, 1.0f);
                 courseCorrection = courseCorrection < 0 ? -8000 * courseCorrectionFactor : 8000 * courseCorrectionFactor;
                 if (!IS_RC_MODE_ACTIVE(BOXNAVALTHOLD)) {    // DEBUG ONLY
                     virtualTargetBearing = wrap_36000(posControl.activeWaypoint.yaw - courseCorrection);

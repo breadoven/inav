@@ -2894,14 +2894,14 @@ groups:
         min: 0
         max: 90
         # CR67
-      - name: nav_fw_wp_tracking_deadband
-        description: "Forces craft to rapidly move toward and accurately track along waypoint course line within the set tracking deadband. Deadband is the distance either side of the waypoint course line [cm]. If set to 0 course tracking is disabled and the craft will head directly to the next waypoint from whatever position was achieved after the last waypoint turn."
-        default_value: 250
-        field: fw.waypoint_tracking_deadband
+      - name: nav_fw_wp_tracking_accuracy
+        description: "Forces craft to quickly head toward and track along waypoint course line within the set tracking accuracy. Accuracy is the distance either side of the waypoint course line [cm] but also affects the tracking response relative to the distance to the course line. Higher values reduce the tracking response. A value of 250 is a good starting point. If set to 0 course tracking is disabled and the craft will head directly to the next waypoint from whatever position was achieved after the last waypoint turn."
+        default_value: 0
+        field: fw.waypoint_tracking_accuracy
         min: 0
         max: 1000
       - name: nav_fw_wp_smooth_turns
-        description: "Smooths waypoint turns by reaching waypoint early if turn exceeds 70 degrees. Applied as a factor of nav_wp_radius from 2 (70 degs) to 10 (110 degs and over), i.e. approaching 90 degree turn is reached when 6 * nav_wp_radius from waypoint."
+        description: "Smooths waypoint turns by reaching waypoint early if turn exceeds 70 degrees. Applied as a factor of nav_wp_radius from 2 (70 degs) to 10 (110 degs and over), i.e. 90 degree turn is reached when 6 * nav_wp_radius from waypoint."
         default_value: OFF
         field: fw.waypoint_smooth_turns
         type: bool
