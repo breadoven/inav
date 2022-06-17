@@ -353,15 +353,13 @@ static bool failsafeCheckStickMotion(void)
 static failsafeProcedure_e failsafeChooseFailsafeProcedure(void)
 {
     // CR68
-    // static timeMs_t wpModeDelayedFailsafeStart = 0;
-    // if ((FLIGHT_MODE(NAV_WP_MODE) || isWaypointMissionRTHActive())) {
-        // if (!wpModeDelayedFailsafeStart) {
-            // wpModeDelayedFailsafeStart = millis();
+    // if ((FLIGHT_MODE(NAV_WP_MODE) || isWaypointMissionRTHActive()) && failsafeConfig()->failsafe_mission_delay) {
+        // if (!failsafeState.wpModeDelayedFailsafeStart) {
+            // failsafeState.wpModeDelayedFailsafeStart = millis();
+            // return FAILSAFE_PROCEDURE_NONE;
         // } else {
-            // if ((millis() - wpModeDelayedFailsafeStart <  (MILLIS_PER_SECOND * (uint16_t)failsafeConfig()->failsafe_mission_delay)) || failsafeConfig()->failsafe_mission_delay == -1) {
+            // if ((millis() - failsafeState.wpModeDelayedFailsafeStart < (MILLIS_PER_SECOND * (uint16_t)failsafeConfig()->failsafe_mission_delay)) || failsafeConfig()->failsafe_mission_delay == -1) {
                 // return FAILSAFE_PROCEDURE_NONE;
-            // } else {
-                // wpModeDelayedFailsafeStart = 0;
             // }
         // }
     // }
@@ -423,6 +421,7 @@ void failsafeUpdateState(void)
                             failsafeState.receivingRxDataPeriodPreset = PERIOD_OF_3_SECONDS; // require 3 seconds of valid rxData
                         } else {
                             failsafeState.phase = FAILSAFE_RX_LOSS_DETECTED;
+                            // failsafeState.wpModeDelayedFailsafeStart = 0;   // CR68
                         }
                         reprocessState = true;
                     }
@@ -479,6 +478,15 @@ void failsafeUpdateState(void)
                     failsafeState.phase = FAILSAFE_RX_LOSS_RECOVERED;
                     reprocessState = true;
                 }
+                // CR68
+                // } else {
+                    // // check if failsafe procedure has changed and trigger new procedure if it has
+                    // if (failsafeChooseFailsafeProcedure() != FAILSAFE_PROCEDURE_NONE) {
+                        // failsafeState.phase = FAILSAFE_RX_LOSS_DETECTED;
+                        // reprocessState = true;
+                    // }
+                // }
+                // CR58
                 break;
 
             case FAILSAFE_RETURN_TO_HOME:
