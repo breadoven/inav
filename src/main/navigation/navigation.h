@@ -305,6 +305,7 @@ typedef struct navConfig_s {
         // CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
         bool     launch_allow_throttle_low;  // Allow launch with throttle low
         // xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+        bool     launch_manual_throttle;     // CR70
         uint8_t  cruise_yaw_rate;            // Max yaw rate (dps) when CRUISE MODE is enabled
         bool     allow_manual_thr_increase;
         bool     useFwNavYawControl;

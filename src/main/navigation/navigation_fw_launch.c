@@ -440,13 +440,29 @@ static fixedWingLaunchEvent_t fwLaunchState_FW_LAUNCH_STATE_MOTOR_SPINUP(timeUs_
 
 static fixedWingLaunchEvent_t fwLaunchState_FW_LAUNCH_STATE_IN_PROGRESS(timeUs_t currentTimeUs)
 {
-    rcCommand[THROTTLE] = constrain(currentBatteryProfile->nav.fw.launch_throttle, getThrottleIdleValue(), motorConfig()->maxthrottle);
+    // CR70
+    uint16_t initialTime = navConfig()->fw.launch_motor_timer + navConfig()->fw.launch_motor_spinup_time;
+
+    if (navConfig()->fw.launch_manual_throttle) {
+        if (isThrottleLow()) {
+            fwLaunch.currentStateTimeUs = currentTimeUs;
+            initialTime = 0;
+            if (isRollPitchStickDeflected(LAUNCH_ABORT_STICK_DEADBAND)) {
+                return FW_LAUNCH_EVENT_ABORT;
+            }
+        }
+        fwLaunch.pitchAngle = navConfig()->fw.launch_climb_angle;
+    } else {
+        rcCommand[THROTTLE] = constrain(currentBatteryProfile->nav.fw.launch_throttle, getThrottleIdleValue(), motorConfig()->maxthrottle);
+    }
+    // CR70
 
     if (isLaunchMaxAltitudeReached()) {
         return FW_LAUNCH_EVENT_SUCCESS; // cancel the launch and do the FW_LAUNCH_STATE_FINISH state
     }
 
-    if (areSticksMoved(navConfig()->fw.launch_motor_timer + navConfig()->fw.launch_motor_spinup_time, currentTimeUs)) {
+    if (areSticksMoved(initialTime, currentTimeUs)) {   // CR70
+    // if (areSticksMoved(navConfig()->fw.launch_motor_timer + navConfig()->fw.launch_motor_spinup_time, currentTimeUs)) {
         return FW_LAUNCH_EVENT_ABORT; // cancel the launch and do the FW_LAUNCH_STATE_ABORTED state
     }
 
@@ -483,8 +499,12 @@ static fixedWingLaunchEvent_t fwLaunchState_FW_LAUNCH_STATE_FINISH(timeUs_t curr
     }
     else {
         // make a smooth transition from the launch state to the current state for throttle and the pitch angle
-        const uint16_t launchThrottle = constrain(currentBatteryProfile->nav.fw.launch_throttle, getThrottleIdleValue(), motorConfig()->maxthrottle);
-        rcCommand[THROTTLE] = scaleRangef(elapsedTimeMs, 0.0f, endTimeMs,  launchThrottle, rcCommand[THROTTLE]);
+        // CR70
+        if (!navConfig()->fw.launch_manual_throttle) {
+            const uint16_t launchThrottle = constrain(currentBatteryProfile->nav.fw.launch_throttle, getThrottleIdleValue(), motorConfig()->maxthrottle);
+            rcCommand[THROTTLE] = scaleRangef(elapsedTimeMs, 0.0f, endTimeMs,  launchThrottle, rcCommand[THROTTLE]);
+        }
+        // CR70
         fwLaunch.pitchAngle = scaleRangef(elapsedTimeMs, 0.0f, endTimeMs, navConfig()->fw.launch_climb_angle, rcCommand[PITCH]);
     }
 
@@ -562,7 +582,13 @@ void applyFixedWingLaunchController(timeUs_t currentTimeUs)
 
 void resetFixedWingLaunchController(timeUs_t currentTimeUs)
 {
-    setCurrentState(FW_LAUNCH_STATE_WAIT_THROTTLE, currentTimeUs);
+     // CR70
+    if (navConfig()->fw.launch_manual_throttle) {
+        setCurrentState(FW_LAUNCH_STATE_IN_PROGRESS, currentTimeUs);
+    } else {
+        setCurrentState(FW_LAUNCH_STATE_WAIT_THROTTLE, currentTimeUs);
+    }
+     // CR70
 }
 
 void enableFixedWingLaunchController(timeUs_t currentTimeUs)
