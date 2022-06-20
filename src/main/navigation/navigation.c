@@ -255,7 +255,7 @@ void calculateFarAwayTarget(fpVector3_t * farAwayPos, int32_t yaw, int32_t dista
 void calculateNewCruiseTarget(fpVector3_t * origin, int32_t yaw, int32_t distance);
 // static bool isWaypointPositionReached(const fpVector3_t * pos, const bool isWaypointHome);   CR67
 // static bool isWaypointReached(const navWaypointPosition_t * waypoint, const bool isWaypointHome);   // CR67
-static bool isWaypointReached(const fpVector3_t * pos, const int32_t * yaw, const bool isWaypointHome);  // CR67
+static bool isWaypointReached(const fpVector3_t * waypointPos, const int32_t * waypointYaw);  // CR67
 bool isWaypointAltitudeReached(void);
 static void mapWaypointToLocalPosition(fpVector3_t * localPos, const navWaypoint_t * waypoint, geoAltitudeConversionMode_e altConv);
 static navigationFSMEvent_t nextForNonGeoStates(void);
@@ -1340,7 +1340,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_TRACKBACK(navigatio
             return NAV_FSM_EVENT_SWITCH_TO_NAV_STATE_RTH_INITIALIZE;    // procede to home after final trackback point
         }
 
-        if (isWaypointReached(&posControl.activeWaypoint.pos, &posControl.activeWaypoint.yaw, false)) {  // CR67
+        if (isWaypointReached(&posControl.activeWaypoint.pos, &posControl.activeWaypoint.yaw)) {  // CR67
         // if (isWaypointReached(&posControl.activeWaypoint, false)) {  // || isWaypointMissed(&posControl.activeWaypoint)) {  CR67
             posControl.activeRthTBPointIndex--;
 
@@ -1374,7 +1374,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_HEAD_HOME(navigatio
     // If we have position sensor - continue home
     if ((posControl.flags.estPosStatus >= EST_USABLE)) {
         fpVector3_t * tmpHomePos = rthGetHomeTargetPosition(RTH_HOME_ENROUTE_PROPORTIONAL);
-        if (isWaypointReached(tmpHomePos, 0, true)) {   // CR67
+        if (isWaypointReached(tmpHomePos, 0)) {   // CR67
         // if (isWaypointPositionReached(tmpHomePos, true)) {
             // Successfully reached position target - update XYZ-position
             setDesiredPosition(tmpHomePos, posControl.rthState.homePosition.yaw, NAV_POS_UPDATE_XY | NAV_POS_UPDATE_Z | NAV_POS_UPDATE_HEADING);
@@ -1630,7 +1630,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_WAYPOINT_IN_PROGRESS(na
             case NAV_WP_ACTION_HOLD_TIME:
             case NAV_WP_ACTION_WAYPOINT:
             case NAV_WP_ACTION_LAND:
-                if (isWaypointReached(&posControl.activeWaypoint.pos, &posControl.activeWaypoint.yaw, false)) {  // CR67
+                if (isWaypointReached(&posControl.activeWaypoint.pos, &posControl.activeWaypoint.yaw)) {  // CR67
                 // if (isWaypointReached(&posControl.activeWaypoint, false)) {  // || isWaypointMissed(&posControl.activeWaypoint)) {  CR67
                     return NAV_FSM_EVENT_SUCCESS;   // will switch to NAV_STATE_WAYPOINT_REACHED
                 }
@@ -2297,26 +2297,30 @@ static bool getLocalPosNextWaypoint(fpVector3_t * nextWpPos)
         // return (posControl.wpDistance <= navConfig()->general.waypoint_radius);
     // }
 // }
-
+    // CR67
 /*-----------------------------------------------------------
  * Check if waypoint is/was reached.
  * waypointYaw stores initial bearing to waypoint
  *-----------------------------------------------------------*/
-static bool isWaypointReached(const fpVector3_t * waypointPos, const int32_t * waypointYaw, const bool isWaypointHome)
+static bool isWaypointReached(const fpVector3_t * waypointPos, const int32_t * waypointYaw)
 {
-    // CR67
     posControl.wpDistance = calculateDistanceToDestination(waypointPos);
 
-    if (isWaypointHome) {
-        // Airplane will do a circular loiter over home and might never approach it closer than waypoint_radius
-        // Check within 10% margin of circular loiter radius
-        bool fixedwingIsWithinLoiterRadius = STATE(AIRPLANE) && posControl.wpDistance <= (navConfig()->fw.loiter_radius * 1.10f);
+    // Airplane will do a circular loiter at hold waypoints and might never approach them closer than waypoint_radius
+    // Check within 10% margin of circular loiter radius
+    if (STATE(AIRPLANE) && isNavHoldPositionActive() && posControl.wpDistance <= (navConfig()->fw.loiter_radius * 1.10f)) {
+        return true;
+    }
 
-        return (posControl.wpDistance <= navConfig()->general.waypoint_radius) || fixedwingIsWithinLoiterRadius;
-    } else {
-        int8_t turnEarlyFactor = 0;
+    int8_t turnEarlyFactor = 0;
+    if (FLIGHT_MODE(NAV_WP_MODE)) {
+        // Check if waypoint was missed based on bearing to WP exceeding 100 degrees relative to waypointYaw
+        if (ABS(wrap_18000(calculateBearingToDestination(waypointPos) - *waypointYaw)) > 10000) {
+            return true;
+        }
+
         // fixed wing option to reach waypoint earlier to help smooth tighter turns to next waypoint
-        if (navConfig()->fw.waypoint_smooth_turns && FLIGHT_MODE(NAV_WP_MODE) && STATE(AIRPLANE) && posControl.activeWaypointIndex > 0) {
+        if (navConfig()->fw.waypoint_smooth_turns && STATE(AIRPLANE) && posControl.activeWaypointIndex > 0) {
             fpVector3_t nextWpPos;
             if (getLocalPosNextWaypoint(&nextWpPos)) {
                 int32_t bearingToNextWP = ABS(wrap_18000(calculateBearingBetweenLocalPositions(waypointPos, &nextWpPos) - *waypointYaw));
@@ -2324,12 +2328,9 @@ static bool isWaypointReached(const fpVector3_t * waypointPos, const int32_t * w
                 DEBUG_SET(DEBUG_CRUISE, 7, turnEarlyFactor);
             }
         }
-
-        // Check if waypoint was missed based on bearing to WP -> missed if passed by 100 degrees.
-        int32_t waypointBearingError = ABS(wrap_18000(calculateBearingToDestination(waypointPos) - *waypointYaw));
-
-        return (posControl.wpDistance <= (navConfig()->general.waypoint_radius * (1 + turnEarlyFactor))) || waypointBearingError > 10000;
     }
+
+    return posControl.wpDistance <= (navConfig()->general.waypoint_radius * (1 + turnEarlyFactor));
     // CR67
 }
 
