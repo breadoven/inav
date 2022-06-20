@@ -281,7 +281,8 @@ static inline bool areSticksMoved(timeMs_t initialTime, timeUs_t currentTimeUs)
 
 static void resetPidsIfNeeded(void) {
     // Until motors are started don't use PID I-term and reset TPA filter
-    if (fwLaunch.currentState < FW_LAUNCH_STATE_MOTOR_SPINUP) {
+    if (fwLaunch.currentState < FW_LAUNCH_STATE_MOTOR_SPINUP || (navConfig()->fw.launch_manual_throttle && isThrottleLow())) {  // CR70
+    // if (!isFixedWingFlying()) {  // CR70
         pidResetErrorAccumulators();
         pidResetTPAFilter();
     }
@@ -447,11 +448,13 @@ static fixedWingLaunchEvent_t fwLaunchState_FW_LAUNCH_STATE_IN_PROGRESS(timeUs_t
         if (isThrottleLow()) {
             fwLaunch.currentStateTimeUs = currentTimeUs;
             initialTime = 0;
+            fwLaunch.pitchAngle = 0;
             if (isRollPitchStickDeflected(LAUNCH_ABORT_STICK_DEADBAND)) {
                 return FW_LAUNCH_EVENT_ABORT;
             }
+        } else {
+            fwLaunch.pitchAngle = navConfig()->fw.launch_climb_angle;
         }
-        fwLaunch.pitchAngle = navConfig()->fw.launch_climb_angle;
     } else {
         rcCommand[THROTTLE] = constrain(currentBatteryProfile->nav.fw.launch_throttle, getThrottleIdleValue(), motorConfig()->maxthrottle);
     }

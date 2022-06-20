@@ -479,12 +479,9 @@ void failsafeUpdateState(void)
                     reprocessState = true;
                 }
                 // CR68
-                // } else {
-                    // // check if failsafe procedure has changed and trigger new procedure if it has
-                    // if (failsafeChooseFailsafeProcedure() != FAILSAFE_PROCEDURE_NONE) {
-                        // failsafeState.phase = FAILSAFE_RX_LOSS_DETECTED;
-                        // reprocessState = true;
-                    // }
+                // } else if (failsafeChooseFailsafeProcedure() != FAILSAFE_PROCEDURE_NONE) {  // trigger new failsafe procedure if changed
+                    // failsafeState.phase = FAILSAFE_RX_LOSS_DETECTED;
+                    // reprocessState = true;
                 // }
                 // CR58
                 break;
