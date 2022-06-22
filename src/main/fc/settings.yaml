@@ -47,7 +47,7 @@ tables:
     values: ["NONE", "ADC", "ESC"]
     enum: voltageSensor_e
   - name: gps_provider
-    values: ["NMEA", "UBLOX", "UNUSED", "NAZA", "UBLOX7", "MTK", "MSP"]
+    values: ["NMEA", "UBLOX", "NAZA", "UBLOX7", "MTK", "MSP"]
     enum: gpsProvider_e
   - name: gps_sbas_mode
     values: ["AUTO", "EGNOS", "WAAS", "MSAS", "GAGAN", "NONE"]
@@ -146,7 +146,7 @@ tables:
   - name: airmodeHandlingType
     values: ["STICK_CENTER", "THROTTLE_THRESHOLD", "STICK_CENTER_ONCE"]
   - name: nav_extra_arming_safety
-    values: ["OFF", "ON", "ALLOW_BYPASS"]
+    values: ["ON", "ALLOW_BYPASS"]
     enum: navExtraArmingSafety_e
   - name: rssi_source
     values: ["NONE", "AUTO", "ADC", "CHANNEL", "PROTOCOL", "MSP"]
@@ -191,11 +191,9 @@ tables:
   - name: djiRssiSource
     values: ["RSSI", "CRSF_LQ"]
     enum: djiRssiSource_e
-    # CR66
   - name: rth_trackback_mode
     values: ["OFF", "ON", "FS"]
     enum: rthTrackbackMode_e
-    # CR66
 
 constants:
   RPYL_PID_MIN: 0
@@ -2616,19 +2614,17 @@ groups:
         default_value: 0
         field: general.rth_home_altitude
         max: 65000
-# CR66
       - name: nav_rth_trackback_mode
-        description: "Useage modes for RTH Trackback. OFF = disabled. ON = Normal and Failsafe RTH, FS = Failsafe RTH only."
+        description: "Useage modes for RTH Trackback. OFF = disabled, ON = Normal and Failsafe RTH, FS = Failsafe RTH only."
         default_value: "OFF"
         field: general.flags.rth_trackback_mode
         table: rth_trackback_mode
       - name: nav_rth_trackback_distance
-        description: "Maximum straight line distance allowed for RTH trackback from start point [m]."
+        description: "Maximum distance allowed for RTH trackback. Normal RTH is executed once this distance is exceeded [m]."
         default_value: 500
         field: general.rth_trackback_distance
         max: 2000
         min: 50
-# CR66
       - name: safehome_max_distance
         description: "In order for a safehome to be used, it must be less than this distance (in cm) from the arming point."
         default_value: 20000

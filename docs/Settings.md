@@ -3914,7 +3914,11 @@ If set to ON drone will return tail-first. Obviously meaningless for airplanes.
 
 ### nav_rth_trackback_distance
 
+
 Maximum straight line distance allowed for RTH trackback from start point [m].
+
+Maximum distance allowed for RTH trackback. Normal RTH is executed once this distance is exceeded [m].
+
 
 | Default | Min | Max |
 | --- | --- | --- |
@@ -3924,7 +3928,11 @@ Maximum straight line distance allowed for RTH trackback from start point [m].
 
 ### nav_rth_trackback_mode
 
+
 Useage modes for RTH Trackback. OFF = disabled. ON = Normal and Failsafe RTH, FS = Failsafe RTH only.
+
+Useage modes for RTH Trackback. OFF = disabled, ON = Normal and Failsafe RTH, FS = Failsafe RTH only.
+
 
 | Default | Min | Max |
 | --- | --- | --- |
