@@ -278,11 +278,18 @@ static inline bool areSticksMoved(timeMs_t initialTime, timeUs_t currentTimeUs)
 {
     return (initialTime + currentStateElapsedMs(currentTimeUs)) > navConfig()->fw.launch_min_time && isRollPitchStickDeflected(LAUNCH_ABORT_STICK_DEADBAND); // CR60
 }
-
+// CR70
+static inline bool isProbablyNotFlying(void)
+{
+    return posControl.flags.estPosStatus == EST_TRUSTED && !isFixedWingFlying();
+}
+// CR70
 static void resetPidsIfNeeded(void) {
     // Until motors are started don't use PID I-term and reset TPA filter
-    if (fwLaunch.currentState < FW_LAUNCH_STATE_MOTOR_SPINUP || (navConfig()->fw.launch_manual_throttle && isThrottleLow())) {  // CR70
-    // if (!isFixedWingFlying()) {  // CR70
+    // if (fwLaunch.currentState < FW_LAUNCH_STATE_MOTOR_SPINUP || (navConfig()->fw.launch_manual_throttle && isThrottleLow())) {  // CR70
+    DEBUG_SET(DEBUG_CRUISE, 7, 11);
+    if (isProbablyNotFlying() || fwLaunch.currentState < FW_LAUNCH_STATE_MOTOR_SPINUP) {  // CR70
+        DEBUG_SET(DEBUG_CRUISE, 7, 22);
         pidResetErrorAccumulators();
         pidResetTPAFilter();
     }
@@ -442,20 +449,21 @@ static fixedWingLaunchEvent_t fwLaunchState_FW_LAUNCH_STATE_MOTOR_SPINUP(timeUs_
 static fixedWingLaunchEvent_t fwLaunchState_FW_LAUNCH_STATE_IN_PROGRESS(timeUs_t currentTimeUs)
 {
     // CR70
-    uint16_t initialTime = navConfig()->fw.launch_motor_timer + navConfig()->fw.launch_motor_spinup_time;
+    uint16_t initialTime = 0;
 
     if (navConfig()->fw.launch_manual_throttle) {
         if (isThrottleLow()) {
             fwLaunch.currentStateTimeUs = currentTimeUs;
-            initialTime = 0;
             fwLaunch.pitchAngle = 0;
             if (isRollPitchStickDeflected(LAUNCH_ABORT_STICK_DEADBAND)) {
                 return FW_LAUNCH_EVENT_ABORT;
             }
         } else {
+            if (isProbablyNotFlying()) fwLaunch.currentStateTimeUs = currentTimeUs;
             fwLaunch.pitchAngle = navConfig()->fw.launch_climb_angle;
         }
     } else {
+        initialTime = navConfig()->fw.launch_motor_timer + navConfig()->fw.launch_motor_spinup_time;
         rcCommand[THROTTLE] = constrain(currentBatteryProfile->nav.fw.launch_throttle, getThrottleIdleValue(), motorConfig()->maxthrottle);
     }
     // CR70

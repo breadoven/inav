@@ -2325,7 +2325,7 @@ static bool isWaypointReached(const fpVector3_t * waypointPos, const int32_t * w
             if (getLocalPosNextWaypoint(&nextWpPos)) {
                 int32_t bearingToNextWP = ABS(wrap_18000(calculateBearingBetweenLocalPositions(waypointPos, &nextWpPos) - *waypointYaw));
                 turnEarlyFactor = constrain((bearingToNextWP - 6000) / 500, 0, 9);
-                DEBUG_SET(DEBUG_CRUISE, 7, turnEarlyFactor);
+                // DEBUG_SET(DEBUG_CRUISE, 7, turnEarlyFactor);
             }
         }
     }
@@ -3646,10 +3646,11 @@ static navigationFSMEvent_t selectNavEventFromBoxModeInput(bool launchBypass)   
 	// General use debugs
     // DEBUG_SET(DEBUG_CRUISE, 0, posControl.rthTBPointsList[0].x);
     // DEBUG_SET(DEBUG_CRUISE, 1, posControl.rthTBPointsList[1].x);
-    // DEBUG_SET(DEBUG_CRUISE, 2, posControl.totalTripDistance);
+    // DEBUG_SET(DEBUG_CRUISE, 2, isFixedWingFlying());
     // DEBUG_SET(DEBUG_CRUISE, 3, posControl.rthTBPointsList[3].x);
     // DEBUG_SET(DEBUG_CRUISE, 4, posControl.rthTBPointsList[4].x);
     // DEBUG_SET(DEBUG_CRUISE, 5, posControl.rthTBPointsList[5].x);
+    // DEBUG_SET(DEBUG_CRUISE, 6, posControl.rthTBPointsList[5].x);
     // DEBUG_SET(DEBUG_CRUISE, 7, posControl.activeRthTBPointIndex);
 
     static bool canActivateWaypoint = false;
