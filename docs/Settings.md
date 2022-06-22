@@ -3092,6 +3092,16 @@ Launch idle throttle - throttle to be set before launch sequence is initiated. I
 
 ---
 
+### nav_fw_launch_manual_throttle
+
+Allow launch with manually controlled throttle. INAV only levels wings and controls climb pitch during launch. Throttle is controlled directly by throttle stick movement. IF USED WITHOUT A GPS LOCK plane must be launched immediately after throttle up to avoid issues with climb out stabilisation and the launch ending sooner than expected (launch end timer starts as soon as the throttle stick is raised).
+
+| Default | Min | Max |
+| --- | --- | --- |
+| OFF | OFF | ON |
+
+---
+
 ### nav_fw_launch_max_altitude
 
 Altitude (centimeters) at which LAUNCH mode will be turned off and regular flight mode will take over [0-60000].
@@ -3914,11 +3924,7 @@ If set to ON drone will return tail-first. Obviously meaningless for airplanes.
 
 ### nav_rth_trackback_distance
 
-
-Maximum straight line distance allowed for RTH trackback from start point [m].
-
 Maximum distance allowed for RTH trackback. Normal RTH is executed once this distance is exceeded [m].
-
 
 | Default | Min | Max |
 | --- | --- | --- |
@@ -3928,11 +3934,7 @@ Maximum distance allowed for RTH trackback. Normal RTH is executed once this dis
 
 ### nav_rth_trackback_mode
 
-
-Useage modes for RTH Trackback. OFF = disabled. ON = Normal and Failsafe RTH, FS = Failsafe RTH only.
-
 Useage modes for RTH Trackback. OFF = disabled, ON = Normal and Failsafe RTH, FS = Failsafe RTH only.
-
 
 | Default | Min | Max |
 | --- | --- | --- |
