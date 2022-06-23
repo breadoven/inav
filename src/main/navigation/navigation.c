@@ -1342,7 +1342,6 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_TRACKBACK(navigatio
         }
 
         if (isWaypointReached(&posControl.activeWaypoint.pos, &posControl.activeWaypoint.yaw)) {  // CR67
-        // if (isWaypointReached(&posControl.activeWaypoint, false)) {  // || isWaypointMissed(&posControl.activeWaypoint)) {  CR67
             posControl.activeRthTBPointIndex--;
 
             if (posControl.rthTBWrapAroundCounter > -1 && posControl.activeRthTBPointIndex < 0) {
@@ -1376,7 +1375,6 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_HEAD_HOME(navigatio
     if ((posControl.flags.estPosStatus >= EST_USABLE)) {
         fpVector3_t * tmpHomePos = rthGetHomeTargetPosition(RTH_HOME_ENROUTE_PROPORTIONAL);
         if (isWaypointReached(tmpHomePos, 0)) {   // CR67
-        // if (isWaypointPositionReached(tmpHomePos, true)) {
             // Successfully reached position target - update XYZ-position
             setDesiredPosition(tmpHomePos, posControl.rthState.homePosition.yaw, NAV_POS_UPDATE_XY | NAV_POS_UPDATE_Z | NAV_POS_UPDATE_HEADING);
             return NAV_FSM_EVENT_SUCCESS;       // NAV_STATE_RTH_HOVER_PRIOR_TO_LANDING
@@ -1632,7 +1630,6 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_WAYPOINT_IN_PROGRESS(na
             case NAV_WP_ACTION_WAYPOINT:
             case NAV_WP_ACTION_LAND:
                 if (isWaypointReached(&posControl.activeWaypoint.pos, &posControl.activeWaypoint.yaw)) {  // CR67
-                // if (isWaypointReached(&posControl.activeWaypoint, false)) {  // || isWaypointMissed(&posControl.activeWaypoint)) {  CR67
                     return NAV_FSM_EVENT_SUCCESS;   // will switch to NAV_STATE_WAYPOINT_REACHED
                 }
                 else {
@@ -1816,7 +1813,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_EMERGENCY_LANDING_FINIS
 
     // disarm(DISARM_NAVIGATION);
     rcCommand[THROTTLE] = getThrottleIdleValue();
-    ENABLE_STATE(NAV_MOTOR_STOP_OR_IDLE);;
+    ENABLE_STATE(NAV_MOTOR_STOP_OR_IDLE);
 
     return NAV_FSM_EVENT_NONE;
 }
@@ -2274,32 +2271,6 @@ static bool getLocalPosNextWaypoint(fpVector3_t * nextWpPos)
 }
 // CR67
 /*-----------------------------------------------------------
- * Check if waypoint is/was reached. Assume that waypoint-yaw stores initial bearing
- *-----------------------------------------------------------*/
-// bool isWaypointMissed(const navWaypointPosition_t * waypoint)
-// {
-    // int32_t bearingError = calculateBearingToDestination(&waypoint->pos) - waypoint->yaw;
-    // bearingError = wrap_18000(bearingError);
-
-    // return ABS(bearingError) > 10000; // TRUE if we passed the waypoint by 100 degrees
-// }
-// CR67
-// static bool isWaypointPositionReached(const fpVector3_t * pos, const bool isWaypointHome)
-// {
-    // // We consider waypoint reached if within specified radius
-    // posControl.wpDistance = calculateDistanceToDestination(pos);
-
-    // if (STATE(FIXED_WING_LEGACY) && isWaypointHome) {
-        // // Airplane will do a circular loiter over home and might never approach it closer than waypoint_radius - need extra check
-        // return (posControl.wpDistance <= navConfig()->general.waypoint_radius)
-                // || (posControl.wpDistance <= (navConfig()->fw.loiter_radius * 1.10f));  // 10% margin of desired circular loiter radius
-    // }
-    // else {
-        // return (posControl.wpDistance <= navConfig()->general.waypoint_radius);
-    // }
-// }
-    // CR67
-/*-----------------------------------------------------------
  * Check if waypoint is/was reached.
  * waypointYaw stores initial bearing to waypoint
  *-----------------------------------------------------------*/
@@ -2334,32 +2305,6 @@ static bool isWaypointReached(const fpVector3_t * waypointPos, const int32_t * w
     return posControl.wpDistance <= (navConfig()->general.waypoint_radius * (1 + turnEarlyFactor));
     // CR67
 }
-
-// static bool isWaypointReached(const navWaypointPosition_t * waypoint, const bool isWaypointHome)
-// {
-    // // CR67
-    // if (isWaypointHome) {
-        // return isWaypointPositionReached(&waypoint->pos, isWaypointHome);
-    // } else {
-        // int8_t turnEarlyFactor = 0;
-        // posControl.wpDistance = calculateDistanceToDestination(&waypoint->pos);
-        // /* For fixed wing, reach waypoint earlier if turn to next waypoint is tighter. Helps avoid overshoot during turn */
-        // if (navConfig()->fw.waypoint_smooth_turns && FLIGHT_MODE(NAV_WP_MODE) && STATE(AIRPLANE) && posControl.activeWaypointIndex > 0) {
-            // fpVector3_t nextWpPos;
-            // if (getLocalPosNextWaypoint(&nextWpPos)) {
-                // int32_t bearingToNextWP = ABS(wrap_18000(calculateBearingBetweenLocalPositions(&waypoint->pos, &nextWpPos) - waypoint->yaw));
-                // turnEarlyFactor = constrain((bearingToNextWP - 6000) / 500, 0, 9);
-                // DEBUG_SET(DEBUG_CRUISE, 7, turnEarlyFactor);
-            // }
-        // }
-
-        // // Check if waypoint was missed based on bearing to WP, waypoint missed if passed by 100 degrees
-        // int32_t bearingError = ABS(wrap_18000(calculateBearingToDestination(&waypoint->pos) - waypoint->yaw));
-
-        // return (posControl.wpDistance <= (navConfig()->general.waypoint_radius * (1 + turnEarlyFactor))) || bearingError > 10000;
-    // }
-    // // CR67
-// }
 
 bool isWaypointAltitudeReached(void)
 {

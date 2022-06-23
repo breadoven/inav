@@ -4231,23 +4231,6 @@ static void osdRefresh(timeUs_t currentTimeUs)
         // or THR is high or PITCH is high, resume refreshing.
         // Clear the screen first to erase other elements which
         // might have been drawn while the OSD wasn't refreshing.
-        if (statsPageAutoSwapCntl != 2) {
-            if (STATS_PAGE1 || STATS_PAGE2) {
-                statsPageAutoSwapCntl = 2;
-            } else {
-                if (OSD_ALTERNATING_CHOICES((osdConfig()->stats_page_auto_swap_time * 1000), 2)) {
-                    if (statsPageAutoSwapCntl == 0) {
-                        osdShowStatsPage1();
-                        statsPageAutoSwapCntl = 1;
-                    }
-                } else {
-                    if (statsPageAutoSwapCntl == 1) {
-                        osdShowStatsPage2();
-                        statsPageAutoSwapCntl = 0;
-                    }
-                }
-            }
-        }
 
         // auto swap stats pages when first shown
         // auto swap cancelled using roll stick

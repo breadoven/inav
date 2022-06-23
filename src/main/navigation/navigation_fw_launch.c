@@ -200,7 +200,6 @@ static const fixedWingLaunchStateDescriptor_t launchStateMachine[FW_LAUNCH_STATE
         .onEntry                                    = fwLaunchState_FW_LAUNCH_STATE_FINISH,
         .onEvent = {
             [FW_LAUNCH_EVENT_SUCCESS]               = FW_LAUNCH_STATE_FLYING,
-            // [FW_LAUNCH_EVENT_ABORT]                 = FW_LAUNCH_STATE_FLYING,
             // CR6
             [FW_LAUNCH_EVENT_FINISH_THR_LOW]        = FW_LAUNCH_STATE_FINISH_THR_LOW
             // CR6
@@ -473,7 +472,6 @@ static fixedWingLaunchEvent_t fwLaunchState_FW_LAUNCH_STATE_IN_PROGRESS(timeUs_t
     }
 
     if (areSticksMoved(initialTime, currentTimeUs)) {   // CR70
-    // if (areSticksMoved(navConfig()->fw.launch_motor_timer + navConfig()->fw.launch_motor_spinup_time, currentTimeUs)) {
         return FW_LAUNCH_EVENT_ABORT; // cancel the launch and do the FW_LAUNCH_STATE_ABORTED state
     }
 
