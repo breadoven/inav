@@ -275,7 +275,7 @@ static inline bool isLaunchMaxAltitudeReached(void)
 
 static inline bool areSticksMoved(timeMs_t initialTime, timeUs_t currentTimeUs)
 {
-    return (initialTime + currentStateElapsedMs(currentTimeUs)) > navConfig()->fw.launch_min_time && isRollPitchStickDeflected(LAUNCH_ABORT_STICK_DEADBAND); // CR60
+    return (initialTime + currentStateElapsedMs(currentTimeUs)) >= navConfig()->fw.launch_min_time && isRollPitchStickDeflected(LAUNCH_ABORT_STICK_DEADBAND); // CR60 + CR70
 }
 // CR70
 static inline bool isProbablyNotFlying(void)

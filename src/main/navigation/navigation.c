@@ -212,7 +212,7 @@ PG_RESET_TEMPLATE(navConfig_t, navConfig,
         .auto_disarm_delay = SETTING_NAV_FW_AUTO_DISARM_DELAY_DEFAULT,          // ms - time delay to disarm when auto disarm after landing enabled
         .soaring_pitch_deadband = SETTING_NAV_FW_SOARING_PITCH_DEADBAND_DEFAULT,// pitch angle mode deadband when Saoring mode enabled
         .waypoint_tracking_accuracy = SETTING_NAV_FW_WP_TRACKING_ACCURACY_DEFAULT,   // 0 cm    CR67
-        .waypoint_smooth_turns = SETTING_NAV_FW_WP_SMOOTH_TURNS_DEFAULT,        // OFF   CR67
+        .wp_smooth_turn_dist = SETTING_NAV_FW_WP_SMOOTH_TURN_DIST_DEFAULT,      // 0 meters   CR67
     }
 );
 
@@ -254,7 +254,6 @@ void calculateInitialHoldPosition(fpVector3_t * pos);
 void calculateFarAwayTarget(fpVector3_t * farAwayPos, int32_t yaw, int32_t distance);
 void calculateNewCruiseTarget(fpVector3_t * origin, int32_t yaw, int32_t distance);
 // static bool isWaypointPositionReached(const fpVector3_t * pos, const bool isWaypointHome);   CR67
-// static bool isWaypointReached(const navWaypointPosition_t * waypoint, const bool isWaypointHome);   // CR67
 static bool isWaypointReached(const fpVector3_t * waypointPos, const int32_t * waypointYaw);  // CR67
 bool isWaypointAltitudeReached(void);
 static void mapWaypointToLocalPosition(fpVector3_t * localPos, const navWaypoint_t * waypoint, geoAltitudeConversionMode_e altConv);
@@ -2284,7 +2283,7 @@ static bool isWaypointReached(const fpVector3_t * waypointPos, const int32_t * w
         return true;
     }
 
-    int8_t turnEarlyFactor = 0;
+    int8_t turnEarlyDistance = 0;
     if (FLIGHT_MODE(NAV_WP_MODE)) {
         // Check if waypoint was missed based on bearing to WP exceeding 100 degrees relative to waypointYaw
         if (ABS(wrap_18000(calculateBearingToDestination(waypointPos) - *waypointYaw)) > 10000) {
@@ -2292,17 +2291,17 @@ static bool isWaypointReached(const fpVector3_t * waypointPos, const int32_t * w
         }
 
         // fixed wing option to reach waypoint earlier to help smooth tighter turns to next waypoint
-        if (navConfig()->fw.waypoint_smooth_turns && STATE(AIRPLANE) && posControl.activeWaypointIndex > 0) {
+        if (navConfig()->fw.wp_smooth_turn_dist && STATE(AIRPLANE) && posControl.activeWaypointIndex > 0) {
             fpVector3_t nextWpPos;
             if (getLocalPosNextWaypoint(&nextWpPos)) {
                 int32_t bearingToNextWP = ABS(wrap_18000(calculateBearingBetweenLocalPositions(waypointPos, &nextWpPos) - *waypointYaw));
-                turnEarlyFactor = constrain((bearingToNextWP - 6000) / 500, 0, 9);
-                // DEBUG_SET(DEBUG_CRUISE, 7, turnEarlyFactor);
+                turnEarlyDistance = navConfig()->fw.wp_smooth_turn_dist * constrain((bearingToNextWP - 5500) / 500, 0, 10);
+                // DEBUG_SET(DEBUG_CRUISE, 7, turnEarlyDistance);
             }
         }
     }
 
-    return posControl.wpDistance <= (navConfig()->general.waypoint_radius * (1 + turnEarlyFactor));
+    return posControl.wpDistance <= (navConfig()->general.waypoint_radius + METERS_TO_CENTIMETERS(turnEarlyDistance));
     // CR67
 }
 

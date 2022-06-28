@@ -3362,13 +3362,13 @@ Pitch Angle deadband when soaring mode enabled (deg). Angle mode inactive within
 
 ---
 
-### nav_fw_wp_smooth_turns
+### nav_fw_wp_smooth_turn_dist
 
-Smooths waypoint turns by reaching waypoint earlier if turn exceeds 65 degrees. Applied as an increasing factor of nav_wp_radius starting at 65 degrees with a maximum factor of 10 for turns of 105 degrees and over, e.g. a 90 degree turn is reached when 7 x nav_wp_radius from waypoint.
+Smooths waypoint turns by reaching waypoint earlier as turns become tighter. Applied as an increasing multiple (from 1 to 10) of nav_fw_wp_smooth_turn_dist [meters] for turns exceeding 60 degrees to a maximum of 105 degrees, e.g. a 90 degree turn is reached when 7 x nav_fw_wp_smooth_turn_dist from waypoint. Set to 0 to disable turn smoothing.
 
 | Default | Min | Max |
 | --- | --- | --- |
-| OFF | OFF | ON |
+| 0 | 0 | 20 |
 
 ---
 
