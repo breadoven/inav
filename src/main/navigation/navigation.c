@@ -212,7 +212,7 @@ PG_RESET_TEMPLATE(navConfig_t, navConfig,
         .auto_disarm_delay = SETTING_NAV_FW_AUTO_DISARM_DELAY_DEFAULT,          // ms - time delay to disarm when auto disarm after landing enabled
         .soaring_pitch_deadband = SETTING_NAV_FW_SOARING_PITCH_DEADBAND_DEFAULT,// pitch angle mode deadband when Saoring mode enabled
         .waypoint_tracking_accuracy = SETTING_NAV_FW_WP_TRACKING_ACCURACY_DEFAULT,   // 0 cm    CR67
-        .wp_smooth_turn_dist = SETTING_NAV_FW_WP_SMOOTH_TURN_DIST_DEFAULT,      // 0 meters   CR67
+        .wp_turn_smoothing_dist = SETTING_NAV_FW_WP_TURN_SMOOTHING_DIST_DEFAULT,     // 0 meters   CR67
     }
 );
 
@@ -2291,11 +2291,11 @@ static bool isWaypointReached(const fpVector3_t * waypointPos, const int32_t * w
         }
 
         // fixed wing option to reach waypoint earlier to help smooth tighter turns to next waypoint
-        if (navConfig()->fw.wp_smooth_turn_dist && STATE(AIRPLANE) && posControl.activeWaypointIndex > 0) {
+        if (navConfig()->fw.wp_turn_smoothing_dist && STATE(AIRPLANE) && posControl.activeWaypointIndex > 0) {
             fpVector3_t nextWpPos;
             if (getLocalPosNextWaypoint(&nextWpPos)) {
                 int32_t bearingToNextWP = ABS(wrap_18000(calculateBearingBetweenLocalPositions(waypointPos, &nextWpPos) - *waypointYaw));
-                turnEarlyDistance = navConfig()->fw.wp_smooth_turn_dist * constrain((bearingToNextWP - 5500) / 500, 0, 10);
+                turnEarlyDistance = navConfig()->fw.wp_turn_smoothing_dist * constrain((bearingToNextWP - 5500) / 500, 0, 10);
                 // DEBUG_SET(DEBUG_CRUISE, 7, turnEarlyDistance);
             }
         }

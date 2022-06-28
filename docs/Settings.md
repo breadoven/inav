@@ -3362,16 +3362,6 @@ Pitch Angle deadband when soaring mode enabled (deg). Angle mode inactive within
 
 ---
 
-### nav_fw_wp_smooth_turn_dist
-
-Smooths waypoint turns by reaching waypoint earlier as turns become tighter. Applied as an increasing multiple (from 1 to 10) of nav_fw_wp_smooth_turn_dist [meters] for turns exceeding 60 degrees to a maximum of 105 degrees, e.g. a 90 degree turn is reached when 7 x nav_fw_wp_smooth_turn_dist from waypoint. Set to 0 to disable turn smoothing.
-
-| Default | Min | Max |
-| --- | --- | --- |
-| 0 | 0 | 20 |
-
----
-
 ### nav_fw_wp_tracking_accuracy
 
 Forces craft to quickly head toward and track along waypoint course line within the set tracking accuracy. Accuracy is the distance either side of the waypoint course line [cm] but also affects the tracking response relative to the distance to the course line. Higher values reduce the tracking response. A value of 250 is a good starting point. If set to 0 course tracking is disabled and the craft will head directly to the next waypoint from whatever position was achieved after the last waypoint turn.
@@ -3379,6 +3369,16 @@ Forces craft to quickly head toward and track along waypoint course line within 
 | Default | Min | Max |
 | --- | --- | --- |
 | 0 | 0 | 1000 |
+
+---
+
+### nav_fw_wp_turn_smoothing_dist
+
+Provides a means of smoothing waypoint turns by reaching waypoints earlier as turns become tighter. Applied as an increasing multiple of nav_fw_wp_turn_smoothing_dist [meters] starting at 1 for turns exceeding 60 degrees to a maximum multiple of 10 for turns of 105 degrees and over, e.g. a 90 degree turn is reached when 7 x nav_fw_wp_turn_smoothing_dist from waypoint. Set to 0 to disable turn smoothing.
+
+| Default | Min | Max |
+| --- | --- | --- |
+| 0 | 0 | 20 |
 
 ---
 
