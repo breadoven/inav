@@ -100,7 +100,7 @@ STATIC_ASSERT(NAV_MAX_WAYPOINTS < 254, NAV_MAX_WAYPOINTS_exceeded_allowable_rang
 PG_REGISTER_ARRAY(navWaypoint_t, NAV_MAX_WAYPOINTS, nonVolatileWaypointList, PG_WAYPOINT_MISSION_STORAGE, 1);
 #endif
 
-PG_REGISTER_WITH_RESET_TEMPLATE(navConfig_t, navConfig, PG_NAV_CONFIG, 0);
+PG_REGISTER_WITH_RESET_TEMPLATE(navConfig_t, navConfig, PG_NAV_CONFIG, 1);  // CR67
 
 PG_RESET_TEMPLATE(navConfig_t, navConfig,
     .general = {
@@ -211,8 +211,8 @@ PG_RESET_TEMPLATE(navConfig_t, navConfig,
         .yawControlDeadband = SETTING_NAV_FW_YAW_DEADBAND_DEFAULT,
         .auto_disarm_delay = SETTING_NAV_FW_AUTO_DISARM_DELAY_DEFAULT,          // ms - time delay to disarm when auto disarm after landing enabled
         .soaring_pitch_deadband = SETTING_NAV_FW_SOARING_PITCH_DEADBAND_DEFAULT,// pitch angle mode deadband when Saoring mode enabled
-        .waypoint_tracking_accuracy = SETTING_NAV_FW_WP_TRACKING_ACCURACY_DEFAULT,   // 0 cm    CR67
-        .wp_turn_smoothing_dist = SETTING_NAV_FW_WP_TURN_SMOOTHING_DIST_DEFAULT,     // 0 meters   CR67
+        .waypoint_tracking_accuracy = SETTING_NAV_FW_WP_TRACKING_ACCURACY_DEFAULT,   // 0 cm   CR67
+        .wp_turn_smoothing_dist = SETTING_NAV_FW_WP_TURN_SMOOTHING_DIST_DEFAULT,     // 0 cm   CR67
     }
 );
 
@@ -2282,7 +2282,7 @@ static bool isWaypointReached(const fpVector3_t * waypointPos, const int32_t * w
         return true;
     }
 
-    int8_t turnEarlyDistance = 0;
+    uint16_t turnEarlyDistance = 0;
     if (FLIGHT_MODE(NAV_WP_MODE)) {
         // Check if waypoint was missed based on bearing to WP exceeding 100 degrees relative to waypointYaw
         if (ABS(wrap_18000(calculateBearingToDestination(waypointPos) - *waypointYaw)) > 10000) {
@@ -2300,7 +2300,7 @@ static bool isWaypointReached(const fpVector3_t * waypointPos, const int32_t * w
         }
     }
 
-    return posControl.wpDistance <= (navConfig()->general.waypoint_radius + METERS_TO_CENTIMETERS(turnEarlyDistance));
+    return posControl.wpDistance <= (navConfig()->general.waypoint_radius + turnEarlyDistance);
     // CR67
 }
 
