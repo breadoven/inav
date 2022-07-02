@@ -597,9 +597,9 @@ static void imuCalculateEstimatedAttitude(float dT)
                 // Force reset of heading hold target
                 resetHeadingHoldTarget(DECIDEGREES_TO_DEGREES(attitude.values.yaw));
             }
-        } else if (!ARMING_FLAG(ARMED)) {     // CR71
+        } else if (!ARMING_FLAG(ARMED)) {
             gpsHeadingInitialized = false;
-        }   // CR71
+        }
     }
     else {
         // Multicopters don't use GPS heading

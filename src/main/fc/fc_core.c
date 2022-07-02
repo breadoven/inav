@@ -38,7 +38,6 @@ FILE_COMPILE_FOR_SPEED
 #include "drivers/time.h"
 #include "drivers/system.h"
 #include "drivers/pwm_output.h"
-#include "drivers/accgyro/accgyro_bno055.h"
 
 #include "sensors/sensors.h"
 #include "sensors/diagnostics.h"
@@ -223,7 +222,7 @@ static void updateArmingStatus(void)
 
         /* CHECK: pitch / roll sticks centered when NAV_LAUNCH_MODE enabled */
         if (isNavLaunchEnabled()) {
-            if (isRollPitchStickDeflected(rcControlsConfig()->control_deadband)) {  // CR60
+            if (isRollPitchStickDeflected(rcControlsConfig()->control_deadband)) {
                 ENABLE_ARMING_FLAG(ARMING_DISABLED_ROLLPITCH_NOT_CENTERED);
             } else {
                 DISABLE_ARMING_FLAG(ARMING_DISABLED_ROLLPITCH_NOT_CENTERED);
@@ -266,7 +265,7 @@ static void updateArmingStatus(void)
 
         /* CHECK: */
         if (
-            sensors(SENSOR_ACC) && 
+            sensors(SENSOR_ACC) &&
             !STATE(ACCELEROMETER_CALIBRATED) &&
             // Require ACC calibration only if any of the setting might require it
             (

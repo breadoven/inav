@@ -99,7 +99,6 @@
 #define USE_MAG_AK8975
 
 #define TEMPERATURE_I2C_BUS     I2C_EXT_BUS
-#define BNO055_I2C_BUS          I2C_EXT_BUS
 
 #define USE_BARO
 
@@ -190,11 +189,11 @@
 
 #define SERIAL_PORT_COUNT       5       // VCP, USART1, USART3, USART6, SOFTSERIAL1
 #endif
-// CR71
+
 #define DEFAULT_RX_TYPE         RX_TYPE_SERIAL
 #define SERIALRX_PROVIDER       SERIALRX_SBUS
 #define SERIALRX_UART           SERIAL_PORT_USART1
-// CR71
+
 #define USE_SPI
 
 #define USE_SPI_DEVICE_1
