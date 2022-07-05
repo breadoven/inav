@@ -391,6 +391,44 @@ static void updatePositionHeadingController_FW(timeUs_t currentTimeUs, timeDelta
     }
     DEBUG_SET(DEBUG_CRUISE, 2, gpsSol.groundCourse / 10);
     DEBUG_SET(DEBUG_CRUISE, 6, posControl.activeWaypoint.yaw);
+
+    // DEBUG_SET(DEBUG_CRUISE, 4, virtualTargetBearing);
+    // /* If waypoint tracking enabled force craft toward waypoint course line
+     // * and hold within set accuracy distance from line */
+    // static float lastDistToCourseLine = 0;
+    // if (navConfig()->fw.waypoint_tracking_accuracy && isWaypointNavTrackingRoute() && !needToCalculateCircularLoiter) {
+        // if (ABS(wrap_18000(virtualTargetBearing - posControl.actualState.yaw)) < 9000 || posControl.wpDistance < 1000.0f) {
+            // fpVector3_t virtualCoursePoint;
+            // virtualCoursePoint.x = posControl.activeWaypoint.pos.x -
+                                   // posControl.wpDistance * cos_approx(CENTIDEGREES_TO_RADIANS(posControl.activeWaypoint.yaw));
+            // virtualCoursePoint.y = posControl.activeWaypoint.pos.y -
+                                   // posControl.wpDistance * sin_approx(CENTIDEGREES_TO_RADIANS(posControl.activeWaypoint.yaw));
+            // float distToCourseLine = calculateDistanceToDestination(&virtualCoursePoint);
+            // DEBUG_SET(DEBUG_CRUISE, 3, distToCourseLine);
+
+            // int32_t courseCorrection = wrap_18000(posControl.activeWaypoint.yaw - virtualTargetBearing);
+            // int32_t courseError = wrap_18000(posControl.activeWaypoint.yaw - posControl.actualState.yaw);
+            // int32_t courseConvergenceRate = (distToCourseLine - lastDistToCourseLine) / US2S(deltaMicros);
+
+            // if (distToCourseLine < navConfig()->fw.waypoint_tracking_accuracy && ABS(courseError) < 1000) {
+                // virtualTargetBearing = posControl.activeWaypoint.yaw;
+            // } else if ((distToCourseLine / courseConvergenceRate) > (CENTIDEGREES_TO_DEGREES(courseError) / fabsf(gyro.gyroADCf[YAW]))) {
+                // float courseCorrectionFactor = constrainf((distToCourseLine - navConfig()->fw.waypoint_tracking_accuracy) /
+                                                // (15.0f * navConfig()->fw.waypoint_tracking_accuracy), 0.0f, 1.0f);
+                // courseCorrection = courseCorrection < 0 ? -8000 * courseCorrectionFactor : 8000 * courseCorrectionFactor;
+                // if (!IS_RC_MODE_ACTIVE(BOXNAVALTHOLD)) {    // DEBUG ONLY
+                    // virtualTargetBearing = wrap_36000(posControl.activeWaypoint.yaw - courseCorrection);
+                // }
+
+                // DEBUG_SET(DEBUG_CRUISE, 0, courseCorrection);
+                // DEBUG_SET(DEBUG_CRUISE, 1, courseCorrectionFactor * 100);
+            // }
+            // lastDistToCourseLine = distToCourseLine;
+        // }
+        // DEBUG_SET(DEBUG_CRUISE, 5, virtualTargetBearing);
+    // }
+    // DEBUG_SET(DEBUG_CRUISE, 2, gpsSol.groundCourse / 10);
+    // DEBUG_SET(DEBUG_CRUISE, 6, posControl.activeWaypoint.yaw);
     // CR67
 
     /*

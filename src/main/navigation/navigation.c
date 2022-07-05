@@ -2283,7 +2283,7 @@ static bool isWaypointReached(const fpVector3_t * waypointPos, const int32_t * w
     }
 
     uint16_t turnEarlyDistance = 0;
-    if (FLIGHT_MODE(NAV_WP_MODE)) {
+    if (navGetStateFlags(posControl.navState) & NAV_WP_MODE) {
         // Check if waypoint was missed based on bearing to WP exceeding 100 degrees relative to waypointYaw
         if (ABS(wrap_18000(calculateBearingToDestination(waypointPos) - *waypointYaw)) > 10000) {
             return true;
@@ -4275,7 +4275,8 @@ bool navigationIsExecutingAnEmergencyLanding(void)
 bool navigationInAutomaticThrottleMode(void)
 {
     navigationFSMStateFlags_t stateFlags = navGetCurrentStateFlags();
-    return (stateFlags & (NAV_CTL_ALT | NAV_CTL_EMERG | NAV_CTL_LAUNCH | NAV_CTL_LAND));
+    return (stateFlags & (NAV_CTL_ALT | NAV_CTL_EMERG | NAV_CTL_LAND)) ||
+            ((stateFlags & NAV_CTL_LAUNCH) && !navConfig()->fw.launch_manual_throttle); // CR70
 }
 
 // CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx

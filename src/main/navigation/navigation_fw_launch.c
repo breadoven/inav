@@ -285,9 +285,8 @@ static inline bool isProbablyNotFlying(void)
 // CR70
 static void resetPidsIfNeeded(void) {
     // Until motors are started don't use PID I-term and reset TPA filter
-    // if (fwLaunch.currentState < FW_LAUNCH_STATE_MOTOR_SPINUP || (navConfig()->fw.launch_manual_throttle && isThrottleLow())) {  // CR70
     DEBUG_SET(DEBUG_CRUISE, 7, 11);
-    if (isProbablyNotFlying() || fwLaunch.currentState < FW_LAUNCH_STATE_MOTOR_SPINUP) {  // CR70
+    if (isProbablyNotFlying() || fwLaunch.currentState < FW_LAUNCH_STATE_MOTOR_SPINUP || (navConfig()->fw.launch_manual_throttle && isThrottleLow())) { // CR70
         DEBUG_SET(DEBUG_CRUISE, 7, 22);
         pidResetErrorAccumulators();
         pidResetTPAFilter();
