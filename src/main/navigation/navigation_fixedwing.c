@@ -375,25 +375,24 @@ static void updatePositionHeadingController_FW(timeUs_t currentTimeUs, timeDelta
             int32_t courseVirtualCorrection = wrap_18000(posControl.activeWaypoint.yaw - virtualTargetBearing);
             DEBUG_SET(DEBUG_CRUISE, 0, courseVirtualCorrection);
             int32_t courseHeadingError = wrap_18000(posControl.activeWaypoint.yaw - posControl.actualState.yaw);
-            if (distToCourseLine < navConfig()->fw.waypoint_tracking_accuracy && ABS(courseHeadingError) < 1000) {
-                virtualTargetBearing = posControl.activeWaypoint.yaw;
-            } else {
-                float courseCorrectionFactor = constrainf((distToCourseLine - navConfig()->fw.waypoint_tracking_accuracy) /
-                                                (15.0f * navConfig()->fw.waypoint_tracking_accuracy), 0.0f, 1.0f);
-                courseCorrectionFactor = courseVirtualCorrection < 0 ? -courseCorrectionFactor : courseCorrectionFactor;
-                if (ABS(courseHeadingError) > 1000) {
-                    courseCorrectionFactor = constrainf(courseCorrectionFactor - (courseHeadingError / 18000.0f), -1.0f, 1.0f);
-                }
-                courseVirtualCorrection = 8000 * courseCorrectionFactor;
 
-                if (!IS_RC_MODE_ACTIVE(BOXNAVALTHOLD)) {    // DEBUG ONLY
-                    virtualTargetBearing = wrap_36000(posControl.activeWaypoint.yaw - courseVirtualCorrection);
-                }
+            float courseCorrectionFactor = constrainf(distToCourseLine / (100.0f * navConfig()->fw.waypoint_tracking_accuracy), 0.0f, 1.0f);
+            float courseHeadingFactor = constrainf(sq(courseHeadingError / 18000.0f), 0.0f, 1.0f);
+            courseCorrectionFactor = courseVirtualCorrection < 0 ? -courseCorrectionFactor : courseCorrectionFactor;
+            courseHeadingFactor = courseHeadingError < 0 ? -courseHeadingFactor : courseHeadingFactor;
 
+            courseCorrectionFactor = constrainf(courseCorrectionFactor - courseHeadingFactor, -1.0f, 1.0f);
+            courseVirtualCorrection = 8000 * courseCorrectionFactor;
 
-                DEBUG_SET(DEBUG_CRUISE, 1, courseCorrectionFactor * 100);
-                DEBUG_SET(DEBUG_CRUISE, 7, courseVirtualCorrection);
+            if (IS_RC_MODE_ACTIVE(BOXNAVPOSHOLD)) {    // DEBUG ONLY
+                // original simple idea that didn't seem to work:
+                virtualTargetBearing -= wrap_18000(posControl.activeWaypoint.yaw - virtualTargetBearing);
+            } else if (!IS_RC_MODE_ACTIVE(BOXNAVALTHOLD)) {    // DEBUG ONLY
+                virtualTargetBearing = wrap_36000(posControl.activeWaypoint.yaw - courseVirtualCorrection); // main code line
             }
+            DEBUG_SET(DEBUG_CRUISE, 1, courseCorrectionFactor * 100);
+            DEBUG_SET(DEBUG_CRUISE, 7, courseVirtualCorrection);
+
         }
         DEBUG_SET(DEBUG_CRUISE, 5, virtualTargetBearing);
     }
