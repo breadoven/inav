@@ -275,7 +275,8 @@ static inline bool isLaunchMaxAltitudeReached(void)
 
 static inline bool areSticksMoved(timeMs_t initialTime, timeUs_t currentTimeUs)
 {
-    return (initialTime + currentStateElapsedMs(currentTimeUs)) >= navConfig()->fw.launch_min_time && isRollPitchStickDeflected(LAUNCH_ABORT_STICK_DEADBAND); // CR70
+    return (initialTime + currentStateElapsedMs(currentTimeUs)) >= navConfig()->fw.launch_min_time &&   // CR70
+            isRollPitchStickDeflected(navConfig()->fw.launch_abort_deadband);
 }
 // CR70
 static inline bool isProbablyNotFlying(void)
@@ -453,7 +454,7 @@ static fixedWingLaunchEvent_t fwLaunchState_FW_LAUNCH_STATE_IN_PROGRESS(timeUs_t
         if (isThrottleLow()) {
             fwLaunch.currentStateTimeUs = currentTimeUs;
             fwLaunch.pitchAngle = 0;
-            if (isRollPitchStickDeflected(LAUNCH_ABORT_STICK_DEADBAND)) {
+            if (isRollPitchStickDeflected(navConfig()->fw.launch_abort_deadband)) {
                 return FW_LAUNCH_EVENT_ABORT;
             }
         } else {
@@ -486,7 +487,7 @@ static fixedWingLaunchEvent_t fwLaunchState_FW_LAUNCH_STATE_FINISH(timeUs_t curr
     const timeMs_t elapsedTimeMs = currentStateElapsedMs(currentTimeUs);
     const timeMs_t endTimeMs = navConfig()->fw.launch_end_time;
 
-    if (isRollPitchStickDeflected(LAUNCH_ABORT_STICK_DEADBAND)) {
+    if (isRollPitchStickDeflected(navConfig()->fw.launch_abort_deadband)) {
         return FW_LAUNCH_EVENT_SUCCESS; // cancel the launch and do the FW_LAUNCH_STATE_FLYING state
     }
     // CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
@@ -526,7 +527,7 @@ static fixedWingLaunchEvent_t fwLaunchState_FW_LAUNCH_STATE_FINISH_THR_LOW(timeU
     const timeMs_t elapsedTimeMs = US2MS(currentTimeUs) - throttleRaisedStartTimeMs;
     const timeMs_t endTimeMs = 1000;
 
-    if (isRollPitchStickDeflected(LAUNCH_ABORT_STICK_DEADBAND)) {
+    if (isRollPitchStickDeflected(navConfig()->fw.launch_abort_deadband)) {
         return FW_LAUNCH_EVENT_SUCCESS;     // end the launch and go to FW_LAUNCH_STATE_FLYING
     }
 

@@ -54,11 +54,11 @@
 #define PPM_RCVR_TIMEOUT            0
 
 typedef enum {
-    RX_FRAME_PENDING             = 0,        // No new data available from receiver
-    RX_FRAME_COMPLETE            = (1 << 0), // There is new data available
-    RX_FRAME_FAILSAFE            = (1 << 1), // Receiver detected loss of RC link. Only valid when RX_FRAME_COMPLETE is set as well
+    RX_FRAME_PENDING             = 0,         // No new data available from receiver
+    RX_FRAME_COMPLETE            = (1 << 0),  // There is new data available
+    RX_FRAME_FAILSAFE            = (1 << 1),  // Receiver detected loss of RC link. Only valid when RX_FRAME_COMPLETE is set as well
     RX_FRAME_PROCESSING_REQUIRED = (1 << 2),
-    RX_FRAME_DROPPED             = (1 << 3), // Receiver detected dropped frame. Not loss of link yet.
+    RX_FRAME_DROPPED             = (1 << 3),  // Receiver detected dropped frame. Not loss of link yet.
 } rxFrameState_e;
 
 typedef enum {
@@ -72,7 +72,6 @@ typedef enum {
     SERIALRX_SPEKTRUM2048,
     SERIALRX_SBUS,
     SERIALRX_SUMD,
-    SERIALRX_SUMH,
     SERIALRX_IBUS,
     SERIALRX_JETIEXBUS,
     SERIALRX_CRSF,
@@ -152,7 +151,6 @@ typedef struct rxLinkQualityTracker_s {
 
 typedef struct rxRuntimeConfig_s {
     uint8_t channelCount;                  // number of rc channels as reported by current input driver
-    timeUs_t rxRefreshRate;
     timeUs_t rxSignalTimeout;
     rcReadRawDataFnPtr rcReadRawFn;
     rcFrameStatusFnPtr rcFrameStatusFn;
@@ -178,12 +176,12 @@ typedef enum {
 } rssiSource_e;
 
 typedef struct rxLinkStatistics_s {
-    int16_t     uplinkRSSI;     // RSSI value in dBm
-    uint8_t     uplinkLQ;       // A protocol specific measure of the link quality in [0..100]
-    int8_t      uplinkSNR;      // The SNR of the uplink in dB
-    uint8_t     rfMode;         // A protocol specific measure of the transmission bandwidth [2 = 150Hz, 1 = 50Hz, 0 = 4Hz]
-    uint16_t    uplinkTXPower;  // power in mW
-    uint8_t     activeAntenna;
+    int16_t uplinkRSSI;     // RSSI value in dBm
+    uint8_t uplinkLQ;       // A protocol specific measure of the link quality in [0..100]
+    int8_t uplinkSNR;       // The SNR of the uplink in dB
+    uint8_t rfMode;         // A protocol specific measure of the transmission bandwidth [2 = 150Hz, 1 = 50Hz, 0 = 4Hz]
+    uint16_t uplinkTXPower; // power in mW
+    uint8_t activeAntenna;
 } rxLinkStatistics_t;
 
 extern rxRuntimeConfig_t rxRuntimeConfig; //!!TODO remove this extern, only needed once for channelCount
@@ -214,8 +212,6 @@ void resetAllRxChannelRangeConfigurations(void);
 
 void suspendRxSignal(void);
 void resumeRxSignal(void);
-
-uint16_t rxGetRefreshRate(void);
 
 // Processed RC channel value. These values might include
 // filtering and some extra processing like value holding
