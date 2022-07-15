@@ -402,6 +402,7 @@ typedef struct {
     float                       wpDistance;                 // Distance to active WP
     timeMs_t                    wpReachedTime;              // Time the waypoint was reached
     bool                        wpAltitudeReached;          // WP altitude achieved
+    bool                        wpReached;                  // WP reached flag  // CR67
 
     /* RTH Trackback */
     fpVector3_t                 rthTBPointsList[NAV_RTH_TRACKBACK_POINTS];
@@ -455,6 +456,8 @@ bool isNavHoldPositionActive(void);
 bool isLastMissionWaypoint(void);
 float getActiveWaypointSpeed(void);
 bool isWaypointNavTrackingRoute(void);  // CR67
+bool getLocalPosNextWaypoint(fpVector3_t * nextWpPos);   // CR67
+int32_t calculateBearingBetweenLocalPositions(const fpVector3_t * startPos, const fpVector3_t * endPos);    // CR67
 
 void updateActualHeading(bool headingValid, int32_t newHeading);
 void updateActualHorizontalPositionAndVelocity(bool estPosValid, bool estVelValid, float newX, float newY, float newVelX, float newVelY);

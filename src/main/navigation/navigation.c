@@ -123,7 +123,7 @@ PG_RESET_TEMPLATE(navConfig_t, navConfig,
             .waypoint_mission_restart = SETTING_NAV_WP_MISSION_RESTART_DEFAULT,       // WP mission restart action
             .soaring_motor_stop = SETTING_NAV_FW_SOARING_MOTOR_STOP_DEFAULT,          // stops motor when Saoring mode enabled
             .waypoint_enforce_altitude = SETTING_NAV_WP_ENFORCE_ALTITUDE_DEFAULT,     // Forces set wp altitude to be achieved
-            .rth_trackback_mode = SETTING_NAV_RTH_TRACKBACK_MODE_DEFAULT              // RTH trackback useage mode
+            .rth_trackback_mode = SETTING_NAV_RTH_TRACKBACK_MODE_DEFAULT,             // RTH trackback useage mode
         },
 
         // General navigation parameters
@@ -213,7 +213,7 @@ PG_RESET_TEMPLATE(navConfig_t, navConfig,
         .auto_disarm_delay = SETTING_NAV_FW_AUTO_DISARM_DELAY_DEFAULT,          // ms - time delay to disarm when auto disarm after landing enabled
         .soaring_pitch_deadband = SETTING_NAV_FW_SOARING_PITCH_DEADBAND_DEFAULT,// pitch angle mode deadband when Saoring mode enabled
         .waypoint_tracking_accuracy = SETTING_NAV_FW_WP_TRACKING_ACCURACY_DEFAULT,   // 0 m    CR67
-        .wp_turn_smoothing_dist = SETTING_NAV_FW_WP_TURN_SMOOTHING_DIST_DEFAULT,     // 0 cm   CR67
+        .waypoint_turn_smoothing = SETTING_NAV_FW_WP_TURN_SMOOTHING_DEFAULT,    // Smooths turns during FW WP mode missions - OFF   CR67
     }
 );
 
@@ -1209,6 +1209,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_INITIALIZE(navigati
             if (trackbackActive && posControl.activeRthTBPointIndex >= 0 && !isWaypointMissionRTHActive()) {
                 updateRthTrackback(true);       // save final trackpoint for altitude and max trackback distance reference
                 posControl.flags.rthTrackbackActive = true;
+                posControl.wpReached = false;   // CR67
                 calculateAndSetActiveWaypointToLocalPosition(rthGetTrackbackPos());
                 return NAV_FSM_EVENT_SWITCH_TO_NAV_STATE_RTH_TRACKBACK;
             }
@@ -1573,6 +1574,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_WAYPOINT_PRE_ACTION(nav
             posControl.wpInitialDistance = calculateDistanceToDestination(&posControl.activeWaypoint.pos);
             posControl.wpInitialAltitude = posControl.actualState.abs.pos.z;
             posControl.wpAltitudeReached = false;
+            posControl.wpReached = false;   // CR67
             return NAV_FSM_EVENT_SUCCESS;       // will switch to NAV_STATE_WAYPOINT_IN_PROGRESS
 
                 // We use p3 as the volatile jump counter (p2 is the static value)
@@ -2241,7 +2243,7 @@ bool navCalculatePathToDestination(navDestinationPath_t *result, const fpVector3
     return true;
 }
 // CR67
-static bool getLocalPosNextWaypoint(fpVector3_t * nextWpPos)
+bool getLocalPosNextWaypoint(fpVector3_t * nextWpPos)
 {
     // Only for WP Mode not Trackback. Ignore non geo waypoints except RTH and JUMP.
     if (FLIGHT_MODE(NAV_WP_MODE) && !isLastMissionWaypoint()) {
@@ -2283,25 +2285,16 @@ static bool isWaypointReached(const fpVector3_t * waypointPos, const int32_t * w
         return true;
     }
 
-    uint16_t turnEarlyDistance = 0;
-    if (navGetStateFlags(posControl.navState) & NAV_AUTO_WP) {
+    if (navGetStateFlags(posControl.navState) & NAV_AUTO_WP || posControl.flags.rthTrackbackActive) {
         // Check if waypoint was missed based on bearing to WP exceeding 100 degrees relative to waypointYaw
-        if (ABS(wrap_18000(calculateBearingToDestination(waypointPos) - *waypointYaw)) > 10000) {
+        // Also check if WP reached when turn smoothing used
+        if (ABS(wrap_18000(calculateBearingToDestination(waypointPos) - *waypointYaw)) > 10000 || posControl.wpReached) {
+            posControl.wpReached = false;
             return true;
-        }
-
-        // fixed wing option to reach waypoint earlier to help smooth tighter turns to next waypoint
-        if (navConfig()->fw.wp_turn_smoothing_dist && STATE(AIRPLANE) && posControl.activeWaypointIndex > 0) {
-            fpVector3_t nextWpPos;
-            if (getLocalPosNextWaypoint(&nextWpPos)) {
-                int32_t bearingToNextWP = ABS(wrap_18000(calculateBearingBetweenLocalPositions(waypointPos, &nextWpPos) - *waypointYaw));
-                turnEarlyDistance = navConfig()->fw.wp_turn_smoothing_dist * constrain((bearingToNextWP - 4000) / 500, 0, 10);
-                // DEBUG_SET(DEBUG_CRUISE, 7, turnEarlyDistance);
-            }
         }
     }
 
-    return posControl.wpDistance <= (navConfig()->general.waypoint_radius + turnEarlyDistance);
+    return posControl.wpDistance <= (navConfig()->general.waypoint_radius);
     // CR67
 }
 

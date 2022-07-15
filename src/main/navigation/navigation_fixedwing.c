@@ -281,15 +281,50 @@ static void calculateVirtualPositionTarget_FW(float trackingPeriod)
     needToCalculateCircularLoiter = isNavHoldPositionActive() &&   // CR67
                                     (distanceToActualTarget <= (navLoiterRadius / TAN_15DEG)) &&
                                     (distanceToActualTarget > 50.0f);
+// CR67
+    fpVector3_t loiterCenterPos = posControl.desiredState.pos;
+    int8_t turnDirection = loiterDirection();
+
+    /* WP turn smoothing option - switch to loiter path when distance to waypoint < navLoiterRadius.
+     * Loiter centered on point inside turn at navLoiterRadius distance from waypoint and
+     * on a bearing midway between current and next waypoint course bearings */
+    if (navConfig()->fw.waypoint_turn_smoothing && isWaypointNavTrackingRoute() && posControl.wpDistance < navLoiterRadius && !needToCalculateCircularLoiter) {
+        fpVector3_t posNextWp;
+        if (getLocalPosNextWaypoint(&posNextWp)) {
+            int32_t bearingNextWp = calculateBearingBetweenLocalPositions(&posControl.activeWaypoint.pos, &posNextWp);
+            turnDirection = wrap_18000(bearingNextWp - posControl.activeWaypoint.yaw) > 0 ? 1 : -1;  // 1 = right
+            int32_t loiterCenterBearing = wrap_36000(((wrap_18000(bearingNextWp - posControl.activeWaypoint.yaw - 18000)) / 2) +
+                                          posControl.activeWaypoint.yaw + 18000);
+            DEBUG_SET(DEBUG_CRUISE, 7, loiterCenterBearing);
+            DEBUG_SET(DEBUG_CRUISE, 0, bearingNextWp);
+            loiterCenterPos.x = posControl.activeWaypoint.pos.x + navLoiterRadius * cos_approx(CENTIDEGREES_TO_RADIANS(loiterCenterBearing));
+            loiterCenterPos.y = posControl.activeWaypoint.pos.y + navLoiterRadius * sin_approx(CENTIDEGREES_TO_RADIANS(loiterCenterBearing));
+
+            posErrorX = loiterCenterPos.x - navGetCurrentActualPositionAndVelocity()->pos.x;
+            posErrorY = loiterCenterPos.y - navGetCurrentActualPositionAndVelocity()->pos.y;
+
+            // if waypoint not reached based on distance from waypoint then waypoint considered
+            // reached if difference between actual heading and waypoint bearing exceeds 90 degs
+            posControl.wpReached = ABS(wrap_18000(posControl.activeWaypoint.yaw - posControl.actualState.yaw)) > 9000;
+
+            needToCalculateCircularLoiter = true;
+        }
+    }
+    DEBUG_SET(DEBUG_CRUISE, 1, loiterCenterPos.x);
+    DEBUG_SET(DEBUG_CRUISE, 2, turnDirection);
+// CR67
 
     // Calculate virtual position for straight movement
     if (needToCalculateCircularLoiter) {
         // We are closing in on a waypoint, calculate circular loiter
-        float loiterAngle = atan2_approx(-posErrorY, -posErrorX) + DEGREES_TO_RADIANS(loiterDirection() * 45.0f);
-
-        float loiterTargetX = posControl.desiredState.pos.x + navLoiterRadius * cos_approx(loiterAngle);
-        float loiterTargetY = posControl.desiredState.pos.y + navLoiterRadius * sin_approx(loiterAngle);
-
+        float loiterAngle = atan2_approx(-posErrorY, -posErrorX) + DEGREES_TO_RADIANS(turnDirection * 45.0f);   // CR67
+        // float loiterAngle = atan2_approx(-posErrorY, -posErrorX) + DEGREES_TO_RADIANS(loiterDirection() * 45.0f);
+        // CR67
+        float loiterTargetX = loiterCenterPos.x + navLoiterRadius * cos_approx(loiterAngle);
+        float loiterTargetY = loiterCenterPos.y + navLoiterRadius * sin_approx(loiterAngle);
+        // float loiterTargetX = posControl.desiredState.pos.x + navLoiterRadius * cos_approx(loiterAngle);
+        // float loiterTargetY = posControl.desiredState.pos.y + navLoiterRadius * sin_approx(loiterAngle);
+        // CR67
         // We have temporary loiter target. Recalculate distance and position error
         posErrorX = loiterTargetX - navGetCurrentActualPositionAndVelocity()->pos.x;
         posErrorY = loiterTargetY - navGetCurrentActualPositionAndVelocity()->pos.y;
@@ -361,7 +396,7 @@ static void updatePositionHeadingController_FW(timeUs_t currentTimeUs, timeDelta
     // CR67
     DEBUG_SET(DEBUG_CRUISE, 4, virtualTargetBearing);
     /* If waypoint tracking enabled force craft toward waypoint course line
-     * and hold within set accuracy distance from line */
+     * and hold on course line */
     if (navConfig()->fw.waypoint_tracking_accuracy && isWaypointNavTrackingRoute() && !needToCalculateCircularLoiter) {
         if (ABS(wrap_18000(virtualTargetBearing - posControl.actualState.yaw)) < 9000 || posControl.wpDistance < 1000.0f) {
             fpVector3_t virtualCoursePoint;
@@ -373,7 +408,7 @@ static void updatePositionHeadingController_FW(timeUs_t currentTimeUs, timeDelta
             DEBUG_SET(DEBUG_CRUISE, 3, distToCourseLine);
 
             int32_t courseVirtualCorrection = wrap_18000(posControl.activeWaypoint.yaw - virtualTargetBearing);
-            DEBUG_SET(DEBUG_CRUISE, 0, courseVirtualCorrection);
+            // DEBUG_SET(DEBUG_CRUISE, 0, courseVirtualCorrection);
             int32_t courseHeadingError = wrap_18000(posControl.activeWaypoint.yaw - posControl.actualState.yaw);
 
             float courseCorrectionFactor = constrainf(distToCourseLine / (100.0f * navConfig()->fw.waypoint_tracking_accuracy), 0.0f, 1.0f);
@@ -390,13 +425,13 @@ static void updatePositionHeadingController_FW(timeUs_t currentTimeUs, timeDelta
             } else if (!IS_RC_MODE_ACTIVE(BOXNAVALTHOLD)) {    // DEBUG ONLY
                 virtualTargetBearing = wrap_36000(posControl.activeWaypoint.yaw - courseVirtualCorrection); // main code line
             }
-            DEBUG_SET(DEBUG_CRUISE, 1, courseCorrectionFactor * 100);
-            DEBUG_SET(DEBUG_CRUISE, 7, courseVirtualCorrection);
+            // DEBUG_SET(DEBUG_CRUISE, 1, courseCorrectionFactor * 100);
+            // DEBUG_SET(DEBUG_CRUISE, 7, courseVirtualCorrection);
 
         }
         DEBUG_SET(DEBUG_CRUISE, 5, virtualTargetBearing);
     }
-    DEBUG_SET(DEBUG_CRUISE, 2, gpsSol.groundCourse / 10);
+    // DEBUG_SET(DEBUG_CRUISE, 2, gpsSol.groundCourse / 10);
     DEBUG_SET(DEBUG_CRUISE, 6, posControl.activeWaypoint.yaw);
     // CR67
 
