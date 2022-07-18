@@ -395,7 +395,7 @@ typedef struct {
     int8_t                      loadedMultiMissionStartWP;  // selected multi mission start WP
     int8_t                      loadedMultiMissionWPCount;  // number of WPs in selected multi mission
 #endif
-    navWaypointPosition_t       activeWaypoint;             // Local position and initial bearing, filled on waypoint activation
+    navWaypointPosition_t       activeWaypoint;             // Local position, current bearing and bearing to next WP, filled on waypoint activation  CR67
     int8_t                      activeWaypointIndex;
     float                       wpInitialAltitude;          // Altitude at start of WP
     float                       wpInitialDistance;          // Distance when starting flight to WP

@@ -3381,6 +3381,13 @@ static void calculateAndSetActiveWaypoint(const navWaypoint_t * waypoint)
     fpVector3_t localPos;
     mapWaypointToLocalPosition(&localPos, waypoint, waypointMissionAltConvMode(waypoint->p3));
     calculateAndSetActiveWaypointToLocalPosition(&localPos);
+    // CR67
+    fpVector3_t posNextWp;
+    posControl.activeWaypoint.bearingToNextWp = -1;
+    if (getLocalPosNextWaypoint(&posNextWp)) {
+        posControl.activeWaypoint.bearingToNextWp = calculateBearingBetweenLocalPositions(&posControl.activeWaypoint.pos, &posNextWp);
+    }
+    // CR67
 }
 
 /* Checks if active waypoint is last in mission */
