@@ -1209,7 +1209,6 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_INITIALIZE(navigati
             if (trackbackActive && posControl.activeRthTBPointIndex >= 0 && !isWaypointMissionRTHActive()) {
                 updateRthTrackback(true);       // save final trackpoint for altitude and max trackback distance reference
                 posControl.flags.rthTrackbackActive = true;
-                posControl.wpReached = false;   // CR67
                 calculateAndSetActiveWaypointToLocalPosition(rthGetTrackbackPos());
                 return NAV_FSM_EVENT_SWITCH_TO_NAV_STATE_RTH_TRACKBACK;
             }
@@ -1574,7 +1573,6 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_WAYPOINT_PRE_ACTION(nav
             posControl.wpInitialDistance = calculateDistanceToDestination(&posControl.activeWaypoint.pos);
             posControl.wpInitialAltitude = posControl.actualState.abs.pos.z;
             posControl.wpAltitudeReached = false;
-            posControl.wpReached = false;   // CR67
             return NAV_FSM_EVENT_SUCCESS;       // will switch to NAV_STATE_WAYPOINT_IN_PROGRESS
 
                 // We use p3 as the volatile jump counter (p2 is the static value)
@@ -2243,7 +2241,7 @@ bool navCalculatePathToDestination(navDestinationPath_t *result, const fpVector3
     return true;
 }
 // CR67
-bool getLocalPosNextWaypoint(fpVector3_t * nextWpPos)
+static bool getLocalPosNextWaypoint(fpVector3_t * nextWpPos)
 {
     // Only for WP Mode not Trackback. Ignore non geo waypoints except RTH and JUMP.
     if (FLIGHT_MODE(NAV_WP_MODE) && !isLastMissionWaypoint()) {
@@ -2286,10 +2284,10 @@ static bool isWaypointReached(const fpVector3_t * waypointPos, const int32_t * w
     }
 
     if (navGetStateFlags(posControl.navState) & NAV_AUTO_WP || posControl.flags.rthTrackbackActive) {
-        // Check if waypoint was missed based on bearing to WP exceeding 100 degrees relative to waypointYaw
-        // Also check if WP reached when turn smoothing used
-        if (ABS(wrap_18000(calculateBearingToDestination(waypointPos) - *waypointYaw)) > 10000 || posControl.wpReached) {
-            posControl.wpReached = false;
+        // Check if waypoint was missed based on bearing to WP exceeding 100 degrees relative to waypoint Yaw
+        // Same method used for turn smoothing but relative bearing set at 45 degrees
+        uint16_t relativeBearing = posControl.flags.wpTurnSmoothingActive ? 4500 : 10000;
+        if (ABS(wrap_18000(calculateBearingToDestination(waypointPos) - *waypointYaw)) > relativeBearing) {
             return true;
         }
     }
@@ -3364,6 +3362,7 @@ static void calculateAndSetActiveWaypointToLocalPosition(const fpVector3_t * pos
     } else {
         posControl.activeWaypoint.yaw = calculateBearingToDestination(pos);
     }
+    posControl.activeWaypoint.bearingToNextWp = -1;     // reset to NO next WP (-1), will be set by WP mode as required   CR67
 
     posControl.activeWaypoint.pos = *pos;
     // CR67
@@ -3382,10 +3381,11 @@ static void calculateAndSetActiveWaypoint(const navWaypoint_t * waypoint)
     mapWaypointToLocalPosition(&localPos, waypoint, waypointMissionAltConvMode(waypoint->p3));
     calculateAndSetActiveWaypointToLocalPosition(&localPos);
     // CR67
-    fpVector3_t posNextWp;
-    posControl.activeWaypoint.bearingToNextWp = -1;
-    if (getLocalPosNextWaypoint(&posNextWp)) {
-        posControl.activeWaypoint.bearingToNextWp = calculateBearingBetweenLocalPositions(&posControl.activeWaypoint.pos, &posNextWp);
+    if (navConfig()->fw.waypoint_turn_smoothing) {
+        fpVector3_t posNextWp;
+        if (getLocalPosNextWaypoint(&posNextWp)) {
+            posControl.activeWaypoint.bearingToNextWp = calculateBearingBetweenLocalPositions(&posControl.activeWaypoint.pos, &posNextWp);
+        }
     }
     // CR67
 }
