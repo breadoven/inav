@@ -3357,7 +3357,7 @@ static void calculateAndSetActiveWaypointToLocalPosition(const fpVector3_t * pos
 {
     // Calculate bearing towards waypoint and store it in waypoint yaw parameter (this will further be used to detect missed waypoints)
     // CR67
-    if (isWaypointNavTrackingRoute()) {
+    if (waypointNavTrackingStatus() > 0) {
         posControl.activeWaypoint.yaw = calculateBearingBetweenLocalPositions(&posControl.activeWaypoint.pos, pos);
     } else {
         posControl.activeWaypoint.yaw = calculateBearingToDestination(pos);
@@ -3438,11 +3438,20 @@ float getActiveWaypointSpeed(void)
     }
 }
 // CR67
-bool isWaypointNavTrackingRoute(void)
+int8_t waypointNavTrackingStatus(void)
 {
+    // returns 0 if no WP tracking active, -1 if WP tracking active and heading to first WP
+    // otherwise returns active WP index beyond first WP
+    if (FLIGHT_MODE(NAV_WP_MODE)) {
+        return posControl.activeWaypointIndex == 0 ? -1 : posControl.activeWaypointIndex;
+    } else if (posControl.flags.rthTrackbackActive) {
+        return posControl.activeRthTBPointIndex == posControl.rthTBLastSavedIndex ? -1 : posControl.activeRthTBPointIndex;
+    }
+
+    return 0;
     // True when established on route beyond first WP
-    return (FLIGHT_MODE(NAV_WP_MODE) && posControl.activeWaypointIndex > 0) ||
-            (posControl.flags.rthTrackbackActive && posControl.activeRthTBPointIndex != posControl.rthTBLastSavedIndex);
+    // return (FLIGHT_MODE(NAV_WP_MODE) && posControl.activeWaypointIndex > 0) ||
+            // (posControl.flags.rthTrackbackActive && posControl.activeRthTBPointIndex != posControl.rthTBLastSavedIndex);
 }
 // CR67
 /*-----------------------------------------------------------
