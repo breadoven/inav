@@ -331,36 +331,47 @@ static void calculateVirtualPositionTarget_FW(float trackingPeriod)
     }
 
     // CR67
-    if (activeWpStatus && !needToCalculateCircularLoiter) {
-        static int8_t prevWPIndex;
+    if (navConfig()->fw.waypoint_tracking_accuracy && activeWpStatus && !needToCalculateCircularLoiter) {
         static fpVector3_t prevWPPos;
         static float gradient;
         static float constant;
+        static int8_t prevWPIndex;  // can be -1
         static uint8_t gradientFlag = 0;
+        static int8_t directionFlag = 1;
         fpVector3_t tempPos;
         fpVector3_t currentWPPos = posControl.activeWaypoint.pos;
 
         if (activeWpStatus > 0) {
             if (prevWPIndex != activeWpStatus) {
-                if (currentWPPos.x == prevWPPos.x) {
+                if (currentWPPos.x == prevWPPos.x) {    // infinite gradient
                     gradientFlag = 1;
-                } else if (currentWPPos.y == prevWPPos.y) {
+                    directionFlag = currentWPPos.y < prevWPPos.y ? -1 : 1;
+                } else if (currentWPPos.y == prevWPPos.y) {     // zero gradient
                     gradientFlag = 2;
+                    directionFlag = currentWPPos.x < prevWPPos.x ? -1 : 1;
                 } else {
                     // gradient and constant of course line defined by y = mx + c
                     gradient = (currentWPPos.y - prevWPPos.y) / (currentWPPos.x - prevWPPos.x);
                     constant = currentWPPos.y - gradient * currentWPPos.x;
                     gradientFlag = 0;
+                    if (fabsf(gradient) > 1) {
+                        directionFlag = currentWPPos.y < prevWPPos.y ? -1 : 1;
+                    } else {
+                        directionFlag = currentWPPos.x < prevWPPos.x ? -1 : 1;
+                    }
                 }
                 prevWPPos = currentWPPos;
                 prevWPIndex = activeWpStatus;
             }
 
+            uint8_t distanceFactor;
             if (gradientFlag == 1) {
+                distanceFactor = constrain(7 - (fabsf(posErrorX) / 500), 2, 5);
                 tempPos.x = currentWPPos.x;
-                tempPos.y = navGetCurrentActualPositionAndVelocity()->pos.y + posErrorY * (trackingDistance / distanceToActualTarget);
+                tempPos.y = navGetCurrentActualPositionAndVelocity()->pos.y + trackingDistance * distanceFactor * directionFlag;
             } else if (gradientFlag == 2) {
-                tempPos.x = navGetCurrentActualPositionAndVelocity()->pos.x + posErrorX * (trackingDistance / distanceToActualTarget);
+                distanceFactor = constrain(7 - (fabsf(posErrorY) / 500), 2, 5);
+                tempPos.x = navGetCurrentActualPositionAndVelocity()->pos.x + trackingDistance * distanceFactor * directionFlag;
                 tempPos.y = currentWPPos.y;
             } else if (gradient != 0) {
                 // constant2 = y axis intercept of line perpendiculat to course line passing through actual position
@@ -368,13 +379,13 @@ static void calculateVirtualPositionTarget_FW(float trackingPeriod)
                 float constant2 = navGetCurrentActualPositionAndVelocity()->pos.y + navGetCurrentActualPositionAndVelocity()->pos.x / gradient;
                 tempPos.x = (constant2 - constant) / (gradient + 1 / gradient);
                 tempPos.y = gradient * tempPos.x + constant;
-                uint8_t distanceFactor = constrain(7 - (calculateDistanceToDestination(&tempPos) / 500), 1, 5);
+                distanceFactor = constrain(7 - (calculateDistanceToDestination(&tempPos) / 500), 2, 5);
                 DEBUG_SET(DEBUG_CRUISE, 2, distanceFactor);
                 if (fabsf(gradient) > 1) {     // increment in y
-                    tempPos.y += trackingDistance * distanceFactor * (currentWPPos.y < prevWPPos.y ? -1 : 1);
+                    tempPos.y += trackingDistance * distanceFactor * directionFlag;
                     tempPos.x = (tempPos.y - constant) / gradient;
                 } else {    // increment in x
-                    tempPos.x += trackingDistance * distanceFactor * (currentWPPos.x < prevWPPos.x ? -1 : 1);
+                    tempPos.x += trackingDistance * distanceFactor * directionFlag;
                     tempPos.y = gradient * tempPos.x + constant;
                 }
             }
