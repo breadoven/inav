@@ -328,78 +328,49 @@ static void calculateVirtualPositionTarget_FW(float trackingPeriod)
         posErrorX = loiterTargetX - navGetCurrentActualPositionAndVelocity()->pos.x;
         posErrorY = loiterTargetY - navGetCurrentActualPositionAndVelocity()->pos.y;
         distanceToActualTarget = calc_length_pythagorean_2D(posErrorX, posErrorY);
-    }
-
     // CR67
-    if (navConfig()->fw.waypoint_tracking_accuracy && activeWpStatus && !needToCalculateCircularLoiter) {
-        static fpVector3_t prevWPPos;
-        static float gradient;
-        static float constant;
-        static int8_t prevWPIndex;  // can be -1
-        static uint8_t gradientFlag = 0;
-        static int8_t directionFlag = 1;
+    } else if (navConfig()->fw.waypoint_tracking_accuracy && activeWpStatus > 0) {
+        // track along waypoint course line if tracking accuracy used
         fpVector3_t tempPos;
         fpVector3_t currentWPPos = posControl.activeWaypoint.pos;
+        uint32_t currentCourse = posControl.activeWaypoint.yaw;
+        uint8_t distanceFactor;
+        uint8_t setting = navConfig()->fw.waypoint_tracking_accuracy;
 
-        if (activeWpStatus > 0) {
-            if (prevWPIndex != activeWpStatus) {
-                if (currentWPPos.x == prevWPPos.x) {    // infinite gradient
-                    gradientFlag = 1;
-                    directionFlag = currentWPPos.y < prevWPPos.y ? -1 : 1;
-                } else if (currentWPPos.y == prevWPPos.y) {     // zero gradient
-                    gradientFlag = 2;
-                    directionFlag = currentWPPos.x < prevWPPos.x ? -1 : 1;
-                } else {
-                    // gradient and constant of course line defined by y = mx + c
-                    gradient = (currentWPPos.y - prevWPPos.y) / (currentWPPos.x - prevWPPos.x);
-                    constant = currentWPPos.y - gradient * currentWPPos.x;
-                    gradientFlag = 0;
-                    if (fabsf(gradient) > 1) {
-                        directionFlag = currentWPPos.y < prevWPPos.y ? -1 : 1;
-                    } else {
-                        directionFlag = currentWPPos.x < prevWPPos.x ? -1 : 1;
-                    }
-                }
-                prevWPPos = currentWPPos;
-                prevWPIndex = activeWpStatus;
-            }
-
-            uint8_t distanceFactor;
-            if (gradientFlag == 1) {
-                distanceFactor = constrain(7 - (fabsf(posErrorX) / 500), 2, 5);
-                tempPos.x = currentWPPos.x;
-                tempPos.y = navGetCurrentActualPositionAndVelocity()->pos.y + trackingDistance * distanceFactor * directionFlag;
-            } else if (gradientFlag == 2) {
-                distanceFactor = constrain(7 - (fabsf(posErrorY) / 500), 2, 5);
-                tempPos.x = navGetCurrentActualPositionAndVelocity()->pos.x + trackingDistance * distanceFactor * directionFlag;
-                tempPos.y = currentWPPos.y;
-            } else if (gradient != 0) {
-                // constant2 = y axis intercept of line perpendiculat to course line passing through actual position
-                // used to calculate position on course line normal to actual position
-                float constant2 = navGetCurrentActualPositionAndVelocity()->pos.y + navGetCurrentActualPositionAndVelocity()->pos.x / gradient;
-                tempPos.x = (constant2 - constant) / (gradient + 1 / gradient);
-                tempPos.y = gradient * tempPos.x + constant;
-                distanceFactor = constrain(7 - (calculateDistanceToDestination(&tempPos) / 500), 2, 5);
-                DEBUG_SET(DEBUG_CRUISE, 2, distanceFactor);
-                if (fabsf(gradient) > 1) {     // increment in y
-                    tempPos.y += trackingDistance * distanceFactor * directionFlag;
-                    tempPos.x = (tempPos.y - constant) / gradient;
-                } else {    // increment in x
-                    tempPos.x += trackingDistance * distanceFactor * directionFlag;
-                    tempPos.y = gradient * tempPos.x + constant;
-                }
-            }
-            posErrorX = tempPos.x - navGetCurrentActualPositionAndVelocity()->pos.x;
-            posErrorY = tempPos.y - navGetCurrentActualPositionAndVelocity()->pos.y;
-            distanceToActualTarget = calc_length_pythagorean_2D(posErrorX, posErrorY);
+        if (currentCourse == 9000 || currentCourse == 27000) {
+            distanceFactor = constrain(4 + setting - (fabsf(posErrorX) / 750), setting, setting + 4);
+            tempPos.x = currentWPPos.x;
+            tempPos.y = navGetCurrentActualPositionAndVelocity()->pos.y + trackingDistance * distanceFactor * (currentCourse == 9000 ? 1 : -1);
+        } else if (currentCourse == 0 || currentCourse == 18000) {
+            distanceFactor = constrain(4 + setting - (fabsf(posErrorY) / 750), setting, setting + 4);
+            tempPos.x = navGetCurrentActualPositionAndVelocity()->pos.x + trackingDistance * distanceFactor * (currentCourse == 0 ? 1 : -1);
+            tempPos.y = currentWPPos.y;
         } else {
-            prevWPPos = currentWPPos;
-            prevWPIndex = activeWpStatus;
+            // using y = mx + c
+            // constant2 = y axis intercept of line normal to course line passing through actual position
+            // used to calculate position on course line normal to actual position
+            float gradient = tan_approx(CENTIDEGREES_TO_RADIANS(posControl.activeWaypoint.yaw));
+            float constant = currentWPPos.y - gradient * currentWPPos.x;
+            float constant2 = navGetCurrentActualPositionAndVelocity()->pos.y + navGetCurrentActualPositionAndVelocity()->pos.x / gradient;
+            tempPos.x = (constant2 - constant) / (gradient + 1 / gradient);
+            tempPos.y = gradient * tempPos.x + constant;
+            uint32_t distanceline = calculateDistanceToDestination(&tempPos);   // debug only, remove after
+            distanceFactor = constrain(4 + setting - (distanceline / 750), setting, setting + 4);
+            if (fabsf(gradient) > 1) {     // increment in y
+                tempPos.y += trackingDistance * distanceFactor * (currentCourse < 18000 ? 1 : -1);
+                tempPos.x = (tempPos.y - constant) / gradient;
+            } else {    // increment in x
+                tempPos.x += trackingDistance * distanceFactor * (currentCourse > 27000 || currentCourse < 9000 ? 1 : -1);
+                tempPos.y = gradient * tempPos.x + constant;
+            }
+            DEBUG_SET(DEBUG_CRUISE, 0, constant);
+            DEBUG_SET(DEBUG_CRUISE, 1, gradient * 100);
+            DEBUG_SET(DEBUG_CRUISE, 2, distanceFactor);
+            DEBUG_SET(DEBUG_CRUISE, 3, distanceline);
         }
-        DEBUG_SET(DEBUG_CRUISE, 0, constant);
-        DEBUG_SET(DEBUG_CRUISE, 1, gradient * 100);
-        // DEBUG_SET(DEBUG_CRUISE, 2, distanceToActualTarget);
-        // DEBUG_SET(DEBUG_CRUISE, 2, posControl.activeWaypoint.yaw);
+        posErrorX = tempPos.x - navGetCurrentActualPositionAndVelocity()->pos.x;
+        posErrorY = tempPos.y - navGetCurrentActualPositionAndVelocity()->pos.y;
+        distanceToActualTarget = calc_length_pythagorean_2D(posErrorX, posErrorY);
         DEBUG_SET(DEBUG_CRUISE, 5, posErrorX);
         DEBUG_SET(DEBUG_CRUISE, 7, posErrorY);
     }
@@ -471,40 +442,40 @@ static void updatePositionHeadingController_FW(timeUs_t currentTimeUs, timeDelta
     DEBUG_SET(DEBUG_CRUISE, 4, virtualTargetBearing);
     /* If waypoint tracking enabled force craft toward waypoint course line
      * and hold on course line */
-    if (navConfig()->fw.waypoint_tracking_accuracy && waypointNavTrackingStatus() > 0 && !needToCalculateCircularLoiter) {
-        if (ABS(wrap_18000(virtualTargetBearing - posControl.actualState.yaw)) < 9000 || posControl.wpDistance < 1000.0f) {
-            fpVector3_t virtualCoursePoint;
-            virtualCoursePoint.x = posControl.activeWaypoint.pos.x -
-                                   posControl.wpDistance * cos_approx(CENTIDEGREES_TO_RADIANS(posControl.activeWaypoint.yaw));
-            virtualCoursePoint.y = posControl.activeWaypoint.pos.y -
-                                   posControl.wpDistance * sin_approx(CENTIDEGREES_TO_RADIANS(posControl.activeWaypoint.yaw));
-            float distToCourseLine = calculateDistanceToDestination(&virtualCoursePoint);
-            DEBUG_SET(DEBUG_CRUISE, 3, distToCourseLine);
+    // if (navConfig()->fw.waypoint_tracking_accuracy && waypointNavTrackingStatus() > 0 && !needToCalculateCircularLoiter) {
+        // if (ABS(wrap_18000(virtualTargetBearing - posControl.actualState.yaw)) < 9000 || posControl.wpDistance < 1000.0f) {
+            // fpVector3_t virtualCoursePoint;
+            // virtualCoursePoint.x = posControl.activeWaypoint.pos.x -
+                                   // posControl.wpDistance * cos_approx(CENTIDEGREES_TO_RADIANS(posControl.activeWaypoint.yaw));
+            // virtualCoursePoint.y = posControl.activeWaypoint.pos.y -
+                                   // posControl.wpDistance * sin_approx(CENTIDEGREES_TO_RADIANS(posControl.activeWaypoint.yaw));
+            // float distToCourseLine = calculateDistanceToDestination(&virtualCoursePoint);
+            // DEBUG_SET(DEBUG_CRUISE, 3, distToCourseLine);
 
-            int32_t courseVirtualCorrection = wrap_18000(posControl.activeWaypoint.yaw - virtualTargetBearing);
-            // DEBUG_SET(DEBUG_CRUISE, 0, courseVirtualCorrection);
-            int32_t courseHeadingError = wrap_18000(posControl.activeWaypoint.yaw - posControl.actualState.yaw);
+            // int32_t courseVirtualCorrection = wrap_18000(posControl.activeWaypoint.yaw - virtualTargetBearing);
+            // // DEBUG_SET(DEBUG_CRUISE, 0, courseVirtualCorrection);
+            // int32_t courseHeadingError = wrap_18000(posControl.activeWaypoint.yaw - posControl.actualState.yaw);
 
-            float courseCorrectionFactor = constrainf(distToCourseLine / (100.0f * navConfig()->fw.waypoint_tracking_accuracy), 0.0f, 1.0f);
-            float courseHeadingFactor = constrainf(sq(courseHeadingError / 18000.0f), 0.0f, 1.0f);
-            courseCorrectionFactor = courseVirtualCorrection < 0 ? -courseCorrectionFactor : courseCorrectionFactor;
-            courseHeadingFactor = courseHeadingError < 0 ? -courseHeadingFactor : courseHeadingFactor;
+            // float courseCorrectionFactor = constrainf(distToCourseLine / (100.0f * navConfig()->fw.waypoint_tracking_accuracy), 0.0f, 1.0f);
+            // float courseHeadingFactor = constrainf(sq(courseHeadingError / 18000.0f), 0.0f, 1.0f);
+            // courseCorrectionFactor = courseVirtualCorrection < 0 ? -courseCorrectionFactor : courseCorrectionFactor;
+            // courseHeadingFactor = courseHeadingError < 0 ? -courseHeadingFactor : courseHeadingFactor;
 
-            courseCorrectionFactor = constrainf(courseCorrectionFactor - courseHeadingFactor, -1.0f, 1.0f);
-            courseVirtualCorrection = 8000 * courseCorrectionFactor;
+            // courseCorrectionFactor = constrainf(courseCorrectionFactor - courseHeadingFactor, -1.0f, 1.0f);
+            // courseVirtualCorrection = 8000 * courseCorrectionFactor;
 
-            if (IS_RC_MODE_ACTIVE(BOXNAVPOSHOLD)) {    // DEBUG ONLY
-                // original simple idea that didn't seem to work:
-                virtualTargetBearing -= wrap_18000(posControl.activeWaypoint.yaw - virtualTargetBearing);
-            } else if (IS_RC_MODE_ACTIVE(BOXNAVALTHOLD)) {    // DEBUG ONLY
-                virtualTargetBearing = wrap_36000(posControl.activeWaypoint.yaw - courseVirtualCorrection); // main code line
-            }
-            // DEBUG_SET(DEBUG_CRUISE, 1, courseCorrectionFactor * 100);
-            // DEBUG_SET(DEBUG_CRUISE, 7, courseVirtualCorrection);
+            // if (IS_RC_MODE_ACTIVE(BOXNAVPOSHOLD)) {    // DEBUG ONLY
+                // // original simple idea that didn't seem to work:
+                // virtualTargetBearing -= wrap_18000(posControl.activeWaypoint.yaw - virtualTargetBearing);
+            // } else if (IS_RC_MODE_ACTIVE(BOXNAVALTHOLD)) {    // DEBUG ONLY
+                // virtualTargetBearing = wrap_36000(posControl.activeWaypoint.yaw - courseVirtualCorrection); // main code line
+            // }
+            // // DEBUG_SET(DEBUG_CRUISE, 1, courseCorrectionFactor * 100);
+            // // DEBUG_SET(DEBUG_CRUISE, 7, courseVirtualCorrection);
 
-        }
+        // }
         // DEBUG_SET(DEBUG_CRUISE, 5, virtualTargetBearing);
-    }
+    // }
     // DEBUG_SET(DEBUG_CRUISE, 2, gpsSol.groundCourse / 10);
     DEBUG_SET(DEBUG_CRUISE, 6, posControl.activeWaypoint.yaw);
     // CR67

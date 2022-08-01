@@ -127,7 +127,7 @@ int32_t wrap_18000(int32_t angle)
 
 int32_t wrap_36000(int32_t angle)
 {
-    if (angle > 36000)
+    if (angle >= 36000)     // CR67
         angle -= 36000;
     if (angle < 0)
         angle += 36000;
