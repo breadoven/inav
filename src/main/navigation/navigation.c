@@ -3357,7 +3357,7 @@ static void calculateAndSetActiveWaypointToLocalPosition(const fpVector3_t * pos
 {
     // Calculate bearing towards waypoint and store it in waypoint yaw parameter (this will further be used to detect missed waypoints)
     // CR67
-    if (waypointNavTrackingStatus() > 0 && !(posControl.activeWaypoint.pos.x == pos->x && posControl.activeWaypoint.pos.y == pos->y)) {
+    if (isWaypointNavTrackingActive() && !(posControl.activeWaypoint.pos.x == pos->x && posControl.activeWaypoint.pos.y == pos->y)) {
         posControl.activeWaypoint.yaw = calculateBearingBetweenLocalPositions(&posControl.activeWaypoint.pos, pos);
     } else {
         posControl.activeWaypoint.yaw = calculateBearingToDestination(pos);
@@ -3439,19 +3439,13 @@ float getActiveWaypointSpeed(void)
     }
 }
 // CR67
-int8_t waypointNavTrackingStatus(void)
+bool isWaypointNavTrackingActive(void)
 {
-    // returns 0 if no WP tracking active, -1 if WP tracking active and heading to first WP
-    // otherwise returns active WP index beyond first WP.
-    // NOTE: NAV_WP_MODE flag used (rather than state flag NAV_AUTO_WP) to ensure WP Restart resume/switch returns 0
+    // NAV_WP_MODE flag used rather than state flag NAV_AUTO_WP to ensure heading to initial waypoint
+    // is set from current position not previous WP. Works for WP Restart intermediate WP as well as first mission WP.
     // (NAV_WP_MODE flag isn't set until WP initialisation is finished)
-    if (FLIGHT_MODE(NAV_WP_MODE)) {
-        return posControl.activeWaypointIndex == 0 ? -1 : posControl.activeWaypointIndex;
-    } else if (posControl.flags.rthTrackbackActive) {
-        return posControl.activeRthTBPointIndex == posControl.rthTBLastSavedIndex ? -1 : posControl.activeRthTBPointIndex;
-    }
 
-    return 0;
+    return FLIGHT_MODE(NAV_WP_MODE) || (posControl.flags.rthTrackbackActive && posControl.activeRthTBPointIndex != posControl.rthTBLastSavedIndex);
 }
 // CR67
 /*-----------------------------------------------------------

@@ -73,7 +73,6 @@ static float throttleSpeedAdjustment = 0;
 static bool isAutoThrottleManuallyIncreased = false;
 static int32_t navHeadingError;
 static int8_t loiterDirYaw = 1;
-static bool needToCalculateCircularLoiter = false;  // CR67
 
 // Calculates the cutoff frequency for smoothing out roll/pitch commands
 // control_smoothness valid range from 0 to 9
@@ -276,33 +275,33 @@ static void calculateVirtualPositionTarget_FW(float trackingPeriod)
 
     uint32_t navLoiterRadius = getLoiterRadius(navConfig()->fw.loiter_radius);
     fpVector3_t loiterCenterPos = posControl.desiredState.pos;  // CR67
-    int8_t turnDirection = loiterDirection();    // CR67
-    int8_t activeWpStatus = waypointNavTrackingStatus();    // CR67
+    int8_t loiterTurnDirection = loiterDirection();    // CR67
+    bool isWpTrackingActive = isWaypointNavTrackingActive();    // CR67
 
     // Detemine if a circular loiter is required.
     // For waypoints only use circular loiter when angular visibility is > 30 degs, otherwise head straight toward target
     #define TAN_15DEG    0.26795f
-    needToCalculateCircularLoiter = isNavHoldPositionActive() &&   // CR67
-                                    (distanceToActualTarget <= (navLoiterRadius / TAN_15DEG)) &&
-                                    (distanceToActualTarget > 50.0f);
+    bool needToCalculateCircularLoiter = isNavHoldPositionActive() &&
+                                         (distanceToActualTarget <= (navLoiterRadius / TAN_15DEG)) &&
+                                         (distanceToActualTarget > 50.0f);
 // CR67
     /* WP turn smoothing option - switch to loiter path when distance to waypoint < navLoiterRadius.
      * Loiter centered on point inside turn at navLoiterRadius distance from waypoint and
      * on a bearing midway between current and next waypoint course bearings
      * Works for turns > 30 degs and < 120 degs, navLoiterRadius factored down between 30 to 60 degs to align with course line */
-    int32_t waypointTurnAngle = posControl.activeWaypoint.nextTurnAngle;
+    int32_t waypointTurnAngle = posControl.activeWaypoint.nextTurnAngle = -1 ? -1 : ABS(posControl.activeWaypoint.nextTurnAngle);
     posControl.flags.wpTurnSmoothingActive = false;
-    if (waypointTurnAngle > 3000 && waypointTurnAngle < 12000 && activeWpStatus > 0 && !needToCalculateCircularLoiter) {
+    if (waypointTurnAngle > 3000 && waypointTurnAngle < 12000 && isWpTrackingActive && !needToCalculateCircularLoiter) {
         float turnFactor = 0.0f;
         if (navConfig()->fw.waypoint_turn_smoothing == 1) { // pass through WP
-            turnFactor = ABS(waypointTurnAngle) / 6000.0f;
+            turnFactor = waypointTurnAngle / 6000.0f;
         } else {
             turnFactor = 1.0f / tan_approx(CENTIDEGREES_TO_RADIANS(9000.0f - waypointTurnAngle / 2.0f));    // cut corner
         }
         constrainf(turnFactor, 0.5f, 1.5f);
         DEBUG_SET(DEBUG_CRUISE, 7, turnFactor * 100);
         if (posControl.wpDistance < navLoiterRadius * turnFactor) {
-            int32_t loiterCenterBearing = wrap_36000(((wrap_18000(waypointTurnAngle - 18000)) / 2) + posControl.activeWaypoint.yaw + 18000);
+            int32_t loiterCenterBearing = wrap_36000(((wrap_18000(posControl.activeWaypoint.nextTurnAngle - 18000)) / 2) + posControl.activeWaypoint.yaw + 18000);
             float distToTurnCentre = navLoiterRadius;
             if (navConfig()->fw.waypoint_turn_smoothing == 2) {     // cut corner
                 distToTurnCentre = navLoiterRadius / sin_approx(CENTIDEGREES_TO_RADIANS(9000.0f - waypointTurnAngle / 2.0f));
@@ -314,21 +313,20 @@ static void calculateVirtualPositionTarget_FW(float trackingPeriod)
             posErrorY = loiterCenterPos.y - navGetCurrentActualPositionAndVelocity()->pos.y;
 
             // turn direction to next waypoint
-            turnDirection = waypointTurnAngle > 0 ? 1 : -1;  // 1 = right
+            loiterTurnDirection = posControl.activeWaypoint.nextTurnAngle > 0 ? 1 : -1;  // 1 = right
 
             needToCalculateCircularLoiter = posControl.flags.wpTurnSmoothingActive = true;
         }
         DEBUG_SET(DEBUG_CRUISE, 1, loiterCenterPos.x);
-        DEBUG_SET(DEBUG_CRUISE, 2, turnDirection);
-        DEBUG_SET(DEBUG_CRUISE, 0, waypointTurnAngle);
+        DEBUG_SET(DEBUG_CRUISE, 2, loiterTurnDirection);
     }
-
+    DEBUG_SET(DEBUG_CRUISE, 0, waypointTurnAngle);
 // CR67
 
     // We are closing in on a waypoint, calculate circular loiter if required
     if (needToCalculateCircularLoiter) {
         // CR67
-        float loiterAngle = atan2_approx(-posErrorY, -posErrorX) + DEGREES_TO_RADIANS(turnDirection * 45.0f);
+        float loiterAngle = atan2_approx(-posErrorY, -posErrorX) + DEGREES_TO_RADIANS(loiterTurnDirection * 45.0f);
         float loiterTargetX = loiterCenterPos.x + navLoiterRadius * cos_approx(loiterAngle);
         float loiterTargetY = loiterCenterPos.y + navLoiterRadius * sin_approx(loiterAngle);
         // CR67
@@ -337,7 +335,7 @@ static void calculateVirtualPositionTarget_FW(float trackingPeriod)
         posErrorY = loiterTargetY - navGetCurrentActualPositionAndVelocity()->pos.y;
         distanceToActualTarget = calc_length_pythagorean_2D(posErrorX, posErrorY);
     // CR67
-    } else if (navConfig()->fw.waypoint_tracking_accuracy && activeWpStatus > 0) {
+    } else if (navConfig()->fw.waypoint_tracking_accuracy && isWpTrackingActive) {
         // track along waypoint course line if tracking accuracy used
         fpVector3_t tempPos;
         fpVector3_t currentWPPos = posControl.activeWaypoint.pos;
@@ -371,7 +369,7 @@ static void calculateVirtualPositionTarget_FW(float trackingPeriod)
                 tempPos.x += trackingDistance * distanceFactor * (currentCourse > 27000 || currentCourse < 9000 ? 1 : -1);
                 tempPos.y = gradient * tempPos.x + constant;
             }
-            DEBUG_SET(DEBUG_CRUISE, 0, constant);
+            // DEBUG_SET(DEBUG_CRUISE, 0, constant);
             DEBUG_SET(DEBUG_CRUISE, 1, gradient * 100);
             DEBUG_SET(DEBUG_CRUISE, 2, distanceFactor);
             DEBUG_SET(DEBUG_CRUISE, 3, distanceline);
