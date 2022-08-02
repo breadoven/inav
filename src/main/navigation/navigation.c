@@ -3362,7 +3362,7 @@ static void calculateAndSetActiveWaypointToLocalPosition(const fpVector3_t * pos
     } else {
         posControl.activeWaypoint.yaw = calculateBearingToDestination(pos);
     }
-    posControl.activeWaypoint.bearingToNextWp = -1;     // reset to NO next WP (-1), will be set by WP mode as required   CR67
+    posControl.activeWaypoint.nextTurnAngle = -1;     // no turn angle set (-1), will be set by WP mode as required   CR67
 
     posControl.activeWaypoint.pos = *pos;
     // CR67
@@ -3384,7 +3384,8 @@ static void calculateAndSetActiveWaypoint(const navWaypoint_t * waypoint)
     if (navConfig()->fw.waypoint_turn_smoothing) {
         fpVector3_t posNextWp;
         if (getLocalPosNextWaypoint(&posNextWp)) {
-            posControl.activeWaypoint.bearingToNextWp = calculateBearingBetweenLocalPositions(&posControl.activeWaypoint.pos, &posNextWp);
+            int32_t bearingToNextWp = calculateBearingBetweenLocalPositions(&posControl.activeWaypoint.pos, &posNextWp);
+            posControl.activeWaypoint.nextTurnAngle = wrap_18000(bearingToNextWp - posControl.activeWaypoint.yaw);
         }
     }
     // CR67

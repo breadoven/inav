@@ -381,7 +381,7 @@ extern radar_pois_t radar_pois[RADAR_MAX_POIS];
 typedef struct {
     fpVector3_t pos;
     int32_t     yaw;             // deg * 100
-    int32_t     bearingToNextWp;   // CR67
+    int32_t     nextTurnAngle;   // CR67
 } navWaypointPosition_t;
 
 typedef struct navDestinationPath_s {
