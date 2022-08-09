@@ -2445,7 +2445,7 @@ groups:
         max: 9
         # CR67
       - name: nav_fw_wp_tracking_accuracy
-        description: "Waypoint tracking accuracy forces the craft to quickly head toward and track along the waypoint course line as closely as possible. Setting to 0 disables the option otherwise the set value adjusts the course tracking response. Higher values dampen the response reducing possible overshoot. A value of 2 is a good starting point."
+        description: "Waypoint tracking accuracy forces the craft to quickly head toward and track along the waypoint course line as closely as possible. Setting to 0 disables the option otherwise the set value adjusts the course tracking response. Higher values dampen the response reducing possible overshoot. A value of 5 is a good starting point."
         default_value: 0
         field: fw.waypoint_tracking_accuracy
         min: 0
