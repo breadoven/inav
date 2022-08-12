@@ -168,7 +168,13 @@ typedef enum {
     RTH_TRACKBACK_ON,
     RTH_TRACKBACK_FS,
 } rthTrackbackMode_e;
-
+// CR67
+typedef enum {
+    WP_TURN_SMOOTHING_OFF,
+    WP_TURN_SMOOTHING_ON,
+    WP_TURN_SMOOTHING_CUT,
+} wpFwTurnSmoothing_e;
+// CR67
 typedef struct positionEstimationConfig_s {
     uint8_t automatic_mag_declination;
     uint8_t reset_altitude_type; // from nav_reset_type_e
