@@ -275,20 +275,19 @@ static inline bool isLaunchMaxAltitudeReached(void)
 
 static inline bool areSticksMoved(timeMs_t initialTime, timeUs_t currentTimeUs)
 {
-    return (initialTime + currentStateElapsedMs(currentTimeUs)) >= navConfig()->fw.launch_min_time &&   // CR70
+    return (initialTime + currentStateElapsedMs(currentTimeUs)) >= navConfig()->fw.launch_min_time &&
             isRollPitchStickDeflected(navConfig()->fw.launch_abort_deadband);
 }
-// CR70
+
 static inline bool isProbablyNotFlying(void)
 {
+    // Check flight status but only if GPS lock valid
     return posControl.flags.estPosStatus == EST_TRUSTED && !isFixedWingFlying();
 }
-// CR70
+
 static void resetPidsIfNeeded(void) {
-    // Until motors are started don't use PID I-term and reset TPA filter
-    DEBUG_SET(DEBUG_CRUISE, 7, 11);
-    if (isProbablyNotFlying() || fwLaunch.currentState < FW_LAUNCH_STATE_MOTOR_SPINUP || (navConfig()->fw.launch_manual_throttle && isThrottleLow())) { // CR70
-        DEBUG_SET(DEBUG_CRUISE, 7, 22);
+    // Don't use PID I-term and reset TPA filter until motors are started or until flight is detected
+    if (isProbablyNotFlying() || fwLaunch.currentState < FW_LAUNCH_STATE_MOTOR_SPINUP || (navConfig()->fw.launch_manual_throttle && isThrottleLow())) {
         pidResetErrorAccumulators();
         pidResetTPAFilter();
     }
@@ -447,10 +446,10 @@ static fixedWingLaunchEvent_t fwLaunchState_FW_LAUNCH_STATE_MOTOR_SPINUP(timeUs_
 
 static fixedWingLaunchEvent_t fwLaunchState_FW_LAUNCH_STATE_IN_PROGRESS(timeUs_t currentTimeUs)
 {
-    // CR70
     uint16_t initialTime = 0;
 
     if (navConfig()->fw.launch_manual_throttle) {
+        // reset timers when throttle is low or until flight detected and abort launch regardless of launch settings
         if (isThrottleLow()) {
             fwLaunch.currentStateTimeUs = currentTimeUs;
             fwLaunch.pitchAngle = 0;
@@ -458,20 +457,21 @@ static fixedWingLaunchEvent_t fwLaunchState_FW_LAUNCH_STATE_IN_PROGRESS(timeUs_t
                 return FW_LAUNCH_EVENT_ABORT;
             }
         } else {
-            if (isProbablyNotFlying()) fwLaunch.currentStateTimeUs = currentTimeUs;
+            if (isProbablyNotFlying()) {
+                fwLaunch.currentStateTimeUs = currentTimeUs;
+            }
             fwLaunch.pitchAngle = navConfig()->fw.launch_climb_angle;
         }
     } else {
         initialTime = navConfig()->fw.launch_motor_timer + navConfig()->fw.launch_motor_spinup_time;
         rcCommand[THROTTLE] = constrain(currentBatteryProfile->nav.fw.launch_throttle, getThrottleIdleValue(), motorConfig()->maxthrottle);
     }
-    // CR70
 
     if (isLaunchMaxAltitudeReached()) {
         return FW_LAUNCH_EVENT_SUCCESS; // cancel the launch and do the FW_LAUNCH_STATE_FINISH state
     }
 
-    if (areSticksMoved(initialTime, currentTimeUs)) {   // CR70
+    if (areSticksMoved(initialTime, currentTimeUs)) {
         return FW_LAUNCH_EVENT_ABORT; // cancel the launch and do the FW_LAUNCH_STATE_ABORTED state
     }
 
@@ -507,13 +507,12 @@ static fixedWingLaunchEvent_t fwLaunchState_FW_LAUNCH_STATE_FINISH(timeUs_t curr
         //CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
     }
     else {
-        // make a smooth transition from the launch state to the current state for throttle and the pitch angle
-        // CR70
+        // Make a smooth transition from the launch state to the current state for pitch angle
+        // Do the same for throttle when manual launch throttle isn't used
         if (!navConfig()->fw.launch_manual_throttle) {
             const uint16_t launchThrottle = constrain(currentBatteryProfile->nav.fw.launch_throttle, getThrottleIdleValue(), motorConfig()->maxthrottle);
-            rcCommand[THROTTLE] = scaleRangef(elapsedTimeMs, 0.0f, endTimeMs,  launchThrottle, rcCommand[THROTTLE]);
+            rcCommand[THROTTLE] = scaleRangef(elapsedTimeMs, 0.0f, endTimeMs, launchThrottle, rcCommand[THROTTLE]);
         }
-        // CR70
         fwLaunch.pitchAngle = scaleRangef(elapsedTimeMs, 0.0f, endTimeMs, navConfig()->fw.launch_climb_angle, rcCommand[PITCH]);
     }
 
@@ -591,13 +590,13 @@ void applyFixedWingLaunchController(timeUs_t currentTimeUs)
 
 void resetFixedWingLaunchController(timeUs_t currentTimeUs)
 {
-     // CR70
     if (navConfig()->fw.launch_manual_throttle) {
+        // no detection or motor control required with manual launch throttle
+        // so start at launch in progress
         setCurrentState(FW_LAUNCH_STATE_IN_PROGRESS, currentTimeUs);
     } else {
         setCurrentState(FW_LAUNCH_STATE_WAIT_THROTTLE, currentTimeUs);
     }
-     // CR70
 }
 
 void enableFixedWingLaunchController(timeUs_t currentTimeUs)
