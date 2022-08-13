@@ -385,9 +385,10 @@ static void calculateVirtualPositionTarget_FW(float trackingPeriod)
     // CR67
 
     // Calculate virtual waypoint
-    virtualDesiredPosition.x = navGetCurrentActualPositionAndVelocity()->pos.x + posErrorX * (trackingDistance / distanceToActualTarget);
-    virtualDesiredPosition.y = navGetCurrentActualPositionAndVelocity()->pos.y + posErrorY * (trackingDistance / distanceToActualTarget);
-
+    // CR72
+    virtualDesiredPosition.x = navGetCurrentActualPositionAndVelocity()->pos.x + posErrorX;
+    virtualDesiredPosition.y = navGetCurrentActualPositionAndVelocity()->pos.y + posErrorY;
+    // CR72
     // Shift position according to pilot's ROLL input (up to max_manual_speed velocity)
     if (posControl.flags.isAdjustingPosition) {
         int16_t rcRollAdjustment = applyDeadbandRescaled(rcCommand[ROLL], rcControlsConfig()->pos_hold_deadband, -500, 500);
@@ -396,6 +397,10 @@ static void calculateVirtualPositionTarget_FW(float trackingPeriod)
             float rcShiftY = rcRollAdjustment * navConfig()->general.max_manual_speed / 500.0f * trackingPeriod;
 
             // Rotate this target shift from body frame to to earth frame and apply to position target
+            // CR72
+            virtualDesiredPosition.x += posErrorX * ((trackingDistance / distanceToActualTarget) - 1);
+            virtualDesiredPosition.y += posErrorY * ((trackingDistance / distanceToActualTarget) - 1);
+            // CR72
             virtualDesiredPosition.x += -rcShiftY * posControl.actualState.sinYaw;
             virtualDesiredPosition.y +=  rcShiftY * posControl.actualState.cosYaw;
         }
