@@ -294,7 +294,7 @@ static void calculateVirtualPositionTarget_FW(float trackingPeriod)
     posControl.flags.wpTurnSmoothingActive = false;
     if (waypointTurnAngle > 3000 && waypointTurnAngle < 12000 && isWaypointNavTrackingActive() && !needToCalculateCircularLoiter) {
         float turnFactor = 0.0f;
-        if (navConfig()->fw.waypoint_turn_smoothing == WP_TURN_SMOOTHING_ON) { // pass through WP
+        if (navConfig()->fw.wp_turn_smoothing == WP_TURN_SMOOTHING_ON) { // pass through WP
             turnFactor = waypointTurnAngle / 6000.0f;
         } else {
             turnFactor = tan_approx(CENTIDEGREES_TO_RADIANS(waypointTurnAngle / 2.0f));    // cut corner
@@ -304,7 +304,7 @@ static void calculateVirtualPositionTarget_FW(float trackingPeriod)
         if (posControl.wpDistance < navLoiterRadius * turnFactor) {
             int32_t loiterCenterBearing = wrap_36000(((wrap_18000(posControl.activeWaypoint.nextTurnAngle - 18000)) / 2) + posControl.activeWaypoint.yaw + 18000);
             float distToTurnCentre = navLoiterRadius;
-            if (navConfig()->fw.waypoint_turn_smoothing == WP_TURN_SMOOTHING_CUT) {     // cut corner
+            if (navConfig()->fw.wp_turn_smoothing == WP_TURN_SMOOTHING_CUT) {     // cut corner
                 distToTurnCentre = navLoiterRadius / cos_approx(CENTIDEGREES_TO_RADIANS(waypointTurnAngle / 2.0f));
             }
             loiterCenterPos.x = posControl.activeWaypoint.pos.x + distToTurnCentre * cos_approx(CENTIDEGREES_TO_RADIANS(loiterCenterBearing));
@@ -454,21 +454,32 @@ static void updatePositionHeadingController_FW(timeUs_t currentTimeUs, timeDelta
     // CR67
     DEBUG_SET(DEBUG_CRUISE, 4, virtualTargetBearing);
     /* If waypoint tracking enabled force craft toward waypoint course line and hold on course line */
-    if (navConfig()->fw.waypoint_tracking_accuracy && isWaypointNavTrackingActive() && !needToCalculateCircularLoiter) {
+    if (navConfig()->fw.wp_tracking_accuracy && isWaypointNavTrackingActive() && !needToCalculateCircularLoiter) {
         if (ABS(wrap_18000(virtualTargetBearing - posControl.actualState.yaw)) < 9000 || posControl.wpDistance < 1000.0f) {
             int32_t courseVirtualCorrection = wrap_18000(posControl.activeWaypoint.yaw - virtualTargetBearing);
             float distToCourseLine = ABS(posControl.wpDistance * sin_approx(CENTIDEGREES_TO_RADIANS(courseVirtualCorrection)));
-            DEBUG_SET(DEBUG_CRUISE, 0, courseVirtualCorrection);
+            int32_t courseHeadingError = wrap_18000(posControl.activeWaypoint.yaw - posControl.actualState.yaw);
+            // DEBUG_SET(DEBUG_CRUISE, 0, courseVirtualCorrection);
 
-            float courseCorrectionFactor = constrainf(distToCourseLine / (1000.0f * navConfig()->fw.waypoint_tracking_accuracy), 0.0f, 1.0f);
+            uint8_t captureFactor = 1;
+            if (IS_RC_MODE_ACTIVE(BOXNAVALTHOLD)) {
+                static float previousDistToCourseLine;
+                captureFactor = ABS(courseHeadingError) < 1000 && distToCourseLine > previousDistToCourseLine &&
+                                distToCourseLine > 100.0f && distToCourseLine < 500.0f ? 2 : 1;
+                if ((currentTimeUs - previousTimeMonitoringUpdate) >= HZ2US(NAV_FW_CONTROL_MONITORING_RATE)) {
+                    previousDistToCourseLine = distToCourseLine;
+                }
+            }
+            DEBUG_SET(DEBUG_CRUISE, 0, captureFactor);
+            float courseCorrectionFactor = constrainf(captureFactor * distToCourseLine / (1000.0f * navConfig()->fw.wp_tracking_accuracy), 0.0f, 1.0f);
             courseCorrectionFactor = courseVirtualCorrection < 0 ? -courseCorrectionFactor : courseCorrectionFactor;
 
-            int32_t courseHeadingError = wrap_18000(posControl.activeWaypoint.yaw - posControl.actualState.yaw);
+            // int32_t courseHeadingError = wrap_18000(posControl.activeWaypoint.yaw - posControl.actualState.yaw);
             float courseHeadingFactor = constrainf(sq(courseHeadingError / 18000.0f), 0.0f, 1.0f);
             courseHeadingFactor = courseHeadingError < 0 ? -courseHeadingFactor : courseHeadingFactor;
 
             courseCorrectionFactor = constrainf(courseCorrectionFactor - courseHeadingFactor, -1.0f, 1.0f);
-            courseVirtualCorrection = 8000 * courseCorrectionFactor;
+            courseVirtualCorrection = DEGREES_TO_CENTIDEGREES(navConfig()->fw.wp_tracking_max_angle) * courseCorrectionFactor;
             virtualTargetBearing = wrap_36000(posControl.activeWaypoint.yaw - courseVirtualCorrection);
 
             DEBUG_SET(DEBUG_CRUISE, 3, distToCourseLine);

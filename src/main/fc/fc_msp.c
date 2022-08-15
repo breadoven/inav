@@ -3222,7 +3222,7 @@ void mspWriteSimulatorOSD(sbuf_t *dst)
 
 		int processedRows = 16;
 
-		while (bytesCount < 80) //whole response should be less 155 bytes at worst. 
+		while (bytesCount < 80) //whole response should be less 155 bytes at worst.
 		{
 			bool blink1;
 			uint16_t lastChar;
@@ -3289,14 +3289,14 @@ void mspWriteSimulatorOSD(sbuf_t *dst)
 			else if (count > 2 || cmd !=0 )
 			{
 				cmd |= count;  //long command for blink/bank switch and symbol repeat
-				sbufWriteU8(dst, 0); 
+				sbufWriteU8(dst, 0);
 				sbufWriteU8(dst, cmd);
 				sbufWriteU8(dst, lastChar & 0xff);
 				bytesCount += 3;
 			}
 			else if (count == 2)  //cmd == 0 here
 			{
-				sbufWriteU8(dst, lastChar & 0xff);  
+				sbufWriteU8(dst, lastChar & 0xff);
 				sbufWriteU8(dst, lastChar & 0xff);
 				bytesCount+=2;
 			}
@@ -3323,8 +3323,10 @@ void mspWriteSimulatorOSD(sbuf_t *dst)
 
 bool mspFCProcessInOutCommand(uint16_t cmdMSP, sbuf_t *dst, sbuf_t *src, mspResult_e *ret)
 {
+#ifdef USE_SIMULATOR
     uint8_t tmp_u8;
     const unsigned int dataSize = sbufBytesRemaining(src);
+#endif
 
     switch (cmdMSP) {
 
@@ -3424,8 +3426,8 @@ bool mspFCProcessInOutCommand(uint16_t cmdMSP, sbuf_t *dst, sbuf_t *src, mspResu
 		else if (!areSensorsCalibrating()) {
 			if (!ARMING_FLAG(SIMULATOR_MODE)) { // just once
 #ifdef USE_BARO
-				baroStartCalibration(); 
-#endif			
+				baroStartCalibration();
+#endif
 #ifdef USE_MAG
 				if (compassConfig()->mag_hardware != MAG_NONE){
 					sensorsSet(SENSOR_MAG);
@@ -3528,7 +3530,7 @@ bool mspFCProcessInOutCommand(uint16_t cmdMSP, sbuf_t *dst, sbuf_t *src, mspResu
                 }
 
                 if (simulatorData.flags & SIMU_AIRSPEED) {
-                     simulatorData.airSpeed = sbufReadU16(src);   
+                     simulatorData.airSpeed = sbufReadU16(src);
 			    }
 			}
 			else {
@@ -3546,8 +3548,8 @@ bool mspFCProcessInOutCommand(uint16_t cmdMSP, sbuf_t *dst, sbuf_t *src, mspResu
 			simulatorData.debugIndex = 0;
 		}
 
-		tmp_u8 = simulatorData.debugIndex | 
-			((mixerConfig()->platformType == PLATFORM_AIRPLANE) ? 128 : 0) | 
+		tmp_u8 = simulatorData.debugIndex |
+			((mixerConfig()->platformType == PLATFORM_AIRPLANE) ? 128 : 0) |
 			(ARMING_FLAG(ARMED) ? 64 : 0) |
 			(!feature(FEATURE_OSD) ? 32: 0) |
 			(!isOSDTypeSupportedBySimulator() ? 16: 0);
@@ -3562,7 +3564,7 @@ bool mspFCProcessInOutCommand(uint16_t cmdMSP, sbuf_t *dst, sbuf_t *src, mspResu
 
         *ret = MSP_RESULT_ACK;
         break;
-#endif
+#endif  // simulator
 
     default:
         // Not handled
