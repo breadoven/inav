@@ -68,6 +68,8 @@ bool findNearestSafeHome(void);                  // Find nearest safehome
 
 #endif // defined(USE_SAFE_HOME)
 
+extern uint8_t wpMissionStartIndex;    // CR74
+
 #ifndef NAV_MAX_WAYPOINTS
 #define NAV_MAX_WAYPOINTS 15
 #endif
@@ -518,7 +520,7 @@ bool loadNonVolatileWaypointList(bool clearIfLoaded);
 bool saveNonVolatileWaypointList(void);
 #ifdef USE_MULTI_MISSION
 void selectMultiMissionIndex(int8_t increment);
-void setMultiMissionOnArm(void);
+// void setMultiMissionOnArm(void); // CR74
 #endif
 float getFinalRTHAltitude(void);
 int16_t fixedWingPitchToThrottleCorrection(int16_t pitch, timeUs_t currentTimeUs);

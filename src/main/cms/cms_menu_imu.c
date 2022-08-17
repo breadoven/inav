@@ -255,7 +255,7 @@ static const OSD_Entry cmsx_menuPidGpsnavEntries[] =
     OTHER_PIDFF_ENTRY("VEL P", &cmsx_pidVelXY.P),
     OTHER_PIDFF_ENTRY("VEL I", &cmsx_pidVelXY.I),
     OTHER_PIDFF_ENTRY("VEL D", &cmsx_pidVelXY.D),
-    OTHER_PIDFF_ENTRY("VEL FF", &cmsx_pidVelXY.FF),  // CR47
+    OTHER_PIDFF_ENTRY("VEL FF", &cmsx_pidVelXY.FF),
 // CR73
     OSD_BACK_AND_END_ENTRY,
 };

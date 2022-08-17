@@ -184,7 +184,7 @@
 // Wind estimator
 // #define USE_WIND_ESTIMATOR   // CR46 removed to free up memory with Flywood F411 mainly, but don't use anyway
 
-// #define USE_SIMULATOR
+#define USE_SIMULATOR
 
 //Designed to free space of F722 and F411 MCUs
 #if (MCU_FLASH_SIZE > 512)
