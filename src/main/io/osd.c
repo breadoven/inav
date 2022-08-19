@@ -1526,8 +1526,6 @@ int8_t getGeoWaypointNumber(int8_t waypointIndex)
             }
         }
     }
-DEBUG_SET(DEBUG_CRUISE, 6, geoWaypointIndex);
-DEBUG_SET(DEBUG_CRUISE, 7, wpMissionStartIndex);
     return geoWaypointIndex - wpMissionStartIndex + 1;  // CR74
 }
 

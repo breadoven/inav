@@ -435,12 +435,12 @@ static void updatePositionHeadingController_FW(timeUs_t currentTimeUs, timeDelta
 
             DEBUG_SET(DEBUG_CRUISE, 3, distToCourseLine);
             DEBUG_SET(DEBUG_CRUISE, 1, courseCorrectionFactor * 100);
-            // DEBUG_SET(DEBUG_CRUISE, 7, courseVirtualCorrection);
+            DEBUG_SET(DEBUG_CRUISE, 7, courseVirtualCorrection);
         }
         DEBUG_SET(DEBUG_CRUISE, 5, virtualTargetBearing);
     }
     // DEBUG_SET(DEBUG_CRUISE, 2, gpsSol.groundCourse / 10);
-    // DEBUG_SET(DEBUG_CRUISE, 6, posControl.activeWaypoint.yaw);
+    DEBUG_SET(DEBUG_CRUISE, 6, posControl.activeWaypoint.yaw);
     // CR67
 
 // MASTER VERSION

@@ -1549,14 +1549,10 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_WAYPOINT_INITIALIZE(nav
 
 static navigationFSMEvent_t nextForNonGeoStates(void)
 {
-        /* simple helper for non-geographical states that just set other data */
-    const bool isLastWaypoint = (posControl.waypointList[posControl.activeWaypointIndex].flag == NAV_WP_FLAG_LAST) || (posControl.activeWaypointIndex >= (wpMissionStartIndex + posControl.waypointCount - 1));   // CR74
-
-    if (isLastWaypoint) {
-            // non-geo state is the last waypoint, switch to finish.
+    /* simple helper for non-geographical states that just set other data */
+    if (isLastMissionWaypoint()) { // non-geo state is the last waypoint, switch to finish. CR74
         return NAV_FSM_EVENT_SWITCH_TO_WAYPOINT_FINISHED;
-    } else {
-            // Finished non-geo,  move to next WP
+    } else {    // Finished non-geo,  move to next WP
         posControl.activeWaypointIndex++;
         return NAV_FSM_EVENT_NONE; // re-process the state passing to the next WP
     }
@@ -1946,7 +1942,7 @@ static void navProcessFSMEvents(navigationFSMEvent_t injectedEvent)
     if (posControl.flags.isAdjustingPosition)   NAV_Status.flags |= MW_NAV_FLAG_ADJUSTING_POSITION;
     if (posControl.flags.isAdjustingAltitude)   NAV_Status.flags |= MW_NAV_FLAG_ADJUSTING_ALTITUDE;
 
-    NAV_Status.activeWpNumber = posControl.activeWaypointIndex + 1 - wpMissionStartIndex; // CR74
+    NAV_Status.activeWpNumber = posControl.activeWaypointIndex - wpMissionStartIndex + 1; // CR74
     NAV_Status.activeWpAction = 0;
     if ((posControl.activeWaypointIndex >= 0) && (posControl.activeWaypointIndex < NAV_MAX_WAYPOINTS)) {
         NAV_Status.activeWpAction = posControl.waypointList[posControl.activeWaypointIndex].action;
@@ -3101,8 +3097,8 @@ void getWaypoint(uint8_t wpNumber, navWaypoint_t * wpData)
         }
     }
     // WP #1 - #60 - common waypoints - pre-programmed mission
-    else if ((wpNumber >= 1) && (wpNumber <= NAV_MAX_WAYPOINTS)) {      // CR74 check
-        if (wpNumber <= posControl.waypointCount) {
+    else if ((wpNumber >= 1) && (wpNumber <= NAV_MAX_WAYPOINTS)) {
+        if (wpNumber <= posControl.waypointCount + wpMissionStartIndex) {   // CR74
             *wpData = posControl.waypointList[wpNumber - 1];
             if(wpData->action == NAV_WP_ACTION_JUMP) {
                 wpData->p1 += 1; // make WP # (vice index)
@@ -3251,11 +3247,13 @@ void loadMultiMission(uint8_t missionIndex)
 
 void updateWpMissionChange(void) // CR74 check
 {
-    if (!ARMING_FLAG(ARMED)) return;
+    if (!ARMING_FLAG(ARMED) || posControl.multiMissionCount <= 1) return;       // || FLIGHT_MODE(NAV_WP_MODE)
 
     if (!IS_RC_MODE_ACTIVE(BOXCHANGEMISSION)) {
         if (posControl.loadedMultiMissionIndex != navConfig()->general.waypoint_multi_mission_index) {
             loadMultiMission(navConfig()->general.waypoint_multi_mission_index);
+        } else if (posControl.waypointCount > posControl.loadedMultiMissionWPCount) {
+            posControl.waypointCount = posControl.loadedMultiMissionWPCount;
         }
         return;
     }
@@ -3344,7 +3342,6 @@ bool loadNonVolatileWaypointList(bool clearIfLoaded)
             break;
         }
     }
-
     posControl.geoWaypointCount = loadedMultiMissionGeoWPCount;
     posControl.loadedMultiMissionIndex = posControl.multiMissionCount ? navConfig()->general.waypoint_multi_mission_index : 0;
 
@@ -3766,7 +3763,13 @@ static navigationFSMEvent_t selectNavEventFromBoxModeInput(bool launchBypass)   
 
         // Pilot-activated waypoint mission. Fall-back to RTH in case of no mission loaded
         // Block activation if using WP Mission Planner or BOXCHANGEMISSION mode active  CR74
+        // Update WP mission change before activating WP mode    // CR74
+#ifdef USE_MULTI_MISSION
+        updateWpMissionChange();        // CR74
         if (IS_RC_MODE_ACTIVE(BOXNAVWP) && !posControl.flags.wpMissionPlannerActive && !IS_RC_MODE_ACTIVE(BOXCHANGEMISSION)) {  // CR74
+#else
+        if (IS_RC_MODE_ACTIVE(BOXNAVWP) && !posControl.flags.wpMissionPlannerActive) {  // CR74
+#endif
             if (FLIGHT_MODE(NAV_WP_MODE) || (canActivateWaypoint && canActivateNavigation && canActivateAltHold && STATE(GPS_FIX_HOME)))
                 return NAV_FSM_EVENT_SWITCH_TO_WAYPOINT;
         }
@@ -3928,13 +3931,19 @@ navArmingBlocker_e navigationIsBlockingArming(bool *usedBypass)
          * Can't jump beyond WP list
          * Only jump to geo-referenced WP types
          */
-         // Only perform check when mission loaded at start of posControl.waypointList  // CR74 check
-    if (posControl.waypointCount) {
-        for (uint8_t wp = wpMissionStartIndex; wp < posControl.waypointCount + wpMissionStartIndex; wp++){  // CR74 add on offset
+// CR74
+         // Only perform check when mission loaded at start of posControl.waypointList  // CR74 DELETE
+    uint8_t wpCount = posControl.waypointCount;
+#ifdef USE_MULTI_MISSION
+    wpCount = posControl.loadedMultiMissionWPCount;
+#endif
+    if (wpCount) {  // CR74
+        for (uint8_t wp = wpMissionStartIndex; wp < wpCount + wpMissionStartIndex; wp++){  // CR74 add on offset
             if (posControl.waypointList[wp].action == NAV_WP_ACTION_JUMP){
-                if (wp == wpMissionStartIndex || posControl.waypointList[wp].p1 == (wp - wpMissionStartIndex + 1) || posControl.waypointList[wp].p1 == (wp - wpMissionStartIndex - 1) || posControl.waypointList[wp].p1 >= posControl.waypointCount || posControl.waypointList[wp].p2 < -1) {      // CR74 add on offset
+                if (wp == wpMissionStartIndex || posControl.waypointList[wp].p1 == (wp - wpMissionStartIndex + 1) || posControl.waypointList[wp].p1 == (wp - wpMissionStartIndex - 1) || posControl.waypointList[wp].p1 >= wpCount || posControl.waypointList[wp].p2 < -1) {      // CR74 add on offset
                     return NAV_ARMING_BLOCKER_JUMP_WAYPOINT_ERROR;
                 }
+// CR74
                     /* check for target geo-ref sanity */
                 uint16_t target = posControl.waypointList[wp].p1 + wpMissionStartIndex;   // CR74 add on offset
                 if (!(posControl.waypointList[target].action == NAV_WP_ACTION_WAYPOINT || posControl.waypointList[target].action == NAV_WP_ACTION_HOLD_TIME || posControl.waypointList[target].action == NAV_WP_ACTION_LAND)) {
@@ -4064,9 +4073,6 @@ void updateWaypointsAndNavigationMode(void)
 
     // Update WP mission planner
     updateWpMissionPlanner();
-
-    // Update WP mission change     // CR74
-    updateWpMissionChange();        // CR74
 
     // Update RTH trackback
     updateRthTrackback(false);
