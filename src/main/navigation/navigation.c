@@ -3765,8 +3765,8 @@ static navigationFSMEvent_t selectNavEventFromBoxModeInput(bool launchBypass)   
         // Block activation if using WP Mission Planner or BOXCHANGEMISSION mode active  CR74
         // Update WP mission change before activating WP mode    // CR74
 #ifdef USE_MULTI_MISSION
-        updateWpMissionChange();        // CR74
         if (IS_RC_MODE_ACTIVE(BOXNAVWP) && !posControl.flags.wpMissionPlannerActive && !IS_RC_MODE_ACTIVE(BOXCHANGEMISSION)) {  // CR74
+        updateWpMissionChange();        // CR74
 #else
         if (IS_RC_MODE_ACTIVE(BOXNAVWP) && !posControl.flags.wpMissionPlannerActive) {  // CR74
 #endif
@@ -3878,11 +3878,11 @@ bool navigationTerrainFollowingEnabled(void)
 uint32_t distanceToFirstWP(void)
 {
     fpVector3_t startingWaypointPos;
-#ifdef USE_MULTI_MISSION
+// #ifdef USE_MULTI_MISSION
     mapWaypointToLocalPosition(&startingWaypointPos, &posControl.waypointList[wpMissionStartIndex], GEO_ALT_RELATIVE);     // CR74
-#else
-    mapWaypointToLocalPosition(&startingWaypointPos, &posControl.waypointList[0], GEO_ALT_RELATIVE);
-#endif
+// #else
+    // mapWaypointToLocalPosition(&startingWaypointPos, &posControl.waypointList[0], GEO_ALT_RELATIVE);
+// #endif
     return calculateDistanceToDestination(&startingWaypointPos);
 }
 
@@ -3933,9 +3933,10 @@ navArmingBlocker_e navigationIsBlockingArming(bool *usedBypass)
          */
 // CR74
          // Only perform check when mission loaded at start of posControl.waypointList  // CR74 DELETE
-    uint8_t wpCount = posControl.waypointCount;
 #ifdef USE_MULTI_MISSION
-    wpCount = posControl.loadedMultiMissionWPCount;
+    uint8_t wpCount = posControl.loadedMultiMissionWPCount;
+#else
+    uint8_t wpCount = posControl.waypointCount;
 #endif
     if (wpCount) {  // CR74
         for (uint8_t wp = wpMissionStartIndex; wp < wpCount + wpMissionStartIndex; wp++){  // CR74 add on offset

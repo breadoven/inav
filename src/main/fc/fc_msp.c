@@ -1353,7 +1353,7 @@ static bool mspFcProcessOutCommand(uint16_t cmdMSP, sbuf_t *dst, mspPostProcessF
         break;
 
     case MSP_WP_GETINFO:
-        sbufWriteU8(dst, posControl.waypointCount == posControl.loadedMultiMissionWPCount ? wpMissionStartIndex : 0);      // Mission start waypoint index  // CR74
+        sbufWriteU8(dst, 0);                        // Reserved for waypoint capabilities  // CR74
         sbufWriteU8(dst, NAV_MAX_WAYPOINTS);        // Maximum number of waypoints supported
         sbufWriteU8(dst, isWaypointListValid());    // Is current mission valid
         sbufWriteU8(dst, getWaypointCount());       // Number of waypoints in current mission
