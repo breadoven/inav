@@ -395,8 +395,6 @@ typedef struct {
     /* Multi Missions */
     int8_t                      multiMissionCount;          // number of missions in multi mission entry
     int8_t                      loadedMultiMissionIndex;    // index of selected multi mission
-    // int8_t                      loadedMultiMissionStartWP;  // selected multi mission start WP       CR74
-    // int8_t                      loadedMultiMissionWPCount;  // number of WPs in selected multi mission   CR74
 #endif
     navWaypointPosition_t       activeWaypoint;             // Local position, current bearing and turn angle to next WP, filled on waypoint activation
     int8_t                      activeWaypointIndex;

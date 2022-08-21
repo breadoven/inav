@@ -1518,7 +1518,7 @@ int8_t getGeoWaypointNumber(int8_t waypointIndex)
 
     if (waypointIndex != lastWaypointIndex) {
         lastWaypointIndex = geoWaypointIndex = waypointIndex;
-        for (uint8_t i = wpMissionStartIndex; i <= waypointIndex; i++) {      // CR74 add on offset
+        for (uint8_t i = wpMissionStartIndex; i <= waypointIndex; i++) {      // CR74
             if (posControl.waypointList[i].action == NAV_WP_ACTION_SET_POI ||
                 posControl.waypointList[i].action == NAV_WP_ACTION_SET_HEAD ||
                 posControl.waypointList[i].action == NAV_WP_ACTION_JUMP) {
@@ -3269,7 +3269,7 @@ static bool osdDrawSingleElement(uint8_t item)
                         tfp_sprintf(buff, "M%u/%u>LOAD", navConfig()->general.waypoint_multi_mission_index, posControl.multiMissionCount);
                     } else {
                         // wpCount source for selected mission changes after Arming (until next mission load)
-                        int8_t wpCount = posControl.loadedMissionWPCount; // ? posControl.loadedMultiMissionWPCount : posControl.waypointCount;    // CR74
+                        int8_t wpCount = posControl.loadedMissionWPCount;   // CR74
                         if (posControl.waypointListValid && wpCount > 0) {
                             tfp_sprintf(buff, "M%u/%u>%2uWP", posControl.loadedMultiMissionIndex, posControl.multiMissionCount, wpCount);
                         } else {

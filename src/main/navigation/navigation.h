@@ -520,7 +520,6 @@ bool loadNonVolatileWaypointList(bool clearIfLoaded);
 bool saveNonVolatileWaypointList(void);
 #ifdef USE_MULTI_MISSION
 void selectMultiMissionIndex(int8_t increment);
-// void setMultiMissionOnArm(void); // CR74
 #endif
 float getFinalRTHAltitude(void);
 int16_t fixedWingPitchToThrottleCorrection(int16_t pitch, timeUs_t currentTimeUs);

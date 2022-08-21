@@ -525,9 +525,6 @@ void releaseSharedTelemetryPorts(void) {
 
 void tryArm(void)
 {
-// #ifdef USE_MULTI_MISSION  // CR74
-    // setMultiMissionOnArm();
-// #endif
     updateArmingStatus();
 
 #ifdef USE_DSHOT
