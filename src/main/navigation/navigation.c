@@ -3182,7 +3182,7 @@ void resetWaypointList(void)
         wpMissionStartIndex = 0;    // CR74
         posControl.loadedMissionWPCount = 0;   // CR74
 #ifdef USE_MULTI_MISSION
-        posControl.totalMultiMissionWPCount = 0;    // CR74x
+        posControl.totalMultiMissionWPCount = 0;    // CR74
         posControl.loadedMultiMissionIndex = 0;
 #endif
     }
@@ -3242,16 +3242,17 @@ bool updateWpMissionChange(void)
 {
     /* Function only called when ARMED */
 
-    if (posControl.multiMissionCount <= 1 || posControl.wpPlannerActiveWPIndex) {   // CR74x
+    if (posControl.multiMissionCount <= 1 || posControl.wpPlannerActiveWPIndex) {
         posControl.multiMissionCount = posControl.wpPlannerActiveWPIndex ? 0 : posControl.multiMissionCount;
         return true;
     }
 
+    uint8_t setMissionIndex = navConfig()->general.waypoint_multi_mission_index;
     if (!IS_RC_MODE_ACTIVE(BOXCHANGEMISSION)) {
-        if (posControl.loadedMultiMissionIndex != navConfig()->general.waypoint_multi_mission_index ||
-        (navConfig()->general.waypoint_multi_mission_index > 1 && wpMissionStartIndex == 0)) { // CR74x
-            loadSelectedMultiMission(navConfig()->general.waypoint_multi_mission_index);
-        } else if (posControl.waypointCount != posControl.loadedMissionWPCount) {
+        if (posControl.loadedMultiMissionIndex != setMissionIndex || (setMissionIndex > 1 && wpMissionStartIndex == 0)) {
+            loadSelectedMultiMission(setMissionIndex);
+        }
+        if (posControl.waypointCount != posControl.loadedMissionWPCount) {  // CR74x
             posControl.waypointCount = posControl.loadedMissionWPCount;
         }
         return true;
@@ -3259,7 +3260,7 @@ bool updateWpMissionChange(void)
 
     static bool toggleFlag = true;
     if (IS_RC_MODE_ACTIVE(BOXNAVWP) && toggleFlag) {
-        if (navConfig()->general.waypoint_multi_mission_index == posControl.multiMissionCount) {
+        if (setMissionIndex == posControl.multiMissionCount) {
             navConfigMutable()->general.waypoint_multi_mission_index = 1;
         } else {
             selectMultiMissionIndex(1);
@@ -3318,7 +3319,7 @@ bool loadNonVolatileWaypointList(bool clearIfLoaded)
             break;
         }
     }
-    posControl.totalMultiMissionWPCount = posControl.waypointCount; // CR74x
+    posControl.totalMultiMissionWPCount = posControl.waypointCount;
     loadSelectedMultiMission(navConfig()->general.waypoint_multi_mission_index);
 
     /* Mission sanity check failed - reset the list
@@ -3544,7 +3545,7 @@ void applyWaypointNavigationAndAltitudeHold(void)
         posControl.rthTBWrapAroundCounter = -1;
         // Reset active waypoint count and wpMissionStartIndex on disarm
 #ifdef USE_MULTI_MISSION
-        if (wpMissionStartIndex || posControl.waypointCount < posControl.totalMultiMissionWPCount) {   // CR74x
+        if (wpMissionStartIndex || posControl.waypointCount < posControl.totalMultiMissionWPCount) {   // CR74
             posControl.waypointCount = posControl.totalMultiMissionWPCount;
             wpMissionStartIndex = 0;
         }
