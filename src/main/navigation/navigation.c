@@ -3184,6 +3184,7 @@ void resetWaypointList(void)
 #ifdef USE_MULTI_MISSION
         posControl.totalMultiMissionWPCount = 0;    // CR74
         posControl.loadedMultiMissionIndex = 0;
+        posControl.multiMissionCount = 0;
 #endif
     }
 }
@@ -3252,7 +3253,7 @@ bool updateWpMissionChange(void)
         if (posControl.loadedMultiMissionIndex != setMissionIndex || (setMissionIndex > 1 && wpMissionStartIndex == 0)) {
             loadSelectedMultiMission(setMissionIndex);
         }
-        if (posControl.waypointCount != posControl.loadedMissionWPCount) {  // CR74x
+        if (posControl.waypointCount != posControl.loadedMissionWPCount) {
             posControl.waypointCount = posControl.loadedMissionWPCount;
         }
         return true;
