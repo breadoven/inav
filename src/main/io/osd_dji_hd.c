@@ -964,6 +964,11 @@ static void osdDJIAdjustmentMessage(char *buff, uint8_t adjustmentFunction)
         case ADJUSTMENT_NAV_FW_CONTROL_SMOOTHNESS:
             tfp_sprintf(buff, "CSM %3d", navConfigMutable()->fw.control_smoothness);
             break;
+        // CR76
+        case ADJUSTMENT_NAV_WP_MULTI_MISSION_INDEX:
+            tfp_sprintf(buff, "WPI %3d", navConfigMutable()->general.waypoint_multi_mission_index);
+            break;
+        // CR76
         default:
             tfp_sprintf(buff, "UNSUPPORTED");
             break;

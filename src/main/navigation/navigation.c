@@ -39,6 +39,7 @@
 #include "fc/rc_controls.h"
 #include "fc/rc_modes.h"
 #include "fc/runtime_config.h"
+#include "fc/rc_adjustments.h"  // CR76
 #ifdef USE_MULTI_MISSION
 #include "fc/cli.h"
 #endif
@@ -3237,6 +3238,7 @@ void loadSelectedMultiMission(uint8_t missionIndex)
 
     posControl.loadedMultiMissionIndex = posControl.multiMissionCount ? missionIndex : 0;
     posControl.wpMissionRestart = true;
+    posControl.activeWaypointIndex = wpMissionStartIndex;
 }
 
 bool updateWpMissionChange(void)
@@ -3249,7 +3251,7 @@ bool updateWpMissionChange(void)
     }
 
     uint8_t setMissionIndex = navConfig()->general.waypoint_multi_mission_index;
-    if (!IS_RC_MODE_ACTIVE(BOXCHANGEMISSION)) {
+    if (!(IS_RC_MODE_ACTIVE(BOXCHANGEMISSION) || isAdjustmentFunctionSelected(ADJUSTMENT_NAV_WP_MULTI_MISSION_INDEX))) {
         if (posControl.loadedMultiMissionIndex != setMissionIndex || (setMissionIndex > 1 && wpMissionStartIndex == 0)) {
             loadSelectedMultiMission(setMissionIndex);
         }

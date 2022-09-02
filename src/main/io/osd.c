@@ -3238,7 +3238,11 @@ static bool osdDrawSingleElement(uint8_t item)
     case OSD_NAV_FW_CONTROL_SMOOTHNESS:
         osdDisplayAdjustableDecimalValue(elemPosX, elemPosY, "CTL S", 0, navConfig()->fw.control_smoothness, 1, 0, ADJUSTMENT_NAV_FW_CONTROL_SMOOTHNESS);
         return true;
-
+// CR76
+    case OSD_NAV_WP_MULTI_MISSION_INDEX:
+        osdDisplayAdjustableDecimalValue(elemPosX, elemPosY, "WP I", 0, navConfig()->general.waypoint_multi_mission_index, 1, 0, ADJUSTMENT_NAV_WP_MULTI_MISSION_INDEX);
+        return true;
+// CR76
     case OSD_MISSION:
         {
             if (IS_RC_MODE_ACTIVE(BOXPLANWPMISSION)) {
