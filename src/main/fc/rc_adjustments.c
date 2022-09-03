@@ -610,9 +610,14 @@ static void applyStepAdjustment(controlRateConfig_t *controlRateConfig, uint8_t 
             break;
         }
         // CR76
+#ifdef USE_MULTI_MISSION
         case ADJUSTMENT_NAV_WP_MULTI_MISSION_INDEX:
-            applyAdjustmentU8(ADJUSTMENT_NAV_WP_MULTI_MISSION_INDEX, &navConfigMutable()->general.waypoint_multi_mission_index, delta, SETTING_NAV_WP_MULTI_MISSION_INDEX_MIN, posControl.multiMissionCount);
+            if (posControl.multiMissionCount) {
+                applyAdjustmentU8(ADJUSTMENT_NAV_WP_MULTI_MISSION_INDEX, &navConfigMutable()->general.waypoint_multi_mission_index, delta, SETTING_NAV_WP_MULTI_MISSION_INDEX_MIN, posControl.multiMissionCount);
+            }
             break;
+#endif
+        // CR76
         default:
             break;
     };
