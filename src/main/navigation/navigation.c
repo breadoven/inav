@@ -3241,7 +3241,7 @@ bool updateWpMissionChange(void)
 {
     /* Function only called when ARMED */
 
-    if (posControl.multiMissionCount <= 1 || posControl.wpPlannerActiveWPIndex) {
+    if (posControl.multiMissionCount <= 1 || posControl.wpPlannerActiveWPIndex || FLIGHT_MODE(NAV_WP_MODE)) {
         posControl.multiMissionCount = posControl.wpPlannerActiveWPIndex ? 0 : posControl.multiMissionCount;
         return true;
     }
