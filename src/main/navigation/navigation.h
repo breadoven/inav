@@ -68,8 +68,6 @@ bool findNearestSafeHome(void);                  // Find nearest safehome
 
 #endif // defined(USE_SAFE_HOME)
 
-extern uint8_t wpMissionStartIndex;    // CR74
-
 #ifndef NAV_MAX_WAYPOINTS
 #define NAV_MAX_WAYPOINTS 15
 #endif

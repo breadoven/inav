@@ -1518,7 +1518,7 @@ int8_t getGeoWaypointNumber(int8_t waypointIndex)
 
     if (waypointIndex != lastWaypointIndex) {
         lastWaypointIndex = geoWaypointIndex = waypointIndex;
-        for (uint8_t i = wpMissionStartIndex; i <= waypointIndex; i++) {      // CR74
+        for (uint8_t i = posControl.startWpIndex; i <= waypointIndex; i++) {      // CR74
             if (posControl.waypointList[i].action == NAV_WP_ACTION_SET_POI ||
                 posControl.waypointList[i].action == NAV_WP_ACTION_SET_HEAD ||
                 posControl.waypointList[i].action == NAV_WP_ACTION_JUMP) {
@@ -1526,7 +1526,7 @@ int8_t getGeoWaypointNumber(int8_t waypointIndex)
             }
         }
     }
-    return geoWaypointIndex - wpMissionStartIndex + 1;  // CR74
+    return geoWaypointIndex - posControl.startWpIndex + 1;  // CR74
 }
 
 void osdDisplaySwitchIndicator(const char *swName, int rcValue, char *buff) {
@@ -2303,7 +2303,7 @@ static bool osdDrawSingleElement(uint8_t item)
 
                 for (int i = osdConfig()->hud_wp_disp - 1; i >= 0 ; i--) { // Display in reverse order so the next WP is always written on top
                     j = posControl.activeWaypointIndex + i;
-                    if (j > wpMissionStartIndex + posControl.waypointCount - 1) { // limit to max WP index for mission    // CR74
+                    if (j > posControl.startWpIndex + posControl.waypointCount - 1) { // limit to max WP index for mission    // CR74
                         break;
                     }
                     if (posControl.waypointList[j].lat != 0 && posControl.waypointList[j].lon != 0) {
@@ -3275,7 +3275,7 @@ static bool osdDrawSingleElement(uint8_t item)
                     if (navConfig()->general.waypoint_multi_mission_index != posControl.loadedMultiMissionIndex) {
                         tfp_sprintf(buff, "M%u/%u>LOAD", navConfig()->general.waypoint_multi_mission_index, posControl.multiMissionCount);
                     } else {
-                        int8_t wpCount = posControl.loadedMissionWPCount;   // CR74
+                        int8_t wpCount = posControl.loadedMissionWpCount;   // CR74
                         if (posControl.waypointListValid && wpCount > 0) {
                             tfp_sprintf(buff, "M%u/%u>%2uWP", posControl.loadedMultiMissionIndex, posControl.multiMissionCount, wpCount);
                         } else {
