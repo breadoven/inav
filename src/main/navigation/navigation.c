@@ -205,6 +205,7 @@ PG_RESET_TEMPLATE(navConfig_t, navConfig,
         .launch_allow_throttle_low = SETTING_NAV_FW_LAUNCH_ALLOW_THROTTLE_LOW_DEFAULT,         // allow launch with throttle low CR6
         .launch_manual_throttle = SETTING_NAV_FW_LAUNCH_MANUAL_THROTTLE_DEFAULT,// OFF
         .launch_abort_deadband = SETTING_NAV_FW_LAUNCH_ABORT_DEADBAND_DEFAULT,  // 100 us
+
         .cruise_yaw_rate  = SETTING_NAV_FW_CRUISE_YAW_RATE_DEFAULT,             // 20dps
         .allow_manual_thr_increase = SETTING_NAV_FW_ALLOW_MANUAL_THR_INCREASE_DEFAULT,
         .useFwNavYawControl = SETTING_NAV_USE_FW_YAW_CONTROL_DEFAULT,
@@ -3395,7 +3396,7 @@ static void calculateAndSetActiveWaypointToLocalPosition(const fpVector3_t * pos
 
 geoAltitudeConversionMode_e waypointMissionAltConvMode(geoAltitudeDatumFlag_e datumFlag)
 {
-    return datumFlag == NAV_WP_MSL_DATUM ? GEO_ALT_ABSOLUTE : GEO_ALT_RELATIVE;
+    return ((datumFlag & NAV_WP_MSL_DATUM) == NAV_WP_MSL_DATUM) ? GEO_ALT_ABSOLUTE : GEO_ALT_RELATIVE;
 }
 
 static void calculateAndSetActiveWaypoint(const navWaypoint_t * waypoint)
@@ -3998,7 +3999,7 @@ void missionPlannerSetWaypoint(void)
     posControl.waypointList[posControl.wpPlannerActiveWPIndex].lon = wpLLH.lon;
     posControl.waypointList[posControl.wpPlannerActiveWPIndex].alt = wpLLH.alt;
     posControl.waypointList[posControl.wpPlannerActiveWPIndex].p1 = posControl.waypointList[posControl.wpPlannerActiveWPIndex].p2 = 0;
-    posControl.waypointList[posControl.wpPlannerActiveWPIndex].p3 = 1;                      // use absolute altitude datum
+    posControl.waypointList[posControl.wpPlannerActiveWPIndex].p3 |= NAV_WP_ALTMODE;      // use absolute altitude datum
     posControl.waypointList[posControl.wpPlannerActiveWPIndex].flag = NAV_WP_FLAG_LAST;
     posControl.waypointListValid = true;
 
