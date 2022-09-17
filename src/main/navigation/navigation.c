@@ -3909,7 +3909,8 @@ navArmingBlocker_e navigationIsBlockingArming(bool *usedBypass)
     if (wpCount) {  // CR74
         for (uint8_t wp = posControl.startWpIndex; wp < wpCount + posControl.startWpIndex; wp++){  // CR74
             if (posControl.waypointList[wp].action == NAV_WP_ACTION_JUMP){
-                if (wp == posControl.startWpIndex || posControl.waypointList[wp].p1 == (wp - posControl.startWpIndex + 1) || posControl.waypointList[wp].p1 == (wp - posControl.startWpIndex - 1) || posControl.waypointList[wp].p1 >= wpCount || posControl.waypointList[wp].p2 < -1) {      // CR74
+                if (wp == posControl.startWpIndex || posControl.waypointList[wp].p1 >= wpCount ||
+                (posControl.waypointList[wp].p1 > (wp - posControl.startWpIndex - 2) && posControl.waypointList[wp].p1 < (wp - posControl.startWpIndex + 2)) || posControl.waypointList[wp].p2 < -1) {
                     return NAV_ARMING_BLOCKER_JUMP_WAYPOINT_ERROR;
                 }
 // CR74
