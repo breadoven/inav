@@ -3097,8 +3097,8 @@ void getWaypoint(uint8_t wpNumber, navWaypoint_t * wpData)
     }
     // WP #1 - #60 - common waypoints - pre-programmed mission
     else if ((wpNumber >= 1) && (wpNumber <= NAV_MAX_WAYPOINTS)) {
-        if (wpNumber <= posControl.waypointCount) {
-            *wpData = posControl.waypointList[wpNumber + posControl.startWpIndex - 1];    // CR74x
+        if (wpNumber <= getWaypointCount()) {   // CR74x
+            *wpData = posControl.waypointList[wpNumber - 1 + (ARMING_FLAG(ARMED) ? posControl.startWpIndex : 0)];    // CR74x
             if(wpData->action == NAV_WP_ACTION_JUMP) {
                 wpData->p1 += 1; // make WP # (vice index)
             }
@@ -3193,7 +3193,15 @@ bool isWaypointListValid(void)
 
 int getWaypointCount(void)
 {
-    return posControl.waypointCount;
+    // CR74x
+    uint8_t waypointCount = posControl.waypointCount;
+#ifdef USE_MULTI_MISSION
+    if (!ARMING_FLAG(ARMED) && posControl.totalMultiMissionWPCount) {
+        waypointCount = posControl.totalMultiMissionWPCount;
+    }
+#endif
+    return waypointCount;
+    // CR74x
 }
 #ifdef USE_MULTI_MISSION
 void selectMultiMissionIndex(int8_t increment)
@@ -3301,8 +3309,6 @@ bool loadNonVolatileWaypointList(bool clearIfLoaded)
     if (navConfig()->general.waypoint_multi_mission_index > posControl.multiMissionCount) {
         navConfigMutable()->general.waypoint_multi_mission_index = 1;
     }
-    posControl.multiMissionCount = 0;
-    posControl.loadedMissionWpCount = 0;
 #endif
     for (int i = 0; i < NAV_MAX_WAYPOINTS; i++) {
         setWaypoint(i + 1, nonVolatileWaypointList(i));
@@ -3536,13 +3542,6 @@ void applyWaypointNavigationAndAltitudeHold(void)
         posControl.activeRthTBPointIndex = -1;
         posControl.flags.rthTrackbackActive = false;
         posControl.rthTBWrapAroundCounter = -1;
-        // Reset active waypoint count and posControl.startWpIndex on disarm
-#ifdef USE_MULTI_MISSION
-        if (posControl.startWpIndex || posControl.waypointCount < posControl.totalMultiMissionWPCount) {   // CR74
-            posControl.waypointCount = posControl.totalMultiMissionWPCount;
-            posControl.startWpIndex = 0;
-        }
-#endif
         return;
     }
 
