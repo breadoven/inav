@@ -3178,9 +3178,8 @@ void resetWaypointList(void)
     posControl.waypointListValid = false;
     posControl.geoWaypointCount = 0;
     posControl.startWpIndex = 0;    // CR74
-    posControl.loadedMissionWpCount = 0;   // CR74
 #ifdef USE_MULTI_MISSION
-    posControl.totalMultiMissionWPCount = 0;    // CR74
+    posControl.totalMultiMissionWpCount = 0;    // CR74
     posControl.loadedMultiMissionIndex = 0;
     posControl.multiMissionCount = 0;
 #endif
@@ -3196,8 +3195,8 @@ int getWaypointCount(void)
     // CR74x
     uint8_t waypointCount = posControl.waypointCount;
 #ifdef USE_MULTI_MISSION
-    if (!ARMING_FLAG(ARMED) && posControl.totalMultiMissionWPCount) {
-        waypointCount = posControl.totalMultiMissionWPCount;
+    if (!ARMING_FLAG(ARMED) && posControl.totalMultiMissionWpCount) {
+        waypointCount = posControl.totalMultiMissionWpCount;
     }
 #endif
     return waypointCount;
@@ -3214,7 +3213,7 @@ void selectMultiMissionIndex(int8_t increment)
 void loadSelectedMultiMission(uint8_t missionIndex)
 {
     uint8_t missionCount = 1;
-    posControl.loadedMissionWpCount = 0;
+    posControl.waypointCount = 0;
     posControl.geoWaypointCount = 0;
 
     for (int i = 0; i < NAV_MAX_WAYPOINTS; i++) {
@@ -3226,13 +3225,13 @@ void loadSelectedMultiMission(uint8_t missionIndex)
             }
             /* store details of selected mission */
             // mission start WP
-            if (posControl.loadedMissionWpCount == 0) {
-                posControl.loadedMissionWpCount = 1;   // start marker only, value here unimportant (but not 0)
+            if (posControl.waypointCount == 0) {
+                posControl.waypointCount = 1;   // start marker only, value here unimportant (but not 0)
                 posControl.startWpIndex = i;
             }
             // mission end WP
             if (posControl.waypointList[i].flag == NAV_WP_FLAG_LAST) {
-                posControl.loadedMissionWpCount = i - posControl.startWpIndex + 1;
+                posControl.waypointCount = i - posControl.startWpIndex + 1;
                 break;
             }
         } else if (posControl.waypointList[i].flag == NAV_WP_FLAG_LAST) {
@@ -3254,11 +3253,8 @@ bool updateWpMissionChange(void)
 
     uint8_t setMissionIndex = navConfig()->general.waypoint_multi_mission_index;
     if (!(IS_RC_MODE_ACTIVE(BOXCHANGEMISSION) || isAdjustmentFunctionSelected(ADJUSTMENT_NAV_WP_MULTI_MISSION_INDEX))) {    // CR76
-        if (posControl.loadedMultiMissionIndex != setMissionIndex || (setMissionIndex > 1 && posControl.startWpIndex == 0)) {
+        if (posControl.loadedMultiMissionIndex != setMissionIndex) {
             loadSelectedMultiMission(setMissionIndex);
-        }
-        if (posControl.waypointCount != posControl.loadedMissionWpCount) {
-            posControl.waypointCount = posControl.loadedMissionWpCount;
         }
         return true;
     }
@@ -3318,19 +3314,18 @@ bool loadNonVolatileWaypointList(bool clearIfLoaded)
             break;
         }
     }
-    posControl.totalMultiMissionWPCount = posControl.waypointCount;
+    posControl.totalMultiMissionWpCount = posControl.waypointCount;
     loadSelectedMultiMission(navConfig()->general.waypoint_multi_mission_index);
 
     /* Mission sanity check failed - reset the list
      * Also reset if no selected mission loaded (shouldn't happen) */
-    if (!posControl.waypointListValid || !posControl.loadedMissionWpCount) {
+    if (!posControl.waypointListValid || !posControl.waypointCount) {
 #else
         // check this is the last waypoint
         if (nonVolatileWaypointList(i)->flag == NAV_WP_FLAG_LAST) {
             break;
         }
     }
-    posControl.loadedMissionWpCount = posControl.waypointCount;  // CR74
 
     // Mission sanity check failed - reset the list
     if (!posControl.waypointListValid) {
@@ -3904,11 +3899,10 @@ navArmingBlocker_e navigationIsBlockingArming(bool *usedBypass)
          * Only jump to geo-referenced WP types
          */
 // CR74
-    uint8_t wpCount = posControl.loadedMissionWpCount;
-    if (wpCount) {  // CR74
-        for (uint8_t wp = posControl.startWpIndex; wp < wpCount + posControl.startWpIndex; wp++){  // CR74
+    if (posControl.waypointCount) {  // CR74
+        for (uint8_t wp = posControl.startWpIndex; wp < posControl.waypointCount + posControl.startWpIndex; wp++){  // CR74
             if (posControl.waypointList[wp].action == NAV_WP_ACTION_JUMP){
-                if (wp == posControl.startWpIndex || posControl.waypointList[wp].p1 >= wpCount ||
+                if (wp == posControl.startWpIndex || posControl.waypointList[wp].p1 >= posControl.waypointCount ||
                 (posControl.waypointList[wp].p1 > (wp - posControl.startWpIndex - 2) && posControl.waypointList[wp].p1 < (wp - posControl.startWpIndex + 2)) || posControl.waypointList[wp].p2 < -1) {
                     return NAV_ARMING_BLOCKER_JUMP_WAYPOINT_ERROR;
                 }
