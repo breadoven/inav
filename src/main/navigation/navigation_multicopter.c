@@ -759,7 +759,7 @@ bool isMulticopterLandingDetected(void)
                         posControl.actualState.velXY < (MC_LAND_CHECK_VEL_XY_MOVING * sensitivity);     // CR77
     // check gyro rates are low (degs/s)
     bool gyroCondition = averageAbsGyroRates() < (4.0f * sensitivity);  // CR77
-    DEBUG_SET(DEBUG_LANDING, 2, sensitivity);
+    DEBUG_SET(DEBUG_LANDING, 2, sensitivity * 100);
     // DEBUG_SET(DEBUG_LANDING, 2, velCondition);
     // DEBUG_SET(DEBUG_LANDING, 3, gyroCondition);
 
@@ -816,7 +816,7 @@ bool isMulticopterLandingDetected(void)
     DEBUG_SET(DEBUG_LANDING, 5, possibleLandingDetected);
 
     if (possibleLandingDetected) {
-        timeUs_t safetyTimeDelay = MS2US(2000 + navConfig()->mc.auto_disarm_delay);  // check conditions stable for 2s + optional extra delay
+        timeUs_t safetyTimeDelay = MS2US(2000 + navConfig()->general.auto_disarm_delay);  // check conditions stable for 2s + optional extra delay  CR77
         return (currentTimeUs - landingDetectorStartedAt > safetyTimeDelay);
     } else {
         landingDetectorStartedAt = currentTimeUs;
