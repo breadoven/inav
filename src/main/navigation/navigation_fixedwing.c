@@ -747,13 +747,15 @@ bool isFixedWingLandingDetected(void)
     static timeMs_t fwLandingTimerStartAt;
     static int16_t fwLandSetRollDatum;
     static int16_t fwLandSetPitchDatum;
+    const float sensitivity = navConfig()->general.land_detect_sensitivity / 5.0f;   // CR77
 
     timeMs_t currentTimeMs = millis();
 
     // Check horizontal and vertical volocities are low (cm/s)
-    bool velCondition = fabsf(navGetCurrentActualPositionAndVelocity()->vel.z) < 50.0f && posControl.actualState.velXY < 100.0f;
+    bool velCondition = fabsf(navGetCurrentActualPositionAndVelocity()->vel.z) < (50.0f * sensitivity) &&
+                        posControl.actualState.velXY < (100.0f * sensitivity);  // CR77
     // Check angular rates are low (degs/s)
-    bool gyroCondition = averageAbsGyroRates() < 2.0f;
+    bool gyroCondition = averageAbsGyroRates() < (2.0f * sensitivity);  // CR77
     DEBUG_SET(DEBUG_LANDING, 2, velCondition);
     DEBUG_SET(DEBUG_LANDING, 3, gyroCondition);
 
@@ -766,8 +768,9 @@ bool isFixedWingLandingDetected(void)
             fixAxisCheck = true;
             fwLandingTimerStartAt = currentTimeMs;
         } else {
-            bool isRollAxisStatic = ABS(fwLandSetRollDatum - attitude.values.roll) < 5;
-            bool isPitchAxisStatic = ABS(fwLandSetPitchDatum - attitude.values.pitch) < 5;
+            const uint8_t angleLimit = 5 * sensitivity;   // CR77
+            bool isRollAxisStatic = ABS(fwLandSetRollDatum - attitude.values.roll) < angleLimit;    // CR77
+            bool isPitchAxisStatic = ABS(fwLandSetPitchDatum - attitude.values.pitch) < angleLimit; // CR77
             DEBUG_SET(DEBUG_LANDING, 6, isRollAxisStatic);
             DEBUG_SET(DEBUG_LANDING, 7, isPitchAxisStatic);
             if (isRollAxisStatic && isPitchAxisStatic) {

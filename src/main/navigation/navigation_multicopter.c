@@ -738,6 +738,7 @@ bool isMulticopterFlying(void)
 bool isMulticopterLandingDetected(void)
 {
     DEBUG_SET(DEBUG_LANDING, 4, 0);
+    DEBUG_SET(DEBUG_LANDING, 3, averageAbsGyroRates() * 100);
     static timeUs_t landingDetectorStartedAt;
     const bool throttleIsLow = calculateThrottleStatus(THROTTLE_STATUS_TYPE_RC) == THROTTLE_LOW;
 
@@ -751,13 +752,16 @@ bool isMulticopterLandingDetected(void)
         return  posControl.flags.resetLandingDetector = false;
     }
 
+    const float sensitivity = navConfig()->general.land_detect_sensitivity / 5.0f;   // CR77
+
     // check vertical and horizontal velocities are low (cm/s)
-    bool velCondition = fabsf(navGetCurrentActualPositionAndVelocity()->vel.z) < MC_LAND_CHECK_VEL_Z_MOVING &&
-                        posControl.actualState.velXY < MC_LAND_CHECK_VEL_XY_MOVING;
+    bool velCondition = fabsf(navGetCurrentActualPositionAndVelocity()->vel.z) < (MC_LAND_CHECK_VEL_Z_MOVING * sensitivity) &&
+                        posControl.actualState.velXY < (MC_LAND_CHECK_VEL_XY_MOVING * sensitivity);     // CR77
     // check gyro rates are low (degs/s)
-    bool gyroCondition = averageAbsGyroRates() < 2.0f;
-    DEBUG_SET(DEBUG_LANDING, 2, velCondition);
-    DEBUG_SET(DEBUG_LANDING, 3, gyroCondition);
+    bool gyroCondition = averageAbsGyroRates() < (4.0f * sensitivity);  // CR77
+    DEBUG_SET(DEBUG_LANDING, 2, sensitivity);
+    // DEBUG_SET(DEBUG_LANDING, 2, velCondition);
+    // DEBUG_SET(DEBUG_LANDING, 3, gyroCondition);
 
     bool possibleLandingDetected = false;
     const timeUs_t currentTimeUs = micros();
