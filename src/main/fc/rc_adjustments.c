@@ -42,7 +42,7 @@
 #include "fc/settings.h"
 
 #include "navigation/navigation.h"
-#include "navigation/navigation_private.h"  // CR76
+#include "navigation/navigation_private.h"
 
 #include "flight/mixer.h"
 #include "flight/pid.h"
@@ -299,11 +299,9 @@ static const adjustmentConfig_t defaultAdjustmentConfigs[ADJUSTMENT_FUNCTION_COU
         .mode = ADJUSTMENT_MODE_STEP,
         .data = { .stepConfig = { .step = 1 }}
     }, {
-        // CR76
         .adjustmentFunction = ADJUSTMENT_NAV_WP_MULTI_MISSION_INDEX,
         .mode = ADJUSTMENT_MODE_STEP,
         .data = { .stepConfig = { .step = 1 }}
-        // CR76
     }
 };
 
@@ -609,7 +607,6 @@ static void applyStepAdjustment(controlRateConfig_t *controlRateConfig, uint8_t 
             blackboxLogInflightAdjustmentEvent(ADJUSTMENT_FW_LEVEL_TRIM, (int)(newValue * 10.0f));
             break;
         }
-        // CR76
 #ifdef USE_MULTI_MISSION
         case ADJUSTMENT_NAV_WP_MULTI_MISSION_INDEX:
             if (posControl.multiMissionCount && !FLIGHT_MODE(NAV_WP_MODE)) {
@@ -617,7 +614,6 @@ static void applyStepAdjustment(controlRateConfig_t *controlRateConfig, uint8_t 
             }
             break;
 #endif
-        // CR76
         default:
             break;
     };

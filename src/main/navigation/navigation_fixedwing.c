@@ -685,13 +685,11 @@ void applyFixedWingPitchRollThrottleController(navigationFSMStateFlags_t navStat
      * Then altitude is below landing slowdown min. altitude, enable final approach procedure
      * TODO refactor conditions in this metod if logic is proven to be correct
      */
-    if (navStateFlags & NAV_CTL_LAND || STATE(LANDING_DETECTED)) {  // CR75
-    // CR75
+    if (navStateFlags & NAV_CTL_LAND || STATE(LANDING_DETECTED)) {
         int32_t finalAltitude = navConfig()->general.land_slowdown_minalt + posControl.rthState.homeTmpWaypoint.z;
 
         if ((posControl.flags.estAltStatus >= EST_USABLE && navGetCurrentActualPositionAndVelocity()->pos.z <= finalAltitude) ||
            (posControl.flags.estAglStatus == EST_TRUSTED && posControl.actualState.agl.pos.z <= navConfig()->general.land_slowdown_minalt)) {
-    // CR75
             // Set motor to min. throttle and stop it when MOTOR_STOP feature is enabled
             rcCommand[THROTTLE] = getThrottleIdleValue();
             ENABLE_STATE(NAV_MOTOR_STOP_OR_IDLE);
@@ -747,15 +745,15 @@ bool isFixedWingLandingDetected(void)
     static timeMs_t fwLandingTimerStartAt;
     static int16_t fwLandSetRollDatum;
     static int16_t fwLandSetPitchDatum;
-    const float sensitivity = navConfig()->general.land_detect_sensitivity / 5.0f;   // CR77
+    const float sensitivity = navConfig()->general.land_detect_sensitivity / 5.0f;
 
     timeMs_t currentTimeMs = millis();
 
-    // Check horizontal and vertical volocities are low (cm/s)
+    // Check horizontal and vertical velocities are low (cm/s)
     bool velCondition = fabsf(navGetCurrentActualPositionAndVelocity()->vel.z) < (50.0f * sensitivity) &&
-                        posControl.actualState.velXY < (100.0f * sensitivity);  // CR77
+                        posControl.actualState.velXY < (100.0f * sensitivity);
     // Check angular rates are low (degs/s)
-    bool gyroCondition = averageAbsGyroRates() < (2.0f * sensitivity);  // CR77
+    bool gyroCondition = averageAbsGyroRates() < (2.0f * sensitivity);
     DEBUG_SET(DEBUG_LANDING, 2, velCondition);
     DEBUG_SET(DEBUG_LANDING, 3, gyroCondition);
 
@@ -768,14 +766,14 @@ bool isFixedWingLandingDetected(void)
             fixAxisCheck = true;
             fwLandingTimerStartAt = currentTimeMs;
         } else {
-            const uint8_t angleLimit = 5 * sensitivity;   // CR77
-            bool isRollAxisStatic = ABS(fwLandSetRollDatum - attitude.values.roll) < angleLimit;    // CR77
-            bool isPitchAxisStatic = ABS(fwLandSetPitchDatum - attitude.values.pitch) < angleLimit; // CR77
+            const uint8_t angleLimit = 5 * sensitivity;
+            bool isRollAxisStatic = ABS(fwLandSetRollDatum - attitude.values.roll) < angleLimit;
+            bool isPitchAxisStatic = ABS(fwLandSetPitchDatum - attitude.values.pitch) < angleLimit;
             DEBUG_SET(DEBUG_LANDING, 6, isRollAxisStatic);
             DEBUG_SET(DEBUG_LANDING, 7, isPitchAxisStatic);
             if (isRollAxisStatic && isPitchAxisStatic) {
-                // Must have landed, low horizontal and vertical velocities and no axis rotation in Roll and Pitch
-                timeMs_t safetyTimeDelay = 2000 + navConfig()->general.auto_disarm_delay;   // CR77
+                // Probably landed, low horizontal and vertical velocities and no axis rotation in Roll and Pitch
+                timeMs_t safetyTimeDelay = 2000 + navConfig()->general.auto_disarm_delay;
                 return currentTimeMs - fwLandingTimerStartAt > safetyTimeDelay; // check conditions stable for 2s + optional extra delay
             } else {
                 fixAxisCheck = false;
