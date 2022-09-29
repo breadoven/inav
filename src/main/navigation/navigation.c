@@ -3273,36 +3273,6 @@ bool updateWpMissionChange(void)
     return false;   // block WP mode while changing mission when armed
 }
 
-bool updateWpMissionChange(void)
-{
-    /* Function only called when ARMED */
-
-    if (posControl.multiMissionCount <= 1 || posControl.wpPlannerActiveWPIndex || FLIGHT_MODE(NAV_WP_MODE)) {
-        return true;
-    }
-
-    uint8_t setMissionIndex = navConfig()->general.waypoint_multi_mission_index;
-    if (!(IS_RC_MODE_ACTIVE(BOXCHANGEMISSION) || isAdjustmentFunctionSelected(ADJUSTMENT_NAV_WP_MULTI_MISSION_INDEX))) {
-        if (posControl.loadedMultiMissionIndex != setMissionIndex) {
-            loadSelectedMultiMission(setMissionIndex);
-        }
-        return true;
-    }
-
-    static bool toggleFlag = false;
-    if (IS_RC_MODE_ACTIVE(BOXNAVWP) && toggleFlag) {
-        if (setMissionIndex == posControl.multiMissionCount) {
-            navConfigMutable()->general.waypoint_multi_mission_index = 1;
-        } else {
-            selectMultiMissionIndex(1);
-        }
-        toggleFlag = false;
-    } else if (!IS_RC_MODE_ACTIVE(BOXNAVWP)) {
-        toggleFlag = true;
-    }
-    return false;
-}
-
 bool checkMissionCount(int8_t waypoint)
 {
     if (nonVolatileWaypointList(waypoint)->flag == NAV_WP_FLAG_LAST) {
