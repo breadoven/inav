@@ -115,7 +115,8 @@ FILE_COMPILE_FOR_SPEED
 #endif
 
 #define VIDEO_BUFFER_CHARS_PAL    480
-#define VIDEO_BUFFER_CHARS_HD     900
+#define VIDEO_BUFFER_CHARS_HDZERO 900
+#define VIDEO_BUFFER_CHARS_DJIWTF 1320
 
 #define GFORCE_FILTER_TC 0.2
 
@@ -222,7 +223,11 @@ bool osdDisplayIsPAL(void)
 
 bool osdDisplayIsHD(void)
 {
-    return displayScreenSize(osdDisplayPort) == VIDEO_BUFFER_CHARS_HD;
+    if (displayScreenSize(osdDisplayPort) >= VIDEO_BUFFER_CHARS_HDZERO)
+    {
+        return true;
+    }
+    return false;
 }
 
 /**
@@ -3760,7 +3765,7 @@ static void osdCompleteAsyncInitialization(void)
     uint8_t y = 1;
     displayFontMetadata_t metadata;
     bool fontHasMetadata = displayGetFontMetadata(&metadata, osdDisplayPort);
-    LOG_D(OSD, "Font metadata version %s: %u (%u chars)",
+    LOG_DEBUG(OSD, "Font metadata version %s: %u (%u chars)",
         fontHasMetadata ? "Y" : "N", metadata.version, metadata.charCount);
 
     if (fontHasMetadata && metadata.charCount > 256) {
@@ -4688,6 +4693,7 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
             }
         }
         /* Messages that are shown regardless of Arming state */
+
 #ifdef USE_DEV_TOOLS
         if (systemConfig()->groundTestMode) {
             messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_GRD_TEST_MODE);

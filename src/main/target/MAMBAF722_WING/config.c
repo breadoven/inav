@@ -15,34 +15,51 @@
  * along with INAV.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <stdbool.h>
 #include <stdint.h>
+
 #include <platform.h>
+
+#include "common/axis.h"
 
 #include "config/config_master.h"
 #include "config/feature.h"
 
+#include "drivers/sensor.h"
+#include "drivers/pwm_esc_detect.h"
+#include "drivers/pwm_output.h"
+#include "drivers/serial.h"
+
+#include "fc/rc_controls.h"
+
+#include "flight/failsafe.h"
 #include "flight/mixer.h"
+#include "flight/pid.h"
+
+#include "rx/rx.h"
 
 #include "io/serial.h"
 
+#include "sensors/battery.h"
+#include "sensors/sensors.h"
+
 #include "telemetry/telemetry.h"
-#include "fc/fc_msp_box.h"
 #include "io/piniobox.h"
 
-// alternative defaults settings for MATEKF405SE targets
 void targetConfiguration(void)
-{  
-#ifdef MATEKF405SE_PINIO
+{
+
     pinioBoxConfigMutable()->permanentId[0] = BOX_PERMANENT_ID_USER1;
     pinioBoxConfigMutable()->permanentId[1] = BOX_PERMANENT_ID_USER2;
-#endif
 
-    serialConfigMutable()->portConfigs[1].functionMask = FUNCTION_MSP;
-    serialConfigMutable()->portConfigs[1].msp_baudrateIndex = BAUD_57600;
-
-    //featureSet(FEATURE_PWM_OUTPUT_ENABLE); // enable PWM outputs by default
-    //mixerConfigMutable()->mixerMode = MIXER_FLYING_WING; // default mixer to flying wing
-    mixerConfigMutable()->platformType = PLATFORM_AIRPLANE;   // default mixer to Airplane
-
-    serialConfigMutable()->portConfigs[7].functionMask = FUNCTION_TELEMETRY_SMARTPORT;
+    /*
+     * UART1 is SerialRX
+     */
+    serialConfigMutable()->portConfigs[findSerialPortIndexByIdentifier(SERIAL_PORT_USART1)].functionMask = FUNCTION_RX_SERIAL;
+    
+    /*
+     * Enable MSP at 115200 at UART4
+     */
+    serialConfigMutable()->portConfigs[findSerialPortIndexByIdentifier(SERIAL_PORT_USART4)].functionMask = FUNCTION_MSP;
+    serialConfigMutable()->portConfigs[findSerialPortIndexByIdentifier(SERIAL_PORT_USART4)].msp_baudrateIndex = BAUD_115200;
 }
