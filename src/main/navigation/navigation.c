@@ -2665,7 +2665,13 @@ static bool rthAltControlStickOverrideCheck(unsigned axis)
  * --------------------------------------------------------------------------------- */
  static void updateRthTrackback(bool forceSaveTrackPoint)
 {
-    if (navConfig()->general.flags.rth_trackback_mode == RTH_TRACKBACK_OFF || FLIGHT_MODE(NAV_RTH_MODE) || !ARMING_FLAG(ARMED)) {
+    // CR78
+    static bool suspendTracking = false;
+    if (!(FLIGHT_MODE(NAV_POSHOLD_MODE) && STATE(AIRPLANE)) && suspendTracking) {
+        suspendTracking = false;
+    }
+    // CR78
+    if (navConfig()->general.flags.rth_trackback_mode == RTH_TRACKBACK_OFF || FLIGHT_MODE(NAV_RTH_MODE) || !ARMING_FLAG(ARMED) || suspendTracking) { // CR78
         return;
     }
 
@@ -2714,6 +2720,11 @@ static bool rthAltControlStickOverrideCheck(unsigned axis)
                 saveTrackpoint = calculateDistanceToDestination(&posControl.rthTBPointsList[posControl.activeRthTBPointIndex]) > METERS_TO_CENTIMETERS(20);
                 previousTBTripDist = posControl.totalTripDistance;
             }
+            // CR78
+            if (distanceIncrement && FLIGHT_MODE(NAV_POSHOLD_MODE) && STATE(AIRPLANE)) {
+                saveTrackpoint = suspendTracking = true;
+            }
+            // CR78
         }
 
         // when trackpoint store full, overwrite from start of store using 'rthTBWrapAroundCounter' to track overwrite position
