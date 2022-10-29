@@ -2667,7 +2667,8 @@ static bool rthAltControlStickOverrideCheck(unsigned axis)
 {
     // CR78
     static bool suspendTracking = false;
-    if (!(FLIGHT_MODE(NAV_POSHOLD_MODE) && STATE(AIRPLANE)) && suspendTracking) {
+    bool fwLoiterIsActive = STATE(AIRPLANE) && (NAV_Status.state == MW_NAV_STATE_HOLD_TIMED || FLIGHT_MODE(NAV_POSHOLD_MODE));
+    if (!fwLoiterIsActive && suspendTracking) {
         suspendTracking = false;
     }
     // CR78
@@ -2721,7 +2722,7 @@ static bool rthAltControlStickOverrideCheck(unsigned axis)
                 previousTBTripDist = posControl.totalTripDistance;
             }
             // CR78
-            if (distanceIncrement && FLIGHT_MODE(NAV_POSHOLD_MODE) && STATE(AIRPLANE)) {
+            if (distanceCounter && fwLoiterIsActive) {
                 saveTrackpoint = suspendTracking = true;
             }
             // CR78
