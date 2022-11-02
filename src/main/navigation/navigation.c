@@ -2285,6 +2285,12 @@ static bool isWaypointReached(const fpVector3_t * waypointPos, const int32_t * w
     }
 
     if (navGetStateFlags(posControl.navState) & NAV_AUTO_WP || posControl.flags.rthTrackbackActive) {
+        // CR79
+        if (navConfig()->fw.wp_turn_smoothing == WP_TURN_SMOOTHING_CUT && posControl.flags.wpTurnSmoothingActive) {
+            posControl.flags.wpTurnSmoothingActive = false;
+            return true;
+        }
+        // CR79
         // Check if waypoint was missed based on bearing to WP exceeding 100 degrees relative to waypoint Yaw
         // Same method for turn smoothing option but relative bearing set at 60 degrees
         uint16_t relativeBearing = posControl.flags.wpTurnSmoothingActive ? 6000 : 10000;

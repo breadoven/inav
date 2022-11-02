@@ -288,35 +288,33 @@ static void calculateVirtualPositionTarget_FW(float trackingPeriod)
     /* WP turn smoothing option - switches to loiter path around waypoint using navLoiterRadius.
      * Loiter centered on point inside turn at required distance from waypoint and
      * on a bearing midway between current and next waypoint course bearings.
-     * Works for turns > 30 degs and < 120 degs.
+     * Works for turns > 30 degs and < 160 degs.
      * 2 options, 1 = pass through WP, 2 = cut inside turn missing WP */
     int32_t waypointTurnAngle = posControl.activeWaypoint.nextTurnAngle == -1 ? -1 : ABS(posControl.activeWaypoint.nextTurnAngle);
     posControl.flags.wpTurnSmoothingActive = false;
-    if (waypointTurnAngle > 3000 && waypointTurnAngle < 12000 && isWaypointNavTrackingActive() && !needToCalculateCircularLoiter) {
-        // turnFactor adjusts start of loiter based on turn angle
-        float turnFactor = 0.0f;
+    if (waypointTurnAngle > 3000 && waypointTurnAngle < 16000 && isWaypointNavTrackingActive() && !needToCalculateCircularLoiter) { // CR79
+        // turnStartFactor adjusts start of loiter based on turn angle
+        float turnStartFactor;
         if (navConfig()->fw.wp_turn_smoothing == WP_TURN_SMOOTHING_ON) {     // passes through WP
-            turnFactor = waypointTurnAngle / 6000.0f;
+            turnStartFactor = waypointTurnAngle / 6000.0f;
         } else {
-            turnFactor = tan_approx(CENTIDEGREES_TO_RADIANS(waypointTurnAngle / 2.0f));    // cut inside turn missing WP
+            turnStartFactor = constrainf(tan_approx(CENTIDEGREES_TO_RADIANS(waypointTurnAngle / 2.0f)), 1.0f, 2.0f);    // cut inside turn missing WP
         }
-        constrainf(turnFactor, 0.5f, 2.0f);
-        if (posControl.wpDistance < navLoiterRadius * turnFactor) {
-            int32_t loiterCenterBearing = wrap_36000(((wrap_18000(posControl.activeWaypoint.nextTurnAngle - 18000)) / 2) + posControl.activeWaypoint.yaw + 18000);
-            float distToTurnCentre = navLoiterRadius;
-            if (navConfig()->fw.wp_turn_smoothing == WP_TURN_SMOOTHING_CUT) {
-                distToTurnCentre = navLoiterRadius / cos_approx(CENTIDEGREES_TO_RADIANS(waypointTurnAngle / 2.0f));
+        if (posControl.wpDistance < (posControl.actualState.velXY + navLoiterRadius * turnStartFactor)) { // CR79
+            if (navConfig()->fw.wp_turn_smoothing == WP_TURN_SMOOTHING_ON) {
+                int32_t loiterCenterBearing = wrap_36000(((wrap_18000(posControl.activeWaypoint.nextTurnAngle - 18000)) / 2) + posControl.activeWaypoint.yaw + 18000);
+                loiterCenterPos.x = posControl.activeWaypoint.pos.x + navLoiterRadius * cos_approx(CENTIDEGREES_TO_RADIANS(loiterCenterBearing));
+                loiterCenterPos.y = posControl.activeWaypoint.pos.y + navLoiterRadius * sin_approx(CENTIDEGREES_TO_RADIANS(loiterCenterBearing));
+
+                posErrorX = loiterCenterPos.x - navGetCurrentActualPositionAndVelocity()->pos.x;
+                posErrorY = loiterCenterPos.y - navGetCurrentActualPositionAndVelocity()->pos.y;
+
+                // turn direction to next waypoint
+                loiterTurnDirection = posControl.activeWaypoint.nextTurnAngle > 0 ? 1 : -1;  // 1 = right
+
+                needToCalculateCircularLoiter = true;
             }
-            loiterCenterPos.x = posControl.activeWaypoint.pos.x + distToTurnCentre * cos_approx(CENTIDEGREES_TO_RADIANS(loiterCenterBearing));
-            loiterCenterPos.y = posControl.activeWaypoint.pos.y + distToTurnCentre * sin_approx(CENTIDEGREES_TO_RADIANS(loiterCenterBearing));
-
-            posErrorX = loiterCenterPos.x - navGetCurrentActualPositionAndVelocity()->pos.x;
-            posErrorY = loiterCenterPos.y - navGetCurrentActualPositionAndVelocity()->pos.y;
-
-            // turn direction to next waypoint
-            loiterTurnDirection = posControl.activeWaypoint.nextTurnAngle > 0 ? 1 : -1;  // 1 = right
-
-            needToCalculateCircularLoiter = posControl.flags.wpTurnSmoothingActive = true;
+            posControl.flags.wpTurnSmoothingActive = true;
         }
         DEBUG_SET(DEBUG_CRUISE, 1, loiterCenterPos.x);
         DEBUG_SET(DEBUG_CRUISE, 2, loiterTurnDirection);
@@ -410,32 +408,30 @@ static void updatePositionHeadingController_FW(timeUs_t currentTimeUs, timeDelta
             int32_t courseVirtualCorrection = wrap_18000(posControl.activeWaypoint.yaw - virtualTargetBearing);
             float distToCourseLine = ABS(posControl.wpDistance * sin_approx(CENTIDEGREES_TO_RADIANS(courseVirtualCorrection)));
             int32_t courseHeadingError = wrap_18000(posControl.activeWaypoint.yaw - posControl.actualState.yaw);
-            // DEBUG_SET(DEBUG_CRUISE, 0, courseVirtualCorrection);
-
-            uint8_t captureFactor = 1;
-            if (IS_RC_MODE_ACTIVE(BOXNAVALTHOLD)) {
-                static float previousDistToCourseLine;
-                captureFactor = ABS(courseHeadingError) < 1000 && distToCourseLine > previousDistToCourseLine &&
-                                distToCourseLine > 100.0f && distToCourseLine < 500.0f ? 2 : 1;
-                if ((currentTimeUs - previousTimeMonitoringUpdate) >= HZ2US(NAV_FW_CONTROL_MONITORING_RATE)) {
-                    previousDistToCourseLine = distToCourseLine;
-                }
-            }
-            DEBUG_SET(DEBUG_CRUISE, 0, captureFactor);
-            float courseCorrectionFactor = constrainf(captureFactor * distToCourseLine / (1000.0f * navConfig()->fw.wp_tracking_accuracy), 0.0f, 1.0f);
-            courseCorrectionFactor = courseVirtualCorrection < 0 ? -courseCorrectionFactor : courseCorrectionFactor;
-
-            // int32_t courseHeadingError = wrap_18000(posControl.activeWaypoint.yaw - posControl.actualState.yaw);
-            float courseHeadingFactor = constrainf(sq(courseHeadingError / 18000.0f), 0.0f, 1.0f);
-            courseHeadingFactor = courseHeadingError < 0 ? -courseHeadingFactor : courseHeadingFactor;
-
-            courseCorrectionFactor = constrainf(courseCorrectionFactor - courseHeadingFactor, -1.0f, 1.0f);
-            courseVirtualCorrection = DEGREES_TO_CENTIDEGREES(navConfig()->fw.wp_tracking_max_angle) * courseCorrectionFactor;
-            virtualTargetBearing = wrap_36000(posControl.activeWaypoint.yaw - courseVirtualCorrection);
-
+            DEBUG_SET(DEBUG_CRUISE, 0, courseHeadingError);
             DEBUG_SET(DEBUG_CRUISE, 3, distToCourseLine);
-            DEBUG_SET(DEBUG_CRUISE, 1, courseCorrectionFactor * 100);
-            DEBUG_SET(DEBUG_CRUISE, 7, courseVirtualCorrection);
+            if (distToCourseLine > 200) {  //CR79
+                //CR79
+                float captureFactor = 1.0f;
+                if (IS_RC_MODE_ACTIVE(BOXNAVALTHOLD)) {
+                    captureFactor = distToCourseLine < posControl.actualState.velXY ? constrainf(2.0f - ABS(courseHeadingError) / 500.0f, 0.0f, 2.0f) : 1.0f;
+                }
+                //CR79
+                DEBUG_SET(DEBUG_CRUISE, 2, captureFactor * 100);
+                float courseCorrectionFactor = constrainf(captureFactor * distToCourseLine / (1000.0f * navConfig()->fw.wp_tracking_accuracy), 0.0f, 1.0f);
+                courseCorrectionFactor = courseVirtualCorrection < 0 ? -courseCorrectionFactor : courseCorrectionFactor;
+
+                // int32_t courseHeadingError = wrap_18000(posControl.activeWaypoint.yaw - posControl.actualState.yaw);
+                float courseHeadingFactor = constrainf((courseHeadingError / 18000.0f), 0.0f, 1.0f);    //CR79
+                courseHeadingFactor = courseHeadingError < 0 ? -courseHeadingFactor : courseHeadingFactor;
+
+                courseCorrectionFactor = constrainf(courseCorrectionFactor - courseHeadingFactor, -1.0f, 1.0f);
+                courseVirtualCorrection = DEGREES_TO_CENTIDEGREES(navConfig()->fw.wp_tracking_max_angle) * courseCorrectionFactor;
+                virtualTargetBearing = wrap_36000(posControl.activeWaypoint.yaw - courseVirtualCorrection);
+
+                DEBUG_SET(DEBUG_CRUISE, 1, courseCorrectionFactor * 100);
+                DEBUG_SET(DEBUG_CRUISE, 7, courseVirtualCorrection);
+            }//CR79
         }
         DEBUG_SET(DEBUG_CRUISE, 5, virtualTargetBearing);
     }
