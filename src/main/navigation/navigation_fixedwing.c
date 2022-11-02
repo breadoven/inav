@@ -400,44 +400,40 @@ static void updatePositionHeadingController_FW(timeUs_t currentTimeUs, timeDelta
     // We have virtual position target, calculate heading error
     int32_t virtualTargetBearing = calculateBearingToDestination(&virtualDesiredPosition);
 
-    // CR67
     DEBUG_SET(DEBUG_CRUISE, 4, virtualTargetBearing);
     /* If waypoint tracking enabled force craft toward waypoint course line and hold on course line */
     if (navConfig()->fw.wp_tracking_accuracy && isWaypointNavTrackingActive() && !needToCalculateCircularLoiter) {
-        if (ABS(wrap_18000(virtualTargetBearing - posControl.actualState.yaw)) < 9000 || posControl.wpDistance < 1000.0f) {
-            int32_t courseVirtualCorrection = wrap_18000(posControl.activeWaypoint.yaw - virtualTargetBearing);
-            float distToCourseLine = ABS(posControl.wpDistance * sin_approx(CENTIDEGREES_TO_RADIANS(courseVirtualCorrection)));
+        // CR79
+        int32_t courseVirtualCorrection = wrap_18000(posControl.activeWaypoint.yaw - virtualTargetBearing);
+        float distToCourseLine = ABS(posControl.wpDistance * sin_approx(CENTIDEGREES_TO_RADIANS(courseVirtualCorrection)));
+        DEBUG_SET(DEBUG_CRUISE, 3, distToCourseLine);
+        if ((ABS(wrap_18000(virtualTargetBearing - posControl.actualState.yaw)) < 9000 || posControl.wpDistance < 1000.0f) && distToCourseLine > 200) {
             int32_t courseHeadingError = wrap_18000(posControl.activeWaypoint.yaw - posControl.actualState.yaw);
             DEBUG_SET(DEBUG_CRUISE, 0, courseHeadingError);
-            DEBUG_SET(DEBUG_CRUISE, 3, distToCourseLine);
-            if (distToCourseLine > 200) {  //CR79
-                //CR79
-                float captureFactor = 1.0f;
-                if (IS_RC_MODE_ACTIVE(BOXNAVALTHOLD)) {
-                    captureFactor = distToCourseLine < posControl.actualState.velXY ? constrainf(2.0f - ABS(courseHeadingError) / 500.0f, 0.0f, 2.0f) : 1.0f;
-                }
-                //CR79
-                DEBUG_SET(DEBUG_CRUISE, 2, captureFactor * 100);
-                float courseCorrectionFactor = constrainf(captureFactor * distToCourseLine / (1000.0f * navConfig()->fw.wp_tracking_accuracy), 0.0f, 1.0f);
-                courseCorrectionFactor = courseVirtualCorrection < 0 ? -courseCorrectionFactor : courseCorrectionFactor;
+            float captureFactor = 1.0f;
+            if (IS_RC_MODE_ACTIVE(BOXNAVALTHOLD)) {
+                captureFactor = distToCourseLine < posControl.actualState.velXY ? constrainf(2.0f - ABS(courseHeadingError) / 500.0f, 0.0f, 2.0f) : 1.0f;
+            }
+            //CR79
+            DEBUG_SET(DEBUG_CRUISE, 2, captureFactor * 100);
+            float courseCorrectionFactor = constrainf(captureFactor * distToCourseLine / (1000.0f * navConfig()->fw.wp_tracking_accuracy), 0.0f, 1.0f);
+            courseCorrectionFactor = courseVirtualCorrection < 0 ? -courseCorrectionFactor : courseCorrectionFactor;
 
-                // int32_t courseHeadingError = wrap_18000(posControl.activeWaypoint.yaw - posControl.actualState.yaw);
-                float courseHeadingFactor = constrainf((courseHeadingError / 18000.0f), 0.0f, 1.0f);    //CR79
-                courseHeadingFactor = courseHeadingError < 0 ? -courseHeadingFactor : courseHeadingFactor;
+            // int32_t courseHeadingError = wrap_18000(posControl.activeWaypoint.yaw - posControl.actualState.yaw);
+            float courseHeadingFactor = constrainf((courseHeadingError / 18000.0f), 0.0f, 1.0f);    // CR79
+            courseHeadingFactor = courseHeadingError < 0 ? -courseHeadingFactor : courseHeadingFactor;
 
-                courseCorrectionFactor = constrainf(courseCorrectionFactor - courseHeadingFactor, -1.0f, 1.0f);
-                courseVirtualCorrection = DEGREES_TO_CENTIDEGREES(navConfig()->fw.wp_tracking_max_angle) * courseCorrectionFactor;
-                virtualTargetBearing = wrap_36000(posControl.activeWaypoint.yaw - courseVirtualCorrection);
+            courseCorrectionFactor = constrainf(courseCorrectionFactor - courseHeadingFactor, -1.0f, 1.0f);
+            courseVirtualCorrection = DEGREES_TO_CENTIDEGREES(navConfig()->fw.wp_tracking_max_angle) * courseCorrectionFactor;
+            virtualTargetBearing = wrap_36000(posControl.activeWaypoint.yaw - courseVirtualCorrection);
 
-                DEBUG_SET(DEBUG_CRUISE, 1, courseCorrectionFactor * 100);
-                DEBUG_SET(DEBUG_CRUISE, 7, courseVirtualCorrection);
-            }//CR79
+            DEBUG_SET(DEBUG_CRUISE, 1, courseCorrectionFactor * 100);
+            DEBUG_SET(DEBUG_CRUISE, 7, courseVirtualCorrection);
         }
         DEBUG_SET(DEBUG_CRUISE, 5, virtualTargetBearing);
     }
     // DEBUG_SET(DEBUG_CRUISE, 2, gpsSol.groundCourse / 10);
     DEBUG_SET(DEBUG_CRUISE, 6, posControl.activeWaypoint.yaw);
-    // CR67
 
 // MASTER VERSION
     // /* If waypoint tracking enabled quickly force craft toward waypoint course line and closely track along it */
