@@ -3626,14 +3626,14 @@ static bool isWaypointMissionValid(void)
 static navigationFSMEvent_t selectNavEventFromBoxModeInput(bool launchBypass)   // CR6
 {
 	// General use debugs
-    // DEBUG_SET(DEBUG_CRUISE, 0, posControl.rthTBPointsList[0].x);
-    // DEBUG_SET(DEBUG_CRUISE, 1, posControl.rthTBPointsList[1].x);
-    // DEBUG_SET(DEBUG_CRUISE, 2, isFixedWingFlying());
-    // DEBUG_SET(DEBUG_CRUISE, 3, posControl.rthTBPointsList[3].x);
-    // DEBUG_SET(DEBUG_CRUISE, 4, posControl.rthTBPointsList[4].x);
-    // DEBUG_SET(DEBUG_CRUISE, 5, posControl.rthTBPointsList[5].x);
-    // DEBUG_SET(DEBUG_CRUISE, 6, posControl.rthTBPointsList[5].x);
-    // DEBUG_SET(DEBUG_CRUISE, 7, posControl.activeRthTBPointIndex);
+    // DEBUG_SET(DEBUG_ALWAYS, 0, posControl.rthTBPointsList[0].x);
+    // DEBUG_SET(DEBUG_ALWAYS, 1, posControl.rthTBPointsList[1].x);
+    // DEBUG_SET(DEBUG_ALWAYS, 2, isFixedWingFlying());
+    // DEBUG_SET(DEBUG_ALWAYS, 3, posControl.rthTBPointsList[3].x);
+    // DEBUG_SET(DEBUG_ALWAYS, 4, posControl.rthTBPointsList[4].x);
+    // DEBUG_SET(DEBUG_ALWAYS, 5, posControl.rthTBPointsList[5].x);
+    // DEBUG_SET(DEBUG_ALWAYS, 6, posControl.rthTBPointsList[5].x);
+    // DEBUG_SET(DEBUG_ALWAYS, 7, posControl.activeRthTBPointIndex);
 
     static bool canActivateWaypoint = false;
     static bool canActivateLaunchMode = false;

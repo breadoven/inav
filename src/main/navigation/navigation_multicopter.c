@@ -550,8 +550,8 @@ static void updatePositionAccelController_MC(timeDelta_t deltaMicros, float maxA
         accelLimitX = maxAccelLimit / 1.414213f;
         accelLimitY = accelLimitX;
     }
-    // DEBUG_SET(DEBUG_CRUISE, 1, velErrorX * 1000);
-    // DEBUG_SET(DEBUG_CRUISE, 2, accelLimitX * 1000);
+    // DEBUG_SET(DEBUG_ALWAYS, 1, velErrorX * 1000);
+    // DEBUG_SET(DEBUG_ALWAYS, 2, accelLimitX * 1000);
 
     // Apply additional jerk limiting of 1700 cm/s^3 (~100 deg/s), almost any copter should be able to achieve this rate
     // This will assure that we wont't saturate out LEVEL and RATE PID controller
@@ -620,7 +620,7 @@ static void updatePositionAccelController_MC(timeDelta_t deltaMicros, float maxA
         1.0f,   // Total gain scale
         dtermScale    // Additional dTerm scale
     );
-// DEBUG_SET(DEBUG_CRUISE, 3, newAccelX * 1000);
+// DEBUG_SET(DEBUG_ALWAYS, 3, newAccelX * 1000);
     int32_t maxBankAngle = DEGREES_TO_DECIDEGREES(navConfig()->mc.max_bank_angle);
 
 #ifdef USE_MR_BRAKING_MODE
@@ -660,7 +660,7 @@ static void updatePositionAccelController_MC(timeDelta_t deltaMicros, float maxA
     const float speedError = fabsf(posControl.actualState.velXY - setpointXY);
     if (speedError < 300.0f) {
         uint8_t tweakScaled = scaleRange(speedError, 0, 300, pidProfile()->mc_vel_xy_accel_tweak, 100);
-        // DEBUG_SET(DEBUG_CRUISE, 6, tweakScaled);
+        // DEBUG_SET(DEBUG_ALWAYS, 6, tweakScaled);
         accelForward = accelForward * (tweakScaled / 100.0f);
     }
     // CR47
@@ -672,9 +672,9 @@ static void updatePositionAccelController_MC(timeDelta_t deltaMicros, float maxA
     posControl.rcAdjustment[ROLL] = constrain(RADIANS_TO_DECIDEGREES(desiredRoll), -maxBankAngle, maxBankAngle);
     posControl.rcAdjustment[PITCH] = constrain(RADIANS_TO_DECIDEGREES(desiredPitch), -maxBankAngle, maxBankAngle);
 
-    // DEBUG_SET(DEBUG_CRUISE, 0, speedError * 1000);
-    // DEBUG_SET(DEBUG_CRUISE, 4, accelForward * 1000);
-    // DEBUG_SET(DEBUG_CRUISE, 5, posControl.rcAdjustment[PITCH]);
+    // DEBUG_SET(DEBUG_ALWAYS, 0, speedError * 1000);
+    // DEBUG_SET(DEBUG_ALWAYS, 4, accelForward * 1000);
+    // DEBUG_SET(DEBUG_ALWAYS, 5, posControl.rcAdjustment[PITCH]);
 }
 
 static void applyMulticopterPositionController(timeUs_t currentTimeUs)

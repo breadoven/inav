@@ -319,7 +319,7 @@ void failsafeOnValidDataFailed(void)
     failsafeState.blockChangeArmState = true;    // CR24
     // CR24
     // if (fstest1 == 0 && micros() > 5000000) {
-        // DEBUG_SET(DEBUG_CRUISE, 0, micros());
+        // DEBUG_SET(DEBUG_ALWAYS, 0, micros());
         // fstest1 = micros();
     // }
     // CR24

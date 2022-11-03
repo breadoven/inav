@@ -635,7 +635,7 @@ static void imuCalculateGPSacceleration(fpVector3_t *vEstcentrifugalAccelBF, flo
 }
 
 static void imuCalculateTurnRateacceleration(fpVector3_t *vEstcentrifugalAccelBF, float dT, float *acc_ignore_slope_multipiler)
-{   
+{
     //fixed wing only
     static float lastspeed = -1.0f;
     float currentspeed;
@@ -678,18 +678,18 @@ bool compassHeadingGPSCogErrorCheck(void)
 
     compassGpsCogError = 260;
     bool rcCommandCondition = ABS(rcCommand[PITCH]) > 25 || ABS(rcCommand[ROLL]) > 25 || navigationIsFlyingAutonomousMode();
-        // DEBUG_SET(DEBUG_CRUISE, 0, rcCommand[PITCH]);
-        // DEBUG_SET(DEBUG_CRUISE, 1, rcCommand[ROLL]);
+        // DEBUG_SET(DEBUG_ALWAYS, 0, rcCommand[PITCH]);
+        // DEBUG_SET(DEBUG_ALWAYS, 1, rcCommand[ROLL]);
 
     if (sensors(SENSOR_MAG) && compassIsHealthy() && rcCommandCondition) {
         static uint16_t compassGpsCogErrorPrev = 10;
         int16_t commandCorrection = RADIANS_TO_DECIDEGREES(atan2_approx(rcCommand[ROLL], rcCommand[PITCH]));
 
-        // DEBUG_SET(DEBUG_CRUISE, 2, commandCorrection);
+        // DEBUG_SET(DEBUG_ALWAYS, 2, commandCorrection);
 
         compassGpsCogError = ABS(gpsSol.groundCourse - (wrap_36000(10 * (attitude.values.yaw + commandCorrection))) / 10);
         // compassGpsCogError = ABS(900 - (wrap_36000(10 * (attitude.values.yaw + commandCorrection))) / 10);
-        // DEBUG_SET(DEBUG_CRUISE, 3, compassGpsCogError);
+        // DEBUG_SET(DEBUG_ALWAYS, 3, compassGpsCogError);
         compassGpsCogError = compassGpsCogError > 1800 ? ABS(compassGpsCogError - 3600) : compassGpsCogError;
         compassGpsCogError = 0.8 * compassGpsCogErrorPrev + 0.2 * compassGpsCogError;
         compassGpsCogErrorPrev = compassGpsCogError;
