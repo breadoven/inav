@@ -360,11 +360,11 @@ static void restartGravityCalibration(void)
 }
 
 static bool gravityCalibrationComplete(void)
-{ 
+{
     if (!gyroConfig()->init_gyro_cal_enabled) {
         return true;
     }
-    
+
     return zeroCalibrationIsCompleteS(&posEstimator.imu.gravityCalibration);
 }
 
@@ -778,9 +778,12 @@ static void publishEstimatedTopic(timeUs_t currentTimeUs)
 {
     static navigationTimer_t posPublishTimer;
 
-    /* IMU operates in decidegrees while INAV operates in deg*100 */
-    updateActualHeading(navIsHeadingUsable(), DECIDEGREES_TO_CENTIDEGREES(attitude.values.yaw));
-
+    /* IMU operates in decidegrees while INAV operates in deg*100
+    // CR69
+     * Use GPS course over ground for fixed wing nav "heading" when valid */
+    int16_t yawValue = isGPSHeadingValid() && STATE(AIRPLANE) ? gpsSol.groundCourse : attitude.values.yaw;
+    updateActualHeading(navIsHeadingUsable(), DECIDEGREES_TO_CENTIDEGREES(yawValue));
+    // CR69
     /* Position and velocity are published with INAV_POSITION_PUBLISH_RATE_HZ */
     if (updateTimer(&posPublishTimer, HZ2US(INAV_POSITION_PUBLISH_RATE_HZ), currentTimeUs)) {
         /* Publish position update */

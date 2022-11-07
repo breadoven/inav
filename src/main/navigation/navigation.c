@@ -2168,8 +2168,7 @@ void updateActualHeading(bool headingValid, int32_t newHeading)
         }
         posControl.rthState.homeFlags |= NAV_HOME_VALID_HEADING;
     }
-    // posControl.actualState.yaw = newHeading;
-    posControl.actualState.yaw = isGPSHeadingValid() && STATE(AIRPLANE) ? gpsSol.groundCourse * 10 : newHeading;    // CR69
+    posControl.actualState.yaw = newHeading;
     posControl.flags.estHeadingStatus = newEstHeading;
 
     /* Precompute sin/cos of yaw angle */
