@@ -316,9 +316,9 @@ static void calculateVirtualPositionTarget_FW(float trackingPeriod)
             }
             posControl.flags.wpTurnSmoothingActive = true;
         }
-        DEBUG_SET(DEBUG_ALWAYS, 1, loiterCenterPos.x);
-        DEBUG_SET(DEBUG_ALWAYS, 2, loiterTurnDirection);
-        DEBUG_SET(DEBUG_ALWAYS, 0, waypointTurnAngle);
+        // DEBUG_SET(DEBUG_ALWAYS, 1, loiterCenterPos.x);
+        // DEBUG_SET(DEBUG_ALWAYS, 2, loiterTurnDirection);
+        // DEBUG_SET(DEBUG_ALWAYS, 0, waypointTurnAngle);
     }
 
     // We are closing in on a waypoint, calculate circular loiter if required
@@ -409,13 +409,13 @@ static void updatePositionHeadingController_FW(timeUs_t currentTimeUs, timeDelta
         DEBUG_SET(DEBUG_ALWAYS, 3, distToCourseLine);
         if ((ABS(wrap_18000(virtualTargetBearing - posControl.actualState.yaw)) < 9000 || posControl.wpDistance < 1000.0f) && distToCourseLine > 200) {
             int32_t courseHeadingError = wrap_18000(posControl.activeWaypoint.yaw - posControl.actualState.yaw);
-            DEBUG_SET(DEBUG_ALWAYS, 0, courseHeadingError);
+            // DEBUG_SET(DEBUG_ALWAYS, 0, courseHeadingError);
             float captureFactor = 1.0f;
             if (IS_RC_MODE_ACTIVE(BOXNAVALTHOLD)) {
                 captureFactor = distToCourseLine < posControl.actualState.velXY ? constrainf(2.0f - ABS(courseHeadingError) / 500.0f, 0.0f, 2.0f) : 1.0f;
             }
             //CR79
-            DEBUG_SET(DEBUG_ALWAYS, 2, captureFactor * 100);
+            // DEBUG_SET(DEBUG_ALWAYS, 2, captureFactor * 100);
             float courseCorrectionFactor = constrainf(captureFactor * distToCourseLine / (1000.0f * navConfig()->fw.wp_tracking_accuracy), 0.0f, 1.0f);
             courseCorrectionFactor = courseVirtualCorrection < 0 ? -courseCorrectionFactor : courseCorrectionFactor;
 
@@ -427,12 +427,12 @@ static void updatePositionHeadingController_FW(timeUs_t currentTimeUs, timeDelta
             courseVirtualCorrection = DEGREES_TO_CENTIDEGREES(navConfig()->fw.wp_tracking_max_angle) * courseCorrectionFactor;
             virtualTargetBearing = wrap_36000(posControl.activeWaypoint.yaw - courseVirtualCorrection);
 
-            DEBUG_SET(DEBUG_ALWAYS, 1, courseCorrectionFactor * 100);
+            // DEBUG_SET(DEBUG_ALWAYS, 1, courseCorrectionFactor * 100);
             DEBUG_SET(DEBUG_ALWAYS, 7, courseVirtualCorrection);
         }
         DEBUG_SET(DEBUG_ALWAYS, 5, virtualTargetBearing);
     }
-    // DEBUG_SET(DEBUG_ALWAYS, 2, gpsSol.groundCourse / 10);
+    DEBUG_SET(DEBUG_ALWAYS, 2, gpsSol.groundCourse / 10);
     DEBUG_SET(DEBUG_ALWAYS, 6, posControl.activeWaypoint.yaw);
 
     /*

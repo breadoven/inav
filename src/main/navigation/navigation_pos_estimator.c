@@ -689,7 +689,31 @@ static bool estimationCalculateCorrection_XY_GPS(estimationContext_t * ctx)
 
     return false;
 }
+// CR69
+static void estimationCalculateGoundCourse(void)
+{
+    if (navIsHeadingUsable()) {
+        static float lastPositionX = 0;
+        static float lastPositionY = 0;
 
+        float deltaPosX = posEstimator.est.pos.x - lastPositionX;
+        float deltaPosY = posEstimator.est.pos.y - lastPositionY;
+        lastPositionX = posEstimator.est.pos.x;
+        lastPositionY = posEstimator.est.pos.y;
+
+        uint32_t groundCourse = wrap_36000(RADIANS_TO_CENTIDEGREES(atan2_approx(deltaPosY, deltaPosX)));
+        posEstimator.est.cog = CENTIDEGREES_TO_DECIDEGREES(groundCourse);
+        // if(gpsStats.lastMessageDt <= 20) {  // use GPS ground course directly if GPS update rate at least 5Hz
+            // posEstimator.est.cog = gpsSol.groundCourse;
+            // DEBUG_SET(DEBUG_ALWAYS, 2, 7);
+        // } else {
+
+        // }
+        DEBUG_SET(DEBUG_ALWAYS, 0, posEstimator.est.cog);
+        DEBUG_SET(DEBUG_ALWAYS, 1, gpsSol.groundCourse - posEstimator.est.cog);
+    }
+}
+// CR69
 /**
  * Calculate next estimate using IMU and apply corrections from reference sensors (GPS, BARO etc)
  *  Function is called at main loop rate
@@ -725,14 +749,11 @@ static void updateEstimatedTopic(timeUs_t currentTimeUs)
     estimationPredict(&ctx);
 
     /* Correction stage: Z */
-    const bool estZCorrectOk =
-        estimationCalculateCorrection_Z(&ctx);
+    const bool estZCorrectOk = estimationCalculateCorrection_Z(&ctx);
 
     /* Correction stage: XY: GPS, FLOW */
     // FIXME: Handle transition from FLOW to GPS and back - seamlessly fly indoor/outdoor
-    const bool estXYCorrectOk =
-        estimationCalculateCorrection_XY_GPS(&ctx) ||
-        estimationCalculateCorrection_XY_FLOW(&ctx);
+    const bool estXYCorrectOk = estimationCalculateCorrection_XY_GPS(&ctx) || estimationCalculateCorrection_XY_FLOW(&ctx);
 
     // If we can't apply correction or accuracy is off the charts - decay velocity to zero
     if (!estXYCorrectOk || ctx.newEPH > positionEstimationConfig()->max_eph_epv) {
@@ -761,7 +782,10 @@ static void updateEstimatedTopic(timeUs_t currentTimeUs)
             posEstimator.imu.accelBias.z += ctx.accBiasCorr.z * positionEstimationConfig()->w_acc_bias * ctx.dt;
         }
     }
-
+    // CR69
+    /* Ground course estimation */
+    estimationCalculateGoundCourse();
+    // CR69
     /* Update uncertainty */
     posEstimator.est.eph = ctx.newEPH;
     posEstimator.est.epv = ctx.newEPV;
@@ -781,7 +805,8 @@ static void publishEstimatedTopic(timeUs_t currentTimeUs)
     /* IMU operates in decidegrees while INAV operates in deg*100
     // CR69
      * Use GPS course over ground for fixed wing nav "heading" when valid */
-    int16_t yawValue = isGPSHeadingValid() && STATE(AIRPLANE) ? gpsSol.groundCourse : attitude.values.yaw;
+    int16_t yawValue = isGPSHeadingValid() && STATE(AIRPLANE) ? posEstimator.est.cog : attitude.values.yaw;
+    // int16_t yawValue = isGPSHeadingValid() && STATE(AIRPLANE) ? gpsSol.groundCourse : attitude.values.yaw;   // CR69
     updateActualHeading(navIsHeadingUsable(), DECIDEGREES_TO_CENTIDEGREES(yawValue));
     // CR69
     /* Position and velocity are published with INAV_POSITION_PUBLISH_RATE_HZ */
