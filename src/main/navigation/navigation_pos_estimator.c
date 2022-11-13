@@ -122,6 +122,18 @@ static bool shouldResetReferenceAltitude(void)
     return false;
 }
 
+static bool navIsHeadingUsable(void)
+{
+    if (sensors(SENSOR_GPS)) {
+        // If we have GPS - we need true IMU north (valid heading)
+        return isImuHeadingValid();
+    }
+    else {
+        // If we don't have GPS - we may use whatever we have, other sensors are operating in body frame
+        return isImuHeadingValid() || positionEstimationConfig()->allow_dead_reckoning;
+    }
+}
+
 #if defined(USE_GPS)
 /* Why is this here: Because GPS will be sending at quiet a nailed rate (if not overloaded by junk tasks at the brink of its specs)
  * but we might read out with timejitter because Irq might be off by a few us so we do a +-10% margin around the time between GPS
@@ -299,6 +311,30 @@ void onNewGPSData(void)
         posEstimator.gps.lastUpdateTime = 0;
     }
 }
+// CR69
+void updatePositionEstimator_gpsGroundCourseTopic(void)
+{
+    if (navIsHeadingUsable()) {
+        static float lastPositionX = 0;
+        static float lastPositionY = 0;
+        DEBUG_SET(DEBUG_ALWAYS, 4, gpsStats.lastMessageDt);
+        if(gpsStats.lastMessageDt <= 200) {  // use GPS ground course directly if GPS update rate at least 5Hz
+            posEstimator.est.cog = gpsSol.groundCourse;
+            DEBUG_SET(DEBUG_ALWAYS, 5, 7);
+        } else {
+            float deltaPosX = posEstimator.est.pos.x - lastPositionX;
+            float deltaPosY = posEstimator.est.pos.y - lastPositionY;
+            uint32_t groundCourse = wrap_36000(RADIANS_TO_CENTIDEGREES(atan2_approx(deltaPosY, deltaPosX)));
+            posEstimator.est.cog = CENTIDEGREES_TO_DECIDEGREES(groundCourse);
+            DEBUG_SET(DEBUG_ALWAYS, 5, 17);
+        }
+        lastPositionX = posEstimator.est.pos.x;
+        lastPositionY = posEstimator.est.pos.y;
+        DEBUG_SET(DEBUG_ALWAYS, 0, posEstimator.est.cog / 10);
+        DEBUG_SET(DEBUG_ALWAYS, 1, (gpsSol.groundCourse - posEstimator.est.cog) / 10);
+    }
+}
+// CR69
 #endif
 
 #if defined(USE_BARO)
@@ -476,18 +512,6 @@ float updateEPE(const float oldEPE, const float dt, const float newEPE, const fl
 static bool navIsAccelerationUsable(void)
 {
     return true;
-}
-
-static bool navIsHeadingUsable(void)
-{
-    if (sensors(SENSOR_GPS)) {
-        // If we have GPS - we need true IMU north (valid heading)
-        return isImuHeadingValid();
-    }
-    else {
-        // If we don't have GPS - we may use whatever we have, other sensors are operating in body frame
-        return isImuHeadingValid() || positionEstimationConfig()->allow_dead_reckoning;
-    }
 }
 
 static uint32_t calculateCurrentValidityFlags(timeUs_t currentTimeUs)
@@ -689,31 +713,7 @@ static bool estimationCalculateCorrection_XY_GPS(estimationContext_t * ctx)
 
     return false;
 }
-// CR69
-static void estimationCalculateGoundCourse(void)
-{
-    if (navIsHeadingUsable()) {
-        static float lastPositionX = 0;
-        static float lastPositionY = 0;
 
-        float deltaPosX = posEstimator.est.pos.x - lastPositionX;
-        float deltaPosY = posEstimator.est.pos.y - lastPositionY;
-        lastPositionX = posEstimator.est.pos.x;
-        lastPositionY = posEstimator.est.pos.y;
-
-        uint32_t groundCourse = wrap_36000(RADIANS_TO_CENTIDEGREES(atan2_approx(deltaPosY, deltaPosX)));
-        posEstimator.est.cog = CENTIDEGREES_TO_DECIDEGREES(groundCourse);
-        // if(gpsStats.lastMessageDt <= 20) {  // use GPS ground course directly if GPS update rate at least 5Hz
-            // posEstimator.est.cog = gpsSol.groundCourse;
-            // DEBUG_SET(DEBUG_ALWAYS, 2, 7);
-        // } else {
-
-        // }
-        DEBUG_SET(DEBUG_ALWAYS, 0, posEstimator.est.cog);
-        DEBUG_SET(DEBUG_ALWAYS, 1, gpsSol.groundCourse - posEstimator.est.cog);
-    }
-}
-// CR69
 /**
  * Calculate next estimate using IMU and apply corrections from reference sensors (GPS, BARO etc)
  *  Function is called at main loop rate
@@ -784,7 +784,7 @@ static void updateEstimatedTopic(timeUs_t currentTimeUs)
     }
     // CR69
     /* Ground course estimation */
-    estimationCalculateGoundCourse();
+    // estimationCalculateGoundCourse();
     // CR69
     /* Update uncertainty */
     posEstimator.est.eph = ctx.newEPH;

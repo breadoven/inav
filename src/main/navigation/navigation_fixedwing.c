@@ -400,7 +400,7 @@ static void updatePositionHeadingController_FW(timeUs_t currentTimeUs, timeDelta
     // We have virtual position target, calculate heading error
     int32_t virtualTargetBearing = calculateBearingToDestination(&virtualDesiredPosition);
 
-    DEBUG_SET(DEBUG_ALWAYS, 4, virtualTargetBearing);
+    // DEBUG_SET(DEBUG_ALWAYS, 4, virtualTargetBearing);
     /* If waypoint tracking enabled force craft toward waypoint course line and hold on course line */
     if (navConfig()->fw.wp_tracking_accuracy && isWaypointNavTrackingActive() && !needToCalculateCircularLoiter) {
         // CR79
@@ -430,7 +430,7 @@ static void updatePositionHeadingController_FW(timeUs_t currentTimeUs, timeDelta
             // DEBUG_SET(DEBUG_ALWAYS, 1, courseCorrectionFactor * 100);
             DEBUG_SET(DEBUG_ALWAYS, 7, courseVirtualCorrection);
         }
-        DEBUG_SET(DEBUG_ALWAYS, 5, virtualTargetBearing);
+        // DEBUG_SET(DEBUG_ALWAYS, 5, virtualTargetBearing);
     }
     DEBUG_SET(DEBUG_ALWAYS, 2, gpsSol.groundCourse / 10);
     DEBUG_SET(DEBUG_ALWAYS, 6, posControl.activeWaypoint.yaw);
