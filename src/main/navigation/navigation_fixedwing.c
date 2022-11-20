@@ -415,7 +415,7 @@ static void updatePositionHeadingController_FW(timeUs_t currentTimeUs, timeDelta
                 captureFactor = distToCourseLine < posControl.actualState.velXY ? constrainf(2.0f - ABS(courseHeadingError) / 500.0f, 0.0f, 2.0f) : 1.0f;
             }
             //CR79
-            // DEBUG_SET(DEBUG_ALWAYS, 2, captureFactor * 100);
+            DEBUG_SET(DEBUG_ALWAYS, 2, captureFactor * 100);
             float courseCorrectionFactor = constrainf(captureFactor * distToCourseLine / (1000.0f * navConfig()->fw.wp_tracking_accuracy), 0.0f, 1.0f);
             courseCorrectionFactor = courseVirtualCorrection < 0 ? -courseCorrectionFactor : courseCorrectionFactor;
 
@@ -432,7 +432,7 @@ static void updatePositionHeadingController_FW(timeUs_t currentTimeUs, timeDelta
         }
         // DEBUG_SET(DEBUG_ALWAYS, 5, virtualTargetBearing);
     }
-    DEBUG_SET(DEBUG_ALWAYS, 2, gpsSol.groundCourse / 10);
+    // DEBUG_SET(DEBUG_ALWAYS, 2, gpsSol.groundCourse / 10);
     DEBUG_SET(DEBUG_ALWAYS, 6, posControl.activeWaypoint.yaw);
 
     /*

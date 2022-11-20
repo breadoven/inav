@@ -312,24 +312,21 @@ void onNewGPSData(void)
     }
 }
 // CR69
-void updatePositionEstimator_gpsGroundCourseTopic(void)
+void updatePositionEstimator_gpsGroundCourseTopic(timeUs_t currentTimeUs)
 {
-    if (navIsHeadingUsable()) {
-        static float lastPositionX = 0;
-        static float lastPositionY = 0;
-        DEBUG_SET(DEBUG_ALWAYS, 4, gpsStats.lastMessageDt);
-        if(gpsStats.lastMessageDt <= 200) {  // use GPS ground course directly if GPS update rate at least 5Hz
+    if (STATE(GPS_FIX) && navIsHeadingUsable()) {
+        static timeUs_t lastUpdateTimeUs = 0;
+        const float dt = US2S(currentTimeUs - lastUpdateTimeUs);
+        lastUpdateTimeUs = currentTimeUs;
+        DEBUG_SET(DEBUG_ALWAYS, 4, dt * 1000000);
+        if(gpsStats.lastMessageDt <= 20) {  // use GPS ground course directly if GPS update rate at least 5Hz
             posEstimator.est.cog = gpsSol.groundCourse;
             DEBUG_SET(DEBUG_ALWAYS, 5, 7);
         } else {
-            float deltaPosX = posEstimator.est.pos.x - lastPositionX;
-            float deltaPosY = posEstimator.est.pos.y - lastPositionY;
-            uint32_t groundCourse = wrap_36000(RADIANS_TO_CENTIDEGREES(atan2_approx(deltaPosY, deltaPosX)));
+            uint32_t groundCourse = wrap_36000(RADIANS_TO_CENTIDEGREES(atan2_approx(posEstimator.est.vel.y * dt, posEstimator.est.vel.x * dt)));
             posEstimator.est.cog = CENTIDEGREES_TO_DECIDEGREES(groundCourse);
             DEBUG_SET(DEBUG_ALWAYS, 5, 17);
         }
-        lastPositionX = posEstimator.est.pos.x;
-        lastPositionY = posEstimator.est.pos.y;
         DEBUG_SET(DEBUG_ALWAYS, 0, posEstimator.est.cog / 10);
         DEBUG_SET(DEBUG_ALWAYS, 1, (gpsSol.groundCourse - posEstimator.est.cog) / 10);
     }
@@ -782,10 +779,7 @@ static void updateEstimatedTopic(timeUs_t currentTimeUs)
             posEstimator.imu.accelBias.z += ctx.accBiasCorr.z * positionEstimationConfig()->w_acc_bias * ctx.dt;
         }
     }
-    // CR69
-    /* Ground course estimation */
-    // estimationCalculateGoundCourse();
-    // CR69
+
     /* Update uncertainty */
     posEstimator.est.eph = ctx.newEPH;
     posEstimator.est.epv = ctx.newEPV;
@@ -806,7 +800,6 @@ static void publishEstimatedTopic(timeUs_t currentTimeUs)
     // CR69
      * Use GPS course over ground for fixed wing nav "heading" when valid */
     int16_t yawValue = isGPSHeadingValid() && STATE(AIRPLANE) ? posEstimator.est.cog : attitude.values.yaw;
-    // int16_t yawValue = isGPSHeadingValid() && STATE(AIRPLANE) ? gpsSol.groundCourse : attitude.values.yaw;   // CR69
     updateActualHeading(navIsHeadingUsable(), DECIDEGREES_TO_CENTIDEGREES(yawValue));
     // CR69
     /* Position and velocity are published with INAV_POSITION_PUBLISH_RATE_HZ */

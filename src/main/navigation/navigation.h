@@ -482,7 +482,7 @@ void updatePositionEstimator_BaroTopic(timeUs_t currentTimeUs);
 void updatePositionEstimator_OpticalFlowTopic(timeUs_t currentTimeUs);
 void updatePositionEstimator_SurfaceTopic(timeUs_t currentTimeUs, float newSurfaceAlt);
 void updatePositionEstimator_PitotTopic(timeUs_t currentTimeUs);
-void updatePositionEstimator_gpsGroundCourseTopic(void);    // CR69
+void updatePositionEstimator_gpsGroundCourseTopic(timeUs_t currentTimeUs);    // CR69
 
 /* Navigation system updates */
 void updateWaypointsAndNavigationMode(void);
