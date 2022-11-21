@@ -311,27 +311,6 @@ void onNewGPSData(void)
         posEstimator.gps.lastUpdateTime = 0;
     }
 }
-// CR69
-void updatePositionEstimator_gpsGroundCourseTopic(timeUs_t currentTimeUs)
-{
-    if (STATE(GPS_FIX) && navIsHeadingUsable()) {
-        static timeUs_t lastUpdateTimeUs = 0;
-        const float dt = US2S(currentTimeUs - lastUpdateTimeUs);
-        lastUpdateTimeUs = currentTimeUs;
-        DEBUG_SET(DEBUG_ALWAYS, 4, dt * 1000000);
-        if(gpsStats.lastMessageDt <= 20) {  // use GPS ground course directly if GPS update rate at least 5Hz
-            posEstimator.est.cog = gpsSol.groundCourse;
-            DEBUG_SET(DEBUG_ALWAYS, 5, 7);
-        } else {
-            uint32_t groundCourse = wrap_36000(RADIANS_TO_CENTIDEGREES(atan2_approx(posEstimator.est.vel.y * dt, posEstimator.est.vel.x * dt)));
-            posEstimator.est.cog = CENTIDEGREES_TO_DECIDEGREES(groundCourse);
-            DEBUG_SET(DEBUG_ALWAYS, 5, 17);
-        }
-        DEBUG_SET(DEBUG_ALWAYS, 0, posEstimator.est.cog / 10);
-        DEBUG_SET(DEBUG_ALWAYS, 1, (gpsSol.groundCourse - posEstimator.est.cog) / 10);
-    }
-}
-// CR69
 #endif
 
 #if defined(USE_BARO)
@@ -710,7 +689,24 @@ static bool estimationCalculateCorrection_XY_GPS(estimationContext_t * ctx)
 
     return false;
 }
+// CR69
+static void estimationCalculateGroundCourse(timeUs_t currentTimeUs)
+{
+    if (STATE(GPS_FIX) && navIsHeadingUsable()) {
+        static timeUs_t lastUpdateTimeUs = 0;
 
+        if (currentTimeUs - lastUpdateTimeUs >= HZ2US(20)) {
+            const float dt = US2S(currentTimeUs - lastUpdateTimeUs);
+            DEBUG_SET(DEBUG_ALWAYS, 5, dt * 1000000);
+            uint32_t groundCourse = wrap_36000(RADIANS_TO_CENTIDEGREES(atan2_approx(posEstimator.est.vel.y * dt, posEstimator.est.vel.x * dt)));
+            posEstimator.est.cog = CENTIDEGREES_TO_DECIDEGREES(groundCourse);
+            lastUpdateTimeUs = currentTimeUs;
+        }
+        DEBUG_SET(DEBUG_ALWAYS, 0, posEstimator.est.cog / 10);
+        DEBUG_SET(DEBUG_ALWAYS, 1, (gpsSol.groundCourse - posEstimator.est.cog) / 10);
+    }
+}
+// CR69
 /**
  * Calculate next estimate using IMU and apply corrections from reference sensors (GPS, BARO etc)
  *  Function is called at main loop rate
@@ -779,7 +775,10 @@ static void updateEstimatedTopic(timeUs_t currentTimeUs)
             posEstimator.imu.accelBias.z += ctx.accBiasCorr.z * positionEstimationConfig()->w_acc_bias * ctx.dt;
         }
     }
-
+    // CR69
+    /* Update ground course */
+    estimationCalculateGroundCourse(currentTimeUs);
+    // CR69
     /* Update uncertainty */
     posEstimator.est.eph = ctx.newEPH;
     posEstimator.est.epv = ctx.newEPV;

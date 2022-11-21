@@ -1122,7 +1122,8 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_COURSE_HOLD_IN_PROGRESS
         calculateNewCruiseTarget(&posControl.cruise.targetPos, posControl.cruise.yaw, distance);
     }
 
-    setDesiredPosition(&posControl.cruise.targetPos, posControl.cruise.yaw, NAV_POS_UPDATE_XY);
+    // setDesiredPosition(&posControl.cruise.targetPos, posControl.cruise.yaw, NAV_POS_UPDATE_XY);
+    setDesiredPosition(&posControl.cruise.targetPos, posControl.cruise.yaw, NAV_POS_UPDATE_XY | NAV_POS_UPDATE_HEADING); // CR80
 
     return NAV_FSM_EVENT_NONE;
 }
