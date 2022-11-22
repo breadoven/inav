@@ -122,18 +122,6 @@ static bool shouldResetReferenceAltitude(void)
     return false;
 }
 
-static bool navIsHeadingUsable(void)
-{
-    if (sensors(SENSOR_GPS)) {
-        // If we have GPS - we need true IMU north (valid heading)
-        return isImuHeadingValid();
-    }
-    else {
-        // If we don't have GPS - we may use whatever we have, other sensors are operating in body frame
-        return isImuHeadingValid() || positionEstimationConfig()->allow_dead_reckoning;
-    }
-}
-
 #if defined(USE_GPS)
 /* Why is this here: Because GPS will be sending at quiet a nailed rate (if not overloaded by junk tasks at the brink of its specs)
  * but we might read out with timejitter because Irq might be off by a few us so we do a +-10% margin around the time between GPS
@@ -488,6 +476,18 @@ float updateEPE(const float oldEPE, const float dt, const float newEPE, const fl
 static bool navIsAccelerationUsable(void)
 {
     return true;
+}
+
+static bool navIsHeadingUsable(void)
+{
+    if (sensors(SENSOR_GPS)) {
+        // If we have GPS - we need true IMU north (valid heading)
+        return isImuHeadingValid();
+    }
+    else {
+        // If we don't have GPS - we may use whatever we have, other sensors are operating in body frame
+        return isImuHeadingValid() || positionEstimationConfig()->allow_dead_reckoning;
+    }
 }
 
 static uint32_t calculateCurrentValidityFlags(timeUs_t currentTimeUs)
