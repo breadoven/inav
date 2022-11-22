@@ -87,7 +87,6 @@ FILE_COMPILE_FOR_SPEED
 #include "flight/pid.h"
 #include "flight/power_limits.h"
 #include "flight/rth_estimator.h"
-#include "flight/secondary_imu.h"
 #include "flight/servos.h"
 #include "flight/wind_estimator.h"
 
@@ -1119,28 +1118,12 @@ uint16_t osdGetRemainingGlideTime(void) {
 
 static bool osdIsHeadingValid(void)
 {
-#ifdef USE_SECONDARY_IMU
-    if (secondaryImuState.active && secondaryImuConfig()->useForOsdHeading) {
-        return true;
-    } else {
-        return isImuHeadingValid();
-    }
-#else
     return isImuHeadingValid();
-#endif
 }
 
 int16_t osdGetHeading(void)
 {
-#ifdef USE_SECONDARY_IMU
-    if (secondaryImuState.active && secondaryImuConfig()->useForOsdHeading) {
-        return secondaryImuState.eulerAngles.values.yaw;
-    } else {
-        return attitude.values.yaw;
-    }
-#else
     return attitude.values.yaw;
-#endif
 }
 
 int16_t osdPanServoHomeDirectionOffset(void)
@@ -2360,21 +2343,9 @@ static bool osdDrawSingleElement(uint8_t item)
 
     case OSD_ARTIFICIAL_HORIZON:
         {
-            float rollAngle;
-            float pitchAngle;
+            float rollAngle = DECIDEGREES_TO_RADIANS(attitude.values.roll);
+            float pitchAngle = DECIDEGREES_TO_RADIANS(attitude.values.pitch);
 
-#ifdef USE_SECONDARY_IMU
-            if (secondaryImuState.active && secondaryImuConfig()->useForOsdAHI) {
-                rollAngle = DECIDEGREES_TO_RADIANS(secondaryImuState.eulerAngles.values.roll);
-                pitchAngle = DECIDEGREES_TO_RADIANS(secondaryImuState.eulerAngles.values.pitch);
-            } else {
-                rollAngle = DECIDEGREES_TO_RADIANS(attitude.values.roll);
-                pitchAngle = DECIDEGREES_TO_RADIANS(attitude.values.pitch);
-            }
-#else
-            rollAngle = DECIDEGREES_TO_RADIANS(attitude.values.roll);
-            pitchAngle = DECIDEGREES_TO_RADIANS(attitude.values.pitch);
-#endif
             pitchAngle -= osdConfig()->ahi_camera_uptilt_comp ? DEGREES_TO_RADIANS(osdConfig()->camera_uptilt) : 0;
             pitchAngle += DEGREES_TO_RADIANS(getFixedWingLevelTrim());
             if (osdConfig()->ahi_reverse_roll) {
@@ -3367,7 +3338,7 @@ static bool osdDrawSingleElement(uint8_t item)
     return true;
 }
 
-static uint8_t osdIncElementIndex(uint8_t elementIndex)
+uint8_t osdIncElementIndex(uint8_t elementIndex)
 {
     ++elementIndex;
 
@@ -3523,7 +3494,7 @@ PG_RESET_TEMPLATE(osdConfig_t, osdConfig,
     .left_sidebar_scroll_step = SETTING_OSD_LEFT_SIDEBAR_SCROLL_STEP_DEFAULT,
     .right_sidebar_scroll_step = SETTING_OSD_RIGHT_SIDEBAR_SCROLL_STEP_DEFAULT,
     .sidebar_height = SETTING_OSD_SIDEBAR_HEIGHT_DEFAULT,
-    .ahi_pitch_interval = SETTING_OSD_AHI_PITCH_INTERVAL_DEFAULT,   // CR35
+    .ahi_pitch_interval = SETTING_OSD_AHI_PITCH_INTERVAL_DEFAULT,
     .osd_home_position_arm_screen = SETTING_OSD_HOME_POSITION_ARM_SCREEN_DEFAULT,
     .pan_servo_index = SETTING_OSD_PAN_SERVO_INDEX_DEFAULT,
     .pan_servo_pwm2centideg = SETTING_OSD_PAN_SERVO_PWM2CENTIDEG_DEFAULT,
@@ -3792,7 +3763,7 @@ static void osdCompleteAsyncInitialization(void)
 
     char string_buffer[30];
     tfp_sprintf(string_buffer, "INAV VERSION: %s", FC_VERSION_STRING);
-    uint8_t xPos = osdDisplayIsHD() ? 7 : 5;
+    uint8_t xPos = osdDisplayIsHD() ? 15 : 5;
     displayWrite(osdDisplayPort, xPos, y++, string_buffer);
 #ifdef USE_CMS
     displayWrite(osdDisplayPort, xPos+2, y++,  CMS_STARTUP_HELP_TEXT1);
@@ -3802,8 +3773,8 @@ static void osdCompleteAsyncInitialization(void)
 #ifdef USE_STATS
 
 
-    uint8_t statNameX = osdDisplayIsHD() ? 7 : 4;
-    uint8_t statValueX = osdDisplayIsHD() ? 27 : 24;
+    uint8_t statNameX = osdDisplayIsHD() ? 14 : 4;
+    uint8_t statValueX = osdDisplayIsHD() ? 34 : 24;
 
     if (statsConfig()->stats_enabled) {
         displayWrite(osdDisplayPort, statNameX, ++y, "ODOMETER:");
@@ -3964,8 +3935,8 @@ static void osdShowStatsPage1(void)
 {
     const char * disarmReasonStr[DISARM_REASON_COUNT] = { "UNKNOWN", "TIMEOUT", "STICKS", "SWITCH", "SWITCH", "KILLSW", "FAILSAFE", "NAV SYS", "LANDING"};
     uint8_t top = 1;    /* first fully visible line */
-    const uint8_t statNameX = osdDisplayIsHD() ? 7 : 1;
-    const uint8_t statValuesX = osdDisplayIsHD() ? 33 : 20;
+    const uint8_t statNameX = osdDisplayIsHD() ? 11 : 1;
+    const uint8_t statValuesX = osdDisplayIsHD() ? 30 : 20;
     char buff[10];
     statsPagesCheck = 1;
 
@@ -4050,8 +4021,8 @@ static void osdShowStatsPage1(void)
 static void osdShowStatsPage2(void)
 {
     uint8_t top = 1;    /* first fully visible line */
-    const uint8_t statNameX = osdDisplayIsHD() ? 7 : 1;
-    const uint8_t statValuesX = osdDisplayIsHD() ? 33 : 20;
+    const uint8_t statNameX = osdDisplayIsHD() ? 11 : 1;
+    const uint8_t statValuesX = osdDisplayIsHD() ? 30 : 20;
     char buff[10];
     statsPagesCheck = 1;
 
