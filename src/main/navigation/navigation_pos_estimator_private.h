@@ -127,7 +127,7 @@ typedef struct {
     float                   flowCoordinates[2];
 
     // COURSE
-    int16_t     cog;    // course over ground (decidegrees) CR69
+    int16_t     cog;    // course over ground (decidegrees)
 } navPositionEstimatorESTIMATE_t;
 
 typedef struct {

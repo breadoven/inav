@@ -685,7 +685,7 @@ static bool estimationCalculateCorrection_XY_GPS(estimationContext_t * ctx)
 
     return false;
 }
-// CR69
+
 static void estimationCalculateGroundCourse(timeUs_t currentTimeUs)
 {
     if (STATE(GPS_FIX) && navIsHeadingUsable()) {
@@ -702,7 +702,7 @@ static void estimationCalculateGroundCourse(timeUs_t currentTimeUs)
         DEBUG_SET(DEBUG_ALWAYS, 1, (gpsSol.groundCourse - posEstimator.est.cog) / 10);
     }
 }
-// CR69
+
 /**
  * Calculate next estimate using IMU and apply corrections from reference sensors (GPS, BARO etc)
  *  Function is called at main loop rate
@@ -771,10 +771,10 @@ static void updateEstimatedTopic(timeUs_t currentTimeUs)
             posEstimator.imu.accelBias.z += ctx.accBiasCorr.z * positionEstimationConfig()->w_acc_bias * ctx.dt;
         }
     }
-    // CR69
+
     /* Update ground course */
     estimationCalculateGroundCourse(currentTimeUs);
-    // CR69
+
     /* Update uncertainty */
     posEstimator.est.eph = ctx.newEPH;
     posEstimator.est.epv = ctx.newEPV;
@@ -792,11 +792,10 @@ static void publishEstimatedTopic(timeUs_t currentTimeUs)
     static navigationTimer_t posPublishTimer;
 
     /* IMU operates in decidegrees while INAV operates in deg*100
-    // CR69
      * Use GPS course over ground for fixed wing nav "heading" when valid */
     int16_t yawValue = isGPSHeadingValid() && STATE(AIRPLANE) ? posEstimator.est.cog : attitude.values.yaw;
     updateActualHeading(navIsHeadingUsable(), DECIDEGREES_TO_CENTIDEGREES(yawValue));
-    // CR69
+
     /* Position and velocity are published with INAV_POSITION_PUBLISH_RATE_HZ */
     if (updateTimer(&posPublishTimer, HZ2US(INAV_POSITION_PUBLISH_RATE_HZ), currentTimeUs)) {
         /* Publish position update */

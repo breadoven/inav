@@ -139,17 +139,6 @@ void osdGridDrawArtificialHorizon(displayPort_t *display, unsigned gx, unsigned 
             }
         }
     }
-    // CR35
-    int8_t ahiPitchAngleDatum;     // degrees
-    int8_t ahiLineEndPitchOffset;    // sets offset for AHI end of line offset for non 0 ahiPitchAngleDatum (degrees)
-
-    if (osdConfig()->ahi_pitch_interval) {
-        ahiPitchAngleDatum = osdConfig()->ahi_pitch_interval * (int8_t)(RADIANS_TO_DEGREES(pitchAngle) / osdConfig()->ahi_pitch_interval);
-        pitchAngle -= DEGREES_TO_RADIANS(ahiPitchAngleDatum);
-    } else {
-        ahiPitchAngleDatum = 0;
-    }
-    // CR35
 
     int8_t ahiPitchAngleDatum;     // sets the pitch datum AHI is drawn relative to (degrees)
     int8_t ahiLineEndPitchOffset;  // AHI end of line offset in degrees when ahiPitchAngleDatum > 0
