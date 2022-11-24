@@ -1068,7 +1068,8 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_POSHOLD_3D_IN_PROGRESS(
 
 static navigationFSMEvent_t navOnEnteringState_NAV_STATE_COURSE_HOLD_INITIALIZE(navigationFSMState_t previousState)
 {
-    const navigationFSMStateFlags_t prevFlags = navGetStateFlags(previousState);
+    UNUSED(previousState);  // CR80
+    // const navigationFSMStateFlags_t prevFlags = navGetStateFlags(previousState);
 
     if (!STATE(FIXED_WING_LEGACY)) { return NAV_FSM_EVENT_ERROR; } // Only on FW for now
 
@@ -1076,9 +1077,9 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_COURSE_HOLD_INITIALIZE(
         return NAV_FSM_EVENT_SWITCH_TO_IDLE;
     }  // Switch to IDLE if we do not have an healty position. Try the next iteration.
 
-    if (!(prevFlags & NAV_CTL_POS)) {
+    // if (!(prevFlags & NAV_CTL_POS)) {    // CR80
         resetPositionController();
-    }
+    // }
 
     posControl.cruise.yaw = posControl.actualState.yaw; // Store the yaw to follow
     posControl.cruise.previousYaw = posControl.cruise.yaw;
@@ -1089,6 +1090,8 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_COURSE_HOLD_INITIALIZE(
 
 static navigationFSMEvent_t navOnEnteringState_NAV_STATE_COURSE_HOLD_IN_PROGRESS(navigationFSMState_t previousState)
 {
+    UNUSED(previousState);  // CR80
+
     const timeMs_t currentTimeMs = millis();
 
     if (checkForPositionSensorTimeout()) {
@@ -1107,23 +1110,23 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_COURSE_HOLD_IN_PROGRESS
         float centidegsPerIteration = rateTarget * timeDifference * 0.001f;
         posControl.cruise.yaw = wrap_36000(posControl.cruise.yaw - centidegsPerIteration);
         posControl.cruise.lastYawAdjustmentTime = currentTimeMs;
-    }
-
-    if (currentTimeMs - posControl.cruise.lastYawAdjustmentTime > 4000)
+    } else if (currentTimeMs - posControl.cruise.lastYawAdjustmentTime > 4000) {    // CR80
         posControl.cruise.previousYaw = posControl.cruise.yaw;
-
-    uint32_t distance = gpsSol.groundSpeed * 60; // next WP to be reached in 60s [cm]
-
-    if ((previousState == NAV_STATE_COURSE_HOLD_INITIALIZE) || (previousState == NAV_STATE_COURSE_HOLD_ADJUSTING)
-            || (previousState == NAV_STATE_CRUISE_INITIALIZE) || (previousState == NAV_STATE_CRUISE_ADJUSTING)
-            || posControl.flags.isAdjustingHeading) {
-        calculateFarAwayTarget(&posControl.cruise.targetPos, posControl.cruise.yaw, distance);
-    } else if (calculateDistanceToDestination(&posControl.cruise.targetPos) <= (navConfig()->fw.loiter_radius * 1.10f)) { //10% margin
-        calculateNewCruiseTarget(&posControl.cruise.targetPos, posControl.cruise.yaw, distance);
     }
+    // CR80
+    // uint32_t distance = gpsSol.groundSpeed * 60; // next WP to be reached in 60s [cm]
+
+    // if ((previousState == NAV_STATE_COURSE_HOLD_INITIALIZE) || (previousState == NAV_STATE_COURSE_HOLD_ADJUSTING)
+            // || (previousState == NAV_STATE_CRUISE_INITIALIZE) || (previousState == NAV_STATE_CRUISE_ADJUSTING)
+            // || posControl.flags.isAdjustingHeading) {
+        // calculateFarAwayTarget(&posControl.cruise.targetPos, posControl.cruise.yaw, distance);
+    // } else if (calculateDistanceToDestination(&posControl.cruise.targetPos) <= (navConfig()->fw.loiter_radius * 1.10f)) { //10% margin
+        // calculateNewCruiseTarget(&posControl.cruise.targetPos, posControl.cruise.yaw, distance);
+    // }
 
     // setDesiredPosition(&posControl.cruise.targetPos, posControl.cruise.yaw, NAV_POS_UPDATE_XY);
-    setDesiredPosition(&posControl.cruise.targetPos, posControl.cruise.yaw, NAV_POS_UPDATE_XY | NAV_POS_UPDATE_HEADING); // CR80
+    setDesiredPosition(NULL, posControl.cruise.yaw, NAV_POS_UPDATE_HEADING);
+    // CR80
 
     return NAV_FSM_EVENT_NONE;
 }

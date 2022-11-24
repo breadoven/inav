@@ -323,7 +323,7 @@ typedef struct {
 } rthSanityChecker_t;
 
 typedef struct {
-    fpVector3_t                 targetPos;
+    // fpVector3_t                 targetPos;  // CR80
     int32_t                     yaw;
     int32_t                     previousYaw;
     timeMs_t                    lastYawAdjustmentTime;
