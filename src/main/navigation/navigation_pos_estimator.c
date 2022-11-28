@@ -693,13 +693,12 @@ static void estimationCalculateGroundCourse(timeUs_t currentTimeUs)
 
         if (currentTimeUs - lastUpdateTimeUs >= HZ2US(20)) {
             const float dt = US2S(currentTimeUs - lastUpdateTimeUs);
-            DEBUG_SET(DEBUG_ALWAYS, 5, dt * 1000000);
             uint32_t groundCourse = wrap_36000(RADIANS_TO_CENTIDEGREES(atan2_approx(posEstimator.est.vel.y * dt, posEstimator.est.vel.x * dt)));
             posEstimator.est.cog = CENTIDEGREES_TO_DECIDEGREES(groundCourse);
             lastUpdateTimeUs = currentTimeUs;
         }
-        DEBUG_SET(DEBUG_ALWAYS, 0, posEstimator.est.cog / 10);
-        DEBUG_SET(DEBUG_ALWAYS, 1, (gpsSol.groundCourse - posEstimator.est.cog) / 10);
+        // DEBUG_SET(DEBUG_ALWAYS, 0, posEstimator.est.cog / 10);
+        // DEBUG_SET(DEBUG_ALWAYS, 1, (gpsSol.groundCourse - posEstimator.est.cog) / 10);
     }
 }
 

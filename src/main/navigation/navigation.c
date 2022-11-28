@@ -1107,7 +1107,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_COURSE_HOLD_IN_PROGRESS
         timeMs_t timeDifference = currentTimeMs - posControl.cruise.lastYawAdjustmentTime;
         if (timeDifference > 100) timeDifference = 0; // if adjustment was called long time ago, reset the time difference.
         float rateTarget = scaleRangef((float)rcCommand[YAW], -500.0f, 500.0f, -DEGREES_TO_CENTIDEGREES(navConfig()->fw.cruise_yaw_rate), DEGREES_TO_CENTIDEGREES(navConfig()->fw.cruise_yaw_rate));
-        float centidegsPerIteration = rateTarget * timeDifference * 0.001f;
+        float centidegsPerIteration = rateTarget * MS2S(timeDifference);
         posControl.cruise.yaw = wrap_36000(posControl.cruise.yaw - centidegsPerIteration);
         posControl.cruise.lastYawAdjustmentTime = currentTimeMs;
     } else if (currentTimeMs - posControl.cruise.lastYawAdjustmentTime > 4000) {    // CR80
@@ -2934,8 +2934,19 @@ void updateClimbRateToAltitudeController(float desiredClimbRate, climbRateToAlti
             float timeDelta = US2S(currentTimeUs - lastUpdateTimeUs);
 
             if (timeDelta <= HZ2S(MIN_POSITION_UPDATE_RATE_HZ)) {
-                posControl.desiredState.pos.z += desiredClimbRate * timeDelta;
-                posControl.desiredState.pos.z = constrainf(posControl.desiredState.pos.z, altitudeToUse - 500, altitudeToUse + 500);    // FIXME: calculate sanity limits in a smarter way
+                // CR81
+                // posControl.desiredState.pos.z += desiredClimbRate * timeDelta;
+                float targetAlt = posControl.desiredState.pos.z + desiredClimbRate * timeDelta;
+
+                /* only update target altitude when actual altitude within 5m of target in required direction of change
+                 * otherwise hold target altitude and wait for actual altitude to catch up */
+                if ((desiredClimbRate > 0 && targetAlt < altitudeToUse + 500) || (desiredClimbRate < 0 && targetAlt > altitudeToUse - 500)) {
+                    posControl.desiredState.pos.z = targetAlt;
+                }
+                // posControl.desiredState.pos.z = constrainf(posControl.desiredState.pos.z, altitudeToUse - 500, altitudeToUse + 500);    // FIXME: calculate sanity limits in a smarter way
+                // CR81
+                DEBUG_SET(DEBUG_ALWAYS, 0, desiredClimbRate);
+                DEBUG_SET(DEBUG_ALWAYS, 1, posControl.desiredState.pos.z);
             }
         }
         else {

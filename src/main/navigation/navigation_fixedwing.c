@@ -168,6 +168,7 @@ static void updateAltitudeVelocityAndPitchController_FW(timeDelta_t deltaMicros)
     // Reconstrain pitch angle ( >0 - climb, <0 - dive)
     targetPitchAngle = constrainf(targetPitchAngle, minDiveDeciDeg, maxClimbDeciDeg);
     posControl.rcAdjustment[PITCH] = targetPitchAngle;
+    DEBUG_SET(DEBUG_ALWAYS, 5, targetPitchAngle);
 }
 
 void applyFixedWingAltitudeAndThrottleController(timeUs_t currentTimeUs)
