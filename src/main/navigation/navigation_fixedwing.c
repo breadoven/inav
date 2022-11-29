@@ -168,7 +168,7 @@ static void updateAltitudeVelocityAndPitchController_FW(timeDelta_t deltaMicros)
     // Reconstrain pitch angle ( >0 - climb, <0 - dive)
     targetPitchAngle = constrainf(targetPitchAngle, minDiveDeciDeg, maxClimbDeciDeg);
     posControl.rcAdjustment[PITCH] = targetPitchAngle;
-    DEBUG_SET(DEBUG_ALWAYS, 5, targetPitchAngle);
+    // DEBUG_SET(DEBUG_ALWAYS, 5, targetPitchAngle);
 }
 
 void applyFixedWingAltitudeAndThrottleController(timeUs_t currentTimeUs)
@@ -267,6 +267,11 @@ static int8_t loiterDirection(void) {
 
 static void calculateVirtualPositionTarget_FW(float trackingPeriod)
 {
+    // CR80
+    if (FLIGHT_MODE(NAV_COURSE_HOLD_MODE)) {
+        return;
+    }
+    // CR80
     float posErrorX = posControl.desiredState.pos.x - navGetCurrentActualPositionAndVelocity()->pos.x;
     float posErrorY = posControl.desiredState.pos.y - navGetCurrentActualPositionAndVelocity()->pos.y;
 
@@ -400,11 +405,14 @@ static void updatePositionHeadingController_FW(timeUs_t currentTimeUs, timeDelta
     static bool errorIsDecreasing;
     static bool forceTurnDirection = false;
 
-    // We have virtual position target, calculate heading error
-    int32_t virtualTargetBearing = calculateBearingToDestination(&virtualDesiredPosition);
     // CR80
+    int32_t virtualTargetBearing;
+
     if (FLIGHT_MODE(NAV_COURSE_HOLD_MODE)) {
         virtualTargetBearing = posControl.desiredState.yaw;
+    } else {
+        // We have virtual position target, calculate heading error
+        virtualTargetBearing = calculateBearingToDestination(&virtualDesiredPosition);
     }
     //CR80
 

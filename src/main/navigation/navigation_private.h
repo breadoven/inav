@@ -113,6 +113,8 @@ typedef struct navigationFlags_s {
     bool rthTrackbackActive;                // Activation status of RTH trackback
 
     bool wpTurnSmoothingActive;             // Activation status WP turn smoothing
+
+    bool manualEmergLandActive;             // Activation status of manual emergency landing  CR82
 } navigationFlags_t;
 
 typedef struct {

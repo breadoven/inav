@@ -2942,8 +2942,8 @@ void updateClimbRateToAltitudeController(float desiredClimbRate, climbRateToAlti
                     posControl.desiredState.pos.z = targetAlt;
                 }
                 // CR81
-                DEBUG_SET(DEBUG_ALWAYS, 0, desiredClimbRate);
-                DEBUG_SET(DEBUG_ALWAYS, 1, posControl.desiredState.pos.z);
+                // DEBUG_SET(DEBUG_ALWAYS, 0, desiredClimbRate);
+                // DEBUG_SET(DEBUG_ALWAYS, 1, posControl.desiredState.pos.z);
             }
         }
         else {
@@ -3632,7 +3632,12 @@ static bool isWaypointMissionValid(void)
 {
     return posControl.waypointListValid && (posControl.waypointCount > 0);
 }
-
+// CR82
+static bool isManualEmergencyLandingActivated(void)
+{
+    return FLIGHT_MODE(NAV_POSHOLD_MODE) && calculateThrottleStatus(THROTTLE_STATUS_TYPE_RC) == THROTTLE_LOW && checkStickPosition(YAW_HI);
+}
+// CR82
 static navigationFSMEvent_t selectNavEventFromBoxModeInput(bool launchBypass)   // CR6
 {
 	// General use debugs
@@ -3666,9 +3671,16 @@ static navigationFSMEvent_t selectNavEventFromBoxModeInput(bool launchBypass)   
         if (posControl.flags.rthTrackbackActive) {
             posControl.flags.rthTrackbackActive = isExecutingRTH;
         }
-
+        // CR82
+        if (isManualEmergencyLandingActivated()) {
+            posControl.flags.manualEmergLandActive = true;
+        } else if (posControl.flags.manualEmergLandActive && calculateThrottleStatus(THROTTLE_STATUS_TYPE_RC) != THROTTLE_LOW) {
+            posControl.flags.manualEmergLandActive = false;
+            return NAV_FSM_EVENT_SWITCH_TO_IDLE;
+        }
+        // CR82
         /* Emergency landing triggered by failsafe when Failsafe procedure set to Landing */
-        if (posControl.flags.forcedEmergLandingActivated) {
+        if (posControl.flags.forcedEmergLandingActivated || posControl.flags.manualEmergLandActive) {   // CR82
             return NAV_FSM_EVENT_SWITCH_TO_EMERGENCY_LANDING;
         }
 
