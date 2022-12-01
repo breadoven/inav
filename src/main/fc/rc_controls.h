@@ -113,6 +113,6 @@ bool isRollPitchStickDeflected(uint8_t deadband);
 throttleStatus_e calculateThrottleStatus(throttleStatusType_e type);
 int16_t throttleStickMixedValue(void);
 rollPitchStatus_e calculateRollPitchCenterStatus(void);
-void processRcStickPositions(bool throttleIsLow);  // CR83
+void processRcStickPositions(bool isThrottleLow);  // CR83
 bool throttleStickIsLow(void);         // CR83
 int32_t getRcStickDeflection(int32_t axis);
