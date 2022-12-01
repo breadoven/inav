@@ -112,19 +112,18 @@ bool isRollPitchStickDeflected(uint8_t deadband)
 
 throttleStatus_e FAST_CODE NOINLINE calculateThrottleStatus(throttleStatusType_e type)
 {
-    int value;
-    if (type == THROTTLE_STATUS_TYPE_RC) {
-        value = rxGetChannelValue(THROTTLE);
-    } else {
+    // CR83
+    int value = rxGetChannelValue(THROTTLE);    // THROTTLE_STATUS_TYPE_RC
+    if (type == THROTTLE_STATUS_TYPE_COMMAND) {
         value = rcCommand[THROTTLE];
     }
 
     const uint16_t mid_throttle_deadband = rcControlsConfig()->mid_throttle_deadband;
-    if (feature(FEATURE_REVERSIBLE_MOTORS) && (value > (PWM_RANGE_MIDDLE - mid_throttle_deadband) && value < (PWM_RANGE_MIDDLE + mid_throttle_deadband)))
+    bool midThrottle = value > (PWM_RANGE_MIDDLE - mid_throttle_deadband) && value < (PWM_RANGE_MIDDLE + mid_throttle_deadband);
+    if ((feature(FEATURE_REVERSIBLE_MOTORS) && midThrottle) || (!feature(FEATURE_REVERSIBLE_MOTORS) && (value < rxConfig()->mincheck))) {
         return THROTTLE_LOW;
-    else if (!feature(FEATURE_REVERSIBLE_MOTORS) && (value < rxConfig()->mincheck))
-        return THROTTLE_LOW;
-
+    }
+    // CR83
     return THROTTLE_HIGH;
 }
 // CR83
