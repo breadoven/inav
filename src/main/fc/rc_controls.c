@@ -127,7 +127,12 @@ throttleStatus_e FAST_CODE NOINLINE calculateThrottleStatus(throttleStatusType_e
 
     return THROTTLE_HIGH;
 }
-
+// CR83
+bool throttleStickIsLow(void)
+{
+    return calculateThrottleStatus(feature(FEATURE_REVERSIBLE_MOTORS) ? THROTTLE_STATUS_TYPE_COMMAND : THROTTLE_STATUS_TYPE_RC) == THROTTLE_LOW;
+}
+// CR83
 int16_t throttleStickMixedValue(void)
 {
     int16_t throttleValue;
@@ -182,7 +187,7 @@ static void updateRcStickPositions(void)
     rcStickPositions = tmp;
 }
 
-void processRcStickPositions(throttleStatus_e throttleStatus)
+void processRcStickPositions(void)   // CR83
 {
     static timeMs_t lastTickTimeMs = 0;
     static uint8_t rcDelayCommand;      // this indicates the number of time (multiple of RC measurement at 50Hz) the sticks must be maintained to run or switch off motors
@@ -210,10 +215,11 @@ void processRcStickPositions(throttleStatus_e throttleStatus)
     // perform actions
     bool armingSwitchIsActive = IS_RC_MODE_ACTIVE(BOXARM);
     emergencyArmingUpdate(armingSwitchIsActive);
+    const bool lowThrottle = throttleStickIsLow();   // CR83
 
     if (STATE(AIRPLANE) && feature(FEATURE_MOTOR_STOP) && armingConfig()->fixed_wing_auto_arm) {
         // Auto arm on throttle when using fixedwing and motorstop
-        if (throttleStatus != THROTTLE_LOW) {
+        if (!lowThrottle) {     // CR83
             tryArm();
             return;
         }
@@ -235,7 +241,7 @@ void processRcStickPositions(throttleStatus_e throttleStatus)
             if (ARMING_FLAG(ARMED) && !IS_RC_MODE_ACTIVE(BOXFAILSAFE) && !failsafeBlockChangeArmState() && !failsafeIsActive()) {  // CR24
                 const timeMs_t disarmDelay = currentTimeMs - rcDisarmTimeMs;
                 if (disarmDelay > armingConfig()->switchDisarmDelayMs) {
-                    if (armingConfig()->disarm_kill_switch || (throttleStatus == THROTTLE_LOW)) {
+                    if (armingConfig()->disarm_kill_switch || lowThrottle) {  // CR83
                         disarm(DISARM_SWITCH);
                     }
                 }

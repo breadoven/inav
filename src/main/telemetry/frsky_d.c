@@ -195,9 +195,9 @@ static void sendThrottleOrBatterySizeAsRpm(void)
 {
     sendDataHead(ID_RPM);
     if (ARMING_FLAG(ARMED)) {
-        const throttleStatus_e throttleStatus = calculateThrottleStatus(THROTTLE_STATUS_TYPE_RC);
+        // const throttleStatus_e throttleStatus = calculateThrottleStatus(THROTTLE_STATUS_TYPE_RC);    // CR83
         uint16_t throttleForRPM = rcCommand[THROTTLE] / BLADE_NUMBER_DIVIDER;
-        if (throttleStatus == THROTTLE_LOW && feature(FEATURE_MOTOR_STOP))
+        if (throttleStickIsLow() && feature(FEATURE_MOTOR_STOP))     // CR83
                     throttleForRPM = 0;
         serialize16(throttleForRPM);
     } else {

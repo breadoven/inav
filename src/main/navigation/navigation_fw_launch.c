@@ -262,11 +262,11 @@ static void applyThrottleIdleLogic(bool forceMixerIdle)
         rcCommand[THROTTLE] = getThrottleIdleValue();   // If MOTOR_STOP is disabled, motors will spin given throttle value
     }
 }
-
-static inline bool isThrottleLow(void)
-{
-    return calculateThrottleStatus(THROTTLE_STATUS_TYPE_RC) == THROTTLE_LOW;
-}
+// CR83
+// static inline bool isThrottleLow(void)
+// {
+    // return throttleStickIsLow;
+// }
 
 static inline bool isLaunchMaxAltitudeReached(void)
 {
@@ -287,7 +287,7 @@ static inline bool isProbablyNotFlying(void)
 
 static void resetPidsIfNeeded(void) {
     // Don't use PID I-term and reset TPA filter until motors are started or until flight is detected
-    if (isProbablyNotFlying() || fwLaunch.currentState < FW_LAUNCH_STATE_MOTOR_SPINUP || (navConfig()->fw.launch_manual_throttle && isThrottleLow())) {
+    if (isProbablyNotFlying() || fwLaunch.currentState < FW_LAUNCH_STATE_MOTOR_SPINUP || (navConfig()->fw.launch_manual_throttle && throttleStickIsLow())) { // CR83
         pidResetErrorAccumulators();
         pidResetTPAFilter();
     }
@@ -308,7 +308,7 @@ static fixedWingLaunchEvent_t fwLaunchState_FW_LAUNCH_STATE_WAIT_THROTTLE(timeUs
     UNUSED(currentTimeUs);
 
     // CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-    if (!isThrottleLow() || navConfig()->fw.launch_allow_throttle_low) {
+    if (!throttleStickIsLow() || navConfig()->fw.launch_allow_throttle_low) {    // CR83
         applyThrottleIdleLogic(true);   // Stick low, force mixer idle (motor stop or low rpm)
 
         if (isThrottleIdleEnabled()) {
@@ -331,7 +331,7 @@ static fixedWingLaunchEvent_t fwLaunchState_FW_LAUNCH_STATE_WAIT_THROTTLE(timeUs
 
 static fixedWingLaunchEvent_t fwLaunchState_FW_LAUNCH_STATE_IDLE_MOTOR_DELAY(timeUs_t currentTimeUs)
 {
-    if (isThrottleLow() && !navConfig()->fw.launch_allow_throttle_low) {
+    if (throttleStickIsLow() && !navConfig()->fw.launch_allow_throttle_low) {    // CR83
         return FW_LAUNCH_EVENT_THROTTLE_LOW; // go back to FW_LAUNCH_STATE_WAIT_THROTTLE
     }
 
@@ -350,7 +350,7 @@ static fixedWingLaunchEvent_t fwLaunchState_FW_LAUNCH_STATE_IDLE_MOTOR_DELAY(tim
 static fixedWingLaunchEvent_t fwLaunchState_FW_LAUNCH_STATE_MOTOR_IDLE(timeUs_t currentTimeUs)
 {
     // CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-    if (isThrottleLow() && !navConfig()->fw.launch_allow_throttle_low) {
+    if (throttleStickIsLow() && !navConfig()->fw.launch_allow_throttle_low) {    // CR83
         return FW_LAUNCH_EVENT_THROTTLE_LOW; // go back to FW_LAUNCH_STATE_WAIT_THROTTLE
     }
     // CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
@@ -371,7 +371,7 @@ static fixedWingLaunchEvent_t fwLaunchState_FW_LAUNCH_STATE_MOTOR_IDLE(timeUs_t 
 static fixedWingLaunchEvent_t fwLaunchState_FW_LAUNCH_STATE_WAIT_DETECTION(timeUs_t currentTimeUs)
 {
     // CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-    if (isThrottleLow() && !navConfig()->fw.launch_allow_throttle_low) {
+    if (throttleStickIsLow() && !navConfig()->fw.launch_allow_throttle_low) {    // CR83
         return FW_LAUNCH_EVENT_THROTTLE_LOW; // go back to FW_LAUNCH_STATE_WAIT_THROTTLE
     }
     // CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
@@ -450,7 +450,7 @@ static fixedWingLaunchEvent_t fwLaunchState_FW_LAUNCH_STATE_IN_PROGRESS(timeUs_t
 
     if (navConfig()->fw.launch_manual_throttle) {
         // reset timers when throttle is low or until flight detected and abort launch regardless of launch settings
-        if (isThrottleLow()) {
+        if (throttleStickIsLow()) {  // CR83
             fwLaunch.currentStateTimeUs = currentTimeUs;
             fwLaunch.pitchAngle = 0;
             if (isRollPitchStickDeflected(navConfig()->fw.launch_abort_deadband)) {
@@ -491,7 +491,7 @@ static fixedWingLaunchEvent_t fwLaunchState_FW_LAUNCH_STATE_FINISH(timeUs_t curr
         return FW_LAUNCH_EVENT_SUCCESS; // cancel the launch and do the FW_LAUNCH_STATE_FLYING state
     }
     // CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-    if (navConfig()->fw.launch_allow_throttle_low && isThrottleLow()) {
+    if (navConfig()->fw.launch_allow_throttle_low && throttleStickIsLow()) {     // CR83
         // default to cruise throttle until switch to preselected Nav mode or pilot takes control
         rcCommand[THROTTLE] = currentBatteryProfile->nav.fw.cruise_throttle;
     }
@@ -499,7 +499,7 @@ static fixedWingLaunchEvent_t fwLaunchState_FW_LAUNCH_STATE_FINISH(timeUs_t curr
 
     if (elapsedTimeMs > endTimeMs) {
         //CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-        if (navConfig()->fw.launch_allow_throttle_low && isThrottleLow()) {
+        if (navConfig()->fw.launch_allow_throttle_low && throttleStickIsLow()) { // CR83
             return FW_LAUNCH_EVENT_FINISH_THR_LOW;
         } else {
             return FW_LAUNCH_EVENT_SUCCESS;
@@ -530,7 +530,7 @@ static fixedWingLaunchEvent_t fwLaunchState_FW_LAUNCH_STATE_FINISH_THR_LOW(timeU
         return FW_LAUNCH_EVENT_SUCCESS;     // end the launch and go to FW_LAUNCH_STATE_FLYING
     }
 
-    if (isThrottleLow()) {
+    if (throttleStickIsLow()) {  // CR83
         throttleRaisedStartTimeMs = US2MS(currentTimeUs);
         rcCommand[THROTTLE] = currentBatteryProfile->nav.fw.cruise_throttle;
     } else {

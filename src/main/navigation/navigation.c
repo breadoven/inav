@@ -3635,7 +3635,7 @@ static bool isWaypointMissionValid(void)
 // CR82
 static bool isManualEmergencyLandingActivated(void)
 {
-    return FLIGHT_MODE(NAV_POSHOLD_MODE) && calculateThrottleStatus(THROTTLE_STATUS_TYPE_RC) == THROTTLE_LOW && checkStickPosition(YAW_HI);
+    return FLIGHT_MODE(NAV_POSHOLD_MODE) && throttleStickIsLow() && checkStickPosition(YAW_HI);  // CR83
 }
 // CR82
 static navigationFSMEvent_t selectNavEventFromBoxModeInput(bool launchBypass)   // CR6
@@ -3674,7 +3674,7 @@ static navigationFSMEvent_t selectNavEventFromBoxModeInput(bool launchBypass)   
         // CR82
         if (isManualEmergencyLandingActivated()) {
             posControl.flags.manualEmergLandActive = true;
-        } else if (posControl.flags.manualEmergLandActive && calculateThrottleStatus(THROTTLE_STATUS_TYPE_RC) != THROTTLE_LOW) {
+        } else if (posControl.flags.manualEmergLandActive && !throttleStickIsLow()) {  // CR83 calculateThrottleStatus(THROTTLE_STATUS_TYPE_RC) != THROTTLE_LOW) {
             posControl.flags.manualEmergLandActive = false;
             return NAV_FSM_EVENT_SWITCH_TO_IDLE;
         }
@@ -4388,8 +4388,8 @@ bool isNavLaunchEnabled(void)
 bool abortLaunchAllowed(void)
 {
     // allow NAV_LAUNCH_MODE to be aborted if throttle is low or throttle stick position is < launch idle throttle setting
-    throttleStatus_e throttleStatus = calculateThrottleStatus(THROTTLE_STATUS_TYPE_RC);
-    return throttleStatus == THROTTLE_LOW || throttleStickMixedValue() < currentBatteryProfile->nav.fw.launch_idle_throttle;
+    // throttleStatus_e throttleStatus = calculateThrottleStatus(THROTTLE_STATUS_TYPE_RC);
+    return throttleStickIsLow() || throttleStickMixedValue() < currentBatteryProfile->nav.fw.launch_idle_throttle;   // CR83
 }
 
 int32_t navigationGetHomeHeading(void)
