@@ -177,14 +177,14 @@ bool adjustMulticopterAltitudeFromRCInput(void)
 void setupMulticopterAltitudeController(void)
 {
     // const throttleStatus_e throttleStatus = calculateThrottleStatus(THROTTLE_STATUS_TYPE_RC);    // CR83
-    const bool lowThrottle = throttleStickIsLow();
+    const bool throttleIsLow = throttleStickIsLow();
 
     if (navConfig()->general.flags.use_thr_mid_for_althold) {
         altHoldThrottleRCZero = rcLookupThrottleMid();
     }
     else {
         // If throttle status is THROTTLE_LOW - use Thr Mid anyway
-        if (lowThrottle) {  // CR83
+        if (throttleIsLow) {  // CR83
             altHoldThrottleRCZero = rcLookupThrottleMid();
         }
         else {
@@ -199,7 +199,7 @@ void setupMulticopterAltitudeController(void)
 
     // Force AH controller to initialize althold integral for pending takeoff on reset
     // Signal for that is low throttle _and_ low actual altitude
-    if (lowThrottle && fabsf(navGetCurrentActualPositionAndVelocity()->pos.z) <= 50.0f) {   // CR83
+    if (throttleIsLow && fabsf(navGetCurrentActualPositionAndVelocity()->pos.z) <= 50.0f) {   // CR83
         prepareForTakeoffOnReset = true;
     }
 }

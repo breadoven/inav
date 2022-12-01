@@ -187,7 +187,7 @@ static void updateRcStickPositions(void)
     rcStickPositions = tmp;
 }
 
-void processRcStickPositions(void)   // CR83
+void processRcStickPositions(bool throttleIsLow)   // CR83
 {
     static timeMs_t lastTickTimeMs = 0;
     static uint8_t rcDelayCommand;      // this indicates the number of time (multiple of RC measurement at 50Hz) the sticks must be maintained to run or switch off motors
@@ -215,11 +215,10 @@ void processRcStickPositions(void)   // CR83
     // perform actions
     bool armingSwitchIsActive = IS_RC_MODE_ACTIVE(BOXARM);
     emergencyArmingUpdate(armingSwitchIsActive);
-    const bool lowThrottle = throttleStickIsLow();   // CR83
 
     if (STATE(AIRPLANE) && feature(FEATURE_MOTOR_STOP) && armingConfig()->fixed_wing_auto_arm) {
         // Auto arm on throttle when using fixedwing and motorstop
-        if (!lowThrottle) {     // CR83
+        if (!throttleIsLow) {     // CR83
             tryArm();
             return;
         }
@@ -241,7 +240,7 @@ void processRcStickPositions(void)   // CR83
             if (ARMING_FLAG(ARMED) && !IS_RC_MODE_ACTIVE(BOXFAILSAFE) && !failsafeBlockChangeArmState() && !failsafeIsActive()) {  // CR24
                 const timeMs_t disarmDelay = currentTimeMs - rcDisarmTimeMs;
                 if (disarmDelay > armingConfig()->switchDisarmDelayMs) {
-                    if (armingConfig()->disarm_kill_switch || lowThrottle) {  // CR83
+                    if (armingConfig()->disarm_kill_switch || throttleIsLow) {  // CR83
                         disarm(DISARM_SWITCH);
                     }
                 }
