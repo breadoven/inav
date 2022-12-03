@@ -1860,7 +1860,7 @@ static bool osdDrawSingleElement(uint8_t item)
         {
             buff[0] = SYM_HEADING;
             if (osdIsHeadingValid()) {
-                tfp_sprintf(&buff[1], "%3d", (int16_t)DECIDEGREES_TO_DEGREES(getGroundCourse()));
+                tfp_sprintf(&buff[1], "%3d", (int16_t)CENTIDEGREES_TO_DEGREES(posControl.actualState.cog));
             } else {
                 buff[1] = buff[2] = buff[3] = '-';
             }

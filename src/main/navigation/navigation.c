@@ -2173,9 +2173,9 @@ void updateActualHeading(bool headingValid, int32_t newHeading, int32_t newGroun
         posControl.rthState.homeFlags |= NAV_HOME_VALID_HEADING;
     }
     // CR84
-    /* Use course over ground for fixed wing nav "heading" when valid */
-    posControl.actualState.yaw = isGPSHeadingValid() && STATE(AIRPLANE) ? newGroundCourse : newHeading;
-    // posControl.actualState.yaw = newHeading;
+    /* Use course over ground for fixed wing nav "heading" when valid - FIXME use heading and cog as required for FW and MR */
+    // posControl.actualState.yaw = isGPSHeadingValid() && STATE(AIRPLANE) ? newGroundCourse : newHeading;
+    posControl.actualState.yaw = newHeading;
     posControl.actualState.cog = newGroundCourse;   // CR84
     posControl.flags.estHeadingStatus = newEstHeading;
 
@@ -4422,8 +4422,4 @@ bool isAdjustingHeading(void) {
 
 int32_t getCruiseHeadingAdjustment(void) {
     return wrap_18000(posControl.cruise.yaw - posControl.cruise.previousYaw);
-}
-// CR84
-int32_t getGroundCourse(void) {
-    return posControl.actualState.cog;
 }
