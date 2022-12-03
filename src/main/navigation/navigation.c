@@ -2131,7 +2131,7 @@ void updateActualAltitudeAndClimbRate(bool estimateValid, float newAltitude, flo
 /*-----------------------------------------------------------
  * Processes an update to estimated heading
  *-----------------------------------------------------------*/
-void updateActualHeading(bool headingValid, int32_t newHeading)
+void updateActualHeading(bool headingValid, int32_t newHeading, int32_t newGroundCourse)    // CR84
 {
     /* Update heading. Check if we're acquiring a valid heading for the
      * first time and update home heading accordingly.
@@ -2172,7 +2172,11 @@ void updateActualHeading(bool headingValid, int32_t newHeading)
         }
         posControl.rthState.homeFlags |= NAV_HOME_VALID_HEADING;
     }
-    posControl.actualState.yaw = newHeading;
+    // CR84
+    /* Use course over ground for fixed wing nav "heading" when valid */
+    posControl.actualState.yaw = isGPSHeadingValid() && STATE(AIRPLANE) ? newGroundCourse : newHeading;
+    // posControl.actualState.yaw = newHeading;
+    posControl.actualState.cog = newGroundCourse;   // CR84
     posControl.flags.estHeadingStatus = newEstHeading;
 
     /* Precompute sin/cos of yaw angle */
@@ -4418,4 +4422,8 @@ bool isAdjustingHeading(void) {
 
 int32_t getCruiseHeadingAdjustment(void) {
     return wrap_18000(posControl.cruise.yaw - posControl.cruise.previousYaw);
+}
+// CR84
+int32_t getGroundCourse(void) {
+    return posControl.actualState.cog;
 }

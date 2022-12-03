@@ -614,9 +614,11 @@ void updateLandingStatus(void);
 const navigationPIDControllers_t* getNavigationPIDControllers(void);
 
 int32_t navigationGetHeadingError(void);
+float navigationGetCrossTrackError(void);   // CR84
 int32_t getCruiseHeadingAdjustment(void);
 bool isAdjustingPosition(void);
 bool isAdjustingHeading(void);
+int32_t getGroundCourse(void);       // CR84
 
 float getEstimatedAglPosition(void);
 bool isEstimatedAglTrusted(void);

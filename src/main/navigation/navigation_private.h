@@ -127,6 +127,7 @@ typedef struct {
     navEstimatedPosVel_t    abs;
     navEstimatedPosVel_t    agl;
     int32_t                 yaw;
+    int32_t                 cog;    // CR84
 
     // Service values
     float                   sinYaw;
@@ -458,7 +459,7 @@ bool isLastMissionWaypoint(void);
 float getActiveWaypointSpeed(void);
 bool isWaypointNavTrackingActive(void);
 
-void updateActualHeading(bool headingValid, int32_t newHeading);
+void updateActualHeading(bool headingValid, int32_t newHeading, int32_t newGroundCourse);   // CR84
 void updateActualHorizontalPositionAndVelocity(bool estPosValid, bool estVelValid, float newX, float newY, float newVelX, float newVelY);
 void updateActualAltitudeAndClimbRate(bool estimateValid, float newAltitude, float newVelocity, float surfaceDistance, float surfaceVelocity, navigationEstimateStatus_e surfaceStatus);
 
