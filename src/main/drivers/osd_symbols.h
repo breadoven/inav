@@ -171,6 +171,8 @@
 #define SYM_AH_V_FT_1               0xD7  // 215 mAh/v-ft right
 #define SYM_AH_V_M_0                0xD8  // 216 mAh/v-m left
 #define SYM_AH_V_M_1                0xD9  // 217 mAh/v-m right
+#define SYM_GROUND_COURSE           0xDC  // 220 Ground course  // CR84
+#define SYM_TRACK_ERROR             0xDD  // 221 Cross track error  // CR84
 
 #define SYM_LOGO_START              0x101 // 257 to 280, INAV logo
 #define SYM_LOGO_WIDTH              6

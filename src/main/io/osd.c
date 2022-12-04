@@ -1858,7 +1858,7 @@ static bool osdDrawSingleElement(uint8_t item)
     // CR84
     case OSD_GROUND_COURSE:
         {
-            buff[0] = SYM_HEADING;
+            buff[0] = SYM_GROUND_COURSE;
             if (osdIsHeadingValid()) {
                 tfp_sprintf(&buff[1], "%3d", (int16_t)CENTIDEGREES_TO_DEGREES(posControl.actualState.cog));
             } else {
@@ -1918,11 +1918,10 @@ static bool osdDrawSingleElement(uint8_t item)
     case OSD_CROSS_TRACK_ERROR:
         {
             if (isWaypointNavTrackingActive()) {
-                buff[0] = 'X';
-                buff[1] = 'E';
-                osdFormatDistanceSymbol(buff + 2, navigationGetCrossTrackError(), 0);
+                buff[0] = SYM_TRACK_ERROR;
+                osdFormatDistanceSymbol(buff + 1, navigationGetCrossTrackError(), 0);
             } else {
-                displayWrite(osdDisplayPort, elemPosX, elemPosY, "      ");
+                displayWrite(osdDisplayPort, elemPosX, elemPosY, "     ");
                 return true;
             }
             break;
