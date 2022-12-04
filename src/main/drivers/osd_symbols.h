@@ -171,6 +171,8 @@
 #define SYM_AH_V_FT_1               0xD7  // 215 mAh/v-ft right
 #define SYM_AH_V_M_0                0xD8  // 216 mAh/v-m left
 #define SYM_AH_V_M_1                0xD9  // 217 mAh/v-m right
+#define SYM_FLIGHT_MINS_REMAINING   0xDA  // 218 Flight time (mins) remaining
+#define SYM_FLIGHT_HOURS_REMAINING  0xDB  // 219 Flight time (hours) remaining
 #define SYM_GROUND_COURSE           0xDC  // 220 Ground course  // CR84
 #define SYM_TRACK_ERROR             0xDD  // 221 Cross track error  // CR84
 
@@ -222,6 +224,7 @@
 
 #define SYM_HOME_DIST 	            0x165 // 357 DIST
 #define SYM_AH_CH_CENTER            0x166 // 358 Crossair center
+#define SYM_FLIGHT_DIST_REMAINING   0x167 // 359 Flight distance reminaing
 
 #define SYM_AH_CH_TYPE3             0x190 // 400 to 402, crosshair 3
 #define SYM_AH_CH_TYPE4             0x193 // 403 to 405, crosshair 4

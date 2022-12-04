@@ -691,14 +691,12 @@ static void estimationCalculateGroundCourse(timeUs_t currentTimeUs)
     if (STATE(GPS_FIX) && navIsHeadingUsable()) {
         static timeUs_t lastUpdateTimeUs = 0;
 
-        if (currentTimeUs - lastUpdateTimeUs >= HZ2US(20)) {
+        if (currentTimeUs - lastUpdateTimeUs >= HZ2US(INAV_COG_UPDATE_RATE_HZ)) {   // limit update rate
             const float dt = US2S(currentTimeUs - lastUpdateTimeUs);
             uint32_t groundCourse = wrap_36000(RADIANS_TO_CENTIDEGREES(atan2_approx(posEstimator.est.vel.y * dt, posEstimator.est.vel.x * dt)));
             posEstimator.est.cog = CENTIDEGREES_TO_DECIDEGREES(groundCourse);
             lastUpdateTimeUs = currentTimeUs;
         }
-        // DEBUG_SET(DEBUG_ALWAYS, 0, posEstimator.est.cog / 10);
-        // DEBUG_SET(DEBUG_ALWAYS, 1, (gpsSol.groundCourse - posEstimator.est.cog) / 10);
     }
 }
 
