@@ -2175,7 +2175,7 @@ void updateActualHeading(bool headingValid, int32_t newHeading, int32_t newGroun
         posControl.rthState.homeFlags |= NAV_HOME_VALID_HEADING;
     }
     // CR84
-    /* Use course over ground for fixed wing nav "heading" when valid - FIXME use heading and cog as required for FW and MR */
+    /* Use course over ground for fixed wing nav "heading" when valid - TODO use heading and cog as required for FW and MR */
     // posControl.actualState.yaw = isGPSHeadingValid() && STATE(AIRPLANE) ? newGroundCourse : newHeading;
     posControl.actualState.yaw = newHeading;
     posControl.actualState.cog = newGroundCourse;   // CR84
