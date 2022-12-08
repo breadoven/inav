@@ -1795,9 +1795,21 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_EMERGENCY_LANDING_INITI
 {
     UNUSED(previousState);
 
+    // CR82
+    if ((posControl.flags.estPosStatus >= EST_USABLE)) {
+        // fpVector3_t targetHoldPos;
+        // calculateInitialHoldPosition(&targetHoldPos);
+        resetPositionController();
+        setDesiredPosition(&navGetCurrentActualPositionAndVelocity()->pos, 0, NAV_POS_UPDATE_XY);
+    }
+    // CR82
+
     // Emergency landing MAY use common altitude controller if vertical position is valid - initialize it
     // Make sure terrain following is not enabled
     resetAltitudeController(false);
+    // if (posControl.flags.estAltStatus >= EST_USABLE) {
+        // setDesiredPosition(&navGetCurrentActualPositionAndVelocity()->pos, 0, NAV_POS_UPDATE_Z);
+    // }
 
     return NAV_FSM_EVENT_SUCCESS;
 }
@@ -2253,7 +2265,7 @@ bool navCalculatePathToDestination(navDestinationPath_t *result, const fpVector3
 static bool getLocalPosNextWaypoint(fpVector3_t * nextWpPos)
 {
     // Only for WP Mode not Trackback. Ignore non geo waypoints except RTH and JUMP.
-    if (FLIGHT_MODE(NAV_WP_MODE) && !isLastMissionWaypoint()) {
+    if (navGetStateFlags(posControl.navState) & NAV_AUTO_WP && !isLastMissionWaypoint()) { // FLIGHT_MODE(NAV_WP_MODE)
         navWaypointActions_e nextWpAction = posControl.waypointList[posControl.activeWaypointIndex + 1].action;
 
         if (!(nextWpAction == NAV_WP_ACTION_SET_POI || nextWpAction == NAV_WP_ACTION_SET_HEAD)) {
@@ -2940,16 +2952,18 @@ void updateClimbRateToAltitudeController(float desiredClimbRate, climbRateToAlti
             float timeDelta = US2S(currentTimeUs - lastUpdateTimeUs);
             // CR81
             if (timeDelta <= HZ2S(MIN_POSITION_UPDATE_RATE_HZ) && desiredClimbRate) {
-                float targetAlt = posControl.desiredState.pos.z + desiredClimbRate * timeDelta;
-
-                /* only update target altitude when actual altitude within 5m of target in required direction of change
-                 * otherwise hold target altitude and wait for actual altitude to catch up */
-                if ((desiredClimbRate > 0 && targetAlt < altitudeToUse + 500) || (desiredClimbRate < 0 && targetAlt > altitudeToUse - 500)) {
-                    posControl.desiredState.pos.z = targetAlt;
+                static bool targetHoldActive = false;
+                // Hold target altitude and wait for actual altitude to catch up if actual moving in wrong direction or lagging by > 5m
+                if (navGetCurrentActualPositionAndVelocity()->vel.z * desiredClimbRate >= 0 && fabsf(posControl.desiredState.pos.z - altitudeToUse) < 500) {
+                    posControl.desiredState.pos.z += desiredClimbRate * timeDelta;
+                    targetHoldActive = false;
+                } else if (!targetHoldActive) {     // Reset and hold target to actual + climb rate boost until actual catches up
+                    posControl.desiredState.pos.z = altitudeToUse + desiredClimbRate;
+                    targetHoldActive = true;
                 }
                 // CR81
-                // DEBUG_SET(DEBUG_ALWAYS, 0, desiredClimbRate);
-                // DEBUG_SET(DEBUG_ALWAYS, 1, posControl.desiredState.pos.z);
+                DEBUG_SET(DEBUG_ALWAYS, 0, desiredClimbRate);
+                DEBUG_SET(DEBUG_ALWAYS, 1, posControl.desiredState.pos.z);
             }
         }
         else {
@@ -3463,7 +3477,9 @@ bool isNavHoldPositionActive(void)
         return isLastMissionWaypoint() || NAV_Status.state == MW_NAV_STATE_HOLD_TIMED;
     }
     // RTH mode (spiral climb and Home positions but excluding RTH Trackback point positions) and POSHOLD mode
-    return (FLIGHT_MODE(NAV_RTH_MODE) && !posControl.flags.rthTrackbackActive) || FLIGHT_MODE(NAV_POSHOLD_MODE);
+    return (FLIGHT_MODE(NAV_RTH_MODE) && !posControl.flags.rthTrackbackActive) ||
+            FLIGHT_MODE(NAV_POSHOLD_MODE) ||
+            navigationIsExecutingAnEmergencyLanding();   // CR82
 }
 
 float getActiveWaypointSpeed(void)
@@ -3641,7 +3657,7 @@ static bool isWaypointMissionValid(void)
 // CR82
 static bool isManualEmergencyLandingActivated(void)
 {
-    return FLIGHT_MODE(NAV_POSHOLD_MODE) && throttleStickIsLow() && checkStickPosition(YAW_HI);  // CR83
+    return IS_RC_MODE_ACTIVE(BOXNAVPOSHOLD) && throttleStickIsLow() && checkStickPosition(YAW_HI);  // CR83
 }
 // CR82
 static navigationFSMEvent_t selectNavEventFromBoxModeInput(bool launchBypass)   // CR6
@@ -3680,7 +3696,7 @@ static navigationFSMEvent_t selectNavEventFromBoxModeInput(bool launchBypass)   
         // CR82
         if (isManualEmergencyLandingActivated()) {
             posControl.flags.manualEmergLandActive = true;
-        } else if (posControl.flags.manualEmergLandActive && !throttleStickIsLow()) {  // CR83 calculateThrottleStatus(THROTTLE_STATUS_TYPE_RC) != THROTTLE_LOW) {
+        } else if (posControl.flags.manualEmergLandActive && !throttleStickIsLow()) {  // CR83
             posControl.flags.manualEmergLandActive = false;
             return NAV_FSM_EVENT_SWITCH_TO_IDLE;
         }
