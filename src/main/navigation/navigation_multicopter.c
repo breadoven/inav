@@ -832,8 +832,8 @@ static void applyMulticopterEmergencyLandingController(timeUs_t currentTimeUs)
     static timeUs_t previousTimePositionUpdate = 0;
 
     /* Attempt to stabilise */
-    rcCommand[ROLL] = 0;
-    rcCommand[PITCH] = 0;
+    // rcCommand[ROLL] = 0;
+    // rcCommand[PITCH] = 0;
     rcCommand[YAW] = 0;
 
     if ((posControl.flags.estAltStatus < EST_USABLE)) {
@@ -870,6 +870,14 @@ static void applyMulticopterEmergencyLandingController(timeUs_t currentTimeUs)
 
     // Update throttle controller
     rcCommand[THROTTLE] = posControl.rcAdjustment[THROTTLE];
+    // CR82
+    if ((posControl.flags.estPosStatus >= EST_USABLE)) {
+        applyMulticopterPositionController(currentTimeUs);
+    } else {
+        rcCommand[ROLL] = 0;
+        rcCommand[PITCH] = 0;
+    }
+    // CR82
 }
 
 /*-----------------------------------------------------------

@@ -2962,8 +2962,8 @@ void updateClimbRateToAltitudeController(float desiredClimbRate, climbRateToAlti
                     targetHoldActive = true;
                 }
                 // CR81
-                DEBUG_SET(DEBUG_ALWAYS, 0, desiredClimbRate);
-                DEBUG_SET(DEBUG_ALWAYS, 1, posControl.desiredState.pos.z);
+                // DEBUG_SET(DEBUG_ALWAYS, 0, desiredClimbRate);
+                // DEBUG_SET(DEBUG_ALWAYS, 1, posControl.desiredState.pos.z);
             }
         }
         else {
@@ -3657,7 +3657,32 @@ static bool isWaypointMissionValid(void)
 // CR82
 static bool isManualEmergencyLandingActivated(void)
 {
-    return IS_RC_MODE_ACTIVE(BOXNAVPOSHOLD) && throttleStickIsLow() && checkStickPosition(YAW_HI);  // CR83
+    // if (!throttleStickIsLow()) return false;
+
+    static timeMs_t timeout = 0;
+    static int8_t counter = 0;
+    static bool toggle;
+    timeMs_t currentTimeMs = millis();
+
+    if (timeout && currentTimeMs > timeout) {
+        timeout += 500;
+        counter--;
+        if (counter <= 0) {
+            timeout = 0;
+        }
+    }
+    if (IS_RC_MODE_ACTIVE(BOXNAVPOSHOLD)) {
+        if (!timeout) {
+            timeout = currentTimeMs + 2000;
+        }
+        counter += toggle;
+        toggle = false;
+    } else {
+        toggle = true;
+    }
+    constrain(counter, 0, 7);
+
+    return counter >= 5;
 }
 // CR82
 static navigationFSMEvent_t selectNavEventFromBoxModeInput(bool launchBypass)   // CR6
@@ -3696,7 +3721,7 @@ static navigationFSMEvent_t selectNavEventFromBoxModeInput(bool launchBypass)   
         // CR82
         if (isManualEmergencyLandingActivated()) {
             posControl.flags.manualEmergLandActive = true;
-        } else if (posControl.flags.manualEmergLandActive && !throttleStickIsLow()) {  // CR83
+        } else if (posControl.flags.manualEmergLandActive && checkStickPosition(THR_HI)) {  // CR83
             posControl.flags.manualEmergLandActive = false;
             return NAV_FSM_EVENT_SWITCH_TO_IDLE;
         }
