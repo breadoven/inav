@@ -112,7 +112,6 @@ bool isRollPitchStickDeflected(uint8_t deadband)
 
 throttleStatus_e FAST_CODE NOINLINE calculateThrottleStatus(throttleStatusType_e type)
 {
-    // CR83
     int value = rxGetChannelValue(THROTTLE);    // THROTTLE_STATUS_TYPE_RC
     if (type == THROTTLE_STATUS_TYPE_COMMAND) {
         value = rcCommand[THROTTLE];
@@ -123,15 +122,15 @@ throttleStatus_e FAST_CODE NOINLINE calculateThrottleStatus(throttleStatusType_e
     if ((feature(FEATURE_REVERSIBLE_MOTORS) && midThrottle) || (!feature(FEATURE_REVERSIBLE_MOTORS) && (value < rxConfig()->mincheck))) {
         return THROTTLE_LOW;
     }
-    // CR83
+
     return THROTTLE_HIGH;
 }
-// CR83
+
 bool throttleStickIsLow(void)
 {
     return calculateThrottleStatus(feature(FEATURE_REVERSIBLE_MOTORS) ? THROTTLE_STATUS_TYPE_COMMAND : THROTTLE_STATUS_TYPE_RC) == THROTTLE_LOW;
 }
-// CR83
+
 int16_t throttleStickMixedValue(void)
 {
     int16_t throttleValue;
@@ -186,7 +185,7 @@ static void updateRcStickPositions(void)
     rcStickPositions = tmp;
 }
 
-void processRcStickPositions(bool isThrottleLow)   // CR83
+void processRcStickPositions(bool isThrottleLow)
 {
     static timeMs_t lastTickTimeMs = 0;
     static uint8_t rcDelayCommand;      // this indicates the number of time (multiple of RC measurement at 50Hz) the sticks must be maintained to run or switch off motors
@@ -217,7 +216,7 @@ void processRcStickPositions(bool isThrottleLow)   // CR83
 
     if (STATE(AIRPLANE) && feature(FEATURE_MOTOR_STOP) && armingConfig()->fixed_wing_auto_arm) {
         // Auto arm on throttle when using fixedwing and motorstop
-        if (!isThrottleLow) {     // CR83
+        if (!isThrottleLow) {
             tryArm();
             return;
         }
@@ -240,7 +239,7 @@ void processRcStickPositions(bool isThrottleLow)   // CR83
             if (ARMING_FLAG(ARMED) && !IS_RC_MODE_ACTIVE(BOXFAILSAFE) && !failsafeBlockChangeArmState() && !failsafeIsActive()) {  // CR24
                 const timeMs_t disarmDelay = currentTimeMs - rcDisarmTimeMs;
                 if (disarmDelay > armingConfig()->switchDisarmDelayMs) {
-                    if (armingConfig()->disarm_kill_switch || isThrottleLow) {  // CR83
+                    if (armingConfig()->disarm_kill_switch || isThrottleLow) {
                         disarm(DISARM_SWITCH);
                     }
                 }

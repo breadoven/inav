@@ -176,15 +176,14 @@ bool adjustMulticopterAltitudeFromRCInput(void)
 
 void setupMulticopterAltitudeController(void)
 {
-    // const throttleStatus_e throttleStatus = calculateThrottleStatus(THROTTLE_STATUS_TYPE_RC);    // CR83
     const bool throttleIsLow = throttleStickIsLow();
 
     if (navConfig()->general.flags.use_thr_mid_for_althold) {
         altHoldThrottleRCZero = rcLookupThrottleMid();
     }
     else {
-        // If throttle status is THROTTLE_LOW - use Thr Mid anyway
-        if (throttleIsLow) {  // CR83
+        // If throttle is LOW - use Thr Mid anyway
+        if (throttleIsLow) {
             altHoldThrottleRCZero = rcLookupThrottleMid();
         }
         else {
@@ -199,7 +198,7 @@ void setupMulticopterAltitudeController(void)
 
     // Force AH controller to initialize althold integral for pending takeoff on reset
     // Signal for that is low throttle _and_ low actual altitude
-    if (throttleIsLow && fabsf(navGetCurrentActualPositionAndVelocity()->pos.z) <= 50.0f) {   // CR83
+    if (throttleIsLow && fabsf(navGetCurrentActualPositionAndVelocity()->pos.z) <= 50.0f) {
         prepareForTakeoffOnReset = true;
     }
 }
@@ -741,12 +740,11 @@ bool isMulticopterLandingDetected(void)
     DEBUG_SET(DEBUG_LANDING, 4, 0);
     DEBUG_SET(DEBUG_LANDING, 3, averageAbsGyroRates() * 100);
     static timeUs_t landingDetectorStartedAt;
-    // const bool throttleIsLow = calculateThrottleStatus(THROTTLE_STATUS_TYPE_RC) == THROTTLE_LOW; // CR83
 
     // Basic condition to start looking for landing (prevent landing detection if failsafe_mission OFF except landing states)
     bool startCondition = (navGetCurrentStateFlags() & (NAV_CTL_LAND | NAV_CTL_EMERG))
                           || (FLIGHT_MODE(FAILSAFE_MODE) && !FLIGHT_MODE(NAV_WP_MODE))
-                          || (!navigationIsFlyingAutonomousMode() && throttleStickIsLow());  // CR83
+                          || (!navigationIsFlyingAutonomousMode() && throttleStickIsLow());
 
     if (!startCondition || posControl.flags.resetLandingDetector) {
         landingDetectorStartedAt = 0;

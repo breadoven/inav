@@ -616,7 +616,7 @@ void updateLandingStatus(void);
 const navigationPIDControllers_t* getNavigationPIDControllers(void);
 
 int32_t navigationGetHeadingError(void);
-float navigationGetCrossTrackError(void);   // CR84
+float navigationGetCrossTrackError(void);
 int32_t getCruiseHeadingAdjustment(void);
 bool isAdjustingPosition(void);
 bool isAdjustingHeading(void);

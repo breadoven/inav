@@ -173,11 +173,11 @@
 #define SYM_AH_V_M_1                0xD9  // 217 mAh/v-m right
 #define SYM_FLIGHT_MINS_REMAINING   0xDA  // 218 Flight time (mins) remaining
 #define SYM_FLIGHT_HOURS_REMAINING  0xDB  // 219 Flight time (hours) remaining
-#define SYM_GROUND_COURSE           0xDC  // 220 Ground course  // CR84
-#define SYM_CROSS_TRACK_ERROR       0xFC  // 252 Cross track error  // CR84
+#define SYM_GROUND_COURSE           0xDC  // 220 Ground course
+#define SYM_CROSS_TRACK_ERROR       0xFC  // 252 Cross track error
 
-#define SYM_LOGO_START              0x101 // 257 to 280, INAV logo
-#define SYM_LOGO_WIDTH              6
+#define SYM_LOGO_START              0x101 // 257 to 297, INAV logo
+#define SYM_LOGO_WIDTH              10
 #define SYM_LOGO_HEIGHT             4
 
 #define SYM_AH_LEFT                 0x12C // 300 Arrow left
