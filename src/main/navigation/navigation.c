@@ -3718,7 +3718,7 @@ static navigationFSMEvent_t selectNavEventFromBoxModeInput(bool launchBypass)   
         // CR82
         if (isManualEmergencyLandingActivated()) {
             posControl.flags.manualEmergLandActive = true;
-        } else if (posControl.flags.manualEmergLandActive && checkStickPosition(THR_HI)) {  // CR83
+        } else if (posControl.flags.manualEmergLandActive && checkStickPosition(THR_HI)) {
             posControl.flags.manualEmergLandActive = false;
             return NAV_FSM_EVENT_SWITCH_TO_IDLE;
         }
