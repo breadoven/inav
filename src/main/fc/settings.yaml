@@ -1457,15 +1457,7 @@ groups:
         default_value: 250
         field: switchDisarmDelayMs
         min: 0
-        # CR24
         max: 1000
-      - name: switch_arm_delay
-        description: "Delay before arming when set by switch (ms) [0-1000]"
-        default_value: 250
-        field: switchArmDelayMs
-        min: 0
-        max: 1000
-        # CR24
       - name: prearm_timeout
         description: "Duration (ms) for which Prearm being activated is valid. after this, Prearm needs to be reset. 0 means Prearm does not timeout."
         default_value: 10000

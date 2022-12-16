@@ -140,7 +140,6 @@ typedef struct failsafeState_s {
     bool suspended;                         // Failsafe is temporary suspended. This happens when we temporary suspend RX system due to EEPROM write/read
     bool active;                            // Failsafe is active (on RC link loss)
     bool controlling;                       // Failsafe is driving the sticks instead of pilot
-    bool blockChangeArmState;               // Flag to block change of arm state after loss of Rx signal    // CR24
     timeMs_t rxDataFailurePeriod;
     timeMs_t rxDataRecoveryPeriod;
     timeMs_t validRxDataReceivedAt;
@@ -155,8 +154,6 @@ typedef struct failsafeState_s {
     failsafeRxLinkState_e rxLinkState;
     int16_t lastGoodRcCommand[4];
 } failsafeState_t;
-
-extern timeUs_t fstest1;     // CR24
 
 void failsafeInit(void);
 void failsafeReset(void);
@@ -180,4 +177,3 @@ void failsafeUpdateRcCommandValues(void);
 
 void failsafeOnValidDataReceived(void);
 void failsafeOnValidDataFailed(void);
-bool failsafeBlockChangeArmState(void);     // CR24
