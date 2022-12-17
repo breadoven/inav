@@ -3654,8 +3654,6 @@ static bool isWaypointMissionValid(void)
 // CR82
 static bool isManualEmergencyLandingActivated(void)
 {
-    // if (!throttleStickIsLow()) return false;
-
     static timeMs_t timeout = 0;
     static int8_t counter = 0;
     static bool toggle;
@@ -3663,8 +3661,8 @@ static bool isManualEmergencyLandingActivated(void)
 
     if (timeout && currentTimeMs > timeout) {
         timeout += 500;
-        counter--;
-        if (counter <= 0) {
+        counter -= counter ? 1 : 0;
+        if (!counter) {
             timeout = 0;
         }
     }
@@ -3677,7 +3675,6 @@ static bool isManualEmergencyLandingActivated(void)
     } else {
         toggle = true;
     }
-    constrain(counter, 0, 7);
 
     return counter >= 5;
 }
