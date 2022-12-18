@@ -1082,11 +1082,11 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_COURSE_HOLD_INITIALIZE(
     // if (!(prevFlags & NAV_CTL_POS)) {    // CR80
         resetPositionController();
     // }
-
-    posControl.cruise.yaw = posControl.actualState.yaw; // Store the yaw to follow
-    posControl.cruise.previousYaw = posControl.cruise.yaw;
-    posControl.cruise.lastYawAdjustmentTime = 0;
-
+    // CR87   change cruise.yaw to course
+    posControl.cruise.course = posControl.actualState.cog;  // Store the yaw to follow
+    posControl.cruise.previousCourse = posControl.cruise.course;
+    posControl.cruise.lastCourseAdjustmentTime = 0;
+    // CR87
     return NAV_FSM_EVENT_SUCCESS; // Go to CRUISE_XD_IN_PROGRESS state
 }
 
@@ -1103,19 +1103,20 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_COURSE_HOLD_IN_PROGRESS
     if (posControl.flags.isAdjustingPosition) {
         return NAV_FSM_EVENT_SWITCH_TO_COURSE_ADJ;
     }
-
-    // User is yawing. We record the desidered yaw and we change the desidered target in the meanwhile
+    // CR87
+    // User is yawing. We record the desidered course and change the desidered target in the meanwhile
     if (posControl.flags.isAdjustingHeading) {
-        timeMs_t timeDifference = currentTimeMs - posControl.cruise.lastYawAdjustmentTime;
+        timeMs_t timeDifference = currentTimeMs - posControl.cruise.lastCourseAdjustmentTime;
         if (timeDifference > 100) timeDifference = 0; // if adjustment was called long time ago, reset the time difference.
         float rateTarget = scaleRangef((float)rcCommand[YAW], -500.0f, 500.0f, -DEGREES_TO_CENTIDEGREES(navConfig()->fw.cruise_yaw_rate), DEGREES_TO_CENTIDEGREES(navConfig()->fw.cruise_yaw_rate));
         float centidegsPerIteration = rateTarget * MS2S(timeDifference);
-        posControl.cruise.yaw = wrap_36000(posControl.cruise.yaw - centidegsPerIteration);
-        posControl.cruise.lastYawAdjustmentTime = currentTimeMs;
-    } else if (currentTimeMs - posControl.cruise.lastYawAdjustmentTime > 4000) {    // CR80
-        posControl.cruise.previousYaw = posControl.cruise.yaw;
+        posControl.cruise.course = wrap_36000(posControl.cruise.course - centidegsPerIteration);
+        posControl.cruise.lastCourseAdjustmentTime = currentTimeMs;
+    } else if (currentTimeMs - posControl.cruise.lastCourseAdjustmentTime > 4000) {    // CR80
+        posControl.cruise.previousCourse = posControl.cruise.course;
     }
     // CR80
+    // CR87
     // uint32_t distance = gpsSol.groundSpeed * 60; // next WP to be reached in 60s [cm]
 
     // if ((previousState == NAV_STATE_COURSE_HOLD_INITIALIZE) || (previousState == NAV_STATE_COURSE_HOLD_ADJUSTING)
@@ -1127,7 +1128,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_COURSE_HOLD_IN_PROGRESS
     // }
 
     // setDesiredPosition(&posControl.cruise.targetPos, posControl.cruise.yaw, NAV_POS_UPDATE_XY);
-    setDesiredPosition(NULL, posControl.cruise.yaw, NAV_POS_UPDATE_HEADING);
+    setDesiredPosition(NULL, posControl.cruise.course, NAV_POS_UPDATE_HEADING);     // CR87
     // CR80
 
     return NAV_FSM_EVENT_NONE;
@@ -1139,8 +1140,8 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_COURSE_HOLD_ADJUSTING(n
 
     // User is rolling, changing manually direction. Wait until it is done and then restore CRUISE
     if (posControl.flags.isAdjustingPosition) {
-        posControl.cruise.yaw = posControl.actualState.yaw; //store current heading
-        posControl.cruise.lastYawAdjustmentTime = millis();
+        posControl.cruise.course = posControl.actualState.cog;  //store current course   // CR87
+        posControl.cruise.lastCourseAdjustmentTime = millis();  // CR87
         return NAV_FSM_EVENT_NONE;  // reprocess the state
     }
 
@@ -1229,7 +1230,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_INITIALIZE(navigati
                     // Spiral climb centered at xy of RTH activation
                     calculateInitialHoldPosition(&targetHoldPos);
                 } else {
-                    calculateFarAwayTarget(&targetHoldPos, posControl.actualState.yaw, 100000.0f);  // 1km away Linear climb
+                    calculateFarAwayTarget(&targetHoldPos, posControl.actualState.cog, 100000.0f);  // 1km away Linear climb  // CR87
                 }
             } else {
                 // Multicopter, hover and climb
@@ -2188,7 +2189,7 @@ void updateActualHeading(bool headingValid, int32_t newHeading, int32_t newGroun
     }
     /* Use course over ground for fixed wing nav "heading" when valid - TODO use heading and cog as specifically required for FW and MR */
     posControl.actualState.yaw = newHeading;
-    posControl.actualState.cog = newGroundCourse;       // currently only used for OSD display
+    posControl.actualState.cog = newGroundCourse;       //  CR87 removed comment
     posControl.flags.estHeadingStatus = newEstHeading;
 
     /* Precompute sin/cos of yaw angle */
@@ -2243,6 +2244,7 @@ int32_t calculateBearingBetweenLocalPositions(const fpVector3_t * startPos, cons
     return calculateBearingFromDelta(deltaX, deltaY);
 }
 
+// NOT USED ANYWHERE !!!
 bool navCalculatePathToDestination(navDestinationPath_t *result, const fpVector3_t * destinationPos)
 {
     if (posControl.flags.estPosStatus == EST_NONE ||
@@ -2714,7 +2716,7 @@ static bool rthAltControlStickOverrideCheck(unsigned axis)
         if (posControl.activeRthTBPointIndex < 0) {
             saveTrackpoint = posControl.homeDistance > METERS_TO_CENTIMETERS(50);
 
-            previousTBCourse = CENTIDEGREES_TO_DEGREES(posControl.actualState.yaw);
+            previousTBCourse = CENTIDEGREES_TO_DEGREES(posControl.actualState.cog);     // CR87
             previousTBTripDist = posControl.totalTripDistance;
         } else {
             // Minimum distance increment between course change track points when GPS course valid - set to 10m
@@ -4456,5 +4458,5 @@ bool isAdjustingHeading(void) {
 }
 
 int32_t getCruiseHeadingAdjustment(void) {
-    return wrap_18000(posControl.cruise.yaw - posControl.cruise.previousYaw);
+    return wrap_18000(posControl.cruise.course - posControl.cruise.previousCourse);     // CR87
 }

@@ -327,9 +327,11 @@ typedef struct {
 
 typedef struct {
     // fpVector3_t                 targetPos;  // CR80
-    int32_t                     yaw;
-    int32_t                     previousYaw;
-    timeMs_t                    lastYawAdjustmentTime;
+    // CR87
+    int32_t                     course;
+    int32_t                     previousCourse;
+    timeMs_t                    lastCourseAdjustmentTime;
+    // CR87
 } navCruise_t;
 
 typedef struct {

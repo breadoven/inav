@@ -402,7 +402,7 @@ typedef struct {
     int32_t     nextTurnAngle;      // centidegrees
 } navWaypointPosition_t;
 
-typedef struct navDestinationPath_s {
+typedef struct navDestinationPath_s {   // NOT USED ANYWHERE
     uint32_t distance; // meters * 100
     int32_t bearing; // deg * 100
 } navDestinationPath_t;

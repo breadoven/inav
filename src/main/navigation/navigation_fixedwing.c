@@ -426,8 +426,8 @@ static void updatePositionHeadingController_FW(timeUs_t currentTimeUs, timeDelta
         DEBUG_SET(DEBUG_ALWAYS, 3, navCrossTrackError);
 
         // tracking only active when certain distance and heading conditions are met
-        if ((ABS(wrap_18000(virtualTargetBearing - posControl.actualState.yaw)) < 9000 || posControl.wpDistance < 1000.0f) && navCrossTrackError > 200) {
-            int32_t courseHeadingError = wrap_18000(posControl.activeWaypoint.yaw - posControl.actualState.yaw);
+        if ((ABS(wrap_18000(virtualTargetBearing - posControl.actualState.cog)) < 9000 || posControl.wpDistance < 1000.0f) && navCrossTrackError > 200) {  // CR87
+            int32_t courseHeadingError = wrap_18000(posControl.activeWaypoint.yaw - posControl.actualState.cog);    // CR87  check yaw name activeWP.yaw ?
             // DEBUG_SET(DEBUG_ALWAYS, 0, courseHeadingError);
             // captureFactor adjusts distance/heading sensitivity balance when closing in on course line.
             // Closing distance threashold based on speed and an assumed 1 second response time.
@@ -460,7 +460,7 @@ static void updatePositionHeadingController_FW(timeUs_t currentTimeUs, timeDelta
      * Calculate NAV heading error
      * Units are centidegrees
      */
-    navHeadingError = wrap_18000(virtualTargetBearing - posControl.actualState.yaw);
+    navHeadingError = wrap_18000(virtualTargetBearing - posControl.actualState.cog);    // CR87
 
     // Forced turn direction
     // If heading error is close to 180 deg we initiate forced turn and only disable it when heading error goes below 90 deg
@@ -489,8 +489,8 @@ static void updatePositionHeadingController_FW(timeUs_t currentTimeUs, timeDelta
     // Only allow PID integrator to shrink if error is decreasing over time
     const pidControllerFlags_e pidFlags = PID_DTERM_FROM_ERROR | (errorIsDecreasing ? PID_SHRINK_INTEGRATOR : 0);
 
-    // Input error in (deg*100), output roll angle (deg*100)
-    float rollAdjustment = navPidApply2(&posControl.pids.fw_nav, posControl.actualState.yaw + navHeadingError, posControl.actualState.yaw, US2S(deltaMicros),
+    // Input error in (deg*100), output roll angle (deg*100)    // CR87
+    float rollAdjustment = navPidApply2(&posControl.pids.fw_nav, posControl.actualState.cog + navHeadingError, posControl.actualState.cog, US2S(deltaMicros),
                                        -DEGREES_TO_CENTIDEGREES(navConfig()->fw.max_bank_angle),
                                         DEGREES_TO_CENTIDEGREES(navConfig()->fw.max_bank_angle),
                                         pidFlags);
@@ -812,7 +812,7 @@ void calculateFixedWingInitialHoldPosition(fpVector3_t * pos)
 
 void resetFixedWingHeadingController(void)
 {
-    updateHeadingHoldTarget(CENTIDEGREES_TO_DEGREES(posControl.actualState.yaw));
+    updateHeadingHoldTarget(CENTIDEGREES_TO_DEGREES(posControl.actualState.cog));   // CR87
 }
 
 void applyFixedWingNavigationController(navigationFSMStateFlags_t navStateFlags, timeUs_t currentTimeUs)
