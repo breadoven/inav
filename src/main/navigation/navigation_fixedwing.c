@@ -311,7 +311,7 @@ static void calculateVirtualPositionTarget_FW(float trackingPeriod)
         // velXY provides additional turn initiation distance based on an assumed 1 second delayed turn response time
         if (posControl.wpDistance < (posControl.actualState.velXY + navLoiterRadius * turnStartFactor)) {
             if (navConfig()->fw.wp_turn_smoothing == WP_TURN_SMOOTHING_ON) {
-                int32_t loiterCenterBearing = wrap_36000(((wrap_18000(posControl.activeWaypoint.nextTurnAngle - 18000)) / 2) + posControl.activeWaypoint.yaw + 18000);
+                int32_t loiterCenterBearing = wrap_36000(((wrap_18000(posControl.activeWaypoint.nextTurnAngle - 18000)) / 2) + posControl.activeWaypoint.bearing + 18000);  // CR87
                 loiterCenterPos.x = posControl.activeWaypoint.pos.x + navLoiterRadius * cos_approx(CENTIDEGREES_TO_RADIANS(loiterCenterBearing));
                 loiterCenterPos.y = posControl.activeWaypoint.pos.y + navLoiterRadius * sin_approx(CENTIDEGREES_TO_RADIANS(loiterCenterBearing));
 
@@ -421,13 +421,13 @@ static void updatePositionHeadingController_FW(timeUs_t currentTimeUs, timeDelta
     /* If waypoint tracking enabled force craft toward waypoint course line and hold on course line */
     if (navConfig()->fw.wp_tracking_accuracy && isWaypointNavTrackingActive() && !needToCalculateCircularLoiter) {
         // courseVirtualCorrection initially used to determine current position relative to course line for later use
-        int32_t courseVirtualCorrection = wrap_18000(posControl.activeWaypoint.yaw - virtualTargetBearing);
+        int32_t courseVirtualCorrection = wrap_18000(posControl.activeWaypoint.bearing - virtualTargetBearing);     // CR87
         navCrossTrackError = ABS(posControl.wpDistance * sin_approx(CENTIDEGREES_TO_RADIANS(courseVirtualCorrection)));
         DEBUG_SET(DEBUG_ALWAYS, 3, navCrossTrackError);
 
         // tracking only active when certain distance and heading conditions are met
         if ((ABS(wrap_18000(virtualTargetBearing - posControl.actualState.cog)) < 9000 || posControl.wpDistance < 1000.0f) && navCrossTrackError > 200) {  // CR87
-            int32_t courseHeadingError = wrap_18000(posControl.activeWaypoint.yaw - posControl.actualState.cog);    // CR87  check yaw name activeWP.yaw ?
+            int32_t courseHeadingError = wrap_18000(posControl.activeWaypoint.bearing - posControl.actualState.cog);    // CR87
             // DEBUG_SET(DEBUG_ALWAYS, 0, courseHeadingError);
             // captureFactor adjusts distance/heading sensitivity balance when closing in on course line.
             // Closing distance threashold based on speed and an assumed 1 second response time.
@@ -446,7 +446,7 @@ static void updatePositionHeadingController_FW(timeUs_t currentTimeUs, timeDelta
 
             // final courseVirtualCorrection value
             courseVirtualCorrection = DEGREES_TO_CENTIDEGREES(navConfig()->fw.wp_tracking_max_angle) * courseCorrectionFactor;
-            virtualTargetBearing = wrap_36000(posControl.activeWaypoint.yaw - courseVirtualCorrection);
+            virtualTargetBearing = wrap_36000(posControl.activeWaypoint.bearing - courseVirtualCorrection); // CR87
 
             // DEBUG_SET(DEBUG_ALWAYS, 1, courseCorrectionFactor * 100);
             DEBUG_SET(DEBUG_ALWAYS, 7, courseVirtualCorrection);
@@ -454,7 +454,7 @@ static void updatePositionHeadingController_FW(timeUs_t currentTimeUs, timeDelta
         // DEBUG_SET(DEBUG_ALWAYS, 5, virtualTargetBearing);
     }
     // DEBUG_SET(DEBUG_ALWAYS, 2, gpsSol.groundCourse / 10);
-    DEBUG_SET(DEBUG_ALWAYS, 6, posControl.activeWaypoint.yaw);
+    DEBUG_SET(DEBUG_ALWAYS, 6, posControl.activeWaypoint.bearing);
 
     /*
      * Calculate NAV heading error

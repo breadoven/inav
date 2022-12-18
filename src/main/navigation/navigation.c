@@ -1349,7 +1349,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_TRACKBACK(navigatio
             return NAV_FSM_EVENT_SWITCH_TO_NAV_STATE_RTH_INITIALIZE;    // procede to home after final trackback point
         }
 
-        if (isWaypointReached(&posControl.activeWaypoint.pos, &posControl.activeWaypoint.yaw)) {
+        if (isWaypointReached(&posControl.activeWaypoint.pos, &posControl.activeWaypoint.bearing)) {    // CR87
             posControl.activeRthTBPointIndex--;
 
             if (posControl.rthTBWrapAroundCounter > -1 && posControl.activeRthTBPointIndex < 0) {
@@ -1385,7 +1385,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_HEAD_HOME(navigatio
 
         if (isWaypointReached(tmpHomePos, 0)) {
             // Successfully reached position target - update XYZ-position
-            setDesiredPosition(tmpHomePos, posControl.rthState.homePosition.yaw, NAV_POS_UPDATE_XY | NAV_POS_UPDATE_Z | NAV_POS_UPDATE_HEADING);
+            setDesiredPosition(tmpHomePos, posControl.rthState.homePosition.heading, NAV_POS_UPDATE_XY | NAV_POS_UPDATE_Z | NAV_POS_UPDATE_HEADING);  // CR87
             return NAV_FSM_EVENT_SUCCESS;       // NAV_STATE_RTH_HOVER_PRIOR_TO_LANDING
         } else {
             setDesiredPosition(tmpHomePos, 0, NAV_POS_UPDATE_Z | NAV_POS_UPDATE_XY);
@@ -1415,13 +1415,13 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_HOVER_PRIOR_TO_LAND
 
     // If position ok OR within valid timeout - continue
     // Wait until target heading is reached for MR (with 15 deg margin for error), or continue for Fixed Wing
-    if ((ABS(wrap_18000(posControl.rthState.homePosition.yaw - posControl.actualState.yaw)) < DEGREES_TO_CENTIDEGREES(15)) || STATE(FIXED_WING_LEGACY)) {
-        resetLandingDetector();     // force reset landing detector just in case
+    if ((ABS(wrap_18000(posControl.rthState.homePosition.heading - posControl.actualState.yaw)) < DEGREES_TO_CENTIDEGREES(15)) || STATE(FIXED_WING_LEGACY)) {
+        resetLandingDetector();     // force reset landing detector just in case   // CR87
         updateClimbRateToAltitudeController(0, ROC_TO_ALT_RESET);
         return navigationRTHAllowsLanding() ? NAV_FSM_EVENT_SUCCESS : NAV_FSM_EVENT_SWITCH_TO_RTH_HOVER_ABOVE_HOME; // success = land
     } else {
         fpVector3_t * tmpHomePos = rthGetHomeTargetPosition(RTH_HOME_ENROUTE_FINAL);
-        setDesiredPosition(tmpHomePos, posControl.rthState.homePosition.yaw, NAV_POS_UPDATE_XY | NAV_POS_UPDATE_Z | NAV_POS_UPDATE_HEADING);
+        setDesiredPosition(tmpHomePos, posControl.rthState.homePosition.heading, NAV_POS_UPDATE_XY | NAV_POS_UPDATE_Z | NAV_POS_UPDATE_HEADING);  // CR87
         return NAV_FSM_EVENT_NONE;
     }
 }
@@ -1636,7 +1636,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_WAYPOINT_IN_PROGRESS(na
             case NAV_WP_ACTION_HOLD_TIME:
             case NAV_WP_ACTION_WAYPOINT:
             case NAV_WP_ACTION_LAND:
-                if (isWaypointReached(&posControl.activeWaypoint.pos, &posControl.activeWaypoint.yaw)) {
+                if (isWaypointReached(&posControl.activeWaypoint.pos, &posControl.activeWaypoint.bearing)) {    // CR87
                     return NAV_FSM_EVENT_SUCCESS;   // will switch to NAV_STATE_WAYPOINT_REACHED
                 }
                 else {
@@ -2178,13 +2178,14 @@ void updateActualHeading(bool headingValid, int32_t newHeading, int32_t newGroun
         // to the home point.
         int32_t fakeToRealYawOffset = newHeading - posControl.actualState.yaw;
 
-        posControl.rthState.homePosition.yaw += fakeToRealYawOffset;
-        if (posControl.rthState.homePosition.yaw < 0) {
-            posControl.rthState.homePosition.yaw += DEGREES_TO_CENTIDEGREES(360);
-        }
-        if (posControl.rthState.homePosition.yaw >= DEGREES_TO_CENTIDEGREES(360)) {
-            posControl.rthState.homePosition.yaw -= DEGREES_TO_CENTIDEGREES(360);
-        }
+        posControl.rthState.homePosition.heading += fakeToRealYawOffset;    // CR87
+        posControl.rthState.homePosition.heading = wrap_36000(posControl.rthState.homePosition.heading);    // CR87
+        // if (posControl.rthState.homePosition.yaw < 0) {
+            // posControl.rthState.homePosition.yaw += DEGREES_TO_CENTIDEGREES(360);
+        // }
+        // if (posControl.rthState.homePosition.yaw >= DEGREES_TO_CENTIDEGREES(360)) {
+            // posControl.rthState.homePosition.yaw -= DEGREES_TO_CENTIDEGREES(360);
+        // }
         posControl.rthState.homeFlags |= NAV_HOME_VALID_HEADING;
     }
     /* Use course over ground for fixed wing nav "heading" when valid - TODO use heading and cog as specifically required for FW and MR */
@@ -2465,7 +2466,7 @@ void setHomePosition(const fpVector3_t * pos, int32_t yaw, navSetWaypointFlags_t
     // Heading
     if ((useMask & NAV_POS_UPDATE_HEADING) != 0) {
         // Heading
-        posControl.rthState.homePosition.yaw = yaw;
+        posControl.rthState.homePosition.heading = yaw; // CR87
         if (homeFlags & NAV_HOME_VALID_HEADING) {
             posControl.rthState.homeFlags |= NAV_HOME_VALID_HEADING;
         } else {
@@ -3427,18 +3428,18 @@ static void mapWaypointToLocalPosition(fpVector3_t * localPos, const navWaypoint
 
 static void calculateAndSetActiveWaypointToLocalPosition(const fpVector3_t * pos)
 {
-    // Calculate bearing towards waypoint and store it in waypoint yaw parameter (this will further be used to detect missed waypoints)
+    // Calculate bearing towards waypoint and store it in waypoint bearing parameter (this will further be used to detect missed waypoints)  // CR87
     if (isWaypointNavTrackingActive() && !(posControl.activeWaypoint.pos.x == pos->x && posControl.activeWaypoint.pos.y == pos->y)) {
-        posControl.activeWaypoint.yaw = calculateBearingBetweenLocalPositions(&posControl.activeWaypoint.pos, pos);
+        posControl.activeWaypoint.bearing = calculateBearingBetweenLocalPositions(&posControl.activeWaypoint.pos, pos);     // CR87
     } else {
-        posControl.activeWaypoint.yaw = calculateBearingToDestination(pos);
+        posControl.activeWaypoint.bearing = calculateBearingToDestination(pos); // CR87
     }
     posControl.activeWaypoint.nextTurnAngle = -1;     // no turn angle set (-1), will be set by WP mode as required
 
     posControl.activeWaypoint.pos = *pos;
 
     // Set desired position to next waypoint (XYZ-controller)
-    setDesiredPosition(&posControl.activeWaypoint.pos, posControl.activeWaypoint.yaw, NAV_POS_UPDATE_XY | NAV_POS_UPDATE_Z | NAV_POS_UPDATE_HEADING);
+    setDesiredPosition(&posControl.activeWaypoint.pos, posControl.activeWaypoint.bearing, NAV_POS_UPDATE_XY | NAV_POS_UPDATE_Z | NAV_POS_UPDATE_HEADING); // CR87
 }
 
 geoAltitudeConversionMode_e waypointMissionAltConvMode(geoAltitudeDatumFlag_e datumFlag)
@@ -3456,7 +3457,7 @@ static void calculateAndSetActiveWaypoint(const navWaypoint_t * waypoint)
         fpVector3_t posNextWp;
         if (getLocalPosNextWaypoint(&posNextWp)) {
             int32_t bearingToNextWp = calculateBearingBetweenLocalPositions(&posControl.activeWaypoint.pos, &posNextWp);
-            posControl.activeWaypoint.nextTurnAngle = wrap_18000(bearingToNextWp - posControl.activeWaypoint.yaw);
+            posControl.activeWaypoint.nextTurnAngle = wrap_18000(bearingToNextWp - posControl.activeWaypoint.bearing);  // CR87
         }
     }
 }
@@ -4435,7 +4436,7 @@ bool abortLaunchAllowed(void)
 
 int32_t navigationGetHomeHeading(void)
 {
-    return posControl.rthState.homePosition.yaw;
+    return posControl.rthState.homePosition.heading;    // CR87
 }
 
 // returns m/s

@@ -398,7 +398,8 @@ extern radar_pois_t radar_pois[RADAR_MAX_POIS];
 
 typedef struct {
     fpVector3_t pos;
-    int32_t     yaw;                // centidegrees
+    int32_t     heading;            // centidegrees     CR87
+    int32_t     bearing;            // centidegrees     CR87
     int32_t     nextTurnAngle;      // centidegrees
 } navWaypointPosition_t;
 
