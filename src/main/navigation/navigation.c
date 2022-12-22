@@ -257,9 +257,9 @@ static void clearJumpCounters(void);
 static void calculateAndSetActiveWaypoint(const navWaypoint_t * waypoint);
 static void calculateAndSetActiveWaypointToLocalPosition(const fpVector3_t * pos);
 void calculateInitialHoldPosition(fpVector3_t * pos);
-void calculateFarAwayTarget(fpVector3_t * farAwayPos, int32_t yaw, int32_t distance);
-void calculateNewCruiseTarget(fpVector3_t * origin, int32_t yaw, int32_t distance);
-static bool isWaypointReached(const fpVector3_t * waypointPos, const int32_t * waypointYaw);
+void calculateFarAwayTarget(fpVector3_t * farAwayPos, int32_t bearing, int32_t distance);   // CR87
+// void calculateNewCruiseTarget(fpVector3_t * origin, int32_t course, int32_t distance);      // CR80 // CR87
+static bool isWaypointReached(const fpVector3_t * waypointPos, const int32_t * waypointBearing);    // CR87
 bool isWaypointAltitudeReached(void);
 static void mapWaypointToLocalPosition(fpVector3_t * localPos, const navWaypoint_t * waypoint, geoAltitudeConversionMode_e altConv);
 static navigationFSMEvent_t nextForNonGeoStates(void);
@@ -1798,8 +1798,6 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_EMERGENCY_LANDING_INITI
 
     // CR82
     if ((posControl.flags.estPosStatus >= EST_USABLE)) {
-        // fpVector3_t targetHoldPos;
-        // calculateInitialHoldPosition(&targetHoldPos);
         resetPositionController();
         setDesiredPosition(&navGetCurrentActualPositionAndVelocity()->pos, 0, NAV_POS_UPDATE_XY);
     }
@@ -2246,22 +2244,22 @@ int32_t calculateBearingBetweenLocalPositions(const fpVector3_t * startPos, cons
 }
 
 // NOT USED ANYWHERE !!!
-bool navCalculatePathToDestination(navDestinationPath_t *result, const fpVector3_t * destinationPos)
-{
-    if (posControl.flags.estPosStatus == EST_NONE ||
-        posControl.flags.estHeadingStatus == EST_NONE) {
+// bool navCalculatePathToDestination(navDestinationPath_t *result, const fpVector3_t * destinationPos)
+// {
+    // if (posControl.flags.estPosStatus == EST_NONE ||
+        // posControl.flags.estHeadingStatus == EST_NONE) {
 
-        return false;
-    }
+        // return false;
+    // }
 
-    const navEstimatedPosVel_t *posvel = navGetCurrentActualPositionAndVelocity();
-    const float deltaX = destinationPos->x - posvel->pos.x;
-    const float deltaY = destinationPos->y - posvel->pos.y;
+    // const navEstimatedPosVel_t *posvel = navGetCurrentActualPositionAndVelocity();
+    // const float deltaX = destinationPos->x - posvel->pos.x;
+    // const float deltaY = destinationPos->y - posvel->pos.y;
 
-    result->distance = calculateDistanceFromDelta(deltaX, deltaY);
-    result->bearing = calculateBearingFromDelta(deltaX, deltaY);
-    return true;
-}
+    // result->distance = calculateDistanceFromDelta(deltaX, deltaY);
+    // result->bearing = calculateBearingFromDelta(deltaX, deltaY);
+    // return true;
+// }
 
 static bool getLocalPosNextWaypoint(fpVector3_t * nextWpPos)
 {
@@ -2296,7 +2294,7 @@ static bool getLocalPosNextWaypoint(fpVector3_t * nextWpPos)
  * Check if waypoint is/was reached.
  * waypointYaw stores initial bearing to waypoint
  *-----------------------------------------------------------*/
-static bool isWaypointReached(const fpVector3_t * waypointPos, const int32_t * waypointYaw)
+static bool isWaypointReached(const fpVector3_t * waypointPos, const int32_t * waypointBearing)     // CR87
 {
     posControl.wpDistance = calculateDistanceToDestination(waypointPos);
 
@@ -2315,7 +2313,7 @@ static bool isWaypointReached(const fpVector3_t * waypointPos, const int32_t * w
         // Check if waypoint was missed based on bearing to WP exceeding 100 degrees relative to waypoint Yaw
         // Same method for turn smoothing option but relative bearing set at 60 degrees
         uint16_t relativeBearing = posControl.flags.wpTurnSmoothingActive ? 6000 : 10000;
-        if (ABS(wrap_18000(calculateBearingToDestination(waypointPos) - *waypointYaw)) > relativeBearing) {
+        if (ABS(wrap_18000(calculateBearingToDestination(waypointPos) - *waypointBearing)) > relativeBearing) {     // CR87
             return true;
         }
     }
@@ -2440,7 +2438,7 @@ bool validateRTHSanityChecker(void)
 /*-----------------------------------------------------------
  * Reset home position to current position
  *-----------------------------------------------------------*/
-void setHomePosition(const fpVector3_t * pos, int32_t yaw, navSetWaypointFlags_t useMask, navigationHomeFlags_t homeFlags)
+void setHomePosition(const fpVector3_t * pos, int32_t heading, navSetWaypointFlags_t useMask, navigationHomeFlags_t homeFlags)  // CR87
 {
     // XY-position
     if ((useMask & NAV_POS_UPDATE_XY) != 0) {
@@ -2466,7 +2464,7 @@ void setHomePosition(const fpVector3_t * pos, int32_t yaw, navSetWaypointFlags_t
     // Heading
     if ((useMask & NAV_POS_UPDATE_HEADING) != 0) {
         // Heading
-        posControl.rthState.homePosition.heading = yaw; // CR87
+        posControl.rthState.homePosition.heading = heading; // CR87
         if (homeFlags & NAV_HOME_VALID_HEADING) {
             posControl.rthState.homeFlags |= NAV_HOME_VALID_HEADING;
         } else {
@@ -2848,20 +2846,20 @@ void setDesiredPosition(const fpVector3_t * pos, int32_t yaw, navSetWaypointFlag
     }
 }
 
-void calculateFarAwayTarget(fpVector3_t * farAwayPos, int32_t yaw, int32_t distance)
+void calculateFarAwayTarget(fpVector3_t * farAwayPos, int32_t bearing, int32_t distance)    // CR87
 {
-    farAwayPos->x = navGetCurrentActualPositionAndVelocity()->pos.x + distance * cos_approx(CENTIDEGREES_TO_RADIANS(yaw));
-    farAwayPos->y = navGetCurrentActualPositionAndVelocity()->pos.y + distance * sin_approx(CENTIDEGREES_TO_RADIANS(yaw));
+    farAwayPos->x = navGetCurrentActualPositionAndVelocity()->pos.x + distance * cos_approx(CENTIDEGREES_TO_RADIANS(bearing));  // CR87
+    farAwayPos->y = navGetCurrentActualPositionAndVelocity()->pos.y + distance * sin_approx(CENTIDEGREES_TO_RADIANS(bearing));  // CR87
     farAwayPos->z = navGetCurrentActualPositionAndVelocity()->pos.z;
 }
-
-void calculateNewCruiseTarget(fpVector3_t * origin, int32_t yaw, int32_t distance)
-{
-    origin->x = origin->x + distance * cos_approx(CENTIDEGREES_TO_RADIANS(yaw));
-    origin->y = origin->y + distance * sin_approx(CENTIDEGREES_TO_RADIANS(yaw));
-    origin->z = origin->z;
-}
-
+// CR80
+// void calculateNewCruiseTarget(fpVector3_t * origin, int32_t course, int32_t distance)    // CR87
+// {
+    // origin->x = origin->x + distance * cos_approx(CENTIDEGREES_TO_RADIANS(course));  // CR87
+    // origin->y = origin->y + distance * sin_approx(CENTIDEGREES_TO_RADIANS(course));  // CR87
+    // origin->z = origin->z;
+// }
+// CR80
 /*-----------------------------------------------------------
  * NAV land detector
  *-----------------------------------------------------------*/
@@ -3663,7 +3661,7 @@ static bool isManualEmergencyLandingActivated(void)
     timeMs_t currentTimeMs = millis();
 
     if (timeout && currentTimeMs > timeout) {
-        timeout += 500;
+        timeout += 1000;
         counter -= counter ? 1 : 0;
         if (!counter) {
             timeout = 0;
@@ -3671,7 +3669,7 @@ static bool isManualEmergencyLandingActivated(void)
     }
     if (IS_RC_MODE_ACTIVE(BOXNAVPOSHOLD)) {
         if (!timeout) {
-            timeout = currentTimeMs + 2000;
+            timeout = currentTimeMs + 4000;
         }
         counter += toggle;
         toggle = false;
@@ -3679,7 +3677,7 @@ static bool isManualEmergencyLandingActivated(void)
         toggle = true;
     }
 
-    return counter >= 5;
+    return counter >= 4;
 }
 // CR82
 static navigationFSMEvent_t selectNavEventFromBoxModeInput(bool launchBypass)   // CR6
