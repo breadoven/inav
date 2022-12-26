@@ -432,7 +432,7 @@ static void updatePositionHeadingController_FW(timeUs_t currentTimeUs, timeDelta
             // captureFactor adjusts distance/heading sensitivity balance when closing in on course line.
             // Closing distance threashold based on speed and an assumed 1 second response time.
             float captureFactor = navCrossTrackError < posControl.actualState.velXY ? constrainf(2.0f - ABS(courseHeadingError) / 500.0f, 0.0f, 2.0f) : 1.0f;
-            DEBUG_SET(DEBUG_ALWAYS, 2, captureFactor * 100);
+            // DEBUG_SET(DEBUG_ALWAYS, 2, captureFactor * 100);
             // bias between reducing distance to course line and aligning with course heading adjusted by waypoint_tracking_accuracy
             // initial courseCorrectionFactor based on distance to course line
             float courseCorrectionFactor = constrainf(captureFactor * navCrossTrackError / (1000.0f * navConfig()->fw.wp_tracking_accuracy), 0.0f, 1.0f);

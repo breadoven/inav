@@ -74,6 +74,7 @@ FILE_COMPILE_FOR_SPEED
 #include "msp/msp_serial.h"
 
 #include "navigation/navigation.h"
+#include "navigation/navigation_private.h"  // CR88 test only do properly
 
 #include "rx/rx.h"
 #include "rx/msp.h"
@@ -417,7 +418,61 @@ static void processPilotAndFailSafeActions(float dT)
         }
     }
 }
+// CR88
+void multiModeApply(multi_mode_e selectedItem)
+{
+    switch (selectedItem) {
+    case MODE_NONE:
+        return;
+    case EMERG_LAND:
+        posControl.flags.manualEmergLandActive = true;
+        break;
+    case MODE2:
+        break;
+    case MULTI_MODE_COUNT:
+        return;
+    }
+}
 
+bool multiModeSelection(multi_mode_e * returnItem)
+{
+    static timeMs_t startTimer;
+    static timeMs_t selectTimer;
+    static int8_t selectedItem = 0;
+    static bool toggle = true;
+    const timeMs_t currentTime = millis();
+    DEBUG_SET(DEBUG_ALWAYS, 1, currentTime - selectTimer);
+    DEBUG_SET(DEBUG_ALWAYS, 2, startTimer);
+
+    if (IS_RC_MODE_ACTIVE(BOXMULTISELECT)) {
+        if (selectTimer) {
+            if (currentTime - selectTimer > 3000) {
+                *returnItem = selectedItem;
+                multiModeApply(selectedItem);
+                selectTimer = 0;
+                selectedItem = 0;
+                return true;
+            }
+        } else if (toggle) {
+            selectedItem++;
+            selectedItem = selectedItem == MULTI_MODE_COUNT ? 1 : selectedItem;
+            selectTimer = currentTime;
+        }
+        startTimer = currentTime;
+        toggle = false;
+    } else if (startTimer) {
+        selectTimer = 0;
+        if (currentTime - startTimer > 2000) {
+            startTimer = 0;
+            selectedItem = 0;
+        }
+        toggle = true;
+    }
+
+    *returnItem = selectedItem;
+    return false;
+}
+// CR88
 void disarm(disarmReason_t disarmReason)
 {
     if (ARMING_FLAG(ARMED)) {
@@ -485,8 +540,8 @@ bool emergencyArmingUpdate(bool armingSwitchIsOn)   // CR86
         toggle = true;
     }
 
-    DEBUG_SET(DEBUG_ALWAYS, 0, counter);
-    DEBUG_SET(DEBUG_ALWAYS, 1, timeout - currentTimeMs);
+    // DEBUG_SET(DEBUG_ALWAYS, 0, counter);
+    // DEBUG_SET(DEBUG_ALWAYS, 1, timeout - currentTimeMs);
 
     return counter >= EMERGENCY_ARMING_MIN_ARM_COUNT;
 }

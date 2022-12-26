@@ -33,8 +33,16 @@ typedef enum disarmReason_e {
     DISARM_LANDING      = 8,
     DISARM_REASON_COUNT
 } disarmReason_t;
+// cr88
+typedef enum {
+    MODE_NONE,
+    EMERG_LAND,
+    MODE2,
+    MULTI_MODE_COUNT,
+} multi_mode_e;
 
-
+bool multiModeSelection(multi_mode_e * returnItem);
+// cr88
 void handleInflightCalibrationStickPosition(void);
 
 void disarm(disarmReason_t disarmReason);
