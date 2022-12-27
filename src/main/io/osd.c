@@ -3307,6 +3307,7 @@ static bool osdDrawSingleElement(uint8_t item)
     case OSD_STATUS:
         {
             // CR88
+            displayWrite(osdDisplayPort, elemPosX, elemPosY, "          ");
             elemAttr = osdGetMultiFunctionMessage(buff);
             break;
             // CR88
@@ -4747,7 +4748,7 @@ void resetFailMask(void)
 textAttributes_t osdGetMultiFunctionMessage(char *buff)
 {
     textAttributes_t elemAttr = TEXT_ATTRIBUTES_NONE;
-    strcpy(buff, "          ");
+    // strcpy(buff, "          ");
 
     multi_function_e multiFuncItem;
     multiFunctionSelection(&multiFuncItem);
@@ -4770,12 +4771,14 @@ textAttributes_t osdGetMultiFunctionMessage(char *buff)
         return elemAttr;
     }
 
-    // const char *messages[5];
-    // unsigned messageCount = 0;
-    // static osd_fail_status_flags_e failMask;
+/* WARNINGS --------------------------------------------- */
+    const char *messages[5];
+    char messageBuf[11];
+    const char *message = NULL;
+    uint8_t messageCount = 0;
     static timeMs_t newWarningStartTime = 0;
-    static uint8_t warningCount = 0;
     timeMs_t currentTimeMs = millis();
+
     if (!STATE(GPS_FIX)) {
         // strcpy(buff, "NO GPS FIX");
         // if (getHwGPSStatus() == HW_SENSOR_UNAVAILABLE || getHwGPSStatus() == HW_SENSOR_UNHEALTHY) {
@@ -4783,19 +4786,39 @@ textAttributes_t osdGetMultiFunctionMessage(char *buff)
         // }
         if (!(failMask & OSD_FAIL_GPS)) {
             newWarningStartTime = currentTimeMs;
-            warningCount++;
             failMask |= OSD_FAIL_GPS;
         }
         if (currentTimeMs - newWarningStartTime < 10000) {
-            strcpy(buff, "GPS FAILED");
-            TEXT_ATTRIBUTES_ADD_BLINK(elemAttr);
-            return elemAttr;
+            strcpy(messageBuf, "GPS FAILED");
+            messages[messageCount++] = messageBuf;
         }
     } else if (failMask & OSD_FAIL_GPS) {
         newWarningStartTime = 0;
-        warningCount--;
         failMask ^= OSD_FAIL_GPS;
     }
+
+    if (osdGetAltitude() > 10000) {
+        if (!(failMask & OSD_FAIL_2)) {
+            newWarningStartTime = currentTimeMs;
+            failMask |= OSD_FAIL_2;
+        }
+        if (currentTimeMs - newWarningStartTime < 10000) {
+            strcpy(messageBuf, "ALT EXCEED");
+            messages[messageCount++] = messageBuf;
+        }
+    } else if (failMask & OSD_FAIL_2) {
+        newWarningStartTime = 0;
+        failMask ^= OSD_FAIL_2;
+    }
+
+    if (messageCount) {
+        message = messages[OSD_ALTERNATING_CHOICES(1500, messageCount)];
+        strcpy(buff, message);
+        TEXT_ATTRIBUTES_ADD_BLINK(elemAttr);
+        return elemAttr;
+    }
+
+/* WARNINGS --------------------------------------------- */
 
     if (STATE(MULTIROTOR)) {
         if (compassGpsCogError == 270) {
@@ -4807,6 +4830,7 @@ textAttributes_t osdGetMultiFunctionMessage(char *buff)
         }
     }
 
+    uint8_t warningCount = BITCOUNT(failMask);
     if (warningCount && currentTimeMs - newWarningStartTime > 10000) {
         // buff[0] = SYM_AZIMUTH;
         tfp_sprintf(buff, "%u!", warningCount);
