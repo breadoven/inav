@@ -35,19 +35,20 @@ typedef enum disarmReason_e {
 } disarmReason_t;
 // cr88
 typedef enum {
-    MODE_NONE,
-    EMERG_LAND,
-    MODE2,
-    MULTI_MODE_COUNT,
-} multi_mode_e;
+    MULTI_FUNC_NONE,
+    MULTI_FUNC_1,
+    MULTI_FUNC_2,
+    MULTI_FUNC_3,
+    MULTI_FUNC_COUNT,
+} multi_function_e;
 
-bool multiModeSelection(multi_mode_e * returnItem);
+bool multiFunctionSelection(multi_function_e * returnItem);
 // cr88
 void handleInflightCalibrationStickPosition(void);
 
 void disarm(disarmReason_t disarmReason);
 timeUs_t getLastDisarmTimeUs(void);
-void tryArm(void);
+void tryArm(bool forceArm);     // CR88
 disarmReason_t getDisarmReason(void);
 
 bool emergencyArmingUpdate(bool armingSwitchIsOn);  // CR86

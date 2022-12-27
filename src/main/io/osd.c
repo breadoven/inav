@@ -180,7 +180,8 @@ static uint8_t armState;
 static uint8_t statsPagesCheck = 0;
 
 static bool infocycleSuspended = false;     // CR22
-textAttributes_t osdGetMultiModeMessage(char *buff);     // CR88
+textAttributes_t osdGetMultiFunctionMessage(char *buff);     // CR88
+static osd_fail_status_flags_e failMask = 0;    // CR88
 
 typedef struct osdMapData_s {
     uint32_t scale;
@@ -3302,55 +3303,13 @@ static bool osdDrawSingleElement(uint8_t item)
             return true;
         }
     // CR22
-    // CR27
+    // CR27 + CR88
     case OSD_STATUS:
         {
             // CR88
-            elemAttr = osdGetMultiModeMessage(buff);
+            elemAttr = osdGetMultiFunctionMessage(buff);
             break;
-
-            // multi_mode_e selectedItem;
-            // multiModeSelection(&selectedItem);
-    // DEBUG_SET(DEBUG_ALWAYS, 0, millis());
-            // // if (selectedItem) {
-                // switch (selectedItem) {
-                // case MODE_NONE:
-                    // strcpy(buff, "          ");
-                    // break;
-                // case EMERG_LAND:
-                    // strcpy(buff, "EMERG LAND");
-                    // break;
-                // case MODE2:
-                    // strcpy(buff, "MODE2     ");
-                    // break;
-                // case MULTI_MODE_COUNT:
-                    // break;
-                // }
-
-                // displayWrite(osdDisplayPort, elemPosX, elemPosY, buff);
-                // return true;
-            // // }
-
-            // if (!STATE(GPS_FIX)) {
-                // if (getHwGPSStatus() == HW_SENSOR_UNAVAILABLE || getHwGPSStatus() == HW_SENSOR_UNHEALTHY) {
-                    // strcpy(buff, "GPS FAILED");
-                // }
-                // TEXT_ATTRIBUTES_ADD_BLINK(elemAttr);
-                // break;
-            // }
-            // // CR88
-            // if (STATE(MULTIROTOR)) {
-                // if (compassGpsCogError == 270) {
-                    // strcpy(buff, "NO GPS COG ");
-                // } else if (compassGpsCogError == 260) {
-                    // strcpy(buff, "MOVE DRONE!");
-                // } else {
-                    // tfp_sprintf(buff, "MAG ERR %3u", compassGpsCogError);
-                // }
-                // displayWrite(osdDisplayPort, elemPosX, elemPosY, buff);
-                // // return true;
-            // }
-            // return true;
+            // CR88
         }
     // CR27
 
@@ -4780,31 +4739,65 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
     return elemAttr;
 }
 // CR88
-textAttributes_t osdGetMultiModeMessage(char *buff)
+void resetFailMask(void)
+{
+    failMask = 0;
+}
+
+textAttributes_t osdGetMultiFunctionMessage(char *buff)
 {
     textAttributes_t elemAttr = TEXT_ATTRIBUTES_NONE;
     strcpy(buff, "          ");
 
-    multi_mode_e selectedItem;
-    multiModeSelection(&selectedItem);
-    if (selectedItem) {
-        switch (selectedItem) {
-        case MODE_NONE:
-        case EMERG_LAND:
+    multi_function_e multiFuncItem;
+    multiFunctionSelection(&multiFuncItem);
+    if (multiFuncItem) {
+        switch (multiFuncItem) {
+        case MULTI_FUNC_NONE:
+        case MULTI_FUNC_1:
             strcpy(buff, "EMERG LAND");
             break;
-        case MODE2:
-            strcpy(buff, "MODE2     ");
+        case MULTI_FUNC_2:
+            strcpy(buff, "EMERG ARM ");
             break;
-        case MULTI_MODE_COUNT:
+        case MULTI_FUNC_3:
+            strcpy(buff, "SHOW FAILS");
+            break;
+        case MULTI_FUNC_COUNT:
             break;
         }
-    } else if (!STATE(GPS_FIX)) {
-        if (getHwGPSStatus() == HW_SENSOR_UNAVAILABLE || getHwGPSStatus() == HW_SENSOR_UNHEALTHY) {
+
+        return elemAttr;
+    }
+
+    // const char *messages[5];
+    // unsigned messageCount = 0;
+    // static osd_fail_status_flags_e failMask;
+    static timeMs_t newWarningStartTime = 0;
+    static uint8_t warningCount = 0;
+    timeMs_t currentTimeMs = millis();
+    if (!STATE(GPS_FIX)) {
+        // strcpy(buff, "NO GPS FIX");
+        // if (getHwGPSStatus() == HW_SENSOR_UNAVAILABLE || getHwGPSStatus() == HW_SENSOR_UNHEALTHY) {
+            // strcpy(buff, "GPS FAILED");
+        // }
+        if (!(failMask & OSD_FAIL_GPS)) {
+            newWarningStartTime = currentTimeMs;
+            warningCount++;
+            failMask |= OSD_FAIL_GPS;
+        }
+        if (currentTimeMs - newWarningStartTime < 10000) {
             strcpy(buff, "GPS FAILED");
+            TEXT_ATTRIBUTES_ADD_BLINK(elemAttr);
+            return elemAttr;
         }
-        TEXT_ATTRIBUTES_ADD_BLINK(elemAttr);
-    } else if (STATE(MULTIROTOR)) {
+    } else if (failMask & OSD_FAIL_GPS) {
+        newWarningStartTime = 0;
+        warningCount--;
+        failMask ^= OSD_FAIL_GPS;
+    }
+
+    if (STATE(MULTIROTOR)) {
         if (compassGpsCogError == 270) {
             strcpy(buff, "NO GPS COG ");
         } else if (compassGpsCogError == 260) {
@@ -4812,6 +4805,11 @@ textAttributes_t osdGetMultiModeMessage(char *buff)
         } else {
             tfp_sprintf(buff, "MAG ERR %3u", compassGpsCogError);
         }
+    }
+
+    if (warningCount && currentTimeMs - newWarningStartTime > 10000) {
+        // buff[0] = SYM_AZIMUTH;
+        tfp_sprintf(buff, "%u!", warningCount);
     }
 
     return elemAttr;

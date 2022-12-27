@@ -215,14 +215,14 @@ void processRcStickPositions(bool isThrottleLow)
     if (STATE(AIRPLANE) && feature(FEATURE_MOTOR_STOP) && armingConfig()->fixed_wing_auto_arm) {
         // Auto arm on throttle when using fixedwing and motorstop
         if (!isThrottleLow) {
-            tryArm();
+            tryArm(false);   // CR88
             return;
         }
     }
     else {
         if (armingSwitchIsActive) {
             rcDisarmTimeMs = currentTimeMs;
-            tryArm();
+            tryArm(false);  // CR88
         } else {
             emergencyArmingUpdate(armingSwitchIsActive); // CR86
             // Disarming via ARM BOX

@@ -331,7 +331,15 @@ typedef enum {
     OSD_CRSF_LQ_TYPE2,
     OSD_CRSF_LQ_TYPE3
 } osd_crsf_lq_format_e;
+// CR88
+typedef enum {
+    OSD_FAIL_NONE   = 0,
+    OSD_FAIL_GPS    = 1 << 0,
+    OSD_FAIL_2      = 1 << 1,
+} osd_fail_status_flags_e;
 
+void resetFailMask(void);
+// CR88
 typedef struct osdLayoutsConfig_s {
     // Layouts
     uint16_t item_pos[OSD_LAYOUT_COUNT][OSD_ITEM_COUNT];
