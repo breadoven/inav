@@ -181,7 +181,7 @@ static uint8_t statsPagesCheck = 0;
 
 static bool infocycleSuspended = false;     // CR22
 textAttributes_t osdGetMultiFunctionMessage(char *buff);     // CR88
-static osd_fail_status_flags_e failMask = 0;    // CR88
+static osd_warnings_status_flags_e osdWarningsMask = 0;    // CR88
 
 typedef struct osdMapData_s {
     uint32_t scale;
@@ -4740,15 +4740,15 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
     return elemAttr;
 }
 // CR88
-void resetFailMask(void)
+void resetOsdWarningMask(void)
 {
-    failMask = 0;
+    osdWarningsMask = 0;
 }
 
 textAttributes_t osdGetMultiFunctionMessage(char *buff)
 {
     textAttributes_t elemAttr = TEXT_ATTRIBUTES_NONE;
-    // strcpy(buff, "          ");
+    uint8_t warningCount = BITCOUNT(osdWarningsMask);
 
     multi_function_e multiFuncItem;
     multiFunctionSelection(&multiFuncItem);
@@ -4756,14 +4756,13 @@ textAttributes_t osdGetMultiFunctionMessage(char *buff)
         switch (multiFuncItem) {
         case MULTI_FUNC_NONE:
         case MULTI_FUNC_1:
-            strcpy(buff, "EMERG LAND");
+            strcpy(buff, warningCount ? "WARNINGS  " : "0 WARNINGS");
             break;
         case MULTI_FUNC_2:
-            strcpy(buff, "EMERG ARM ");
+            strcpy(buff, "EMERG LAND");
             break;
         case MULTI_FUNC_3:
-            strcpy(buff, "SHOW FAILS");
-            break;
+            strcpy(buff, "EMERG ARM ");
         case MULTI_FUNC_COUNT:
             break;
         }
@@ -4772,52 +4771,50 @@ textAttributes_t osdGetMultiFunctionMessage(char *buff)
     }
 
 /* WARNINGS --------------------------------------------- */
+    static timeMs_t newWarningStartTime = 0;
     const char *messages[5];
-    char messageBuf[11];
     const char *message = NULL;
     uint8_t messageCount = 0;
-    static timeMs_t newWarningStartTime = 0;
-    timeMs_t currentTimeMs = millis();
+    const timeMs_t currentTimeMs = millis();
 
     if (!STATE(GPS_FIX)) {
-        // strcpy(buff, "NO GPS FIX");
-        // if (getHwGPSStatus() == HW_SENSOR_UNAVAILABLE || getHwGPSStatus() == HW_SENSOR_UNHEALTHY) {
-            // strcpy(buff, "GPS FAILED");
-        // }
-        if (!(failMask & OSD_FAIL_GPS)) {
+        bool gpsFailed = getHwGPSStatus() == HW_SENSOR_UNAVAILABLE || getHwGPSStatus() == HW_SENSOR_UNHEALTHY;
+
+        if (!(osdWarningsMask & OSD_WARN_GPS)) {
             newWarningStartTime = currentTimeMs;
-            failMask |= OSD_FAIL_GPS;
+            osdWarningsMask |= OSD_WARN_GPS;
         }
         if (currentTimeMs - newWarningStartTime < 10000) {
-            strcpy(messageBuf, "GPS FAILED");
-            messages[messageCount++] = messageBuf;
+            messages[messageCount++] = gpsFailed ? "GPS FAILED" : "NO GPS FIX";
         }
-    } else if (failMask & OSD_FAIL_GPS) {
-        newWarningStartTime = 0;
-        failMask ^= OSD_FAIL_GPS;
+    } else if (osdWarningsMask & OSD_WARN_GPS) {
+        // newWarningStartTime = 0;
+        osdWarningsMask ^= OSD_WARN_GPS;
     }
 
     if (osdGetAltitude() > 10000) {
-        if (!(failMask & OSD_FAIL_2)) {
+        if (!(osdWarningsMask & OSD_WARN_2)) {
             newWarningStartTime = currentTimeMs;
-            failMask |= OSD_FAIL_2;
+            osdWarningsMask |= OSD_WARN_2;
         }
         if (currentTimeMs - newWarningStartTime < 10000) {
-            strcpy(messageBuf, "ALT EXCEED");
-            messages[messageCount++] = messageBuf;
+            messages[messageCount++] = "ALT EXCEED";
         }
-    } else if (failMask & OSD_FAIL_2) {
-        newWarningStartTime = 0;
-        failMask ^= OSD_FAIL_2;
+    } else if (osdWarningsMask & OSD_WARN_2) {
+        // newWarningStartTime = 0;
+        osdWarningsMask ^= OSD_WARN_2;
     }
 
     if (messageCount) {
-        message = messages[OSD_ALTERNATING_CHOICES(1500, messageCount)];
+        message = messages[OSD_ALTERNATING_CHOICES(2000, messageCount)];
         strcpy(buff, message);
         TEXT_ATTRIBUTES_ADD_BLINK(elemAttr);
         return elemAttr;
+    } else if (warningCount) {
+        // buff[0] = SYM_AZIMUTH;
+        tfp_sprintf(buff, "%u!", warningCount);
+        return elemAttr;
     }
-
 /* WARNINGS --------------------------------------------- */
 
     if (STATE(MULTIROTOR)) {
@@ -4828,12 +4825,6 @@ textAttributes_t osdGetMultiFunctionMessage(char *buff)
         } else {
             tfp_sprintf(buff, "MAG ERR %3u", compassGpsCogError);
         }
-    }
-
-    uint8_t warningCount = BITCOUNT(failMask);
-    if (warningCount && currentTimeMs - newWarningStartTime > 10000) {
-        // buff[0] = SYM_AZIMUTH;
-        tfp_sprintf(buff, "%u!", warningCount);
     }
 
     return elemAttr;

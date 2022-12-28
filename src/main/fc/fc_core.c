@@ -75,7 +75,6 @@ FILE_COMPILE_FOR_SPEED
 #include "msp/msp_serial.h"
 
 #include "navigation/navigation.h"
-#include "navigation/navigation_private.h"  // CR88 test only do properly
 
 #include "rx/rx.h"
 #include "rx/msp.h"
@@ -838,19 +837,18 @@ void multiFunctionApply(multi_function_e selectedItem)
     switch (selectedItem) {
     case MULTI_FUNC_NONE:
         return;
-    case MULTI_FUNC_1:   // trigger manual emergency landing
-        posControl.flags.manualEmergLandActive = true;
+    case MULTI_FUNC_1:
+        resetOsdWarningMask();
         break;
-    case MULTI_FUNC_2:
+    case MULTI_FUNC_2:  // trigger manual emergency landing
+        activateManualEmergencyLanding();
+        break;
+    case MULTI_FUNC_3:
         if (emergencyArmingCanOverrideArmingDisabled()) {
             tryArm(true);
         }
-        break;
-    case MULTI_FUNC_3:
-        resetFailMask();
-        break;
     case MULTI_FUNC_COUNT:
-        return;
+        break;
     }
 }
 

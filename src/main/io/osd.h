@@ -333,12 +333,12 @@ typedef enum {
 } osd_crsf_lq_format_e;
 // CR88
 typedef enum {
-    OSD_FAIL_NONE   = 0,
-    OSD_FAIL_GPS    = 1 << 0,
-    OSD_FAIL_2      = 1 << 1,
-} osd_fail_status_flags_e;
+    OSD_WARN_NONE   = 0,
+    OSD_WARN_GPS    = 1 << 0,
+    OSD_WARN_2      = 1 << 1,
+} osd_warnings_status_flags_e;
 
-void resetFailMask(void);
+void resetOsdWarningMask(void);
 // CR88
 typedef struct osdLayoutsConfig_s {
     // Layouts

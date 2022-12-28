@@ -3680,6 +3680,12 @@ static bool isManualEmergencyLandingActivated(void)
     return counter >= 4;
 }
 // CR82
+// CR88
+void activateManualEmergencyLanding(void)
+{
+    posControl.flags.manualEmergLandActive = true;
+}
+// CR88
 static navigationFSMEvent_t selectNavEventFromBoxModeInput(bool launchBypass)   // CR6
 {
 	// General use debugs
