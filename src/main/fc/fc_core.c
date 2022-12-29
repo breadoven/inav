@@ -70,7 +70,6 @@ FILE_COMPILE_FOR_SPEED
 #include "io/statusindicator.h"
 #include "io/asyncfatfs/asyncfatfs.h"
 #include "io/piniobox.h"
-// #include "io/osd.h"     // CR88
 
 #include "msp/msp_serial.h"
 
@@ -358,7 +357,7 @@ static void updateArmingStatus(void)
     }
 }
 
-bool emergencyArmingCanOverrideArmingDisabled(void)     // CR88
+static bool emergencyArmingCanOverrideArmingDisabled(void)
 {
     uint32_t armingPrevention = armingFlags & ARMING_DISABLED_ALL_FLAGS;
     armingPrevention &= ~ARMING_DISABLED_EMERGENCY_OVERRIDE;
@@ -367,7 +366,7 @@ bool emergencyArmingCanOverrideArmingDisabled(void)     // CR88
 
 static bool emergencyArmingIsEnabled(void)
 {
-    return emergencyArmingUpdate(IS_RC_MODE_ACTIVE(BOXARM)) && emergencyArmingCanOverrideArmingDisabled();  // CR86
+    return emergencyArmingUpdate(IS_RC_MODE_ACTIVE(BOXARM), false) && emergencyArmingCanOverrideArmingDisabled();  // CR86 + CR88
 }
 
 static void processPilotAndFailSafeActions(float dT)
@@ -459,7 +458,7 @@ disarmReason_t getDisarmReason(void)
     return lastDisarmReason;
 }
 
-bool emergencyArmingUpdate(bool armingSwitchIsOn)   // CR86
+bool emergencyArmingUpdate(bool armingSwitchIsOn, bool forceArm)   // CR86 + CR88
 {
     if (ARMING_FLAG(ARMED)) return false;
 
@@ -485,11 +484,15 @@ bool emergencyArmingUpdate(bool armingSwitchIsOn)   // CR86
     } else {
         toggle = true;
     }
-
-    // DEBUG_SET(DEBUG_ALWAYS, 0, counter);
-    // DEBUG_SET(DEBUG_ALWAYS, 1, timeout - currentTimeMs);
-
+    // CR88
+    if (forceArm) {
+        counter = EMERGENCY_ARMING_MIN_ARM_COUNT + 1;
+    }
+    // CR88
+    DEBUG_SET(DEBUG_ALWAYS, 0, counter);
+    DEBUG_SET(DEBUG_ALWAYS, 1, timeout - currentTimeMs);
     return counter >= EMERGENCY_ARMING_MIN_ARM_COUNT;
+    // CR86
 }
 
 #define TELEMETRY_FUNCTION_MASK (FUNCTION_TELEMETRY_FRSKY | FUNCTION_TELEMETRY_HOTT | FUNCTION_TELEMETRY_SMARTPORT | FUNCTION_TELEMETRY_LTM | FUNCTION_TELEMETRY_MAVLINK | FUNCTION_TELEMETRY_IBUS)
@@ -502,7 +505,7 @@ void releaseSharedTelemetryPorts(void) {
     }
 }
 
-void tryArm(bool forceArm) // CR88
+void tryArm(void)
 {
     updateArmingStatus();
     // CR86
@@ -522,10 +525,7 @@ void tryArm(bool forceArm) // CR88
 #endif
     // CR86
 #ifdef USE_PROGRAMMING_FRAMEWORK
-    if (!isArmingDisabled() ||
-        emergencyArmingIsEnabled() || forceArm || // CR88
-        LOGIC_CONDITION_GLOBAL_FLAG(LOGIC_CONDITION_GLOBAL_FLAG_OVERRIDE_ARMING_SAFETY)
-    ) {
+    if (!isArmingDisabled() || emergencyArmingIsEnabled() || LOGIC_CONDITION_GLOBAL_FLAG(LOGIC_CONDITION_GLOBAL_FLAG_OVERRIDE_ARMING_SAFETY)) {
 #else
     if (!isArmingDisabled() || emergencyArmingIsEnabled()) {
 #endif
@@ -831,66 +831,7 @@ static float calculateThrottleTiltCompensationFactor(uint8_t throttleTiltCompens
         return 1.0f;
     }
 }
-// CR88
-// void multiFunctionApply(multi_function_e selectedItem)
-// {
-    // switch (selectedItem) {
-    // case MULTI_FUNC_NONE:
-        // return;
-    // case MULTI_FUNC_1:
-        // resetOsdWarningMask();
-        // break;
-    // case MULTI_FUNC_2:  // trigger manual emergency landing
-        // activateManualEmergencyLanding();
-        // break;
-    // case MULTI_FUNC_3:
-        // if (emergencyArmingCanOverrideArmingDisabled()) {
-            // tryArm(true);
-        // }
-    // case MULTI_FUNC_COUNT:
-        // break;
-    // }
-// }
 
-// bool multiFunctionSelection(multi_function_e * returnItem)
-// {
-    // static timeMs_t startTimer;
-    // static timeMs_t selectTimer;
-    // static int8_t selectedItem = 0;
-    // static bool toggle = true;
-    // const timeMs_t currentTime = millis();
-    // DEBUG_SET(DEBUG_ALWAYS, 1, currentTime - selectTimer);
-    // DEBUG_SET(DEBUG_ALWAYS, 2, startTimer);
-
-    // if (IS_RC_MODE_ACTIVE(BOXMULTISELECT)) {
-        // if (selectTimer) {
-            // if (currentTime - selectTimer > 3000) {
-                // *returnItem = selectedItem;
-                // multiFunctionApply(selectedItem);
-                // selectTimer = 0;
-                // selectedItem = 0;
-                // return true;
-            // }
-        // } else if (toggle) {
-            // selectedItem++;
-            // selectedItem = selectedItem == MULTI_FUNC_COUNT ? 1 : selectedItem;
-            // selectTimer = currentTime;
-        // }
-        // startTimer = currentTime;
-        // toggle = false;
-    // } else if (startTimer) {
-        // selectTimer = 0;
-        // if (currentTime - startTimer > 2000) {
-            // startTimer = 0;
-            // selectedItem = 0;
-        // }
-        // toggle = true;
-    // }
-
-    // *returnItem = selectedItem;
-    // return false;
-// }
-// CR88
 void taskMainPidLoop(timeUs_t currentTimeUs)
 {
     cycleTime = getTaskDeltaTime(TASK_SELF);

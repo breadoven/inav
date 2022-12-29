@@ -48,9 +48,7 @@ static void multiFunctionApply(multi_function_e selectedItem)
         activateManualEmergencyLanding();
         break;
     case MULTI_FUNC_3:
-        if (emergencyArmingCanOverrideArmingDisabled()) {
-            tryArm(true);
-        }
+        emergencyArmingUpdate(true, true);
     case MULTI_FUNC_COUNT:
         break;
     }
@@ -63,10 +61,10 @@ bool multiFunctionSelection(multi_function_e * returnItem)
     static int8_t selectedItem = 0;
     static bool toggle = true;
     const timeMs_t currentTime = millis();
-    DEBUG_SET(DEBUG_ALWAYS, 1, currentTime - selectTimer);
-    DEBUG_SET(DEBUG_ALWAYS, 2, startTimer);
+    // DEBUG_SET(DEBUG_ALWAYS, 1, currentTime - selectTimer);
+    // DEBUG_SET(DEBUG_ALWAYS, 2, startTimer);
 
-    if (IS_RC_MODE_ACTIVE(BOXMULTISELECT)) {
+    if (IS_RC_MODE_ACTIVE(BOXMULTIFUNCTION)) {
         if (selectTimer) {
             if (currentTime - selectTimer > 3000) {
                 *returnItem = selectedItem;

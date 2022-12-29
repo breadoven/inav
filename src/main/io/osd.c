@@ -4729,7 +4729,7 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
             } else if (message == invertedInfoMessage) {
                 TEXT_ATTRIBUTES_ADD_INVERTED(elemAttr);
             }
-            // We're shoing either failsafePhaseMessage or
+            // We're showing either failsafePhaseMessage or
             // navStateMessage. Don't BLINK here since
             // having this text available might be crucial
             // during a lost aircraft recovery and blinking
@@ -4792,11 +4792,9 @@ textAttributes_t osdGetMultiFunctionMessage(char *buff)
     }
 
 /* WARNINGS --------------------------------------------- */
-    // static timeMs_t newWarningStartTime = 0;
     const char *messages[5];
     const char *message = NULL;
     uint8_t messageCount = 0;
-    // const timeMs_t currentTimeMs = millis();
 
     if (checkOsdWarning(!STATE(GPS_FIX), OSD_WARN_GPS)) {
         bool gpsFailed = getHwGPSStatus() == HW_SENSOR_UNAVAILABLE || getHwGPSStatus() == HW_SENSOR_UNHEALTHY;
@@ -4805,34 +4803,6 @@ textAttributes_t osdGetMultiFunctionMessage(char *buff)
     if (checkOsdWarning(osdGetAltitude() > 10000, OSD_WARN_2)) {
         messages[messageCount++] = "ALT EXCEED";
     }
-
-    // if (!STATE(GPS_FIX)) {
-        // bool gpsFailed = getHwGPSStatus() == HW_SENSOR_UNAVAILABLE || getHwGPSStatus() == HW_SENSOR_UNHEALTHY;
-
-        // if (!(osdWarningsMask & OSD_WARN_GPS)) {
-            // newWarningStartTime = currentTimeMs;
-            // osdWarningsMask |= OSD_WARN_GPS;
-        // }
-        // if (currentTimeMs - newWarningStartTime < 10000) {
-            // messages[messageCount++] = gpsFailed ? "GPS FAILED" : "NO GPS FIX";
-        // }
-    // } else if (osdWarningsMask & OSD_WARN_GPS) {
-        // // newWarningStartTime = 0;
-        // osdWarningsMask ^= OSD_WARN_GPS;
-    // }
-
-    // if (osdGetAltitude() > 10000) {
-        // if (!(osdWarningsMask & OSD_WARN_2)) {
-            // newWarningStartTime = currentTimeMs;
-            // osdWarningsMask |= OSD_WARN_2;
-        // }
-        // if (currentTimeMs - newWarningStartTime < 10000) {
-            // messages[messageCount++] = "ALT EXCEED";
-        // }
-    // } else if (osdWarningsMask & OSD_WARN_2) {
-        // // newWarningStartTime = 0;
-        // osdWarningsMask ^= OSD_WARN_2;
-    // }
 
     if (messageCount) {
         message = messages[OSD_ALTERNATING_CHOICES(2000, messageCount)];
