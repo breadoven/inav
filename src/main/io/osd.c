@@ -76,6 +76,7 @@ FILE_COMPILE_FOR_SPEED
 #include "fc/controlrate_profile.h"
 #include "fc/fc_core.h"
 #include "fc/fc_tasks.h"
+#include "fc/multifunction.h"   // CR88
 #include "fc/rc_adjustments.h"
 #include "fc/rc_controls.h"
 #include "fc/rc_modes.h"
@@ -4745,6 +4746,26 @@ void resetOsdWarningMask(void)
     osdWarningsMask = 0;
 }
 
+bool checkOsdWarning(bool condition, osd_warnings_status_flags_e warningType)
+{
+    static timeMs_t newWarningStartTime = 0;
+    const timeMs_t currentTimeMs = millis();
+
+    if (condition) {
+        if (!(osdWarningsMask & warningType)) {
+            newWarningStartTime = currentTimeMs;
+            osdWarningsMask |= warningType;
+        }
+        if (currentTimeMs - newWarningStartTime < 10000) {
+            return true;
+        }
+    } else if (osdWarningsMask & warningType) {
+        osdWarningsMask ^= warningType;
+    }
+
+    return false;
+}
+
 textAttributes_t osdGetMultiFunctionMessage(char *buff)
 {
     textAttributes_t elemAttr = TEXT_ATTRIBUTES_NONE;
@@ -4771,39 +4792,47 @@ textAttributes_t osdGetMultiFunctionMessage(char *buff)
     }
 
 /* WARNINGS --------------------------------------------- */
-    static timeMs_t newWarningStartTime = 0;
+    // static timeMs_t newWarningStartTime = 0;
     const char *messages[5];
     const char *message = NULL;
     uint8_t messageCount = 0;
-    const timeMs_t currentTimeMs = millis();
+    // const timeMs_t currentTimeMs = millis();
 
-    if (!STATE(GPS_FIX)) {
+    if (checkOsdWarning(!STATE(GPS_FIX), OSD_WARN_GPS)) {
         bool gpsFailed = getHwGPSStatus() == HW_SENSOR_UNAVAILABLE || getHwGPSStatus() == HW_SENSOR_UNHEALTHY;
-
-        if (!(osdWarningsMask & OSD_WARN_GPS)) {
-            newWarningStartTime = currentTimeMs;
-            osdWarningsMask |= OSD_WARN_GPS;
-        }
-        if (currentTimeMs - newWarningStartTime < 10000) {
-            messages[messageCount++] = gpsFailed ? "GPS FAILED" : "NO GPS FIX";
-        }
-    } else if (osdWarningsMask & OSD_WARN_GPS) {
-        // newWarningStartTime = 0;
-        osdWarningsMask ^= OSD_WARN_GPS;
+        messages[messageCount++] = gpsFailed ? "GPS FAILED" : "NO GPS FIX";
+    }
+    if (checkOsdWarning(osdGetAltitude() > 10000, OSD_WARN_2)) {
+        messages[messageCount++] = "ALT EXCEED";
     }
 
-    if (osdGetAltitude() > 10000) {
-        if (!(osdWarningsMask & OSD_WARN_2)) {
-            newWarningStartTime = currentTimeMs;
-            osdWarningsMask |= OSD_WARN_2;
-        }
-        if (currentTimeMs - newWarningStartTime < 10000) {
-            messages[messageCount++] = "ALT EXCEED";
-        }
-    } else if (osdWarningsMask & OSD_WARN_2) {
-        // newWarningStartTime = 0;
-        osdWarningsMask ^= OSD_WARN_2;
-    }
+    // if (!STATE(GPS_FIX)) {
+        // bool gpsFailed = getHwGPSStatus() == HW_SENSOR_UNAVAILABLE || getHwGPSStatus() == HW_SENSOR_UNHEALTHY;
+
+        // if (!(osdWarningsMask & OSD_WARN_GPS)) {
+            // newWarningStartTime = currentTimeMs;
+            // osdWarningsMask |= OSD_WARN_GPS;
+        // }
+        // if (currentTimeMs - newWarningStartTime < 10000) {
+            // messages[messageCount++] = gpsFailed ? "GPS FAILED" : "NO GPS FIX";
+        // }
+    // } else if (osdWarningsMask & OSD_WARN_GPS) {
+        // // newWarningStartTime = 0;
+        // osdWarningsMask ^= OSD_WARN_GPS;
+    // }
+
+    // if (osdGetAltitude() > 10000) {
+        // if (!(osdWarningsMask & OSD_WARN_2)) {
+            // newWarningStartTime = currentTimeMs;
+            // osdWarningsMask |= OSD_WARN_2;
+        // }
+        // if (currentTimeMs - newWarningStartTime < 10000) {
+            // messages[messageCount++] = "ALT EXCEED";
+        // }
+    // } else if (osdWarningsMask & OSD_WARN_2) {
+        // // newWarningStartTime = 0;
+        // osdWarningsMask ^= OSD_WARN_2;
+    // }
 
     if (messageCount) {
         message = messages[OSD_ALTERNATING_CHOICES(2000, messageCount)];

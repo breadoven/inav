@@ -70,7 +70,7 @@ FILE_COMPILE_FOR_SPEED
 #include "io/statusindicator.h"
 #include "io/asyncfatfs/asyncfatfs.h"
 #include "io/piniobox.h"
-#include "io/osd.h"     // CR88
+// #include "io/osd.h"     // CR88
 
 #include "msp/msp_serial.h"
 
@@ -358,7 +358,7 @@ static void updateArmingStatus(void)
     }
 }
 
-static bool emergencyArmingCanOverrideArmingDisabled(void)
+bool emergencyArmingCanOverrideArmingDisabled(void)     // CR88
 {
     uint32_t armingPrevention = armingFlags & ARMING_DISABLED_ALL_FLAGS;
     armingPrevention &= ~ARMING_DISABLED_EMERGENCY_OVERRIDE;
@@ -832,64 +832,64 @@ static float calculateThrottleTiltCompensationFactor(uint8_t throttleTiltCompens
     }
 }
 // CR88
-void multiFunctionApply(multi_function_e selectedItem)
-{
-    switch (selectedItem) {
-    case MULTI_FUNC_NONE:
-        return;
-    case MULTI_FUNC_1:
-        resetOsdWarningMask();
-        break;
-    case MULTI_FUNC_2:  // trigger manual emergency landing
-        activateManualEmergencyLanding();
-        break;
-    case MULTI_FUNC_3:
-        if (emergencyArmingCanOverrideArmingDisabled()) {
-            tryArm(true);
-        }
-    case MULTI_FUNC_COUNT:
-        break;
-    }
-}
+// void multiFunctionApply(multi_function_e selectedItem)
+// {
+    // switch (selectedItem) {
+    // case MULTI_FUNC_NONE:
+        // return;
+    // case MULTI_FUNC_1:
+        // resetOsdWarningMask();
+        // break;
+    // case MULTI_FUNC_2:  // trigger manual emergency landing
+        // activateManualEmergencyLanding();
+        // break;
+    // case MULTI_FUNC_3:
+        // if (emergencyArmingCanOverrideArmingDisabled()) {
+            // tryArm(true);
+        // }
+    // case MULTI_FUNC_COUNT:
+        // break;
+    // }
+// }
 
-bool multiFunctionSelection(multi_function_e * returnItem)
-{
-    static timeMs_t startTimer;
-    static timeMs_t selectTimer;
-    static int8_t selectedItem = 0;
-    static bool toggle = true;
-    const timeMs_t currentTime = millis();
-    DEBUG_SET(DEBUG_ALWAYS, 1, currentTime - selectTimer);
-    DEBUG_SET(DEBUG_ALWAYS, 2, startTimer);
+// bool multiFunctionSelection(multi_function_e * returnItem)
+// {
+    // static timeMs_t startTimer;
+    // static timeMs_t selectTimer;
+    // static int8_t selectedItem = 0;
+    // static bool toggle = true;
+    // const timeMs_t currentTime = millis();
+    // DEBUG_SET(DEBUG_ALWAYS, 1, currentTime - selectTimer);
+    // DEBUG_SET(DEBUG_ALWAYS, 2, startTimer);
 
-    if (IS_RC_MODE_ACTIVE(BOXMULTISELECT)) {
-        if (selectTimer) {
-            if (currentTime - selectTimer > 3000) {
-                *returnItem = selectedItem;
-                multiFunctionApply(selectedItem);
-                selectTimer = 0;
-                selectedItem = 0;
-                return true;
-            }
-        } else if (toggle) {
-            selectedItem++;
-            selectedItem = selectedItem == MULTI_FUNC_COUNT ? 1 : selectedItem;
-            selectTimer = currentTime;
-        }
-        startTimer = currentTime;
-        toggle = false;
-    } else if (startTimer) {
-        selectTimer = 0;
-        if (currentTime - startTimer > 2000) {
-            startTimer = 0;
-            selectedItem = 0;
-        }
-        toggle = true;
-    }
+    // if (IS_RC_MODE_ACTIVE(BOXMULTISELECT)) {
+        // if (selectTimer) {
+            // if (currentTime - selectTimer > 3000) {
+                // *returnItem = selectedItem;
+                // multiFunctionApply(selectedItem);
+                // selectTimer = 0;
+                // selectedItem = 0;
+                // return true;
+            // }
+        // } else if (toggle) {
+            // selectedItem++;
+            // selectedItem = selectedItem == MULTI_FUNC_COUNT ? 1 : selectedItem;
+            // selectTimer = currentTime;
+        // }
+        // startTimer = currentTime;
+        // toggle = false;
+    // } else if (startTimer) {
+        // selectTimer = 0;
+        // if (currentTime - startTimer > 2000) {
+            // startTimer = 0;
+            // selectedItem = 0;
+        // }
+        // toggle = true;
+    // }
 
-    *returnItem = selectedItem;
-    return false;
-}
+    // *returnItem = selectedItem;
+    // return false;
+// }
 // CR88
 void taskMainPidLoop(timeUs_t currentTimeUs)
 {

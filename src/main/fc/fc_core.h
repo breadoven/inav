@@ -33,17 +33,17 @@ typedef enum disarmReason_e {
     DISARM_LANDING      = 8,
     DISARM_REASON_COUNT
 } disarmReason_t;
-// cr88
-typedef enum {
-    MULTI_FUNC_NONE,
-    MULTI_FUNC_1,
-    MULTI_FUNC_2,
-    MULTI_FUNC_3,
-    MULTI_FUNC_COUNT,
-} multi_function_e;
+// // cr88
+// typedef enum {
+    // MULTI_FUNC_NONE,
+    // MULTI_FUNC_1,
+    // MULTI_FUNC_2,
+    // MULTI_FUNC_3,
+    // MULTI_FUNC_COUNT,
+// } multi_function_e;
 
-bool multiFunctionSelection(multi_function_e * returnItem);
-// cr88
+// bool multiFunctionSelection(multi_function_e * returnItem);
+// // cr88
 void handleInflightCalibrationStickPosition(void);
 
 void disarm(disarmReason_t disarmReason);
@@ -52,6 +52,7 @@ void tryArm(bool forceArm);     // CR88
 disarmReason_t getDisarmReason(void);
 
 bool emergencyArmingUpdate(bool armingSwitchIsOn);  // CR86
+bool emergencyArmingCanOverrideArmingDisabled(void); // CR88
 
 bool areSensorsCalibrating(void);
 float getFlightTime(void);
