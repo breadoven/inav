@@ -1690,7 +1690,7 @@ static void cliDelay(char* cmdLine) {
         cliPrintLine("CLI delay deactivated");
         return;
     }
-    
+
     ms = fastA2I(cmdLine);
     if (ms) {
         cliDelayMs = ms;
@@ -1699,7 +1699,7 @@ static void cliDelay(char* cmdLine) {
     } else {
         cliShowParseError();
     }
-    
+
 }
 
 static void printServo(uint8_t dumpMask, const servoParam_t *servoParam, const servoParam_t *defaultServoParam)
@@ -2288,7 +2288,7 @@ static void cliFlashInfo(char *cmdline)
     UNUSED(cmdline);
 
     const flashGeometry_t *layout = flashGetGeometry();
-    
+
     if (layout->totalSize == 0) {
         cliPrintLine("Flash not available");
         return;
@@ -2323,12 +2323,12 @@ static void cliFlashErase(char *cmdline)
     UNUSED(cmdline);
 
     const flashGeometry_t *layout = flashGetGeometry();
-    
+
     if (layout->totalSize == 0) {
         cliPrintLine("Flash not available");
         return;
     }
-    
+
     cliPrintLine("Erasing...");
     flashfsEraseCompletely();
 
@@ -3778,7 +3778,7 @@ static void cliMsc(char *cmdline)
         cliPrintHashLine("restarting in mass storage mode");
         cliPrint("\r\nRebooting");
         bufWriterFlush(cliWriter);
-        delay(1000);
+        delay(2000);    // CR88
         waitForSerialPortToFinishTransmitting(cliPort);
         stopPwmAllMotors();
         systemResetRequest(RESET_MSC_REQUEST);

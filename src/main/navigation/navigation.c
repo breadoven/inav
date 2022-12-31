@@ -1816,7 +1816,15 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_EMERGENCY_LANDING_INITI
 static navigationFSMEvent_t navOnEnteringState_NAV_STATE_EMERGENCY_LANDING_IN_PROGRESS(navigationFSMState_t previousState)
 {
     UNUSED(previousState);
-
+    // CR82
+    // Reset target position if too far away for some reason, e.g. GPS recovered since start landing.
+    if (posControl.flags.estPosStatus >= EST_USABLE) {
+        float targetPosLimit = STATE(MULTIROTOR) ? 2000.0f : navConfig()->fw.loiter_radius * 2.0f;
+        if (calculateDistanceToDestination(&posControl.desiredState.pos) > targetPosLimit) {
+            setDesiredPosition(&navGetCurrentActualPositionAndVelocity()->pos, 0, NAV_POS_UPDATE_XY);
+        }
+    }
+    // CR82
     if (STATE(LANDING_DETECTED)) {
         return NAV_FSM_EVENT_SUCCESS;
     }
@@ -2949,9 +2957,9 @@ void updateClimbRateToAltitudeController(float desiredClimbRate, climbRateToAlti
         if (STATE(FIXED_WING_LEGACY)) {
             // Fixed wing climb rate controller is open-loop. We simply move the known altitude target
             float timeDelta = US2S(currentTimeUs - lastUpdateTimeUs);
+            static bool targetHoldActive = false;
 
             if (timeDelta <= HZ2S(MIN_POSITION_UPDATE_RATE_HZ) && desiredClimbRate) {
-                static bool targetHoldActive = false;
                 // Update target altitude only if actual altitude moving in same direction and lagging by < 5 m, otherwise hold target
                 if (navGetCurrentActualPositionAndVelocity()->vel.z * desiredClimbRate >= 0 && fabsf(posControl.desiredState.pos.z - altitudeToUse) < 500) {
                     posControl.desiredState.pos.z += desiredClimbRate * timeDelta;
@@ -2960,8 +2968,10 @@ void updateClimbRateToAltitudeController(float desiredClimbRate, climbRateToAlti
                     posControl.desiredState.pos.z = altitudeToUse + desiredClimbRate;
                     targetHoldActive = true;
                 }
-                // DEBUG_SET(DEBUG_ALWAYS, 0, desiredClimbRate);
+                // DEBUG_SET(DEBUG_ALWAYS, 0, targetHoldActive);
                 // DEBUG_SET(DEBUG_ALWAYS, 1, posControl.desiredState.pos.z);
+            } else {
+                targetHoldActive = false;
             }
         }
         else {
@@ -3670,7 +3680,7 @@ static bool isManualEmergencyLandingActivated(void)
     }
     if (IS_RC_MODE_ACTIVE(BOXNAVPOSHOLD)) {
         if (!timeout) {
-            timeout = currentTimeMs + 4000;
+            timeout = currentTimeMs + 3000;
         }
         counter += toggle;
         toggle = false;

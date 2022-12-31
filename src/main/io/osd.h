@@ -273,7 +273,7 @@ typedef enum {
     OSD_GROUND_COURSE, // 140
     OSD_CROSS_TRACK_ERROR,
     OSD_INFO_CYCLE, // 142  CR22
-    OSD_STATUS,     // 143  CR27
+    OSD_MULTI_FUNCTION,     // 143  CR27 CR88
     OSD_ITEM_COUNT // MUST BE LAST
 } osd_items_e;
 

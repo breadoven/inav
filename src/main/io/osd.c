@@ -3305,7 +3305,7 @@ static bool osdDrawSingleElement(uint8_t item)
         }
     // CR22
     // CR27 + CR88
-    case OSD_STATUS:
+    case OSD_MULTI_FUNCTION:
         {
             // CR88
             displayWrite(osdDisplayPort, elemPosX, elemPosY, "          ");
@@ -3722,7 +3722,7 @@ void pgResetFn_osdLayoutsConfig(osdLayoutsConfig_t *osdLayoutsConfig)
     osdLayoutsConfig->item_pos[0][OSD_GVAR_3] = OSD_POS(1, 4);
 
     osdLayoutsConfig->item_pos[0][OSD_INFO_CYCLE] = OSD_POS(1, 1);    // CR22
-    osdLayoutsConfig->item_pos[0][OSD_STATUS] = OSD_POS(1, 4);    // CR27
+    osdLayoutsConfig->item_pos[0][OSD_MULTI_FUNCTION] = OSD_POS(1, 4);    // CR27 CR88
 
     osdLayoutsConfig->item_pos[0][OSD_SWITCH_INDICATOR_0] = OSD_POS(2, 7);
     osdLayoutsConfig->item_pos[0][OSD_SWITCH_INDICATOR_1] = OSD_POS(2, 8);
@@ -4810,8 +4810,8 @@ textAttributes_t osdGetMultiFunctionMessage(char *buff)
         TEXT_ATTRIBUTES_ADD_BLINK(elemAttr);
         return elemAttr;
     } else if (warningCount) {
-        // buff[0] = SYM_AZIMUTH;
-        tfp_sprintf(buff, "%u!", warningCount);
+        buff[0] = SYM_ALERT;
+        tfp_sprintf(buff + 1, "%u", warningCount);
         return elemAttr;
     }
 /* WARNINGS --------------------------------------------- */
