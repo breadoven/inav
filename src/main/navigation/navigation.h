@@ -398,12 +398,12 @@ extern radar_pois_t radar_pois[RADAR_MAX_POIS];
 
 typedef struct {
     fpVector3_t pos;
-    int32_t     heading;            // centidegrees     CR87
-    int32_t     bearing;            // centidegrees     CR87
+    int32_t     heading;            // centidegrees
+    int32_t     bearing;            // centidegrees
     int32_t     nextTurnAngle;      // centidegrees
 } navWaypointPosition_t;
 
-typedef struct navDestinationPath_s {   // NOT USED ANYWHERE
+typedef struct navDestinationPath_s {   // NOT USED
     uint32_t distance; // meters * 100
     int32_t bearing; // deg * 100
 } navDestinationPath_t;
@@ -574,7 +574,7 @@ float geoCalculateMagDeclination(const gpsLocation_t * llh); // degrees units
 geoAltitudeConversionMode_e waypointMissionAltConvMode(geoAltitudeDatumFlag_e datumFlag);
 
 /* Distance/bearing calculation */
-bool navCalculatePathToDestination(navDestinationPath_t *result, const fpVector3_t * destinationPos);
+bool navCalculatePathToDestination(navDestinationPath_t *result, const fpVector3_t * destinationPos);   // NOT USED
 uint32_t distanceToFirstWP(void);
 
 /* Failsafe-forced RTH mode */
