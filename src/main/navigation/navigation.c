@@ -3679,7 +3679,7 @@ static bool isManualEmergencyLandingActivated(void)
         }
     }
     if (IS_RC_MODE_ACTIVE(BOXNAVPOSHOLD)) {
-        if (!timeout) {
+        if (!timeout && toggle) {
             timeout = currentTimeMs + 3000;
         }
         counter += toggle;

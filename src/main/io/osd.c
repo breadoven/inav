@@ -3304,16 +3304,14 @@ static bool osdDrawSingleElement(uint8_t item)
             return true;
         }
     // CR22
-    // CR27 + CR88
+    // CR88
     case OSD_MULTI_FUNCTION:
         {
-            // CR88
             displayWrite(osdDisplayPort, elemPosX, elemPosY, "          ");
             elemAttr = osdGetMultiFunctionMessage(buff);
             break;
-            // CR88
         }
-    // CR27
+    // CR88
 
 #ifdef USE_POWER_LIMITS
     case OSD_PLIMIT_REMAINING_BURST_TIME:
@@ -3398,6 +3396,9 @@ uint8_t osdIncElementIndex(uint8_t elementIndex)
             elementIndex = OSD_GPS_SPEED;
         }
         if (elementIndex == OSD_EFFICIENCY_MAH_PER_KM) {
+            elementIndex = OSD_BATTERY_REMAINING_PERCENT;
+        }
+        if (elementIndex == OSD_EFFICIENCY_WH_PER_KM) {
             elementIndex = OSD_TRIP_DIST;
         }
         if (elementIndex == OSD_REMAINING_FLIGHT_TIME_BEFORE_RTH) {
@@ -3416,11 +3417,14 @@ uint8_t osdIncElementIndex(uint8_t elementIndex)
 
     if (!feature(FEATURE_GPS)) {
         if (elementIndex == OSD_GPS_HDOP || elementIndex == OSD_TRIP_DIST || elementIndex == OSD_3D_SPEED || elementIndex == OSD_MISSION ||
-            elementIndex == OSD_AZIMUTH) {
+            elementIndex == OSD_AZIMUTH || elementIndex == OSD_BATTERY_REMAINING_CAPACITY) {
             elementIndex++;
         }
         if (elementIndex == OSD_HEADING_GRAPH && !sensors(SENSOR_MAG)) {
-            elementIndex = feature(FEATURE_CURRENT_METER) ? OSD_WH_DRAWN : OSD_ATTITUDE_PITCH;
+            elementIndex = feature(FEATURE_CURRENT_METER) ? OSD_WH_DRAWN : OSD_BATTERY_REMAINING_PERCENT;
+        }
+        if (elementIndex == OSD_EFFICIENCY_MAH_PER_KM) {
+            elementIndex = OSD_WH_DRAWN;
         }
         if (elementIndex == OSD_EFFICIENCY_WH_PER_KM) {
             elementIndex = OSD_ATTITUDE_PITCH;
@@ -3441,10 +3445,10 @@ uint8_t osdIncElementIndex(uint8_t elementIndex)
             elementIndex = OSD_AIR_MAX_SPEED;
         }
         if (elementIndex == OSD_GLIDE_RANGE) {
-            elementIndex = feature(FEATURE_CURRENT_METER) ? OSD_CLIMB_EFFICIENCY : OSD_ITEM_COUNT;
+            elementIndex = feature(FEATURE_CURRENT_METER) ? OSD_CLIMB_EFFICIENCY : OSD_MULTI_FUNCTION;  // CR88
         }
         if (elementIndex == OSD_NAV_WP_MULTI_MISSION_INDEX) {
-            elementIndex = OSD_ITEM_COUNT;
+            elementIndex = OSD_MULTI_FUNCTION;   // CR88
         }
     }
 
@@ -3722,7 +3726,7 @@ void pgResetFn_osdLayoutsConfig(osdLayoutsConfig_t *osdLayoutsConfig)
     osdLayoutsConfig->item_pos[0][OSD_GVAR_3] = OSD_POS(1, 4);
 
     osdLayoutsConfig->item_pos[0][OSD_INFO_CYCLE] = OSD_POS(1, 1);    // CR22
-    osdLayoutsConfig->item_pos[0][OSD_MULTI_FUNCTION] = OSD_POS(1, 4);    // CR27 CR88
+    osdLayoutsConfig->item_pos[0][OSD_MULTI_FUNCTION] = OSD_POS(1, 4);    // CR88
 
     osdLayoutsConfig->item_pos[0][OSD_SWITCH_INDICATOR_0] = OSD_POS(2, 7);
     osdLayoutsConfig->item_pos[0][OSD_SWITCH_INDICATOR_1] = OSD_POS(2, 8);
@@ -4815,7 +4819,7 @@ textAttributes_t osdGetMultiFunctionMessage(char *buff)
         return elemAttr;
     }
 /* WARNINGS --------------------------------------------- */
-
+    // CR27
     if (STATE(MULTIROTOR)) {
         if (compassGpsCogError == 270) {
             strcpy(buff, "NO GPS COG ");
@@ -4825,7 +4829,7 @@ textAttributes_t osdGetMultiFunctionMessage(char *buff)
             tfp_sprintf(buff, "MAG ERR %3u", compassGpsCogError);
         }
     }
-
+    // CR27
     return elemAttr;
 }
 // CR88

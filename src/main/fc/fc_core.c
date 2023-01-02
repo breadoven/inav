@@ -476,7 +476,7 @@ bool emergencyArmingUpdate(bool armingSwitchIsOn, bool forceArm)   // CR86 + CR8
     }
 
     if (armingSwitchIsOn) {
-        if (!timeout) {
+        if (!timeout && toggle) {
             timeout = currentTimeMs + EMERGENCY_ARMING_TIME_WINDOW_MS;
         }
         counter += toggle;
@@ -489,8 +489,8 @@ bool emergencyArmingUpdate(bool armingSwitchIsOn, bool forceArm)   // CR86 + CR8
         counter = EMERGENCY_ARMING_MIN_ARM_COUNT + 1;
     }
     // CR88
-    // DEBUG_SET(DEBUG_ALWAYS, 0, counter);
-    // DEBUG_SET(DEBUG_ALWAYS, 1, timeout - currentTimeMs);
+    DEBUG_SET(DEBUG_ALWAYS, 0, counter);
+    DEBUG_SET(DEBUG_ALWAYS, 1, timeout - currentTimeMs);
     return counter >= EMERGENCY_ARMING_MIN_ARM_COUNT;
     // CR86
 }
