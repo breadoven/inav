@@ -45,7 +45,7 @@ static void multiFunctionApply(multi_function_e selectedItem)
         resetOsdWarningMask();
         break;
     case MULTI_FUNC_2:  // trigger manual emergency landing
-        activateManualEmergencyLanding();
+        controlManualEmergencyLanding();
         break;
     case MULTI_FUNC_3:
         emergencyArmingUpdate(true, true);

@@ -4781,11 +4781,11 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
             }
         }
 
-#ifdef USE_DEV_TOOLS
-        if (systemConfig()->groundTestMode) {
-            messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_GRD_TEST_MODE);
-        }
-#endif
+// #ifdef USE_DEV_TOOLS
+        // if (systemConfig()->groundTestMode) {
+            // messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_GRD_TEST_MODE);
+        // }
+// #endif
         if (messageCount > 0) {
             message = messages[OSD_ALTERNATING_CHOICES(systemMessageCycleTime(messageCount, messages), messageCount)];
             if (message == failsafeInfoMessage) {
@@ -4844,13 +4844,13 @@ textAttributes_t osdGetMultiFunctionMessage(char *buff)
         switch (multiFuncItem) {
         case MULTI_FUNC_NONE:
         case MULTI_FUNC_1:
-            strcpy(buff, warningCount ? "WARNINGS  " : "0 WARNINGS");
+            strcpy(buff, warningCount ? "WARNINGS" : "0 WARNINGS");
             break;
         case MULTI_FUNC_2:
-            strcpy(buff, "EMERG LAND");
+            strcpy(buff, posControl.flags.manualEmergLandActive ? "END LANDIN" : "EMERG LAND");
             break;
         case MULTI_FUNC_3:
-            strcpy(buff, "EMERG ARM ");
+            strcpy(buff, "EMERG ARM");
         case MULTI_FUNC_COUNT:
             break;
         }
@@ -4869,6 +4869,11 @@ textAttributes_t osdGetMultiFunctionMessage(char *buff)
             messages[messageCount++] = gpsFailed ? "GPS FAILED" : "NO GPS FIX";
         }
     }
+    if (NAV_Status.state == MW_NAV_STATE_RTH_ENROUTE && !posControl.flags.rthTrackbackActive) {
+        if (checkOsdWarning(posControl.homeDistance - posControl.rthSanityChecker.minimalDistanceToHome > 500, OSD_WARN_5)) {
+            messages[messageCount++] = "RTH SANITY";
+        }
+    }
 #endif
 #if defined(USE_MAG)
     if (checkOsdWarning(getHwCompassStatus() == HW_SENSOR_UNAVAILABLE, OSD_WARN_2)) {
@@ -4880,6 +4885,12 @@ textAttributes_t osdGetMultiFunctionMessage(char *buff)
         messages[messageCount++] = "BARO FAIL";
     }
 #endif
+#ifdef USE_DEV_TOOLS
+    if (checkOsdWarning(systemConfig()->groundTestMode, OSD_WARN_4)) {
+        messages[messageCount++] = "GRD TEST";
+    }
+#endif
+
     if (messageCount) {
         message = messages[OSD_ALTERNATING_CHOICES(2000, messageCount)];
         strcpy(buff, message);

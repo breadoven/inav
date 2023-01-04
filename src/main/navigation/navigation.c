@@ -3682,9 +3682,13 @@ static bool isManualEmergencyLandingActivated(void)
 }
 // CR82
 // CR88
-void activateManualEmergencyLanding(void)
+void controlManualEmergencyLanding(void)
 {
-    posControl.flags.manualEmergLandActive = true;
+    posControl.flags.manualEmergLandActive = !posControl.flags.manualEmergLandActive;   //true;
+
+    if (!posControl.flags.manualEmergLandActive) {
+        navProcessFSMEvents(NAV_FSM_EVENT_SWITCH_TO_IDLE);
+    }
 }
 // CR88
 static navigationFSMEvent_t selectNavEventFromBoxModeInput(bool launchBypass)   // CR6
