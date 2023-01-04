@@ -845,7 +845,7 @@ void taskMainPidLoop(timeUs_t currentTimeUs)
 
     if (!ARMING_FLAG(ARMED)) {
         armTime = 0;
-        
+
         processDelayedSave();
     }
 

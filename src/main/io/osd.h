@@ -336,8 +336,9 @@ typedef enum {
 // CR88
 typedef enum {
     OSD_WARN_NONE   = 0,
-    OSD_WARN_GPS    = 1 << 0,
+    OSD_WARN_1      = 1 << 0,
     OSD_WARN_2      = 1 << 1,
+    OSD_WARN_3      = 1 << 2,
 } osd_warnings_status_flags_e;
 
 void resetOsdWarningMask(void);

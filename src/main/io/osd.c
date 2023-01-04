@@ -1764,8 +1764,9 @@ static bool osdDrawSingleElement(uint8_t item)
         buff[1] = SYM_SAT_R;
         tfp_sprintf(buff + 2, "%2d", gpsSol.numSat);
         if (!STATE(GPS_FIX)) {
-            if (getHwGPSStatus() == HW_SENSOR_UNAVAILABLE || getHwGPSStatus() == HW_SENSOR_UNHEALTHY) {
-                strcpy(buff + 2, "X!");
+            if (getHwGPSStatus() == HW_SENSOR_UNAVAILABLE) {
+                buff[2] = SYM_ALERT;
+                buff[3] = '\0';
             }
             TEXT_ATTRIBUTES_ADD_BLINK(elemAttr);
         }
@@ -3389,7 +3390,7 @@ static bool osdDrawSingleElement(uint8_t item)
     displayWriteWithAttr(osdDisplayPort, elemPosX, elemPosY, buff, elemAttr);
     return true;
 }
-// CR85
+
 uint8_t osdIncElementIndex(uint8_t elementIndex)
 {
     ++elementIndex;
@@ -4861,15 +4862,24 @@ textAttributes_t osdGetMultiFunctionMessage(char *buff)
     const char *messages[5];
     const char *message = NULL;
     uint8_t messageCount = 0;
-
-    if (checkOsdWarning(!STATE(GPS_FIX), OSD_WARN_GPS)) {
-        bool gpsFailed = getHwGPSStatus() == HW_SENSOR_UNAVAILABLE || getHwGPSStatus() == HW_SENSOR_UNHEALTHY;
-        messages[messageCount++] = gpsFailed ? "GPS FAILED" : "NO GPS FIX";
+#if defined(USE_GPS)
+    if (feature(FEATURE_GPS)) {
+        if (checkOsdWarning(!STATE(GPS_FIX), OSD_WARN_1)) {
+            bool gpsFailed = getHwGPSStatus() == HW_SENSOR_UNAVAILABLE;
+            messages[messageCount++] = gpsFailed ? "GPS FAILED" : "NO GPS FIX";
+        }
     }
-    if (checkOsdWarning(osdGetAltitude() > 10000, OSD_WARN_2)) {
-        messages[messageCount++] = "ALT EXCEED";
+#endif
+#if defined(USE_MAG)
+    if (checkOsdWarning(getHwCompassStatus() == HW_SENSOR_UNAVAILABLE, OSD_WARN_2)) {
+        messages[messageCount++] = "MAG FAILED";
     }
-
+#endif
+#if defined(USE_BARO)
+    if (checkOsdWarning(getHwBarometerStatus() == HW_SENSOR_UNAVAILABLE, OSD_WARN_3)) {
+        messages[messageCount++] = "BARO FAIL";
+    }
+#endif
     if (messageCount) {
         message = messages[OSD_ALTERNATING_CHOICES(2000, messageCount)];
         strcpy(buff, message);
@@ -4884,11 +4894,11 @@ textAttributes_t osdGetMultiFunctionMessage(char *buff)
     // CR27
     if (STATE(MULTIROTOR)) {
         if (compassGpsCogError == 270) {
-            strcpy(buff, "NO GPS COG ");
+            strcpy(buff, "NO GPS COG");
         } else if (compassGpsCogError == 260) {
-            strcpy(buff, "MOVE DRONE!");
+            strcpy(buff, "MOVE DRONE");
         } else {
-            tfp_sprintf(buff, "MAG ERR %3u", compassGpsCogError);
+            tfp_sprintf(buff, "MAG ERR%3u", compassGpsCogError);
         }
     }
     // CR27
