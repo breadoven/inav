@@ -102,11 +102,10 @@ enum {
     ALIGN_ACCEL = 1,
     ALIGN_MAG = 2
 };
-// CR86
-#define EMERGENCY_ARMING_TIME_WINDOW_MS     10000
-#define EMERGENCY_ARMING_COUNTER_STEP_MS    1000
-#define EMERGENCY_ARMING_MIN_ARM_COUNT      10
-// CR86
+
+#define EMERGENCY_ARMING_TIME_WINDOW_MS 10000
+#define EMERGENCY_ARMING_COUNTER_STEP_MS 1000
+#define EMERGENCY_ARMING_MIN_ARM_COUNT 10
 
 timeDelta_t cycleTime = 0;         // this is the number in micro second to achieve a full loop, it can differ a little and is taken into account in the PID loop
 static timeUs_t flightTime = 0;
@@ -366,7 +365,7 @@ static bool emergencyArmingCanOverrideArmingDisabled(void)
 
 static bool emergencyArmingIsEnabled(void)
 {
-    return emergencyArmingUpdate(IS_RC_MODE_ACTIVE(BOXARM), false) && emergencyArmingCanOverrideArmingDisabled();  // CR86 + CR88
+    return emergencyArmingUpdate(IS_RC_MODE_ACTIVE(BOXARM), false) && emergencyArmingCanOverrideArmingDisabled();  // CR88
 }
 
 static void processPilotAndFailSafeActions(float dT)
@@ -458,9 +457,11 @@ disarmReason_t getDisarmReason(void)
     return lastDisarmReason;
 }
 
-bool emergencyArmingUpdate(bool armingSwitchIsOn, bool forceArm)   // CR86 + CR88
+bool emergencyArmingUpdate(bool armingSwitchIsOn, bool forceArm)    // CR88
 {
-    if (ARMING_FLAG(ARMED)) return false;
+    if (ARMING_FLAG(ARMED)) {
+        return false;
+    }
 
     static timeMs_t timeout = 0;
     static int8_t counter = 0;
@@ -492,7 +493,6 @@ bool emergencyArmingUpdate(bool armingSwitchIsOn, bool forceArm)   // CR86 + CR8
     DEBUG_SET(DEBUG_ALWAYS, 0, counter);
     DEBUG_SET(DEBUG_ALWAYS, 1, timeout - currentTimeMs);
     return counter >= EMERGENCY_ARMING_MIN_ARM_COUNT;
-    // CR86
 }
 
 #define TELEMETRY_FUNCTION_MASK (FUNCTION_TELEMETRY_FRSKY | FUNCTION_TELEMETRY_HOTT | FUNCTION_TELEMETRY_SMARTPORT | FUNCTION_TELEMETRY_LTM | FUNCTION_TELEMETRY_MAVLINK | FUNCTION_TELEMETRY_IBUS)
@@ -508,14 +508,14 @@ void releaseSharedTelemetryPorts(void) {
 void tryArm(void)
 {
     updateArmingStatus();
-    // CR86
+
     if (ARMING_FLAG(ARMED)) {
         return;
     }
 
 #ifdef USE_DSHOT
     if (STATE(MULTIROTOR) && IS_RC_MODE_ACTIVE(BOXTURTLE) && !FLIGHT_MODE(TURTLE_MODE) &&
-        isMotorProtocolDshot() && emergencyArmingCanOverrideArmingDisabled()
+        emergencyArmingCanOverrideArmingDisabled() && isMotorProtocolDshot()
         ) {
         sendDShotCommand(DSHOT_CMD_SPIN_DIRECTION_REVERSED);
         ENABLE_ARMING_FLAG(ARMED);
@@ -523,13 +523,11 @@ void tryArm(void)
         return;
     }
 #endif
-    // CR86
 #ifdef USE_PROGRAMMING_FRAMEWORK
     if (!isArmingDisabled() || emergencyArmingIsEnabled() || LOGIC_CONDITION_GLOBAL_FLAG(LOGIC_CONDITION_GLOBAL_FLAG_OVERRIDE_ARMING_SAFETY)) {
 #else
     if (!isArmingDisabled() || emergencyArmingIsEnabled()) {
 #endif
-// CR86 if (ARMING_FLAG(ARMED)) moved above
         // If nav_extra_arming_safety was bypassed we always
         // allow bypassing it even without the sticks set
         // in the correct position to allow re-arming quickly
