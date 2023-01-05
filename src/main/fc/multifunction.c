@@ -23,16 +23,15 @@
  */
 
 #include "platform.h"
-
 #include "build/debug.h"
-
 #include "drivers/time.h"
 
 #include "fc/fc_core.h"
 #include "fc/multifunction.h"
 #include "fc/rc_modes.h"
-#include "io/osd.h"
+#include "fc/runtime_config.h"
 
+#include "io/osd.h"
 #include "navigation/navigation.h"
 
 // CR88
@@ -44,8 +43,8 @@ static void multiFunctionApply(multi_function_e selectedItem)
     case MULTI_FUNC_1:
         resetOsdWarningMask();
         break;
-    case MULTI_FUNC_2:  // trigger manual emergency landing
-        controlManualEmergencyLanding();
+    case MULTI_FUNC_2:  // control manual emergency landing
+        checkManualEmergencyLandingControl(ARMING_FLAG(ARMED));
         break;
     case MULTI_FUNC_3:
         emergencyArmingUpdate(true, true);

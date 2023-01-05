@@ -3654,7 +3654,7 @@ static bool isWaypointMissionValid(void)
     return posControl.waypointListValid && (posControl.waypointCount > 0);
 }
 // CR82
-static bool isManualEmergencyLandingActivated(void)
+void checkManualEmergencyLandingControl(bool forcedActivation)  // CR88
 {
     static timeMs_t timeout = 0;
     static int8_t counter = 0;
@@ -3670,7 +3670,7 @@ static bool isManualEmergencyLandingActivated(void)
     }
     if (IS_RC_MODE_ACTIVE(BOXNAVPOSHOLD)) {
         if (!timeout && toggle) {
-            timeout = currentTimeMs + 3000;
+            timeout = currentTimeMs + 4000;
         }
         counter += toggle;
         toggle = false;
@@ -3678,19 +3678,16 @@ static bool isManualEmergencyLandingActivated(void)
         toggle = true;
     }
 
-    return counter >= 4;
-}
-// CR82
-// CR88
-void controlManualEmergencyLanding(void)
-{
-    posControl.flags.manualEmergLandActive = !posControl.flags.manualEmergLandActive;   //true;
+    if (counter >= 5 || forcedActivation) {  // CR88
+        counter = 0;
+        posControl.flags.manualEmergLandActive = !posControl.flags.manualEmergLandActive;
 
-    if (!posControl.flags.manualEmergLandActive) {
-        navProcessFSMEvents(NAV_FSM_EVENT_SWITCH_TO_IDLE);
+        if (!posControl.flags.manualEmergLandActive) {
+            navProcessFSMEvents(NAV_FSM_EVENT_SWITCH_TO_IDLE);
+        }
     }
 }
-// CR88
+// CR82
 static navigationFSMEvent_t selectNavEventFromBoxModeInput(bool launchBypass)   // CR6
 {
 	// General use debugs
@@ -3726,12 +3723,8 @@ static navigationFSMEvent_t selectNavEventFromBoxModeInput(bool launchBypass)   
             posControl.flags.rthTrackbackActive = isExecutingRTH;
         }
         // CR82
-        if (isManualEmergencyLandingActivated()) {
-            posControl.flags.manualEmergLandActive = true;
-        } else if (posControl.flags.manualEmergLandActive && checkStickPosition(THR_HI)) {
-            posControl.flags.manualEmergLandActive = false;
-            return NAV_FSM_EVENT_SWITCH_TO_IDLE;
-        }
+        /* Emergency landing triggered manually */
+        checkManualEmergencyLandingControl(false);  // CR88
         // CR82
         /* Emergency landing triggered by failsafe when Failsafe procedure set to Landing */
         if (posControl.flags.forcedEmergLandingActivated || posControl.flags.manualEmergLandActive) {   // CR82
