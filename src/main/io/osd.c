@@ -185,7 +185,7 @@ static uint8_t armState;
 static uint8_t statsPagesCheck = 0;
 
 static bool infocycleSuspended = false;     // CR22
-textAttributes_t osdGetMultiFunctionMessage(char *buff);     // CR88
+static textAttributes_t osdGetMultiFunctionMessage(char *buff);     // CR88
 static osd_warnings_status_flags_e osdWarningsMask = 0;    // CR88
 
 typedef struct osdMapData_s {
@@ -4813,27 +4813,27 @@ void resetOsdWarningMask(void)
     osdWarningsMask = 0;
 }
 
-bool checkOsdWarning(bool condition, osd_warnings_status_flags_e warningType)
+static bool checkOsdWarning(bool condition, osd_warnings_status_flags_e warningIndex)
 {
     static timeMs_t newWarningStartTime = 0;
     const timeMs_t currentTimeMs = millis();
 
     if (condition) {
-        if (!(osdWarningsMask & warningType)) {
+        if (!(osdWarningsMask & warningIndex)) {
             newWarningStartTime = currentTimeMs;
-            osdWarningsMask |= warningType;
+            osdWarningsMask |= warningIndex;
         }
         if (currentTimeMs - newWarningStartTime < 10000) {
             return true;
         }
-    } else if (osdWarningsMask & warningType) {
-        osdWarningsMask ^= warningType;
+    } else if (osdWarningsMask & warningIndex) {
+        osdWarningsMask ^= warningIndex;
     }
 
     return false;
 }
 
-textAttributes_t osdGetMultiFunctionMessage(char *buff)
+static textAttributes_t osdGetMultiFunctionMessage(char *buff)
 {
     textAttributes_t elemAttr = TEXT_ATTRIBUTES_NONE;
     uint8_t warningCount = BITCOUNT(osdWarningsMask);
@@ -4847,7 +4847,7 @@ textAttributes_t osdGetMultiFunctionMessage(char *buff)
             strcpy(buff, warningCount ? "WARNINGS" : "0 WARNINGS");
             break;
         case MULTI_FUNC_2:
-            strcpy(buff, posControl.flags.manualEmergLandActive ? "END LANDIN" : "EMERG LAND");
+            strcpy(buff, posControl.flags.manualEmergLandActive ? "END LAND" : "EMERG LAND");
             break;
         case MULTI_FUNC_3:
             strcpy(buff, "EMERG ARM");
@@ -4859,32 +4859,40 @@ textAttributes_t osdGetMultiFunctionMessage(char *buff)
     }
 
 /* WARNINGS --------------------------------------------- */
-    const char *messages[5];
+    const char *messages[4];
     const char *message = NULL;
     uint8_t messageCount = 0;
+    bool warningCondition = false;
+
 #if defined(USE_GPS)
+    // GPS Fix and Failure
     if (feature(FEATURE_GPS)) {
         if (checkOsdWarning(!STATE(GPS_FIX), OSD_WARN_1)) {
             bool gpsFailed = getHwGPSStatus() == HW_SENSOR_UNAVAILABLE;
             messages[messageCount++] = gpsFailed ? "GPS FAILED" : "NO GPS FIX";
         }
     }
-    if (NAV_Status.state == MW_NAV_STATE_RTH_ENROUTE && !posControl.flags.rthTrackbackActive) {
-        if (checkOsdWarning(posControl.homeDistance - posControl.rthSanityChecker.minimalDistanceToHome > 500, OSD_WARN_5)) {
-            messages[messageCount++] = "RTH SANITY";
-        }
+    // RTH Sanity
+    warningCondition = NAV_Status.state == MW_NAV_STATE_RTH_ENROUTE && !posControl.flags.rthTrackbackActive &&
+                       (posControl.homeDistance - posControl.rthSanityChecker.minimalDistanceToHome) > 500;
+    if (checkOsdWarning(warningCondition, OSD_WARN_2)) {
+        messages[messageCount++] = "RTH SANITY";
+    }
+    // Altitude sanity (estimated vs GPS raw)
+    if (checkOsdWarning(posControl.flags.gpsEstimatedAltitudeMismatch, OSD_WARN_3)) {
+        messages[messageCount++] = "ALT SANITY";
     }
 #endif
-#if defined(USE_MAG)
-    if (checkOsdWarning(getHwCompassStatus() == HW_SENSOR_UNAVAILABLE, OSD_WARN_2)) {
-        messages[messageCount++] = "MAG FAILED";
-    }
-#endif
-#if defined(USE_BARO)
-    if (checkOsdWarning(getHwBarometerStatus() == HW_SENSOR_UNAVAILABLE, OSD_WARN_3)) {
-        messages[messageCount++] = "BARO FAIL";
-    }
-#endif
+// #if defined(USE_MAG)
+    // if (checkOsdWarning(getHwCompassStatus() == HW_SENSOR_UNAVAILABLE, OSD_WARN_5)) {
+        // messages[messageCount++] = "MAG FAILED";
+    // }
+// #endif
+// #if defined(USE_BARO)
+    // if (checkOsdWarning(getHwBarometerStatus() == HW_SENSOR_UNAVAILABLE, OSD_WARN_4)) {
+        // messages[messageCount++] = "BARO FAIL";
+    // }
+// #endif
 #ifdef USE_DEV_TOOLS
     if (checkOsdWarning(systemConfig()->groundTestMode, OSD_WARN_4)) {
         messages[messageCount++] = "GRD TEST";

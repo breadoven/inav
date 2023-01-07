@@ -335,12 +335,10 @@ typedef enum {
 } osd_crsf_lq_format_e;
 // CR88
 typedef enum {
-    OSD_WARN_NONE   = 0,
     OSD_WARN_1      = 1 << 0,
     OSD_WARN_2      = 1 << 1,
     OSD_WARN_3      = 1 << 2,
     OSD_WARN_4      = 1 << 3,
-    OSD_WARN_5      = 1 << 4,
 } osd_warnings_status_flags_e;
 
 void resetOsdWarningMask(void);

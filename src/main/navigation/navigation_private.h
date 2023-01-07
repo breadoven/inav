@@ -91,6 +91,7 @@ typedef struct navigationFlags_s {
     navigationEstimateStatus_e estAglStatus;
     navigationEstimateStatus_e estHeadingStatus;    // Indicate valid heading - wither mag or GPS at certain speed on airplane
     bool compassGpsCogMismatchError;                // mismatch between compass heading and valid GPS heading   // CR27
+    bool gpsEstimatedAltitudeMismatch;              // Indicates a significant mismatch between GPS altitude and estimated altitude   // CR88
 
     bool isAdjustingPosition;
     bool isAdjustingAltitude;
@@ -105,15 +106,12 @@ typedef struct navigationFlags_s {
     bool forcedRTHActivated;
     bool forcedEmergLandingActivated;
 
-    bool wpMissionPlannerActive;            // Activation status of WP mission planner
-
     /* Landing detector */
     bool resetLandingDetector;
 
+    bool wpMissionPlannerActive;            // Activation status of WP mission planner
     bool rthTrackbackActive;                // Activation status of RTH trackback
-
     bool wpTurnSmoothingActive;             // Activation status WP turn smoothing
-
     bool manualEmergLandActive;             // Activation status of manual emergency landing  CR82
 } navigationFlags_t;
 
@@ -461,7 +459,7 @@ bool isWaypointNavTrackingActive(void);
 
 void updateActualHeading(bool headingValid, int32_t newHeading, int32_t newGroundCourse);
 void updateActualHorizontalPositionAndVelocity(bool estPosValid, bool estVelValid, float newX, float newY, float newVelX, float newVelY);
-void updateActualAltitudeAndClimbRate(bool estimateValid, float newAltitude, float newVelocity, float surfaceDistance, float surfaceVelocity, navigationEstimateStatus_e surfaceStatus);
+void updateActualAltitudeAndClimbRate(bool estimateValid, float newAltitude, float newVelocity, float surfaceDistance, float surfaceVelocity, navigationEstimateStatus_e surfaceStatus, float gpsEstAltError);  // CR88
 
 bool checkForPositionSensorTimeout(void);
 
