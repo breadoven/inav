@@ -4879,7 +4879,7 @@ static textAttributes_t osdGetMultiFunctionMessage(char *buff)
         messages[messageCount++] = "RTH SANITY";
     }
     // Altitude sanity (estimated vs GPS raw)
-    if (checkOsdWarning(posControl.flags.gpsEstimatedAltitudeMismatch, OSD_WARN_3)) {
+    if (checkOsdWarning(posControl.flags.gpsCfEstimatedAltitudeMismatch, OSD_WARN_3)) {
         messages[messageCount++] = "ALT SANITY";
     }
 #endif
