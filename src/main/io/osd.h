@@ -341,7 +341,7 @@ typedef enum {
     OSD_WARN_4      = 1 << 3,
 } osd_warnings_status_flags_e;
 
-void resetOsdWarningMask(void);
+void resetOsdWarningFlags(void);
 // CR88
 typedef struct osdLayoutsConfig_s {
     // Layouts

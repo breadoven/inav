@@ -3789,7 +3789,7 @@ static void cliMsc(char *cmdline)
         cliPrintHashLine("restarting in mass storage mode");
         cliPrint("\r\nRebooting");
         bufWriterFlush(cliWriter);
-        delay(2000);    // CR89
+        delay(1000);    // CR89
         waitForSerialPortToFinishTransmitting(cliPort);
         stopPwmAllMotors();
         systemResetRequest(RESET_MSC_REQUEST);
