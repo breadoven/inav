@@ -186,7 +186,7 @@ static uint8_t statsPagesCheck = 0;
 
 static bool infocycleSuspended = false;     // CR22
 static textAttributes_t osdGetMultiFunctionMessage(char *buff);     // CR88
-static osd_warnings_status_flags_e osdWarningsFlags = 0;    // CR88
+static uint8_t osdWarningsFlags = 0;    // CR88
 
 typedef struct osdMapData_s {
     uint32_t scale;
@@ -4781,11 +4781,6 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
             }
         }
 
-// #ifdef USE_DEV_TOOLS
-        // if (systemConfig()->groundTestMode) {
-            // messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_GRD_TEST_MODE);
-        // }
-// #endif
         if (messageCount > 0) {
             message = messages[OSD_ALTERNATING_CHOICES(systemMessageCycleTime(messageCount, messages), messageCount)];
             if (message == failsafeInfoMessage) {
@@ -4813,7 +4808,7 @@ void resetOsdWarningFlags(void)
     osdWarningsFlags = 0;
 }
 
-static bool checkOsdWarning(bool condition, osd_warnings_status_flags_e warningFlag, uint8_t *warningsCount)
+static bool checkOsdWarning(bool condition, uint8_t warningFlag, uint8_t *warningsCount)
 {
     static timeMs_t newWarningStartTime = 0;
     const timeMs_t currentTimeMs = millis();
@@ -4842,26 +4837,22 @@ static bool checkOsdWarning(bool condition, osd_warnings_status_flags_e warningF
 static textAttributes_t osdGetMultiFunctionMessage(char *buff)
 {
     textAttributes_t elemAttr = TEXT_ATTRIBUTES_NONE;
-    static uint8_t osdWarningsCount; // = BITCOUNT(osdWarningsFlags);
+    static uint8_t warningsCount;
 
-    multi_function_e multiFuncItem;
-    multiFunctionSelection(&multiFuncItem);
-    if (multiFuncItem) {
-        switch (multiFuncItem) {
-        case MULTI_FUNC_NONE:
-        case MULTI_FUNC_1:
-            strcpy(buff, osdWarningsCount ? "WARNINGS" : "0 WARNINGS");
-            break;
-        case MULTI_FUNC_2:
-            strcpy(buff, posControl.flags.manualEmergLandActive ? "ABORT LAND" : "EMERG LAND");
-            break;
-        case MULTI_FUNC_3:
-            strcpy(buff, "EMERG ARM");
-        case MULTI_FUNC_COUNT:
-            break;
-        }
-
+    switch (multiFunctionSelection()) {
+    case MULTI_FUNC_NONE:
+        break;
+    case MULTI_FUNC_1:
+        strcpy(buff, warningsCount ? "WARNINGS" : "0 WARNINGS");
         return elemAttr;
+    case MULTI_FUNC_2:
+        strcpy(buff, posControl.flags.manualEmergLandActive ? "ABORT LAND" : "EMERG LAND");
+        return elemAttr;
+    case MULTI_FUNC_3:
+        strcpy(buff, "EMERG ARM");
+        return elemAttr;
+    case MULTI_FUNC_COUNT:
+        break;
     }
 
 /* WARNINGS --------------------------------------------- */
@@ -4869,24 +4860,31 @@ static textAttributes_t osdGetMultiFunctionMessage(char *buff)
     const char *message = NULL;
     uint8_t messageCount = 0;
     bool warningCondition = false;
-    osdWarningsCount = 0;
+    warningsCount = 0;
+    uint8_t warningFlagID = 1;
+
 #if defined(USE_GPS)
     // GPS Fix and Failure
     if (feature(FEATURE_GPS)) {
-        if (checkOsdWarning(!STATE(GPS_FIX), OSD_WARN_1, &osdWarningsCount)) {
+        if (checkOsdWarning(!STATE(GPS_FIX), warningFlagID, &warningsCount)) {
             bool gpsFailed = getHwGPSStatus() == HW_SENSOR_UNAVAILABLE;
             messages[messageCount++] = gpsFailed ? "GPS FAILED" : "NO GPS FIX";
         }
     }
-    // RTH Sanity
+    // RTH sanity
     warningCondition = NAV_Status.state == MW_NAV_STATE_RTH_ENROUTE && !posControl.flags.rthTrackbackActive &&
                        (posControl.homeDistance - posControl.rthSanityChecker.minimalDistanceToHome) > 500;
-    if (checkOsdWarning(warningCondition, OSD_WARN_2, &osdWarningsCount)) {
+    if (checkOsdWarning(warningCondition, warningFlagID << 1, &warningsCount)) {
         messages[messageCount++] = "RTH SANITY";
     }
     // Altitude sanity (estimated vs GPS raw)
-    if (checkOsdWarning(posControl.flags.gpsCfEstimatedAltitudeMismatch, OSD_WARN_3, &osdWarningsCount)) {
+    if (checkOsdWarning(posControl.flags.gpsCfEstimatedAltitudeMismatch, warningFlagID << 1, &warningsCount)) {
         messages[messageCount++] = "ALT SANITY";
+    }
+#endif
+#ifdef USE_DEV_TOOLS
+    if (checkOsdWarning(systemConfig()->groundTestMode, warningFlagID << 1, &warningsCount)) {
+        messages[messageCount++] = "GRD TEST";
     }
 #endif
 // #if defined(USE_MAG)
@@ -4899,20 +4897,14 @@ static textAttributes_t osdGetMultiFunctionMessage(char *buff)
         // messages[messageCount++] = "BARO FAIL";
     // }
 // #endif
-#ifdef USE_DEV_TOOLS
-    if (checkOsdWarning(systemConfig()->groundTestMode, OSD_WARN_4, &osdWarningsCount)) {
-        messages[messageCount++] = "GRD TEST";
-    }
-#endif
-
     if (messageCount) {
         message = messages[OSD_ALTERNATING_CHOICES(2000, messageCount)];
         strcpy(buff, message);
         TEXT_ATTRIBUTES_ADD_BLINK(elemAttr);
         return elemAttr;
-    } else if (osdWarningsCount) {
+    } else if (warningsCount) {
         buff[0] = SYM_ALERT;
-        tfp_sprintf(buff + 1, "%u ", osdWarningsCount);
+        tfp_sprintf(buff + 1, "%u ", warningsCount);
         return elemAttr;
     }
 /* WARNINGS --------------------------------------------- */

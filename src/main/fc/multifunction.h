@@ -32,5 +32,5 @@ typedef enum {
     MULTI_FUNC_COUNT,
 } multi_function_e;
 
-bool multiFunctionSelection(multi_function_e * returnItem);
+multi_function_e multiFunctionSelection(void);
 // cr88

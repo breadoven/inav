@@ -122,10 +122,6 @@
 #define OSD_MSG_SAVING_SETTNGS      "** SAVING SETTINGS **"
 #define OSD_MSG_SETTINGS_SAVED      "** SETTINGS SAVED **"
 
-#ifdef USE_DEV_TOOLS
-#define OSD_MSG_GRD_TEST_MODE       "GRD TEST > MOTORS DISABLED"
-#endif
-
 #if defined(USE_SAFE_HOME)
 #define OSD_MSG_DIVERT_SAFEHOME     "DIVERTING TO SAFEHOME"
 #define OSD_MSG_LOITERING_SAFEHOME  "LOITERING AROUND SAFEHOME"
@@ -334,14 +330,12 @@ typedef enum {
     OSD_CRSF_LQ_TYPE3
 } osd_crsf_lq_format_e;
 // CR88
-typedef enum {
-    OSD_WARN_1      = 1 << 0,
-    OSD_WARN_2      = 1 << 1,
-    OSD_WARN_3      = 1 << 2,
-    OSD_WARN_4      = 1 << 3,
-} osd_warnings_status_flags_e;
-
-void resetOsdWarningFlags(void);
+// typedef enum {
+    // OSD_WARN_1      = 1 << 0,
+    // OSD_WARN_2      = 1 << 1,
+    // OSD_WARN_3      = 1 << 2,
+    // OSD_WARN_4      = 1 << 3,
+// } osd_warnings_status_flags_e;
 // CR88
 typedef struct osdLayoutsConfig_s {
     // Layouts
@@ -495,6 +489,8 @@ void osdFormatAltitudeSymbol(char *buff, int32_t alt);
 void osdFormatVelocityStr(char* buff, int32_t vel, bool _3D, bool _max);
 // Returns a heading angle in degrees normalized to [0, 360).
 int osdGetHeadingAngle(int angle);
+
+void resetOsdWarningFlags(void);    // CR88
 
 /**
  * @brief Get the OSD system message

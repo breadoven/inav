@@ -39,7 +39,7 @@ static void multiFunctionApply(multi_function_e selectedItem)
 {
     switch (selectedItem) {
     case MULTI_FUNC_NONE:
-        return;
+        break;
     case MULTI_FUNC_1:
         resetOsdWarningFlags();
         break;
@@ -53,11 +53,11 @@ static void multiFunctionApply(multi_function_e selectedItem)
     }
 }
 
-bool multiFunctionSelection(multi_function_e * returnItem)
+multi_function_e multiFunctionSelection(void)
 {
     static timeMs_t startTimer;
     static timeMs_t selectTimer;
-    static int8_t selectedItem = 0;
+    static multi_function_e selectedItem = MULTI_FUNC_NONE;
     static bool toggle = true;
     const timeMs_t currentTime = millis();
     // DEBUG_SET(DEBUG_ALWAYS, 1, currentTime - selectTimer);
@@ -66,15 +66,13 @@ bool multiFunctionSelection(multi_function_e * returnItem)
     if (IS_RC_MODE_ACTIVE(BOXMULTIFUNCTION)) {
         if (selectTimer) {
             if (currentTime - selectTimer > 3000) {
-                *returnItem = selectedItem;
                 multiFunctionApply(selectedItem);
                 selectTimer = 0;
-                selectedItem = 0;
-                return true;
+                selectedItem = MULTI_FUNC_NONE;
             }
         } else if (toggle) {
             selectedItem++;
-            selectedItem = selectedItem == MULTI_FUNC_COUNT ? 1 : selectedItem;
+            selectedItem = selectedItem == MULTI_FUNC_COUNT ? MULTI_FUNC_1 : selectedItem;
             selectTimer = currentTime;
         }
         startTimer = currentTime;
@@ -83,12 +81,11 @@ bool multiFunctionSelection(multi_function_e * returnItem)
         selectTimer = 0;
         if (currentTime - startTimer > 2000) {
             startTimer = 0;
-            selectedItem = 0;
+            selectedItem = MULTI_FUNC_NONE;
         }
         toggle = true;
     }
 
-    *returnItem = selectedItem;
-    return false;
+    return selectedItem;
 }
 // CR88
