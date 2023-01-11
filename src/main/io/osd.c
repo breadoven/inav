@@ -4851,7 +4851,7 @@ static textAttributes_t osdGetMultiFunctionMessage(char *buff)
     case MULTI_FUNC_3:
         strcpy(buff, "EMERG ARM");
         return elemAttr;
-    case MULTI_FUNC_COUNT:
+    case MULTI_FUNC_END:
         break;
     }
 

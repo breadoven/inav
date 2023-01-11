@@ -48,7 +48,7 @@ static void multiFunctionApply(multi_function_e selectedItem)
         break;
     case MULTI_FUNC_3:
         emergencyArmingUpdate(true, true);
-    case MULTI_FUNC_COUNT:
+    case MULTI_FUNC_END:
         break;
     }
 }
@@ -71,13 +71,18 @@ multi_function_e multiFunctionSelection(void)
                 selectedItem = MULTI_FUNC_NONE;
             }
         } else if (toggle) {
-            selectedItem++;
-            selectedItem = selectedItem == MULTI_FUNC_COUNT ? MULTI_FUNC_1 : selectedItem;
-            selectTimer = currentTime;
+            if (selectedItem == MULTI_FUNC_NONE) {
+                selectedItem++;
+            } else {
+                selectTimer = currentTime;
+            }
         }
         startTimer = currentTime;
         toggle = false;
     } else if (startTimer) {
+        if (!toggle && selectTimer) {
+            selectedItem = selectedItem == MULTI_FUNC_END - 1 ? MULTI_FUNC_1 : selectedItem + 1;
+        }
         selectTimer = 0;
         if (currentTime - startTimer > 2000) {
             startTimer = 0;

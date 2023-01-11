@@ -329,14 +329,7 @@ typedef enum {
     OSD_CRSF_LQ_TYPE2,
     OSD_CRSF_LQ_TYPE3
 } osd_crsf_lq_format_e;
-// CR88
-// typedef enum {
-    // OSD_WARN_1      = 1 << 0,
-    // OSD_WARN_2      = 1 << 1,
-    // OSD_WARN_3      = 1 << 2,
-    // OSD_WARN_4      = 1 << 3,
-// } osd_warnings_status_flags_e;
-// CR88
+
 typedef struct osdLayoutsConfig_s {
     // Layouts
     uint16_t item_pos[OSD_LAYOUT_COUNT][OSD_ITEM_COUNT];
