@@ -4847,26 +4847,32 @@ static textAttributes_t osdGetMultiFunctionMessage(char *buff)
 {
     textAttributes_t elemAttr = TEXT_ATTRIBUTES_NONE;
     static uint8_t warningsCount;
+    const char *message = NULL;
 
-    switch (multiFunctionSelection()) {
-    case MULTI_FUNC_NONE:
-        break;
-    case MULTI_FUNC_1:
-        strcpy(buff, warningsCount ? "WARNINGS !" : "0 WARNINGS");
+    multi_function_e selectedFunction = multiFunctionSelection();
+    if (selectedFunction) {
+        switch (selectedFunction) {
+        case MULTI_FUNC_NONE:
+        case MULTI_FUNC_1:
+            message = warningsCount ? "WARNINGS !" : "0 WARNINGS";
+            break;
+        case MULTI_FUNC_2:
+            message = posControl.flags.manualEmergLandActive ? "ABORT LAND" : "EMERG LAND";
+            break;
+        case MULTI_FUNC_3:
+            message = "EMERG ARM ";
+            break;
+        case MULTI_FUNC_END:
+            break;
+        }
+
+        strcpy(buff, message);
         return elemAttr;
-    case MULTI_FUNC_2:
-        strcpy(buff, posControl.flags.manualEmergLandActive ? "ABORT LAND" : "EMERG LAND");
-        return elemAttr;
-    case MULTI_FUNC_3:
-        strcpy(buff, "EMERG ARM ");
-        return elemAttr;
-    case MULTI_FUNC_END:
-        break;
     }
 
 /* WARNINGS --------------------------------------------- */
     const char *messages[4];
-    const char *message = NULL;
+    // const char *message = NULL;
     uint8_t messageCount = 0;
     bool warningCondition = false;
     warningsCount = 0;
