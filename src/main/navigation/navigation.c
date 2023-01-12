@@ -2118,7 +2118,7 @@ void updateActualAltitudeAndClimbRate(bool estimateValid, float newAltitude, flo
         posControl.flags.estAglStatus = surfaceStatus;  // Could be TRUSTED or USABLE
         posControl.flags.estAltStatus = EST_TRUSTED;
         posControl.flags.verticalPositionDataNew = true;
-        DEBUG_SET(DEBUG_ALWAYS, 0, gpsCfEstimatedAltitudeError);
+        // DEBUG_SET(DEBUG_ALWAYS, 0, gpsCfEstimatedAltitudeError);
         posControl.lastValidAltitudeTimeMs = millis();
         /* flag set if mismatch between GPS and estimated altitude exceeds 20m */
         posControl.flags.gpsCfEstimatedAltitudeMismatch = fabsf(gpsCfEstimatedAltitudeError) > 100;     // CR88

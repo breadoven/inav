@@ -3341,8 +3341,17 @@ static bool osdDrawSingleElement(uint8_t item)
     // CR88
     case OSD_MULTI_FUNCTION:
         {
-            displayWrite(osdDisplayPort, elemPosX, elemPosY, "          ");
+            // message shown infrequently so only write when needed
+            static bool clearMultiFunction = true;
             elemAttr = osdGetMultiFunctionMessage(buff);
+            if (buff[0] == 0) {
+                if (clearMultiFunction) {
+                    displayWrite(osdDisplayPort, elemPosX, elemPosY, "          ");
+                    clearMultiFunction = false;
+                }
+                return true;
+            }
+            clearMultiFunction = true;
             break;
         }
     // CR88
@@ -4843,13 +4852,13 @@ static textAttributes_t osdGetMultiFunctionMessage(char *buff)
     case MULTI_FUNC_NONE:
         break;
     case MULTI_FUNC_1:
-        strcpy(buff, warningsCount ? "WARNINGS" : "0 WARNINGS");
+        strcpy(buff, warningsCount ? "WARNINGS !" : "0 WARNINGS");
         return elemAttr;
     case MULTI_FUNC_2:
         strcpy(buff, posControl.flags.manualEmergLandActive ? "ABORT LAND" : "EMERG LAND");
         return elemAttr;
     case MULTI_FUNC_3:
-        strcpy(buff, "EMERG ARM");
+        strcpy(buff, "EMERG ARM ");
         return elemAttr;
     case MULTI_FUNC_END:
         break;
@@ -4884,7 +4893,7 @@ static textAttributes_t osdGetMultiFunctionMessage(char *buff)
 #endif
 #ifdef USE_DEV_TOOLS
     if (checkOsdWarning(systemConfig()->groundTestMode, warningFlagID << 1, &warningsCount)) {
-        messages[messageCount++] = "GRD TEST";
+        messages[messageCount++] = "GRD TEST !";
     }
 #endif
 // #if defined(USE_MAG)
@@ -4901,12 +4910,11 @@ static textAttributes_t osdGetMultiFunctionMessage(char *buff)
         message = messages[OSD_ALTERNATING_CHOICES(2000, messageCount)];
         strcpy(buff, message);
         TEXT_ATTRIBUTES_ADD_BLINK(elemAttr);
-        return elemAttr;
     } else if (warningsCount) {
         buff[0] = SYM_ALERT;
-        tfp_sprintf(buff + 1, "%u ", warningsCount);
-        return elemAttr;
+        tfp_sprintf(buff + 1, "%u        ", warningsCount);
     }
+    return elemAttr;
 /* WARNINGS --------------------------------------------- */
     // CR27
     if (STATE(MULTIROTOR)) {
