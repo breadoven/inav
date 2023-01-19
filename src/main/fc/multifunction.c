@@ -60,8 +60,6 @@ multi_function_e multiFunctionSelection(void)
     static multi_function_e selectedItem = MULTI_FUNC_NONE;
     static bool toggle = true;
     const timeMs_t currentTime = millis();
-    // DEBUG_SET(DEBUG_ALWAYS, 1, currentTime - selectTimer);
-    // DEBUG_SET(DEBUG_ALWAYS, 2, startTimer);
 
     if (IS_RC_MODE_ACTIVE(BOXMULTIFUNCTION)) {
         if (selectTimer) {

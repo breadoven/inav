@@ -35,6 +35,7 @@
 #include "sensors/acceleration.h"
 #include "sensors/boardalignment.h"
 #include "sensors/gyro.h"
+// #include "sensors/barometer.h"  // CR89
 
 #include "fc/config.h"
 #include "fc/rc_controls.h"
@@ -733,13 +734,54 @@ bool isMulticopterFlying(void)
 }
 
 /*-----------------------------------------------------------
- * Multicopter land detector
+ * Multicopter landing detector
  *-----------------------------------------------------------*/
+// CR89
+float updateBaroAltitudeVelocity(float newBaroAltVel, bool updateValue)
+{
+    static float newBaroAltVel;
+    if (updateValue) {
+        baroAltVel = newBaroAltVel;
+    }
+
+    return baroAltVel;
+}
+// CR89
 bool isMulticopterLandingDetected(void)
 {
     DEBUG_SET(DEBUG_LANDING, 4, 0);
     DEBUG_SET(DEBUG_LANDING, 3, averageAbsGyroRates() * 100);
+    const timeUs_t currentTimeUs = micros();    // CR89
     static timeUs_t landingDetectorStartedAt;
+
+    // CR89
+    /* Detection based on G bump at touchdown and rapid drop in Baro altitude */
+    DEBUG_SET(DEBUG_ALWAYS, 0, 57);
+    DEBUG_SET(DEBUG_ALWAYS, 1, updateBaroAltitudeVelocity(0, false));
+    static timeUs_t gSpikeDetectTimeUs = 0;
+    bool landingBumpDetected = false;
+
+    if (!gSpikeDetectTimeUs && acc.accADCf[Z] > 2.0f) {
+        gSpikeDetectTimeUs = currentTimeUs;
+    } else if (gSpikeDetectTimeUs) {
+        if (currentTimeUs < gSpikeDetectTimeUs + 100000) {  // G spike must be < 0.1s duration
+            landingBumpDetected = acc.accADCf[Z] < 1.0f && updateBaroAltitudeVelocity(0, false) < 0;
+        } else {
+            gSpikeDetectTimeUs = 0;
+        }
+    }
+    DEBUG_SET(DEBUG_ALWAYS, 3, gSpikeDetectTimeUs);
+    if (landingBumpDetected) {
+        if (navigationInAutomaticThrottleMode()) {
+            bool throttleBelowHover = rcCommand[THROTTLE] < currentBatteryProfile->nav.mc.hover_throttle;
+            DEBUG_SET(DEBUG_ALWAYS, 0, 107 + throttleBelowHover);
+            return throttleBelowHover;
+        } else {
+            DEBUG_SET(DEBUG_ALWAYS, 0, 127);
+            return rcCommand[THROTTLE] < 0.5 * (currentBatteryProfile->nav.mc.hover_throttle + getThrottleIdleValue());
+        }
+    }
+    // CR89
 
     // Basic condition to start looking for landing (prevent landing detection if failsafe_mission OFF except landing states)
     bool startCondition = (navGetCurrentStateFlags() & (NAV_CTL_LAND | NAV_CTL_EMERG))
@@ -762,7 +804,7 @@ bool isMulticopterLandingDetected(void)
     // DEBUG_SET(DEBUG_LANDING, 3, gyroCondition);
 
     bool possibleLandingDetected = false;
-    const timeUs_t currentTimeUs = micros();
+    // const timeUs_t currentTimeUs = micros();   // CR89
 
     if (navGetCurrentStateFlags() & NAV_CTL_LAND) {
         // We have likely landed if throttle is 40 units below average descend throttle
@@ -814,7 +856,7 @@ bool isMulticopterLandingDetected(void)
     DEBUG_SET(DEBUG_LANDING, 5, possibleLandingDetected);
 
     if (possibleLandingDetected) {
-        timeUs_t safetyTimeDelay = MS2US(2000 + navConfig()->general.auto_disarm_delay);  // check conditions stable for 2s + optional extra delay
+        timeUs_t safetyTimeDelay = MS2US(1000 + navConfig()->general.auto_disarm_delay);  // check conditions stable for 1s + optional extra delay CR89
         return (currentTimeUs - landingDetectorStartedAt > safetyTimeDelay);
     } else {
         landingDetectorStartedAt = currentTimeUs;

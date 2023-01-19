@@ -323,6 +323,12 @@ void updatePositionEstimator_BaroTopic(timeUs_t currentTimeUs)
         if (baroDtUs <= MS2US(INAV_BARO_TIMEOUT_MS)) {
             posEstimator.baro.alt = pt1FilterApply3(&posEstimator.baro.avgFilter, posEstimator.baro.alt, US2S(baroDtUs));
         }
+        // CR89
+        static float baroAltPrevious = 0;
+        float baroAltVel = (posEstimator.baro.alt - baroAltPrevious) / US2S(baroDtUs);
+        baroAltPrevious = posEstimator.baro.alt;
+        updateBaroAltitudeVelocity(baroAltVel, true);
+        // CR89
     }
     else {
         posEstimator.baro.alt = 0;
