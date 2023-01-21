@@ -537,10 +537,10 @@ static void osdFormatWindSpeedStr(char *buff, int32_t ws, bool isValid)
             suffix = SYM_KMH;
             break;
     }
-    if (isValid) {
-        osdFormatCentiNumber(buff, centivalue, 0, 2, 0, 3);
-    } else {
-        buff[0] = buff[1] = buff[2] = '-';
+    osdFormatCentiNumber(buff, centivalue, 0, 2, 0, 3);
+    if (!isValid)
+    {
+        suffix = '*';
     }
     buff[3] = suffix;
     buff[4] = '\0';
@@ -768,12 +768,25 @@ static void osdFormatCoordinate(char *buff, char sym, int32_t val)
 
 static void osdFormatCraftName(char *buff)
 {
-    if (strlen(systemConfig()->name) == 0)
+    if (strlen(systemConfig()->craftName) == 0)
             strcpy(buff, "CRAFT_NAME");
     else {
         for (int i = 0; i < MAX_NAME_LENGTH; i++) {
-            buff[i] = sl_toupper((unsigned char)systemConfig()->name[i]);
-            if (systemConfig()->name[i] == 0)
+            buff[i] = sl_toupper((unsigned char)systemConfig()->craftName[i]);
+            if (systemConfig()->craftName[i] == 0)
+                break;
+        }
+    }
+}
+
+void osdFormatPilotName(char *buff)
+{
+    if (strlen(systemConfig()->pilotName) == 0)
+            strcpy(buff, "PILOT_NAME");
+    else {
+        for (int i = 0; i < MAX_NAME_LENGTH; i++) {
+            buff[i] = sl_toupper((unsigned char)systemConfig()->pilotName[i]);
+            if (systemConfig()->pilotName[i] == 0)
                 break;
         }
     }
@@ -1706,14 +1719,22 @@ static bool osdDrawSingleElement(uint8_t item)
         break;
 
     case OSD_MAH_DRAWN: {
-        if (osdFormatCentiNumber(buff, getMAhDrawn() * 100, 1000, 0, (osdConfig()->mAh_used_precision - 2), osdConfig()->mAh_used_precision)) {
-           // Shown in mAh
-           buff[osdConfig()->mAh_used_precision] = SYM_AH;
+
+        if (isBfCompatibleVideoSystem(osdConfig())) {
+            //BFcompat is unable to work with scaled values and it only has mAh symbol to work with
+            tfp_sprintf(buff, "%4d", (int)getMAhDrawn());
+            buff[4] = SYM_MAH;
+            buff[5] = '\0';
         } else {
-          // Shown in Ah
-            buff[osdConfig()->mAh_used_precision] = SYM_MAH;
+            if (osdFormatCentiNumber(buff, getMAhDrawn() * 100, 1000, 0, (osdConfig()->mAh_used_precision - 2), osdConfig()->mAh_used_precision)) {
+            // Shown in mAh
+            buff[osdConfig()->mAh_used_precision] = SYM_AH;
+            } else {
+            // Shown in Ah
+                buff[osdConfig()->mAh_used_precision] = SYM_MAH;
+            }
+            buff[(osdConfig()->mAh_used_precision + 1)] = '\0';
         }
-        buff[(osdConfig()->mAh_used_precision + 1)] = '\0';
         osdUpdateBatteryCapacityOrVoltageTextAttributes(&elemAttr);
         break;
     }
@@ -1829,10 +1850,8 @@ static bool osdDrawSingleElement(uint8_t item)
                     if (!(osdConfig()->pan_servo_pwm2centideg == 0)){
                         panHomeDirOffset = osdPanServoHomeDirectionOffset();
                     }
-                    // CR90
-                    int16_t flightDirection = STATE(AIRPLANE) ? CENTIDEGREES_TO_DEGREES(posControl.actualState.cog): DECIDEGREES_TO_DEGREES(osdGetHeading());
+                    int16_t flightDirection = STATE(AIRPLANE) ? CENTIDEGREES_TO_DEGREES(posControl.actualState.cog) : DECIDEGREES_TO_DEGREES(osdGetHeading());
                     int homeDirection = GPS_directionToHome - flightDirection + panHomeDirOffset;
-                    // CR90
                     osdDrawDirArrow(osdDisplayPort, osdGetDisplayPortCanvas(), OSD_DRAW_POINT_GRID(elemPosX, elemPosY), homeDirection);
                 }
             } else {
@@ -1852,7 +1871,7 @@ static bool osdDrawSingleElement(uint8_t item)
             buff[1] = SYM_HEADING;
 
             if (isImuHeadingValid() && navigationPositionEstimateIsHealthy()) {
-                int16_t h = lrintf(CENTIDEGREES_TO_DEGREES((float)wrap_18000(DEGREES_TO_CENTIDEGREES((int32_t)GPS_directionToHome) - (STATE(AIRPLANE) ? posControl.actualState.cog : DECIDEGREES_TO_CENTIDEGREES((int32_t)osdGetHeading())))));  // CR90
+                int16_t h = lrintf(CENTIDEGREES_TO_DEGREES((float)wrap_18000(DEGREES_TO_CENTIDEGREES((int32_t)GPS_directionToHome) - (STATE(AIRPLANE) ? posControl.actualState.cog : DECIDEGREES_TO_CENTIDEGREES((int32_t)osdGetHeading())))));
                 tfp_sprintf(buff + 2, "%4d", h);
             } else {
                 strcpy(buff + 2, "----");
@@ -2167,6 +2186,10 @@ static bool osdDrawSingleElement(uint8_t item)
 
     case OSD_CRAFT_NAME:
         osdFormatCraftName(buff);
+        break;
+
+    case OSD_PILOT_NAME:
+        osdFormatPilotName(buff);
         break;
 
     case OSD_THROTTLE_POS:
@@ -3045,16 +3068,11 @@ static bool osdDrawSingleElement(uint8_t item)
         {
             bool valid = isEstimatedWindSpeedValid();
             float horizontalWindSpeed;
-            if (valid) {
-                uint16_t angle;
-                horizontalWindSpeed = getEstimatedHorizontalWindSpeed(&angle);
-                int16_t windDirection = osdGetHeadingAngle( CENTIDEGREES_TO_DEGREES((int)angle) - DECIDEGREES_TO_DEGREES(attitude.values.yaw) + 22);
-                buff[1] = SYM_DIRECTION + (windDirection*2 / 90);
-            } else {
-                horizontalWindSpeed = 0;
-                buff[1] = SYM_BLANK;
-            }
+            uint16_t angle;
+            horizontalWindSpeed = getEstimatedHorizontalWindSpeed(&angle);
+            int16_t windDirection = osdGetHeadingAngle( CENTIDEGREES_TO_DEGREES((int)angle) - DECIDEGREES_TO_DEGREES(attitude.values.yaw) + 22);
             buff[0] = SYM_WIND_HORIZONTAL;
+            buff[1] = SYM_DIRECTION + (windDirection*2 / 90);
             osdFormatWindSpeedStr(buff + 2, horizontalWindSpeed, valid);
             break;
         }
@@ -3069,16 +3087,12 @@ static bool osdDrawSingleElement(uint8_t item)
             buff[1] = SYM_BLANK;
             bool valid = isEstimatedWindSpeedValid();
             float verticalWindSpeed;
-            if (valid) {
-                verticalWindSpeed = -getEstimatedWindSpeed(Z);  //from NED to NEU
-                if (verticalWindSpeed < 0) {
-                    buff[1] = SYM_AH_DECORATION_DOWN;
-                    verticalWindSpeed = -verticalWindSpeed;
-                } else if (verticalWindSpeed > 0) {
-                    buff[1] = SYM_AH_DECORATION_UP;
-                }
+            verticalWindSpeed = -getEstimatedWindSpeed(Z);  //from NED to NEU
+            if (verticalWindSpeed < 0) {
+                buff[1] = SYM_AH_DECORATION_DOWN;
+                verticalWindSpeed = -verticalWindSpeed;
             } else {
-                verticalWindSpeed = 0;
+                buff[1] = SYM_AH_DECORATION_UP;
             }
             osdFormatWindSpeedStr(buff + 2, verticalWindSpeed, valid);
             break;
@@ -3562,6 +3576,7 @@ PG_RESET_TEMPLATE(osdConfig_t, osdConfig,
 
     .video_system = SETTING_OSD_VIDEO_SYSTEM_DEFAULT,
     .row_shiftdown = SETTING_OSD_ROW_SHIFTDOWN_DEFAULT,
+    .msp_displayport_fullframe_interval = SETTING_OSD_MSP_DISPLAYPORT_FULLFRAME_INTERVAL_DEFAULT,
 
     .ahi_reverse_roll = SETTING_OSD_AHI_REVERSE_ROLL_DEFAULT,
     .ahi_max_pitch = SETTING_OSD_AHI_MAX_PITCH_DEFAULT,
@@ -3678,6 +3693,7 @@ void pgResetFn_osdLayoutsConfig(osdLayoutsConfig_t *osdLayoutsConfig)
     osdLayoutsConfig->item_pos[0][OSD_HORIZON_SIDEBARS] = OSD_POS(8, 6);
 
     osdLayoutsConfig->item_pos[0][OSD_CRAFT_NAME] = OSD_POS(20, 2);
+    osdLayoutsConfig->item_pos[0][OSD_PILOT_NAME] = OSD_POS(20, 3);
     osdLayoutsConfig->item_pos[0][OSD_VTX_CHANNEL] = OSD_POS(8, 6);
 
 #ifdef USE_SERIALRX_CRSF
@@ -4294,9 +4310,9 @@ static void osdShowArmed(void)
     displayWrite(osdDisplayPort, (osdDisplayPort->cols - strlen(buf)) / 2, y, buf);
     y += 2;
 
-    if (strlen(systemConfig()->name) > 0) {
+    if (strlen(systemConfig()->craftName) > 0) {
         osdFormatCraftName(craftNameBuf);
-        displayWrite(osdDisplayPort, (osdDisplayPort->cols - strlen(systemConfig() -> name)) / 2, y, craftNameBuf );
+        displayWrite(osdDisplayPort, (osdDisplayPort->cols - strlen(systemConfig()->craftName)) / 2, y, craftNameBuf );
         y += 1;
     }
     if (posControl.waypointListValid && posControl.waypointCount > 0) {

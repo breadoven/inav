@@ -324,7 +324,6 @@ typedef struct {
 } rthSanityChecker_t;
 
 typedef struct {
-    // fpVector3_t                 targetPos;  // CR80
     int32_t                     course;
     int32_t                     previousCourse;
     timeMs_t                    lastCourseAdjustmentTime;
