@@ -1948,7 +1948,7 @@ Calculated 1G of Acc axis Z to use in INS
 
 | Default | Min | Max |
 | --- | --- | --- |
-| 0.0 | 0 | 2000 |
+| 0 | 0 | 2000 |
 
 ---
 
@@ -2644,7 +2644,7 @@ Protocol that is used to send motor updates to ESCs. Possible values - STANDARD,
 
 ### motor_pwm_rate
 
-Output frequency (in Hz) for motor pins.  Applies only to brushed motors. 
+Output frequency (in Hz) for motor pins.  Applies only to brushed motors.
 
 | Default | Min | Max |
 | --- | --- | --- |
@@ -2688,7 +2688,7 @@ Delay before craft disarms when `nav_disarm_on_landing` is set (ms)
 
 | Default | Min | Max |
 | --- | --- | --- |
-| 2000 | 100 | 10000 |
+| 1000 | 100 | 10000 |
 
 ---
 
@@ -2849,6 +2849,16 @@ Forward acceleration threshold for bungee launch of throw launch [cm/s/s], 1G = 
 | Default | Min | Max |
 | --- | --- | --- |
 | 1863 | 1000 | 20000 |
+
+---
+
+### nav_fw_launch_allow_throttle_low
+
+Allow launch sequence with throttle maintained low throughout. When main launch sequence completes control is maintained with Nav cruise throttle until sticks moved/throttle raised or control switches to other Nav mode if preselected
+
+| Default | Min | Max |
+| --- | --- | --- |
+| OFF | OFF | ON |
 
 ---
 
@@ -3459,6 +3469,16 @@ P gain of altitude PID controller (Multirotor)
 | Default | Min | Max |
 | --- | --- | --- |
 | 50 | 0 | 255 |
+
+---
+
+### nav_mc_vel_xy_accel_tweak
+
+Fiddle factor to tune bank angle response to specific quad performance
+
+| Default | Min | Max |
+| --- | --- | --- |
+| 100 | 10 | 100 |
 
 ---
 
@@ -4309,6 +4329,16 @@ Temperature under which the IMU temperature OSD element will start blinking (dec
 | Default | Min | Max |
 | --- | --- | --- |
 | -200 | -550 | 1250 |
+
+---
+
+### osd_infocycle_interval_time
+
+Info Cycle field item display time (milliseconds).
+
+| Default | Min | Max |
+| --- | --- | --- |
+| 2000 | 500 | 5000 |
 
 ---
 

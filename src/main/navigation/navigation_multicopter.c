@@ -739,7 +739,7 @@ bool isMulticopterFlying(void)
 // CR89
 float updateBaroAltitudeVelocity(float newBaroAltVel, bool updateValue)
 {
-    static float newBaroAltVel;
+    static float baroAltVel;
     if (updateValue) {
         baroAltVel = newBaroAltVel;
     }
@@ -759,28 +759,26 @@ bool isMulticopterLandingDetected(void)
     DEBUG_SET(DEBUG_ALWAYS, 0, 57);
     DEBUG_SET(DEBUG_ALWAYS, 1, updateBaroAltitudeVelocity(0, false));
     static timeUs_t gSpikeDetectTimeUs = 0;
-    bool landingBumpDetected = false;
+    // bool landingBumpDetected = false;
 
     if (!gSpikeDetectTimeUs && acc.accADCf[Z] > 2.0f) {
         gSpikeDetectTimeUs = currentTimeUs;
     } else if (gSpikeDetectTimeUs) {
         if (currentTimeUs < gSpikeDetectTimeUs + 100000) {  // G spike must be < 0.1s duration
-            landingBumpDetected = acc.accADCf[Z] < 1.0f && updateBaroAltitudeVelocity(0, false) < 0;
+            if (acc.accADCf[Z] < 1.0f && updateBaroAltitudeVelocity(0, false) < 0) {    // check if landing bump detected
+                if (navigationInAutomaticThrottleMode()) {
+                    DEBUG_SET(DEBUG_ALWAYS, 0, 107 + rcCommand[THROTTLE] < currentBatteryProfile->nav.mc.hover_throttle);
+                    return rcCommand[THROTTLE] < currentBatteryProfile->nav.mc.hover_throttle;
+                } else {
+                    DEBUG_SET(DEBUG_ALWAYS, 0, 127 + rcCommand[THROTTLE] < 0.5 * (currentBatteryProfile->nav.mc.hover_throttle + getThrottleIdleValue()));
+                    return rcCommand[THROTTLE] < 0.5 * (currentBatteryProfile->nav.mc.hover_throttle + getThrottleIdleValue());
+                }
+            }
         } else {
             gSpikeDetectTimeUs = 0;
         }
     }
     DEBUG_SET(DEBUG_ALWAYS, 3, gSpikeDetectTimeUs);
-    if (landingBumpDetected) {
-        if (navigationInAutomaticThrottleMode()) {
-            bool throttleBelowHover = rcCommand[THROTTLE] < currentBatteryProfile->nav.mc.hover_throttle;
-            DEBUG_SET(DEBUG_ALWAYS, 0, 107 + throttleBelowHover);
-            return throttleBelowHover;
-        } else {
-            DEBUG_SET(DEBUG_ALWAYS, 0, 127);
-            return rcCommand[THROTTLE] < 0.5 * (currentBatteryProfile->nav.mc.hover_throttle + getThrottleIdleValue());
-        }
-    }
     // CR89
 
     // Basic condition to start looking for landing (prevent landing detection if failsafe_mission OFF except landing states)
