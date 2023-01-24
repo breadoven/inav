@@ -755,30 +755,25 @@ bool isMulticopterLandingDetected(void)
     static timeUs_t landingDetectorStartedAt;
 
     // CR89
-    /* Detection based on G bump at touchdown and rapid drop in Baro altitude */
+    /* Detection based on G bump at touchdown and falling Baro altitude */
     DEBUG_SET(DEBUG_ALWAYS, 0, 57);
     DEBUG_SET(DEBUG_ALWAYS, 1, updateBaroAltitudeVelocity(0, false));
     static timeUs_t gSpikeDetectTimeUs = 0;
-    // bool landingBumpDetected = false;
+    const bool baroAltFalling = updateBaroAltitudeVelocity(0, false) < -200.0f;
 
-    if (!gSpikeDetectTimeUs && acc.accADCf[Z] > 2.0f) {
+    if (!gSpikeDetectTimeUs && acc.accADCf[Z] > 2.0f && baroAltFalling) {
         gSpikeDetectTimeUs = currentTimeUs;
     } else if (gSpikeDetectTimeUs) {
         if (currentTimeUs < gSpikeDetectTimeUs + 100000) {  // G spike must be < 0.1s duration
-            if (acc.accADCf[Z] < 1.0f && updateBaroAltitudeVelocity(0, false) < 0) {    // check if landing bump detected
-                if (navigationInAutomaticThrottleMode()) {
-                    DEBUG_SET(DEBUG_ALWAYS, 0, 107 + rcCommand[THROTTLE] < currentBatteryProfile->nav.mc.hover_throttle);
-                    return rcCommand[THROTTLE] < currentBatteryProfile->nav.mc.hover_throttle;
-                } else {
-                    DEBUG_SET(DEBUG_ALWAYS, 0, 127 + rcCommand[THROTTLE] < 0.5 * (currentBatteryProfile->nav.mc.hover_throttle + getThrottleIdleValue()));
-                    return rcCommand[THROTTLE] < 0.5 * (currentBatteryProfile->nav.mc.hover_throttle + getThrottleIdleValue());
-                }
+            if (acc.accADCf[Z] < 1.0f && baroAltFalling) {    // check if landing bump detected
+                DEBUG_SET(DEBUG_ALWAYS, 0, 127);
+                return rcCommand[THROTTLE] < 0.5 * (currentBatteryProfile->nav.mc.hover_throttle + getThrottleIdleValue());
             }
-        } else {
+        } else if (acc.accADCf[Z] <= 1.0f) {
             gSpikeDetectTimeUs = 0;
         }
     }
-    DEBUG_SET(DEBUG_ALWAYS, 3, gSpikeDetectTimeUs);
+    DEBUG_SET(DEBUG_ALWAYS, 2, gSpikeDetectTimeUs);
     // CR89
 
     // Basic condition to start looking for landing (prevent landing detection if failsafe_mission OFF except landing states)

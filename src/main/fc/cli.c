@@ -3442,7 +3442,7 @@ static void cliStatus(char *cmdline)
 #if defined(USE_OSD)
     displayPort_t *osdDisplayPort = osdGetDisplayPort();
     cliPrintf("%s [%u x %u]", osdDisplayPort->displayPortType, osdDisplayPort->cols, osdDisplayPort->rows);
-#else 
+#else
     cliPrint("not used");
 #endif
     cliPrintLinefeed();
@@ -3801,7 +3801,7 @@ static void cliMsc(char *cmdline)
         cliPrintHashLine("restarting in mass storage mode");
         cliPrint("\r\nRebooting");
         bufWriterFlush(cliWriter);
-        delay(1000);    // CR89
+        delay(1000);
         waitForSerialPortToFinishTransmitting(cliPort);
         stopPwmAllMotors();
         systemResetRequest(RESET_MSC_REQUEST);
