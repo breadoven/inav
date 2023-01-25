@@ -35,7 +35,6 @@
 #include "sensors/acceleration.h"
 #include "sensors/boardalignment.h"
 #include "sensors/gyro.h"
-// #include "sensors/barometer.h"  // CR89
 
 #include "fc/config.h"
 #include "fc/rc_controls.h"
@@ -751,29 +750,30 @@ bool isMulticopterLandingDetected(void)
 {
     DEBUG_SET(DEBUG_LANDING, 4, 0);
     DEBUG_SET(DEBUG_LANDING, 3, averageAbsGyroRates() * 100);
-    const timeUs_t currentTimeUs = micros();    // CR89
-    static timeUs_t landingDetectorStartedAt;
-
+    const timeMs_t currentTimeMs = millis();    // CR89
+    static timeMs_t landingDetectorStartedAt;
     // CR89
-    /* Detection based on G bump at touchdown and falling Baro altitude */
+    /* Detection based on G bump at touchdown, falling Baro altitude and throttle below hover */
     DEBUG_SET(DEBUG_ALWAYS, 0, 57);
     DEBUG_SET(DEBUG_ALWAYS, 1, updateBaroAltitudeVelocity(0, false));
-    static timeUs_t gSpikeDetectTimeUs = 0;
-    const bool baroAltFalling = updateBaroAltitudeVelocity(0, false) < -200.0f;
+    static timeMs_t gSpikeDetectTimeMs = 0;
+    const bool baroAltFalling = updateBaroAltitudeVelocity(0, false) < 0.0f;
 
-    if (!gSpikeDetectTimeUs && acc.accADCf[Z] > 2.0f && baroAltFalling) {
-        gSpikeDetectTimeUs = currentTimeUs;
-    } else if (gSpikeDetectTimeUs) {
-        if (currentTimeUs < gSpikeDetectTimeUs + 100000) {  // G spike must be < 0.1s duration
+    if (!gSpikeDetectTimeMs && acc.accADCf[Z] > 2.0f && baroAltFalling) {
+        gSpikeDetectTimeMs = currentTimeMs;
+    } else if (gSpikeDetectTimeMs) {
+        if (currentTimeMs < gSpikeDetectTimeMs + 100) {  // G spike must be < 0.1s duration
             if (acc.accADCf[Z] < 1.0f && baroAltFalling) {    // check if landing bump detected
                 DEBUG_SET(DEBUG_ALWAYS, 0, 127);
-                return rcCommand[THROTTLE] < 0.5 * (currentBatteryProfile->nav.mc.hover_throttle + getThrottleIdleValue());
+                const uint16_t idleThrottle = getThrottleIdleValue();
+                const uint16_t hoverThrottleRange = currentBatteryProfile->nav.mc.hover_throttle - idleThrottle;
+                return rcCommand[THROTTLE] < idleThrottle + ((navigationInAutomaticThrottleMode() ? 0.9 : 0.5) * hoverThrottleRange);
             }
         } else if (acc.accADCf[Z] <= 1.0f) {
-            gSpikeDetectTimeUs = 0;
+            gSpikeDetectTimeMs = 0;
         }
     }
-    DEBUG_SET(DEBUG_ALWAYS, 2, gSpikeDetectTimeUs);
+    DEBUG_SET(DEBUG_ALWAYS, 2, gSpikeDetectTimeMs);
     // CR89
 
     // Basic condition to start looking for landing (prevent landing detection if failsafe_mission OFF except landing states)
@@ -811,13 +811,13 @@ bool isMulticopterLandingDetected(void)
 
         if (!landingDetectorStartedAt) {
             landingThrSum = landingThrSamples = 0;
-            landingDetectorStartedAt = currentTimeUs;
+            landingDetectorStartedAt = currentTimeMs;
         }
         if (!landingThrSamples) {
-            if (currentTimeUs - landingDetectorStartedAt < (USECS_PER_SEC * MC_LAND_THR_STABILISE_DELAY)) {   // Wait for 1 second so throttle has stabilized.
+            if (currentTimeMs - landingDetectorStartedAt < S2MS(MC_LAND_THR_STABILISE_DELAY)) {   // Wait for 1 second so throttle has stabilized.
                 return false;
             } else {
-                landingDetectorStartedAt = currentTimeUs;
+                landingDetectorStartedAt = currentTimeMs;
             }
         }
         landingThrSamples += 1;
@@ -834,7 +834,7 @@ bool isMulticopterLandingDetected(void)
         if (landingDetectorStartedAt) {
             possibleLandingDetected = velCondition && gyroCondition;
         } else {
-            landingDetectorStartedAt = currentTimeUs;
+            landingDetectorStartedAt = currentTimeMs;
             return false;
         }
     }
@@ -849,10 +849,10 @@ bool isMulticopterLandingDetected(void)
     DEBUG_SET(DEBUG_LANDING, 5, possibleLandingDetected);
 
     if (possibleLandingDetected) {
-        timeUs_t safetyTimeDelay = MS2US(1000 + navConfig()->general.auto_disarm_delay);  // check conditions stable for 1s + optional extra delay CR89
-        return (currentTimeUs - landingDetectorStartedAt > safetyTimeDelay);
+        timeMs_t safetyTimeDelay = 1000 + navConfig()->general.auto_disarm_delay;  // check conditions stable for 1s + optional extra delay CR89
+        return (currentTimeMs - landingDetectorStartedAt > safetyTimeDelay);
     } else {
-        landingDetectorStartedAt = currentTimeUs;
+        landingDetectorStartedAt = currentTimeMs;
         return false;
     }
 }

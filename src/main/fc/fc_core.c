@@ -862,12 +862,7 @@ void taskMainPidLoop(timeUs_t currentTimeUs)
 
     if (isRXDataNew) {
         updateWaypointsAndNavigationMode();
-        // Check if landed, FW and MR   CR89
-        if (STATE(ALTITUDE_CONTROL)) {
-            updateLandingStatus();
-        }
     }
-
     isRXDataNew = false;
 
     updatePositionEstimator();
@@ -932,9 +927,9 @@ void taskMainPidLoop(timeUs_t currentTimeUs)
 #endif
 
     // // Check if landed, FW and MR
-    // if (STATE(ALTITUDE_CONTROL)) {
-        // updateLandingStatus();
-    // }
+    if (STATE(ALTITUDE_CONTROL)) {
+        updateLandingStatus(US2MS(currentTimeUs));  // CR89
+    }
 
 #ifdef USE_BLACKBOX
     if (!cliMode && feature(FEATURE_BLACKBOX)) {

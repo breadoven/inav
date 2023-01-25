@@ -2108,7 +2108,7 @@ void updateActualAltitudeAndClimbRate(bool estimateValid, float newAltitude, flo
         // DEBUG_SET(DEBUG_ALWAYS, 0, gpsCfEstimatedAltitudeError);
         posControl.lastValidAltitudeTimeMs = millis();
         /* flag set if mismatch between GPS and estimated altitude exceeds 20m */
-        posControl.flags.gpsCfEstimatedAltitudeMismatch = fabsf(gpsCfEstimatedAltitudeError) > 100;     // CR88
+        posControl.flags.gpsCfEstimatedAltitudeMismatch = fabsf(gpsCfEstimatedAltitudeError) > 2000;     // CR88
     }
     else {
         posControl.flags.estAltStatus = EST_NONE;
@@ -2845,11 +2845,18 @@ void calculateFarAwayTarget(fpVector3_t * farAwayPos, int32_t bearing, int32_t d
 /*-----------------------------------------------------------
  * NAV land detector
  *-----------------------------------------------------------*/
-void updateLandingStatus(void)
+void updateLandingStatus(timeMs_t currentTimeMs)    // CR89
 {
     // if (STATE(AIRPLANE) && !navConfig()->general.flags.disarm_on_landing) {
         // return;     // no point using this with a fixed wing if not set to disarm
     // }
+    // CR89
+    static timeMs_t lastUpdateTimeMs = 0;
+    if (currentTimeMs < lastUpdateTimeMs + HZ2MS(100)) {  // limit updates to 100Hz
+        return;
+    }
+    lastUpdateTimeMs = currentTimeMs;
+    // CR89
 
     static bool landingDetectorIsActive;
 
@@ -2875,7 +2882,7 @@ void updateLandingStatus(void)
         if (navConfig()->general.flags.disarm_on_landing) {
             ENABLE_ARMING_FLAG(ARMING_DISABLED_LANDING_DETECTED);
             disarm(DISARM_LANDING);
-        } else if (!navigationIsFlyingAutonomousMode()) {
+        } else if (!navigationInAutomaticThrottleMode()) {     // CR89
             // for multirotor only - reactivate landing detector without disarm when throttle raised toward hover throttle
             landingDetectorIsActive = rxGetChannelValue(THROTTLE) < (0.5 * (currentBatteryProfile->nav.mc.hover_throttle + getThrottleIdleValue()));
         }
