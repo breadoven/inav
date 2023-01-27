@@ -740,8 +740,10 @@ bool isFixedWingLandingDetected(void)
             DEBUG_SET(DEBUG_LANDING, 7, isPitchAxisStatic);
             if (isRollAxisStatic && isPitchAxisStatic) {
                 // Probably landed, low horizontal and vertical velocities and no axis rotation in Roll and Pitch
-                timeMs_t safetyTimeDelay = 1000 + navConfig()->general.auto_disarm_delay;
-                return currentTimeMs - fwLandingTimerStartAt > safetyTimeDelay; // check conditions stable for 1s + optional extra delay
+                // Conditions need to be stable for fixed safety time + optional extra delay. Fixed time increased if velocities invalid.
+                const uint16_t safetyTime = posControl.flags.estAltStatus == EST_NONE || posControl.flags.estVelStatus == EST_NONE ? 4000 : 1000; // CR89
+                timeMs_t safetyTimeDelay = safetyTime + navConfig()->general.auto_disarm_delay;
+                return currentTimeMs - fwLandingTimerStartAt > safetyTimeDelay;
             } else {
                 fixAxisCheck = false;
             }

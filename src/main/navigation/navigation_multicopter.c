@@ -735,35 +735,30 @@ bool isMulticopterFlying(void)
 /*-----------------------------------------------------------
  * Multicopter landing detector
  *-----------------------------------------------------------*/
-// CR89
-float updateBaroAltitudeVelocity(float newBaroAltVel, bool updateValue)
+// CR91
+#if defined(USE_BARO)
+float updateBaroAltitudeRate(float newBaroAltRate, bool updateValue)
 {
-    static float baroAltVel;
+    static float baroAltRate;
     if (updateValue) {
-        baroAltVel = newBaroAltVel;
+        baroAltRate = newBaroAltRate;
     }
 
-    return baroAltVel;
+    return baroAltRate;
 }
-// CR89
-bool isMulticopterLandingDetected(void)
+
+static bool isLandingGbumpDetected(timeMs_t currentTimeMs)
 {
-    DEBUG_SET(DEBUG_LANDING, 4, 0);
-    DEBUG_SET(DEBUG_LANDING, 3, averageAbsGyroRates() * 100);
-    const timeMs_t currentTimeMs = millis();    // CR89
-    static timeMs_t landingDetectorStartedAt;
-    // CR89
     /* Detection based on G bump at touchdown, falling Baro altitude and throttle below hover */
     DEBUG_SET(DEBUG_ALWAYS, 0, 57);
-    DEBUG_SET(DEBUG_ALWAYS, 1, updateBaroAltitudeVelocity(0, false));
     static timeMs_t gSpikeDetectTimeMs = 0;
-    const bool baroAltFalling = updateBaroAltitudeVelocity(0, false) < 0.0f;
-
-    if (!gSpikeDetectTimeMs && acc.accADCf[Z] > 2.0f && baroAltFalling) {
+    const float baroAltRate = updateBaroAltitudeRate(0, false);
+    DEBUG_SET(DEBUG_ALWAYS, 1, baroAltRate);
+    if (!gSpikeDetectTimeMs && acc.accADCf[Z] > 2.0f && baroAltRate < 0.0f) {
         gSpikeDetectTimeMs = currentTimeMs;
     } else if (gSpikeDetectTimeMs) {
-        if (currentTimeMs < gSpikeDetectTimeMs + 100) {  // G spike must be < 0.1s duration
-            if (acc.accADCf[Z] < 1.0f && baroAltFalling) {    // check if landing bump detected
+        if (currentTimeMs < gSpikeDetectTimeMs + 100) {             // G spike must be < 0.1s duration
+            if (acc.accADCf[Z] < 1.0f && baroAltRate < -200.0f) {   // check if landing bump detected
                 DEBUG_SET(DEBUG_ALWAYS, 0, 127);
                 const uint16_t idleThrottle = getThrottleIdleValue();
                 const uint16_t hoverThrottleRange = currentBatteryProfile->nav.mc.hover_throttle - idleThrottle;
@@ -774,12 +769,29 @@ bool isMulticopterLandingDetected(void)
         }
     }
     DEBUG_SET(DEBUG_ALWAYS, 2, gSpikeDetectTimeMs);
-    // CR89
+    return false;
+}
+#endif
+// CR91
+bool isMulticopterLandingDetected(void)
+{
+    DEBUG_SET(DEBUG_LANDING, 4, 0);
+    DEBUG_SET(DEBUG_LANDING, 3, averageAbsGyroRates() * 100);
 
+    const timeMs_t currentTimeMs = millis();    // CR89
+    // CR91
+#if defined(USE_BARO)
+    if (sensors(SENSOR_BARO) && isLandingGbumpDetected(currentTimeMs)) {
+        return true;
+    }
+#endif
+    // CR91
     // Basic condition to start looking for landing (prevent landing detection if failsafe_mission OFF except landing states)
     bool startCondition = (navGetCurrentStateFlags() & (NAV_CTL_LAND | NAV_CTL_EMERG))
                           || (FLIGHT_MODE(FAILSAFE_MODE) && !FLIGHT_MODE(NAV_WP_MODE))
                           || (!navigationIsFlyingAutonomousMode() && throttleStickIsLow());
+
+    static timeMs_t landingDetectorStartedAt;
 
     if (!startCondition || posControl.flags.resetLandingDetector) {
         landingDetectorStartedAt = 0;
@@ -849,7 +861,9 @@ bool isMulticopterLandingDetected(void)
     DEBUG_SET(DEBUG_LANDING, 5, possibleLandingDetected);
 
     if (possibleLandingDetected) {
-        timeMs_t safetyTimeDelay = 1000 + navConfig()->general.auto_disarm_delay;  // check conditions stable for 1s + optional extra delay CR89
+        // Conditions need to be stable for fixed safety time + optional extra delay. Fixed time increased if Z velocity invalid.
+        const uint16_t safetyTime = posControl.flags.estAltStatus == EST_NONE ? 4000 : 1000; // CR89
+        timeMs_t safetyTimeDelay = safetyTime + navConfig()->general.auto_disarm_delay; // CR89
         return (currentTimeMs - landingDetectorStartedAt > safetyTimeDelay);
     } else {
         landingDetectorStartedAt = currentTimeMs;
