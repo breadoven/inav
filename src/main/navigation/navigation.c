@@ -2848,13 +2848,6 @@ void updateLandingStatus(timeMs_t currentTimeMs)
     // if (STATE(AIRPLANE) && !navConfig()->general.flags.disarm_on_landing) {
         // return;     // no point using this with a fixed wing if not set to disarm
     // }
-    // CR89
-    static timeMs_t lastUpdateTimeMs = 0;
-    if ((currentTimeMs - lastUpdateTimeMs) <= HZ2MS(100)) {  // limit updates to 100Hz
-        return;
-    }
-    lastUpdateTimeMs = currentTimeMs;
-    // CR89
 
     static timeMs_t lastUpdateTimeMs = 0;
     if ((currentTimeMs - lastUpdateTimeMs) <= HZ2MS(100)) {  // limit update to 100Hz
