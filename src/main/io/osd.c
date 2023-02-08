@@ -1047,13 +1047,17 @@ static void osdFormatBatteryChargeSymbol(char *buff)
     p = (100 - p) / 16.6;
     buff[0] = SYM_BATT_FULL + p;
 }
-
+// CR92
 static void osdUpdateBatteryCapacityOrVoltageTextAttributes(textAttributes_t *attr)
 {
-    if ((getBatteryState() != BATTERY_NOT_PRESENT) && ((batteryUsesCapacityThresholds() && (getBatteryRemainingCapacity() <= currentBatteryProfile->capacity.warning - currentBatteryProfile->capacity.critical)) || ((!batteryUsesCapacityThresholds()) && (getBatteryVoltage() <= getBatteryWarningVoltage()))))
-        TEXT_ATTRIBUTES_ADD_BLINK(*attr);
-}
+    const batteryState_e batteryState = getBatteryState();
 
+    if (batteryState == BATTERY_WARNING || batteryState == BATTERY_CRITICAL) {
+        TEXT_ATTRIBUTES_ADD_BLINK(*attr);
+    }
+
+}
+// CR92
 void osdCrosshairPosition(uint8_t *x, uint8_t *y)
 {
     *x = osdDisplayPort->cols / 2;
@@ -1453,8 +1457,14 @@ static void osdDisplayBatteryVoltage(uint8_t elemPosX, uint8_t elemPosY, uint16_
     osdFormatCentiNumber(buff, voltage, 0, decimals, 0, digits);
     buff[digits] = SYM_VOLT;
     buff[digits+1] = '\0';
-    if ((getBatteryState() != BATTERY_NOT_PRESENT) && (getBatteryVoltage() <= getBatteryWarningVoltage()))
+    // CR92
+    const batteryState_e batteryVoltageState = checkBatteryVoltageState();
+    if (batteryVoltageState == BATTERY_CRITICAL || batteryVoltageState == BATTERY_WARNING) {
         TEXT_ATTRIBUTES_ADD_BLINK(elemAttr);
+    }
+    // if ((getBatteryState() != BATTERY_NOT_PRESENT) && (getBatteryVoltage() <= getBatteryWarningVoltage()))
+        // TEXT_ATTRIBUTES_ADD_BLINK(elemAttr);
+    // CR92
     displayWriteWithAttr(osdDisplayPort, elemPosX + 1, elemPosY, buff, elemAttr);
 }
 
@@ -1759,9 +1769,13 @@ static bool osdDrawSingleElement(uint8_t item)
         buff[4] = currentBatteryProfile->capacity.unit == BAT_CAPACITY_UNIT_MAH ? SYM_MAH : SYM_WH;
         buff[5] = '\0';
 
-        if ((getBatteryState() != BATTERY_NOT_PRESENT) && batteryUsesCapacityThresholds() && (getBatteryRemainingCapacity() <= currentBatteryProfile->capacity.warning - currentBatteryProfile->capacity.critical))
-            TEXT_ATTRIBUTES_ADD_BLINK(elemAttr);
-
+        // CR92
+        if (batteryUsesCapacityThresholds()) {
+            osdUpdateBatteryCapacityOrVoltageTextAttributes(&elemAttr);
+        }
+        // if ((getBatteryState() != BATTERY_NOT_PRESENT) && batteryUsesCapacityThresholds() && (getBatteryRemainingCapacity() <= currentBatteryProfile->capacity.warning - currentBatteryProfile->capacity.critical))
+            // TEXT_ATTRIBUTES_ADD_BLINK(elemAttr);
+        // CR92
         break;
 
     case OSD_BATTERY_REMAINING_PERCENT:
@@ -4831,28 +4845,46 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
     return elemAttr;
 }
 // CR88
-void resetOsdWarningFlags(void)
+void osdResetWarningFlags(void)
 {
     osdWarningsFlags = 0;
 }
 
-static bool checkOsdWarning(bool condition, uint8_t warningFlag, uint8_t *warningsCount)
+static uint16_t osdWarningTimerDuration;
+static bool osdCheckWarning(bool condition, uint8_t warningFlag, uint8_t *warningsCount)
 {
-    static timeMs_t newWarningStartTime = 0;
     const timeMs_t currentTimeMs = millis();
+    static timeMs_t newWarningStartTime = 0;
+    static timeMs_t repeaterStartTimeMs = 0;
+    // static uint16_t osdWarningTimerDuration;
+    static uint8_t newWarningFlags;
 
+    DEBUG_SET(DEBUG_ALWAYS, 3, newWarningStartTime);
+    DEBUG_SET(DEBUG_ALWAYS, 4, currentTimeMs);
+    DEBUG_SET(DEBUG_ALWAYS, 5, repeaterStartTimeMs);
     if (condition) {
         if (!(osdWarningsFlags & warningFlag)) {
             newWarningStartTime = currentTimeMs;
+            osdWarningTimerDuration = 10000;
+            repeaterStartTimeMs = 0;
             osdWarningsFlags |= warningFlag;
+            newWarningFlags |= warningFlag;
         }
 #ifdef USE_DEV_TOOLS
         if (systemConfig()->groundTestMode) {
             return true;
         }
 #endif
-        if (currentTimeMs - newWarningStartTime < 10000) {
-            return true;
+        if (currentTimeMs - newWarningStartTime < osdWarningTimerDuration) {
+            return (newWarningFlags & warningFlag) || osdWarningTimerDuration == 5000;
+        } else {
+            newWarningFlags = 0;
+        }
+        if (repeaterStartTimeMs < currentTimeMs - 1000) {
+            repeaterStartTimeMs = currentTimeMs + 30000;
+        } else if (currentTimeMs >= repeaterStartTimeMs) {
+            newWarningStartTime = currentTimeMs;
+            osdWarningTimerDuration = 5000;
         }
         *warningsCount += 1;
     } else if (osdWarningsFlags & warningFlag) {
@@ -4890,49 +4922,69 @@ static textAttributes_t osdGetMultiFunctionMessage(char *buff)
     }
 
 /* WARNINGS --------------------------------------------- */
-    const char *messages[4];
-    // const char *message = NULL;
+    const char *messages[6];
     uint8_t messageCount = 0;
     bool warningCondition = false;
     warningsCount = 0;
     uint8_t warningFlagID = 1;
 
+    // Low Battery Voltage
+    const batteryState_e batteryVoltageState = checkBatteryVoltageState();
+    warningCondition = batteryVoltageState == BATTERY_CRITICAL || batteryVoltageState == BATTERY_WARNING;
+    if (osdCheckWarning(warningCondition, warningFlagID, &warningsCount)) {
+        messages[messageCount++] = batteryVoltageState == BATTERY_CRITICAL ? "VBATT CRIT" : "VBATT LOW ";
+    }
+
+    // Low Battery Capacity
+    if (batteryUsesCapacityThresholds()) {
+        const batteryState_e batteryState = getBatteryState();
+        warningCondition = batteryState == BATTERY_CRITICAL || batteryVoltageState == BATTERY_WARNING;
+        if (osdCheckWarning(warningCondition, warningFlagID <<= 1, &warningsCount)) {
+            messages[messageCount++] = batteryState == BATTERY_CRITICAL ? "BATT EMPTY" : "BATT LOW  ";
+        }
+    }
+
 #if defined(USE_GPS)
     // GPS Fix and Failure
     if (feature(FEATURE_GPS)) {
-        if (checkOsdWarning(!STATE(GPS_FIX), warningFlagID, &warningsCount)) {
+        if (osdCheckWarning(!STATE(GPS_FIX), warningFlagID <<= 1, &warningsCount)) {
             bool gpsFailed = getHwGPSStatus() == HW_SENSOR_UNAVAILABLE;
             messages[messageCount++] = gpsFailed ? "GPS FAILED" : "NO GPS FIX";
         }
     }
+
     // RTH sanity
     warningCondition = NAV_Status.state == MW_NAV_STATE_RTH_ENROUTE && !posControl.flags.rthTrackbackActive &&
                        (posControl.homeDistance - posControl.rthSanityChecker.minimalDistanceToHome) > 500;
-    if (checkOsdWarning(warningCondition, warningFlagID << 1, &warningsCount)) {
+    if (osdCheckWarning(warningCondition, warningFlagID <<= 1, &warningsCount)) {
         messages[messageCount++] = "RTH SANITY";
     }
+
     // Altitude sanity (estimated vs GPS raw)
-    if (checkOsdWarning(posControl.flags.gpsCfEstimatedAltitudeMismatch, warningFlagID << 1, &warningsCount)) {
+    if (osdCheckWarning(posControl.flags.gpsCfEstimatedAltitudeMismatch, warningFlagID <<= 1, &warningsCount)) {
         messages[messageCount++] = "ALT SANITY";
     }
 #endif
+
 #ifdef USE_DEV_TOOLS
-    if (checkOsdWarning(systemConfig()->groundTestMode, warningFlagID << 1, &warningsCount)) {
+    if (osdCheckWarning(systemConfig()->groundTestMode, warningFlagID <<= 1, &warningsCount)) {
         messages[messageCount++] = "GRD TEST !";
     }
 #endif
+
 // #if defined(USE_MAG)
-    // if (checkOsdWarning(getHwCompassStatus() == HW_SENSOR_UNAVAILABLE, OSD_WARN_5)) {
+    // if (osdCheckWarning(getHwCompassStatus() == HW_SENSOR_UNAVAILABLE, warningFlagID << 1, &warningsCount))) {
         // messages[messageCount++] = "MAG FAILED";
     // }
 // #endif
+
 // #if defined(USE_BARO)
-    // if (checkOsdWarning(getHwBarometerStatus() == HW_SENSOR_UNAVAILABLE, OSD_WARN_4)) {
+    // if (osdCheckWarning(getHwBarometerStatus() == HW_SENSOR_UNAVAILABLE, warningFlagID << 1, &warningsCount))) {
         // messages[messageCount++] = "BARO FAIL";
     // }
 // #endif
     if (messageCount) {
-        message = messages[OSD_ALTERNATING_CHOICES(2000, messageCount)];
+        message = messages[OSD_ALTERNATING_CHOICES(osdWarningTimerDuration == 10000 ? 2000 : 1000, messageCount)];
         strcpy(buff, message);
         TEXT_ATTRIBUTES_ADD_BLINK(elemAttr);
     } else if (warningsCount) {
@@ -4940,7 +4992,7 @@ static textAttributes_t osdGetMultiFunctionMessage(char *buff)
         tfp_sprintf(buff + 1, "%u        ", warningsCount);
     }
     return elemAttr;
-/* WARNINGS --------------------------------------------- */
+
     // CR27
     if (STATE(MULTIROTOR)) {
         if (compassGpsCogError == 270) {

@@ -41,7 +41,7 @@ static void multiFunctionApply(multi_function_e selectedItem)
     case MULTI_FUNC_NONE:
         break;
     case MULTI_FUNC_1:
-        resetOsdWarningFlags();
+        osdResetWarningFlags();
         break;
     case MULTI_FUNC_2:  // control manual emergency landing
         checkManualEmergencyLandingControl(ARMING_FLAG(ARMED));

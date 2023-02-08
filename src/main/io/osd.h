@@ -485,7 +485,7 @@ void osdFormatVelocityStr(char* buff, int32_t vel, bool _3D, bool _max);
 // Returns a heading angle in degrees normalized to [0, 360).
 int osdGetHeadingAngle(int angle);
 
-void resetOsdWarningFlags(void);    // CR88
+void osdResetWarningFlags(void);    // CR88
 
 /**
  * @brief Get the OSD system message

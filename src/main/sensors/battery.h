@@ -82,6 +82,7 @@ uint16_t getBatteryAverageCellVoltage(void);
 uint16_t getBatterySagCompensatedAverageCellVoltage(void);
 uint32_t getBatteryRemainingCapacity(void);
 uint16_t getPowerSupplyImpedance(void);
+batteryState_e checkBatteryVoltageState(void);    // CR92
 
 bool isAmperageConfigured(void);
 int16_t getAmperage(void);
