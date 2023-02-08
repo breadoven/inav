@@ -185,8 +185,10 @@ static uint8_t armState;
 static uint8_t statsPagesCheck = 0;
 
 static bool infocycleSuspended = false;     // CR22
-static textAttributes_t osdGetMultiFunctionMessage(char *buff);     // CR88
-static uint8_t osdWarningsFlags = 0;    // CR88
+// Multifunction display  CR88
+static textAttributes_t osdGetMultiFunctionMessage(char *buff);
+static uint8_t osdWarningsFlags = 0;
+// CR88
 
 typedef struct osdMapData_s {
     uint32_t scale;
@@ -4850,41 +4852,35 @@ void osdResetWarningFlags(void)
     osdWarningsFlags = 0;
 }
 
-static uint16_t osdWarningTimerDuration;
 static bool osdCheckWarning(bool condition, uint8_t warningFlag, uint8_t *warningsCount)
 {
     const timeMs_t currentTimeMs = millis();
-    static timeMs_t newWarningStartTime = 0;
-    static timeMs_t repeaterStartTimeMs = 0;
-    // static uint16_t osdWarningTimerDuration;
+    static timeMs_t warningDisplayStartTime = 0;
+    static timeMs_t redisplayStartTimeMs = 0;
+    static uint16_t osdWarningTimerDuration;
     static uint8_t newWarningFlags;
 
-    DEBUG_SET(DEBUG_ALWAYS, 3, newWarningStartTime);
-    DEBUG_SET(DEBUG_ALWAYS, 4, currentTimeMs);
-    DEBUG_SET(DEBUG_ALWAYS, 5, repeaterStartTimeMs);
     if (condition) {
         if (!(osdWarningsFlags & warningFlag)) {
-            newWarningStartTime = currentTimeMs;
-            osdWarningTimerDuration = 10000;
-            repeaterStartTimeMs = 0;
             osdWarningsFlags |= warningFlag;
             newWarningFlags |= warningFlag;
+            redisplayStartTimeMs = 0;
         }
 #ifdef USE_DEV_TOOLS
         if (systemConfig()->groundTestMode) {
             return true;
         }
 #endif
-        if (currentTimeMs - newWarningStartTime < osdWarningTimerDuration) {
+        if (currentTimeMs > redisplayStartTimeMs) {
+            warningDisplayStartTime = currentTimeMs;
+            osdWarningTimerDuration = newWarningFlags ? 10000 : 5000;
+            redisplayStartTimeMs = currentTimeMs + osdWarningTimerDuration + 30000;
+        }
+
+        if (currentTimeMs - warningDisplayStartTime < osdWarningTimerDuration) {
             return (newWarningFlags & warningFlag) || osdWarningTimerDuration == 5000;
         } else {
             newWarningFlags = 0;
-        }
-        if (repeaterStartTimeMs < currentTimeMs - 1000) {
-            repeaterStartTimeMs = currentTimeMs + 30000;
-        } else if (currentTimeMs >= repeaterStartTimeMs) {
-            newWarningStartTime = currentTimeMs;
-            osdWarningTimerDuration = 5000;
         }
         *warningsCount += 1;
     } else if (osdWarningsFlags & warningFlag) {
@@ -4983,8 +4979,9 @@ static textAttributes_t osdGetMultiFunctionMessage(char *buff)
         // messages[messageCount++] = "BARO FAIL";
     // }
 // #endif
+
     if (messageCount) {
-        message = messages[OSD_ALTERNATING_CHOICES(osdWarningTimerDuration == 10000 ? 2000 : 1000, messageCount)];
+        message = messages[OSD_ALTERNATING_CHOICES(1000, messageCount)];
         strcpy(buff, message);
         TEXT_ATTRIBUTES_ADD_BLINK(elemAttr);
     } else if (warningsCount) {
