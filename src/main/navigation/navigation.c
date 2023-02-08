@@ -1777,12 +1777,10 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_EMERGENCY_LANDING_INITI
 {
     UNUSED(previousState);
 
-    // CR82
     if ((posControl.flags.estPosStatus >= EST_USABLE)) {
         resetPositionController();
         setDesiredPosition(&navGetCurrentActualPositionAndVelocity()->pos, 0, NAV_POS_UPDATE_XY);
     }
-    // CR82
 
     // Emergency landing MAY use common altitude controller if vertical position is valid - initialize it
     // Make sure terrain following is not enabled
@@ -1797,7 +1795,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_EMERGENCY_LANDING_INITI
 static navigationFSMEvent_t navOnEnteringState_NAV_STATE_EMERGENCY_LANDING_IN_PROGRESS(navigationFSMState_t previousState)
 {
     UNUSED(previousState);
-    // CR82
+
     // Reset target position if too far away for some reason, e.g. GPS recovered since start landing.
     if (posControl.flags.estPosStatus >= EST_USABLE) {
         float targetPosLimit = STATE(MULTIROTOR) ? 2000.0f : navConfig()->fw.loiter_radius * 2.0f;
@@ -1805,7 +1803,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_EMERGENCY_LANDING_IN_PR
             setDesiredPosition(&navGetCurrentActualPositionAndVelocity()->pos, 0, NAV_POS_UPDATE_XY);
         }
     }
-    // CR82
+
     if (STATE(LANDING_DETECTED)) {
         return NAV_FSM_EVENT_SUCCESS;
     }
@@ -2845,7 +2843,7 @@ void calculateFarAwayTarget(fpVector3_t * farAwayPos, int32_t bearing, int32_t d
 /*-----------------------------------------------------------
  * NAV land detector
  *-----------------------------------------------------------*/
-void updateLandingStatus(timeMs_t currentTimeMs)    // CR89
+void updateLandingStatus(timeMs_t currentTimeMs)
 {
     // if (STATE(AIRPLANE) && !navConfig()->general.flags.disarm_on_landing) {
         // return;     // no point using this with a fixed wing if not set to disarm
@@ -2857,6 +2855,12 @@ void updateLandingStatus(timeMs_t currentTimeMs)    // CR89
     }
     lastUpdateTimeMs = currentTimeMs;
     // CR89
+
+    static timeMs_t lastUpdateTimeMs = 0;
+    if ((currentTimeMs - lastUpdateTimeMs) <= HZ2MS(100)) {  // limit update to 100Hz
+        return;
+    }
+    lastUpdateTimeMs = currentTimeMs;
 
     static bool landingDetectorIsActive;
 
@@ -2882,7 +2886,7 @@ void updateLandingStatus(timeMs_t currentTimeMs)    // CR89
         if (navConfig()->general.flags.disarm_on_landing) {
             ENABLE_ARMING_FLAG(ARMING_DISABLED_LANDING_DETECTED);
             disarm(DISARM_LANDING);
-        } else if (!navigationInAutomaticThrottleMode()) {     // CR89
+        } else if (!navigationInAutomaticThrottleMode()) {
             // for multirotor only - reactivate landing detector without disarm when throttle raised toward hover throttle
             landingDetectorIsActive = rxGetChannelValue(THROTTLE) < (0.5 * (currentBatteryProfile->nav.mc.hover_throttle + getThrottleIdleValue()));
         }
@@ -3466,9 +3470,10 @@ bool isNavHoldPositionActive(void)
         return isLastMissionWaypoint() || NAV_Status.state == MW_NAV_STATE_HOLD_TIMED;
     }
     // RTH mode (spiral climb and Home positions but excluding RTH Trackback point positions) and POSHOLD mode
+    // Also hold position during emergency landing if position valid
     return (FLIGHT_MODE(NAV_RTH_MODE) && !posControl.flags.rthTrackbackActive) ||
             FLIGHT_MODE(NAV_POSHOLD_MODE) ||
-            navigationIsExecutingAnEmergencyLanding();   // CR82
+            navigationIsExecutingAnEmergencyLanding();
 }
 
 float getActiveWaypointSpeed(void)
@@ -3569,7 +3574,7 @@ void applyWaypointNavigationAndAltitudeHold(void)
         // If we are disarmed, abort forced RTH or Emergency Landing
         posControl.flags.forcedRTHActivated = false;
         posControl.flags.forcedEmergLandingActivated = false;
-        posControl.flags.manualEmergLandActive = false;    // CR82
+        posControl.flags.manualEmergLandActive = false;
         //  ensure WP missions always restart from first waypoint after disarm
         posControl.activeWaypointIndex = posControl.startWpIndex;
         // Reset RTH trackback
@@ -3644,7 +3649,7 @@ static bool isWaypointMissionValid(void)
 {
     return posControl.waypointListValid && (posControl.waypointCount > 0);
 }
-// CR82
+
 void checkManualEmergencyLandingControl(bool forcedActivation)  // CR88
 {
     static timeMs_t timeout = 0;
@@ -3669,6 +3674,7 @@ void checkManualEmergencyLandingControl(bool forcedActivation)  // CR88
         toggle = true;
     }
 
+    // Emergency landing toggled ON or OFF after 5 cycles of Poshold mode @ 1Hz minimum rate
     if (counter >= 5 || forcedActivation) {  // CR88
         counter = 0;
         posControl.flags.manualEmergLandActive = !posControl.flags.manualEmergLandActive;
@@ -3678,7 +3684,7 @@ void checkManualEmergencyLandingControl(bool forcedActivation)  // CR88
         }
     }
 }
-// CR82
+
 static navigationFSMEvent_t selectNavEventFromBoxModeInput(bool launchBypass)   // CR6
 {
 	// General use debugs
@@ -3713,12 +3719,13 @@ static navigationFSMEvent_t selectNavEventFromBoxModeInput(bool launchBypass)   
         if (posControl.flags.rthTrackbackActive) {
             posControl.flags.rthTrackbackActive = isExecutingRTH;
         }
-        // CR82
-        /* Emergency landing triggered manually */
-        checkManualEmergencyLandingControl(false);  // CR88
-        // CR82
-        /* Emergency landing triggered by failsafe when Failsafe procedure set to Landing */
-        if (posControl.flags.forcedEmergLandingActivated || posControl.flags.manualEmergLandActive) {   // CR82
+
+        /* Emergency landing controlled manually by rapid switching of Poshold mode.
+         * Landing toggled ON or OFF for each Poshold activation sequence */
+        checkManualEmergencyLandingControl(false);      // CR88
+
+        /* Emergency landing triggered by failsafe Landing or manually initiated */
+        if (posControl.flags.forcedEmergLandingActivated || posControl.flags.manualEmergLandActive) {
             return NAV_FSM_EVENT_SWITCH_TO_EMERGENCY_LANDING;
         }
 

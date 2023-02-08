@@ -777,9 +777,9 @@ bool isMulticopterLandingDetected(void)
 {
     DEBUG_SET(DEBUG_LANDING, 4, 0);
     DEBUG_SET(DEBUG_LANDING, 3, averageAbsGyroRates() * 100);
-
-    const timeMs_t currentTimeMs = millis();    // CR89
     // CR91
+    const timeMs_t currentTimeMs = millis();
+
 #if defined(USE_BARO)
     if (sensors(SENSOR_BARO) && isLandingGbumpDetected(currentTimeMs)) {
         return true;
@@ -809,7 +809,7 @@ bool isMulticopterLandingDetected(void)
     // DEBUG_SET(DEBUG_LANDING, 3, gyroCondition);
 
     bool possibleLandingDetected = false;
-    // const timeUs_t currentTimeUs = micros();   // CR89
+    // const timeUs_t currentTimeUs = micros();   // CR91
 
     if (navGetCurrentStateFlags() & NAV_CTL_LAND) {
         // We have likely landed if throttle is 40 units below average descend throttle
@@ -861,10 +861,11 @@ bool isMulticopterLandingDetected(void)
     DEBUG_SET(DEBUG_LANDING, 5, possibleLandingDetected);
 
     if (possibleLandingDetected) {
-        // Conditions need to be stable for fixed safety time + optional extra delay. Fixed time increased if Z velocity invalid.
-        const uint16_t safetyTime = posControl.flags.estAltStatus == EST_NONE ? 4000 : 1000; // CR89
-        timeMs_t safetyTimeDelay = safetyTime + navConfig()->general.auto_disarm_delay; // CR89
-        return (currentTimeMs - landingDetectorStartedAt > safetyTimeDelay);
+        /* Conditions need to be held for fixed safety time + optional extra delay.
+         * Fixed time increased if Z velocity invalid to provide extra safety margin against false triggers */
+        const uint16_t safetyTime = posControl.flags.estAltStatus == EST_NONE ? 5000 : 1000;
+        timeMs_t safetyTimeDelay = safetyTime + navConfig()->general.auto_disarm_delay;
+        return currentTimeMs - landingDetectorStartedAt > safetyTimeDelay;
     } else {
         landingDetectorStartedAt = currentTimeMs;
         return false;
@@ -879,8 +880,6 @@ static void applyMulticopterEmergencyLandingController(timeUs_t currentTimeUs)
     static timeUs_t previousTimePositionUpdate = 0;
 
     /* Attempt to stabilise */
-    // rcCommand[ROLL] = 0;
-    // rcCommand[PITCH] = 0;
     rcCommand[YAW] = 0;
 
     if ((posControl.flags.estAltStatus < EST_USABLE)) {
@@ -917,14 +916,14 @@ static void applyMulticopterEmergencyLandingController(timeUs_t currentTimeUs)
 
     // Update throttle controller
     rcCommand[THROTTLE] = posControl.rcAdjustment[THROTTLE];
-    // CR82
+
+    // Hold position if possible
     if ((posControl.flags.estPosStatus >= EST_USABLE)) {
         applyMulticopterPositionController(currentTimeUs);
     } else {
         rcCommand[ROLL] = 0;
         rcCommand[PITCH] = 0;
     }
-    // CR82
 }
 
 /*-----------------------------------------------------------

@@ -615,7 +615,7 @@ const char * fixedWingLaunchStateMessage(void);
 
 float calculateAverageSpeed(void);
 
-void updateLandingStatus(timeMs_t currentTimeMs);     // CR89
+void updateLandingStatus(timeMs_t currentTimeMs);
 
 const navigationPIDControllers_t* getNavigationPIDControllers(void);
 

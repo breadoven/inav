@@ -925,10 +925,9 @@ void taskMainPidLoop(timeUs_t currentTimeUs)
         writeMotors();
     }
 #endif
-
-    // // Check if landed, FW and MR
+    // Check if landed, FW and MR
     if (STATE(ALTITUDE_CONTROL)) {
-        updateLandingStatus(US2MS(currentTimeUs));  // CR89
+        updateLandingStatus(US2MS(currentTimeUs));
     }
 
 #ifdef USE_BLACKBOX
