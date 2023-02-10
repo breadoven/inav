@@ -79,14 +79,14 @@ gpsLocation_t GPS_home;
 uint32_t      GPS_distanceToHome;        // distance to home point in meters
 int16_t       GPS_directionToHome;       // direction to home point in degrees
 
-fpVector3_t   original_rth_home;         // the original rth home - save it, since it could be replaced by safehome or HOME_RESET
+// fpVector3_t   original_rth_home;         // the original rth home - save it, since it could be replaced by safehome or HOME_RESET  CR88
 
 radar_pois_t radar_pois[RADAR_MAX_POIS];
 #if defined(USE_SAFE_HOME)
-int8_t safehome_index = -1;               // -1 if no safehome, 0 to MAX_SAFEHOMES -1 otherwise
-uint32_t safehome_distance = 0;           // distance to the nearest safehome
-fpVector3_t nearestSafeHome;              // The nearestSafeHome found during arming
-bool safehome_applied = false;            // whether the safehome has been applied to home.
+// int8_t safehome_index = -1;               // -1 if no safehome, 0 to MAX_SAFEHOMES -1 otherwise  CR88
+// uint32_t safehome_distance = 0;           // distance to the nearest safehome
+// fpVector3_t nearestSafeHome;              // The nearestSafeHome found during arming
+// bool safehome_applied = false;            // whether the safehome has been applied to home.
 
 PG_REGISTER_ARRAY(navSafeHome_t, MAX_SAFE_HOMES, safeHomeConfig, PG_SAFE_HOME_CONFIG , 0);
 
@@ -2490,12 +2490,18 @@ static navigationHomeFlags_t navigationActualStateHomeValidity(void)
 }
 
 #if defined(USE_SAFE_HOME)
-
+// CR88
+void suspendSafehome(void)
+{
+    posControl.safehomeState.isSuspended = !posControl.safehomeState.isSuspended;
+}
+// CR88
 void checkSafeHomeState(bool shouldBeEnabled)
 {
     const bool safehomeNotApplicable = navConfig()->general.flags.safehome_usage_mode == SAFEHOME_USAGE_OFF ||
+                                       posControl.safehomeState.isSuspended ||   // CR88
                                        posControl.flags.rthTrackbackActive ||
-                                       (!safehome_applied && posControl.homeDistance < navConfig()->general.min_rth_distance);
+                                       (!posControl.safehomeState.isApplied && posControl.homeDistance < navConfig()->general.min_rth_distance); // CR88
 
 	if (safehomeNotApplicable) {
 		shouldBeEnabled = false;
@@ -2505,17 +2511,17 @@ void checkSafeHomeState(bool shouldBeEnabled)
 		shouldBeEnabled = posControl.flags.forcedRTHActivated;
 	}
     // no safe homes found when arming or safehome feature in the correct state, then we don't need to do anything
-	if (safehome_distance == 0 || (safehome_applied == shouldBeEnabled)) {
+	if (posControl.safehomeState.distance == 0 || (posControl.safehomeState.isApplied == shouldBeEnabled)) { // CR88
 		return;
 	}
     if (shouldBeEnabled) {
 		// set home to safehome
-        setHomePosition(&nearestSafeHome, 0, NAV_POS_UPDATE_XY | NAV_POS_UPDATE_Z | NAV_POS_UPDATE_HEADING, navigationActualStateHomeValidity());
-		safehome_applied = true;
+        setHomePosition(&posControl.safehomeState.nearestSafeHome, 0, NAV_POS_UPDATE_XY | NAV_POS_UPDATE_Z | NAV_POS_UPDATE_HEADING, navigationActualStateHomeValidity());// CR88
+		posControl.safehomeState.isApplied = true;
 	} else {
 		// set home to original arming point
-        setHomePosition(&original_rth_home, 0, NAV_POS_UPDATE_XY | NAV_POS_UPDATE_Z | NAV_POS_UPDATE_HEADING, navigationActualStateHomeValidity());
-		safehome_applied = false;
+        setHomePosition(&posControl.rthState.originalHomePosition, 0, NAV_POS_UPDATE_XY | NAV_POS_UPDATE_Z | NAV_POS_UPDATE_HEADING, navigationActualStateHomeValidity());
+		posControl.safehomeState.isApplied = false;  // CR88
 	}
 	// if we've changed the home position, update the distance and direction
     updateHomePosition();
@@ -2527,7 +2533,7 @@ void checkSafeHomeState(bool shouldBeEnabled)
  **********************************************************/
 bool findNearestSafeHome(void)
 {
-    safehome_index = -1;
+    posControl.safehomeState.index = -1;   // CR88
     uint32_t nearest_safehome_distance = navConfig()->general.safehome_max_distance + 1;
     uint32_t distance_to_current;
     fpVector3_t currentSafeHome;
@@ -2543,19 +2549,20 @@ bool findNearestSafeHome(void)
         distance_to_current = calculateDistanceToDestination(&currentSafeHome);
         if (distance_to_current < nearest_safehome_distance) {
              // this safehome is the nearest so far - keep track of it.
-             safehome_index = i;
+             posControl.safehomeState.index = i;   // CR88
              nearest_safehome_distance = distance_to_current;
-             nearestSafeHome.x = currentSafeHome.x;
-             nearestSafeHome.y = currentSafeHome.y;
-             nearestSafeHome.z = currentSafeHome.z;
+             posControl.safehomeState.nearestSafeHome = currentSafeHome;   // CR88
+             // posControl.safehomeState.nearestSafeHome.x = currentSafeHome.x;
+             // posControl.safehomeState.nearestSafeHome.y = currentSafeHome.y;
+             // posControl.safehomeState.nearestSafeHome.z = currentSafeHome.z;
         }
     }
-    if (safehome_index >= 0) {
-		safehome_distance = nearest_safehome_distance;
+    if (posControl.safehomeState.index >= 0) { // CR88
+		posControl.safehomeState.distance = nearest_safehome_distance; // CR88
     } else {
-        safehome_distance = 0;
+        posControl.safehomeState.distance = 0;
     }
-    return safehome_distance > 0;
+    return posControl.safehomeState.distance > 0;
 }
 #endif
 
@@ -2585,9 +2592,10 @@ void updateHomePosition(void)
 #endif
                 setHomePosition(&posControl.actualState.abs.pos, posControl.actualState.yaw, NAV_POS_UPDATE_XY | NAV_POS_UPDATE_Z | NAV_POS_UPDATE_HEADING, navigationActualStateHomeValidity());
                 // save the current location in case it is replaced by a safehome or HOME_RESET
-                original_rth_home.x = posControl.rthState.homePosition.pos.x;
-                original_rth_home.y = posControl.rthState.homePosition.pos.y;
-                original_rth_home.z = posControl.rthState.homePosition.pos.z;
+                posControl.rthState.originalHomePosition = posControl.rthState.homePosition.pos;   // CR88
+                // original_rth_home.x = posControl.rthState.homePosition.pos.x;
+                // original_rth_home.y = posControl.rthState.homePosition.pos.y;
+                // original_rth_home.z = posControl.rthState.homePosition.pos.z;
             }
         }
     }
@@ -4243,6 +4251,7 @@ void navigationInit(void)
     posControl.wpPlannerActiveWPIndex = 0;
     posControl.flags.wpMissionPlannerActive = false;
     posControl.startWpIndex = 0;
+    posControl.safehomeState.isApplied = false; // CR88
 #ifdef USE_MULTI_MISSION
     posControl.multiMissionCount = 0;
 #endif

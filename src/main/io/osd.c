@@ -962,7 +962,7 @@ static const char * osdFailsafeInfoMessage(void)
 #if defined(USE_SAFE_HOME)
 static const char * divertingToSafehomeMessage(void)
 {
-	if (NAV_Status.state != MW_NAV_STATE_HOVER_ABOVE_HOME && safehome_applied) {
+	if (NAV_Status.state != MW_NAV_STATE_HOVER_ABOVE_HOME && posControl.safehomeState.isApplied) {   // CR88
 	    return OSD_MESSAGE_STR(OSD_MSG_DIVERT_SAFEHOME);
 	}
 	return NULL;
@@ -1008,7 +1008,7 @@ static const char * navigationStateMessage(void)
         case MW_NAV_STATE_HOVER_ABOVE_HOME:
             if (STATE(FIXED_WING_LEGACY)) {
 #if defined(USE_SAFE_HOME)
-                if (safehome_applied) {
+                if (posControl.safehomeState.isApplied) {    // CR88
                     return OSD_MESSAGE_STR(OSD_MSG_LOITERING_SAFEHOME);
                 }
 #endif
@@ -1464,8 +1464,6 @@ static void osdDisplayBatteryVoltage(uint8_t elemPosX, uint8_t elemPosY, uint16_
     if (batteryVoltageState == BATTERY_CRITICAL || batteryVoltageState == BATTERY_WARNING) {
         TEXT_ATTRIBUTES_ADD_BLINK(elemAttr);
     }
-    // if ((getBatteryState() != BATTERY_NOT_PRESENT) && (getBatteryVoltage() <= getBatteryWarningVoltage()))
-        // TEXT_ATTRIBUTES_ADD_BLINK(elemAttr);
     // CR92
     displayWriteWithAttr(osdDisplayPort, elemPosX + 1, elemPosY, buff, elemAttr);
 }
@@ -1775,8 +1773,6 @@ static bool osdDrawSingleElement(uint8_t item)
         if (batteryUsesCapacityThresholds()) {
             osdUpdateBatteryCapacityOrVoltageTextAttributes(&elemAttr);
         }
-        // if ((getBatteryState() != BATTERY_NOT_PRESENT) && batteryUsesCapacityThresholds() && (getBatteryRemainingCapacity() <= currentBatteryProfile->capacity.warning - currentBatteryProfile->capacity.critical))
-            // TEXT_ATTRIBUTES_ADD_BLINK(elemAttr);
         // CR92
         break;
 
@@ -4356,13 +4352,13 @@ static void osdShowArmed(void)
             }
             y += 4;
 #if defined (USE_SAFE_HOME)
-            if (safehome_distance) { // safehome found during arming
+            if (posControl.safehomeState.distance) { // safehome found during arming CR88
                 if (navConfig()->general.flags.safehome_usage_mode == SAFEHOME_USAGE_OFF) {
                     strcpy(buf, "SAFEHOME FOUND; MODE OFF");
 				} else {
 					char buf2[12]; // format the distance first
-					osdFormatDistanceStr(buf2, safehome_distance);
-					tfp_sprintf(buf, "%c - %s -> SAFEHOME %u", SYM_HOME, buf2, safehome_index);
+					osdFormatDistanceStr(buf2, posControl.safehomeState.distance); // CR88
+					tfp_sprintf(buf, "%c - %s -> SAFEHOME %u", SYM_HOME, buf2, posControl.safehomeState.index);    // CR88
 				}
 				textAttributes_t elemAttr = _TEXT_ATTRIBUTES_BLINK_BIT;
 				// write this message above the ARMED message to make it obvious
@@ -4455,7 +4451,7 @@ static void osdRefresh(timeUs_t currentTimeUs)
             uint32_t delay = ARMED_SCREEN_DISPLAY_TIME;
             statsPagesCheck = 0;
 #if defined(USE_SAFE_HOME)
-            if (safehome_distance)
+            if (posControl.safehomeState.distance) // CR88
                 delay *= 3;
 #endif
             osdSetNextRefreshIn(delay);
@@ -4907,7 +4903,15 @@ static textAttributes_t osdGetMultiFunctionMessage(char *buff)
             message = posControl.flags.manualEmergLandActive ? "ABORT LAND" : "EMERG LAND";
             break;
         case MULTI_FUNC_3:
-            message = "EMERG ARM ";
+            message = "NO SFHOME ";
+#if defined(USE_SAFE_HOME)
+            if (navConfig()->general.flags.safehome_usage_mode != SAFEHOME_USAGE_OFF) {
+                message = posControl.safehomeState.isSuspended ? "ACT SFHOME" : "SUS SFHOME";
+            }
+#endif
+            break;
+        case MULTI_FUNC_4:
+            message = ARMING_FLAG(ARMED) ? "NOW ARMED " : "EMERG ARM ";
             break;
         case MULTI_FUNC_END:
             break;
@@ -4969,13 +4973,13 @@ static textAttributes_t osdGetMultiFunctionMessage(char *buff)
 #endif
 
 // #if defined(USE_MAG)
-    // if (osdCheckWarning(getHwCompassStatus() == HW_SENSOR_UNAVAILABLE, warningFlagID << 1, &warningsCount))) {
+    // if (osdCheckWarning(getHwCompassStatus() == HW_SENSOR_UNAVAILABLE, warningFlagID <<= 1, &warningsCount))) {
         // messages[messageCount++] = "MAG FAILED";
     // }
 // #endif
 
 // #if defined(USE_BARO)
-    // if (osdCheckWarning(getHwBarometerStatus() == HW_SENSOR_UNAVAILABLE, warningFlagID << 1, &warningsCount))) {
+    // if (osdCheckWarning(getHwBarometerStatus() == HW_SENSOR_UNAVAILABLE, warningFlagID <<= 1, &warningsCount))) {
         // messages[messageCount++] = "BARO FAIL";
     // }
 // #endif
