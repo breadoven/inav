@@ -490,8 +490,6 @@ bool emergencyArmingUpdate(bool armingSwitchIsOn, bool forceArm)    // CR88
         counter = EMERGENCY_ARMING_MIN_ARM_COUNT;
     }
     // CR88
-    // DEBUG_SET(DEBUG_ALWAYS, 0, counter);
-    // DEBUG_SET(DEBUG_ALWAYS, 1, timeout - currentTimeMs);
     return counter >= EMERGENCY_ARMING_MIN_ARM_COUNT;
 }
 

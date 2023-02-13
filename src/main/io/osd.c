@@ -4906,7 +4906,7 @@ static textAttributes_t osdGetMultiFunctionMessage(char *buff)
             message = "NO SFHOME ";
 #if defined(USE_SAFE_HOME)
             if (navConfig()->general.flags.safehome_usage_mode != SAFEHOME_USAGE_OFF) {
-                message = posControl.safehomeState.isSuspended ? "ACT SFHOME" : "SUS SFHOME";
+                message = posControl.safehomeState.isSuspended ? "USE SFHOME" : "CAN SFHOME";
             }
 #endif
             break;
@@ -4922,7 +4922,7 @@ static textAttributes_t osdGetMultiFunctionMessage(char *buff)
     }
 
 /* WARNINGS --------------------------------------------- */
-    const char *messages[6];
+    const char *messages[7];
     uint8_t messageCount = 0;
     bool warningCondition = false;
     warningsCount = 0;
@@ -4944,6 +4944,14 @@ static textAttributes_t osdGetMultiFunctionMessage(char *buff)
         }
     }
 
+    // Vibration levels
+    const float vibrationLevel = accGetVibrationLevel();
+    DEBUG_SET(DEBUG_ALWAYS, 0, vibrationLevel * 100);
+    warningCondition = vibrationLevel > 1.0f;
+    if (osdCheckWarning(warningCondition, warningFlagID <<= 1, &warningsCount)) {
+        messages[messageCount++] = vibrationLevel > 2.0f ? "SEV VIBRTN" : "BAD VIBRTN";
+    }
+
 #if defined(USE_GPS)
     // GPS Fix and Failure
     if (feature(FEATURE_GPS)) {
@@ -4955,7 +4963,7 @@ static textAttributes_t osdGetMultiFunctionMessage(char *buff)
 
     // RTH sanity
     warningCondition = NAV_Status.state == MW_NAV_STATE_RTH_ENROUTE && !posControl.flags.rthTrackbackActive &&
-                       (posControl.homeDistance - posControl.rthSanityChecker.minimalDistanceToHome) > 500;
+                       (posControl.homeDistance - posControl.rthSanityChecker.minimalDistanceToHome) > 10000;
     if (osdCheckWarning(warningCondition, warningFlagID <<= 1, &warningsCount)) {
         messages[messageCount++] = "RTH SANITY";
     }

@@ -750,7 +750,6 @@ float updateBaroAltitudeRate(float newBaroAltRate, bool updateValue)
 static bool isLandingGbumpDetected(timeMs_t currentTimeMs)
 {
     /* Detection based on G bump at touchdown, falling Baro altitude and throttle below hover */
-    DEBUG_SET(DEBUG_ALWAYS, 0, 57);
     static timeMs_t gSpikeDetectTimeMs = 0;
     const float baroAltRate = updateBaroAltitudeRate(0, false);
     DEBUG_SET(DEBUG_ALWAYS, 1, baroAltRate);
@@ -759,7 +758,6 @@ static bool isLandingGbumpDetected(timeMs_t currentTimeMs)
     } else if (gSpikeDetectTimeMs) {
         if (currentTimeMs < gSpikeDetectTimeMs + 100) {             // G spike must be < 0.1s duration
             if (acc.accADCf[Z] < 1.0f && baroAltRate < -200.0f) {   // check if landing bump detected
-                DEBUG_SET(DEBUG_ALWAYS, 0, 127);
                 const uint16_t idleThrottle = getThrottleIdleValue();
                 const uint16_t hoverThrottleRange = currentBatteryProfile->nav.mc.hover_throttle - idleThrottle;
                 return rcCommand[THROTTLE] < idleThrottle + ((navigationInAutomaticThrottleMode() ? 0.9 : 0.5) * hoverThrottleRange);

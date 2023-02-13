@@ -2103,7 +2103,6 @@ void updateActualAltitudeAndClimbRate(bool estimateValid, float newAltitude, flo
         posControl.flags.estAglStatus = surfaceStatus;  // Could be TRUSTED or USABLE
         posControl.flags.estAltStatus = EST_TRUSTED;
         posControl.flags.verticalPositionDataNew = true;
-        // DEBUG_SET(DEBUG_ALWAYS, 0, gpsCfEstimatedAltitudeError);
         posControl.lastValidAltitudeTimeMs = millis();
         /* flag set if mismatch between GPS and estimated altitude exceeds 20m */
         posControl.flags.gpsCfEstimatedAltitudeMismatch = fabsf(gpsCfEstimatedAltitudeError) > 2000;     // CR88
@@ -2954,8 +2953,6 @@ void updateClimbRateToAltitudeController(float desiredClimbRate, climbRateToAlti
                     posControl.desiredState.pos.z = altitudeToUse + desiredClimbRate;
                     targetHoldActive = true;
                 }
-                // DEBUG_SET(DEBUG_ALWAYS, 0, targetHoldActive);
-                // DEBUG_SET(DEBUG_ALWAYS, 1, posControl.desiredState.pos.z);
             } else {
                 targetHoldActive = false;
             }
