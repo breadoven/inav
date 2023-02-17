@@ -35,6 +35,8 @@
 #include "navigation/navigation.h"
 
 // CR88
+uint8_t multiFunctionFlags;
+
 static void multiFunctionApply(multi_function_e selectedItem)
 {
     switch (selectedItem) {
@@ -49,11 +51,16 @@ static void multiFunctionApply(multi_function_e selectedItem)
     case MULTI_FUNC_3:
 #if defined(USE_SAFE_HOME)
         if (navConfig()->general.flags.safehome_usage_mode != SAFEHOME_USAGE_OFF) {
-            suspendSafehome();
+            MULTI_FUNC_FLAG(SUSPEND_SAFEHOMES) ? MULTI_FUNC_FLAG_DISABLE(SUSPEND_SAFEHOMES) : MULTI_FUNC_FLAG_ENABLE(SUSPEND_SAFEHOMES);
         }
 #endif
         break;
     case MULTI_FUNC_4:
+        if (navConfig()->general.flags.rth_trackback_mode != RTH_TRACKBACK_OFF) {
+            MULTI_FUNC_FLAG(SUSPEND_TRACKBACK) ? MULTI_FUNC_FLAG_DISABLE(SUSPEND_TRACKBACK) : MULTI_FUNC_FLAG_ENABLE(SUSPEND_TRACKBACK);
+        }
+        break;
+    case MULTI_FUNC_5:
         if (!ARMING_FLAG(ARMED)) {
             emergencyArmingUpdate(true, true);
         }

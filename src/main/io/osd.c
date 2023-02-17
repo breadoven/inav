@@ -4893,7 +4893,9 @@ static textAttributes_t osdGetMultiFunctionMessage(char *buff)
     const char *message = NULL;
 
     multi_function_e selectedFunction = multiFunctionSelection();
+
     if (selectedFunction) {
+        message = "SKIP NEXT>";     // Default message if function unavailable
         switch (selectedFunction) {
         case MULTI_FUNC_NONE:
         case MULTI_FUNC_1:
@@ -4903,14 +4905,18 @@ static textAttributes_t osdGetMultiFunctionMessage(char *buff)
             message = posControl.flags.manualEmergLandActive ? "ABORT LAND" : "EMERG LAND";
             break;
         case MULTI_FUNC_3:
-            message = "NO SFHOME ";
 #if defined(USE_SAFE_HOME)
             if (navConfig()->general.flags.safehome_usage_mode != SAFEHOME_USAGE_OFF) {
-                message = posControl.safehomeState.isSuspended ? "USE SFHOME" : "CAN SFHOME";
+                message = MULTI_FUNC_FLAG(SUSPEND_SAFEHOMES) ? "USE SFHOME" : "SUS SFHOME";
             }
 #endif
             break;
         case MULTI_FUNC_4:
+            if (navConfig()->general.flags.rth_trackback_mode != RTH_TRACKBACK_OFF) {
+                message = MULTI_FUNC_FLAG(SUSPEND_TRACKBACK) ? "USE TKBACK" : "SUS TKBACK";
+            }
+            break;
+        case MULTI_FUNC_5:
             message = ARMING_FLAG(ARMED) ? "NOW ARMED " : "EMERG ARM ";
             break;
         case MULTI_FUNC_END:
@@ -4947,9 +4953,9 @@ static textAttributes_t osdGetMultiFunctionMessage(char *buff)
     // Vibration levels
     const float vibrationLevel = accGetVibrationLevel();
     DEBUG_SET(DEBUG_ALWAYS, 0, vibrationLevel * 100);
-    warningCondition = vibrationLevel > 1.0f;
+    warningCondition = vibrationLevel > 1.5f;
     if (osdCheckWarning(warningCondition, warningFlagID <<= 1, &warningsCount)) {
-        messages[messageCount++] = vibrationLevel > 2.0f ? "SEV VIBRTN" : "BAD VIBRTN";
+        messages[messageCount++] = vibrationLevel > 2.5f ? "SEV VIBRTN" : "VIBRATION!";
     }
 
 #if defined(USE_GPS)

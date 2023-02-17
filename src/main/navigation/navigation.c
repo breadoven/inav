@@ -36,6 +36,7 @@
 
 #include "fc/fc_core.h"
 #include "fc/config.h"
+#include "fc/multifunction.h"   // CR88
 #include "fc/rc_controls.h"
 #include "fc/rc_modes.h"
 #include "fc/runtime_config.h"
@@ -1193,8 +1194,9 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_INITIALIZE(navigati
         }
         else {
             // Switch to RTH trackback
-            bool trackbackActive = navConfig()->general.flags.rth_trackback_mode == RTH_TRACKBACK_ON ||
-                                   (navConfig()->general.flags.rth_trackback_mode == RTH_TRACKBACK_FS && posControl.flags.forcedRTHActivated);
+            bool trackbackActive = !MULTI_FUNC_FLAG(SUSPEND_TRACKBACK) &&   // CR88
+                                   (navConfig()->general.flags.rth_trackback_mode == RTH_TRACKBACK_ON ||
+                                   (navConfig()->general.flags.rth_trackback_mode == RTH_TRACKBACK_FS && posControl.flags.forcedRTHActivated));
 
             if (trackbackActive && posControl.activeRthTBPointIndex >= 0 && !isWaypointMissionRTHActive()) {
                 updateRthTrackback(true);       // save final trackpoint for altitude and max trackback distance reference
@@ -2489,16 +2491,10 @@ static navigationHomeFlags_t navigationActualStateHomeValidity(void)
 }
 
 #if defined(USE_SAFE_HOME)
-// CR88
-void suspendSafehome(void)
-{
-    posControl.safehomeState.isSuspended = !posControl.safehomeState.isSuspended;
-}
-// CR88
 void checkSafeHomeState(bool shouldBeEnabled)
 {
     const bool safehomeNotApplicable = navConfig()->general.flags.safehome_usage_mode == SAFEHOME_USAGE_OFF ||
-                                       posControl.safehomeState.isSuspended ||   // CR88
+                                       (MULTI_FUNC_FLAG(SUSPEND_SAFEHOMES) && !posControl.flags.forcedRTHActivated) ||  // CR88
                                        posControl.flags.rthTrackbackActive ||
                                        (!posControl.safehomeState.isApplied && posControl.homeDistance < navConfig()->general.min_rth_distance); // CR88
 

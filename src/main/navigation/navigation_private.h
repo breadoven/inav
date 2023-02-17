@@ -353,7 +353,6 @@ typedef struct {
     uint32_t    distance;           // distance to the nearest safehome
     int8_t      index;              // -1 if no safehome, 0 to MAX_SAFEHOMES -1 otherwise
     bool        isApplied;          // whether the safehome has been applied to home.
-    bool        isSuspended;        // CR88
 } safehomeState_t;
 // CR88
 typedef struct {

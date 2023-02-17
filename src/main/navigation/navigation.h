@@ -65,7 +65,6 @@ PG_DECLARE_ARRAY(navSafeHome_t, MAX_SAFE_HOMES, safeHomeConfig);
 
 void resetSafeHomes(void);           // remove all safehomes
 bool findNearestSafeHome(void);      // Find nearest safehome
-void suspendSafehome(void);          // Prevent safehome triggering even when set   CR88
 #endif // defined(USE_SAFE_HOME)
 
 #ifndef NAV_MAX_WAYPOINTS
