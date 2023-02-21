@@ -4895,7 +4895,7 @@ static textAttributes_t osdGetMultiFunctionMessage(char *buff)
     multi_function_e selectedFunction = multiFunctionSelection();
 
     if (selectedFunction) {
-        message = "SKIP NEXT>";     // Default message if function unavailable
+        message = "N/A NEXT >";     // Default message if function unavailable
         switch (selectedFunction) {
         case MULTI_FUNC_NONE:
         case MULTI_FUNC_1:
@@ -4955,7 +4955,7 @@ static textAttributes_t osdGetMultiFunctionMessage(char *buff)
     DEBUG_SET(DEBUG_ALWAYS, 0, vibrationLevel * 100);
     warningCondition = vibrationLevel > 1.5f;
     if (osdCheckWarning(warningCondition, warningFlagID <<= 1, &warningsCount)) {
-        messages[messageCount++] = vibrationLevel > 2.5f ? "SEV VIBRTN" : "VIBRATION!";
+        messages[messageCount++] = vibrationLevel > 2.5f ? "BAD VIBRTN" : "VIBRATION!";
     }
 
 #if defined(USE_GPS)

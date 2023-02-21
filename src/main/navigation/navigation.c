@@ -1194,9 +1194,8 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_INITIALIZE(navigati
         }
         else {
             // Switch to RTH trackback
-            bool trackbackActive = !MULTI_FUNC_FLAG(SUSPEND_TRACKBACK) &&   // CR88
-                                   (navConfig()->general.flags.rth_trackback_mode == RTH_TRACKBACK_ON ||
-                                   (navConfig()->general.flags.rth_trackback_mode == RTH_TRACKBACK_FS && posControl.flags.forcedRTHActivated));
+            bool trackbackActive = navConfig()->general.flags.rth_trackback_mode == RTH_TRACKBACK_ON ||
+                                   (navConfig()->general.flags.rth_trackback_mode == RTH_TRACKBACK_FS && posControl.flags.forcedRTHActivated);
 
             if (trackbackActive && posControl.activeRthTBPointIndex >= 0 && !isWaypointMissionRTHActive()) {
                 updateRthTrackback(true);       // save final trackpoint for altitude and max trackback distance reference
@@ -1324,7 +1323,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_TRACKBACK(navigatio
     if (posControl.flags.estPosStatus >= EST_USABLE) {
         const int32_t distFromStartTrackback = calculateDistanceToDestination(&posControl.rthTBPointsList[posControl.rthTBLastSavedIndex]) / 100;
         const bool cancelTrackback = distFromStartTrackback > navConfig()->general.rth_trackback_distance ||
-                                     (rthAltControlStickOverrideCheck(ROLL) && !posControl.flags.forcedRTHActivated);
+                                     ((rthAltControlStickOverrideCheck(ROLL) || MULTI_FUNC_FLAG(SUSPEND_TRACKBACK)) && !posControl.flags.forcedRTHActivated);// CR88;
 
         if (posControl.activeRthTBPointIndex < 0 || cancelTrackback) {
             posControl.rthTBWrapAroundCounter = posControl.activeRthTBPointIndex = -1;
