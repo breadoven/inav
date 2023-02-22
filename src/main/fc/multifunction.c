@@ -51,16 +51,23 @@ static void multiFunctionApply(multi_function_e selectedItem)
     case MULTI_FUNC_3:
 #if defined(USE_SAFE_HOME)
         if (navConfig()->general.flags.safehome_usage_mode != SAFEHOME_USAGE_OFF) {
-            MULTI_FUNC_FLAG(SUSPEND_SAFEHOMES) ? MULTI_FUNC_FLAG_DISABLE(SUSPEND_SAFEHOMES) : MULTI_FUNC_FLAG_ENABLE(SUSPEND_SAFEHOMES);
+            MULTI_FUNC_FLAG(MF_SUSPEND_SAFEHOMES) ? MULTI_FUNC_FLAG_DISABLE(MF_SUSPEND_SAFEHOMES) : MULTI_FUNC_FLAG_ENABLE(MF_SUSPEND_SAFEHOMES);
         }
 #endif
         break;
     case MULTI_FUNC_4:
         if (navConfig()->general.flags.rth_trackback_mode != RTH_TRACKBACK_OFF) {
-            MULTI_FUNC_FLAG(SUSPEND_TRACKBACK) ? MULTI_FUNC_FLAG_DISABLE(SUSPEND_TRACKBACK) : MULTI_FUNC_FLAG_ENABLE(SUSPEND_TRACKBACK);
+            MULTI_FUNC_FLAG(MF_SUSPEND_TRACKBACK) ? MULTI_FUNC_FLAG_DISABLE(MF_SUSPEND_TRACKBACK) : MULTI_FUNC_FLAG_ENABLE(MF_SUSPEND_TRACKBACK);
         }
         break;
     case MULTI_FUNC_5:
+#ifdef USE_DSHOT
+        if (STATE(MULTIROTOR)) {
+            MULTI_FUNC_FLAG(MF_TURTLE_MODE) ? MULTI_FUNC_FLAG_DISABLE(MF_TURTLE_MODE) : MULTI_FUNC_FLAG_ENABLE(MF_TURTLE_MODE);
+        }
+#endif
+        break;
+    case MULTI_FUNC_6:
         if (!ARMING_FLAG(ARMED)) {
             emergencyArmingUpdate(true, true);
         }
