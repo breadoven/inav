@@ -102,6 +102,7 @@ FILE_COMPILE_FOR_SPEED
 #include "sensors/battery.h"
 #include "sensors/boardalignment.h"
 #include "sensors/diagnostics.h"
+#include "sensors/compass.h"    // CR88
 #include "sensors/sensors.h"
 #include "sensors/pitotmeter.h"
 #include "sensors/temperature.h"
@@ -4935,7 +4936,7 @@ static textAttributes_t osdGetMultiFunctionMessage(char *buff)
     }
 
 /* WARNINGS --------------------------------------------- */
-    const char *messages[7];
+    const char *messages[8];
     uint8_t messageCount = 0;
     bool warningCondition = false;
     warningsCount = 0;
@@ -4987,20 +4988,24 @@ static textAttributes_t osdGetMultiFunctionMessage(char *buff)
     }
 #endif
 
+#if defined(USE_MAG)
+    // Magnetometer failure
+    if (requestedSensors[SENSOR_INDEX_MAG] != MAG_NONE) {
+        hardwareSensorStatus_e magStatus = getHwCompassStatus();
+        if (osdCheckWarning(magStatus == HW_SENSOR_UNAVAILABLE || magStatus == HW_SENSOR_UNHEALTHY, warningFlagID <<= 1, &warningsCount)) {
+            messages[messageCount++] = "MAG FAILED";
+        }
+    }
+#endif
+
 #ifdef USE_DEV_TOOLS
     if (osdCheckWarning(systemConfig()->groundTestMode, warningFlagID <<= 1, &warningsCount)) {
         messages[messageCount++] = "GRD TEST !";
     }
 #endif
 
-// #if defined(USE_MAG)
-    // if (osdCheckWarning(getHwCompassStatus() == HW_SENSOR_UNAVAILABLE, warningFlagID <<= 1, &warningsCount))) {
-        // messages[messageCount++] = "MAG FAILED";
-    // }
-// #endif
-
 // #if defined(USE_BARO)
-    // if (osdCheckWarning(getHwBarometerStatus() == HW_SENSOR_UNAVAILABLE, warningFlagID <<= 1, &warningsCount))) {
+    // if (osdCheckWarning(getHwBarometerStatus() == HW_SENSOR_UNAVAILABLE, warningFlagID <<= 1, &warningsCount)) {
         // messages[messageCount++] = "BARO FAIL";
     // }
 // #endif

@@ -56,7 +56,7 @@ FILE_COMPILE_FOR_SPEED
 #include "fc/cli.h"
 #include "fc/config.h"
 #include "fc/controlrate_profile.h"
-// #include "fc/multifunction.h"   // CR88
+#include "fc/multifunction.h"   // CR88
 #include "fc/rc_adjustments.h"
 #include "fc/rc_smoothing.h"
 #include "fc/rc_controls.h"
