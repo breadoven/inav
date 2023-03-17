@@ -486,7 +486,7 @@ static const navigationFSMStateDescriptor_t navFSM[NAV_STATE_COUNT] = {
         .persistentId = NAV_PERSISTENT_ID_CRUISE_IN_PROGRESS,
         .onEntry = navOnEnteringState_NAV_STATE_CRUISE_IN_PROGRESS,
         .timeoutMs = 10,
-        .stateFlags = NAV_CTL_POS | NAV_CTL_YAW | NAV_CTL_ALT | NAV_REQUIRE_ANGLE | NAV_RC_POS | NAV_RC_YAW | NAV_RC_ALT,
+        .stateFlags = NAV_CTL_ALT | NAV_CTL_POS | NAV_CTL_YAW | NAV_REQUIRE_ANGLE | NAV_RC_POS | NAV_RC_YAW | NAV_RC_ALT,   // CR95
         .mapToFlightModes = NAV_ALTHOLD_MODE | NAV_COURSE_HOLD_MODE,
         .mwState = MW_NAV_STATE_NONE,
         .mwError = MW_NAV_ERROR_NONE,
@@ -995,17 +995,23 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_ALTHOLD_INITIALIZE(navi
     const bool terrainFollowingToggled = (posControl.flags.isTerrainFollowEnabled != navTerrainFollowingRequested());
 
     resetGCSFlags();
-
-    // If surface tracking mode changed value - reset altitude controller
-    if ((prevFlags & NAV_CTL_ALT) == 0 || terrainFollowingToggled) {
+// CR95
+    if (!(prevFlags & NAV_CTL_ALT) || (prevFlags & NAV_AUTO_RTH) || (prevFlags & NAV_AUTO_WP) || terrainFollowingToggled) {
         resetAltitudeController(navTerrainFollowingRequested());
-    }
-
-    if (((prevFlags & NAV_CTL_ALT) == 0) || ((prevFlags & NAV_AUTO_RTH) != 0) || ((prevFlags & NAV_AUTO_WP) != 0) || terrainFollowingToggled) {
         setupAltitudeController();
         setDesiredPosition(&navGetCurrentActualPositionAndVelocity()->pos, posControl.actualState.yaw, NAV_POS_UPDATE_Z);  // This will reset surface offset
     }
 
+    // // If surface tracking mode changed value - reset altitude controller
+    // if ((prevFlags & NAV_CTL_ALT) == 0 || terrainFollowingToggled) {
+        // resetAltitudeController(navTerrainFollowingRequested());
+    // }
+
+    // if (((prevFlags & NAV_CTL_ALT) == 0) || ((prevFlags & NAV_AUTO_RTH) != 0) || ((prevFlags & NAV_AUTO_WP) != 0) || terrainFollowingToggled) {
+        // setupAltitudeController();
+        // setDesiredPosition(&navGetCurrentActualPositionAndVelocity()->pos, posControl.actualState.yaw, NAV_POS_UPDATE_Z);  // This will reset surface offset
+    // }
+// CR95
     return NAV_FSM_EVENT_SUCCESS;
 }
 
@@ -1028,25 +1034,43 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_POSHOLD_3D_INITIALIZE(n
     const bool terrainFollowingToggled = (posControl.flags.isTerrainFollowEnabled != navTerrainFollowingRequested());
 
     resetGCSFlags();
-
-    if ((prevFlags & NAV_CTL_POS) == 0) {
-        resetPositionController();
-    }
-
-    if ((prevFlags & NAV_CTL_ALT) == 0 || terrainFollowingToggled) {
+// CR95
+    if (!(prevFlags & NAV_CTL_ALT) || (prevFlags & NAV_AUTO_RTH) || (prevFlags & NAV_AUTO_WP) || terrainFollowingToggled) {
         resetAltitudeController(navTerrainFollowingRequested());
         setupAltitudeController();
-    }
-
-    if (((prevFlags & NAV_CTL_ALT) == 0) || ((prevFlags & NAV_AUTO_RTH) != 0) || ((prevFlags & NAV_AUTO_WP) != 0) || terrainFollowingToggled) {
         setDesiredPosition(&navGetCurrentActualPositionAndVelocity()->pos, posControl.actualState.yaw, NAV_POS_UPDATE_Z);  // This will reset surface offset
     }
+// NAV_STATE_RTH_CLIMB_TO_SAFE_ALT  also ?
+    if (previousState != NAV_STATE_RTH_HOVER_PRIOR_TO_LANDING && previousState != NAV_STATE_RTH_HOVER_ABOVE_HOME &&
+        previousState != NAV_STATE_RTH_LANDING && previousState != NAV_STATE_WAYPOINT_RTH_LAND &&
+        previousState != NAV_STATE_WAYPOINT_FINISHED && previousState != NAV_STATE_WAYPOINT_HOLD_TIME)
+        {
+        resetPositionController();
 
-    if ((previousState != NAV_STATE_RTH_HOVER_PRIOR_TO_LANDING) && (previousState != NAV_STATE_RTH_HOVER_ABOVE_HOME) && (previousState != NAV_STATE_RTH_LANDING)) {
         fpVector3_t targetHoldPos;
         calculateInitialHoldPosition(&targetHoldPos);
         setDesiredPosition(&targetHoldPos, posControl.actualState.yaw, NAV_POS_UPDATE_XY | NAV_POS_UPDATE_HEADING);
     }
+// CR95
+
+    // if ((prevFlags & NAV_CTL_POS) == 0) {
+        // resetPositionController();
+    // }
+
+    // if ((prevFlags & NAV_CTL_ALT) == 0 || terrainFollowingToggled) {
+        // resetAltitudeController(navTerrainFollowingRequested());
+        // setupAltitudeController();
+    // }
+
+    // if (((prevFlags & NAV_CTL_ALT) == 0) || ((prevFlags & NAV_AUTO_RTH) != 0) || ((prevFlags & NAV_AUTO_WP) != 0) || terrainFollowingToggled) {
+        // setDesiredPosition(&navGetCurrentActualPositionAndVelocity()->pos, posControl.actualState.yaw, NAV_POS_UPDATE_Z);  // This will reset surface offset
+    // }
+
+    // if ((previousState != NAV_STATE_RTH_HOVER_PRIOR_TO_LANDING) && (previousState != NAV_STATE_RTH_HOVER_ABOVE_HOME) && (previousState != NAV_STATE_RTH_LANDING)) {
+        // fpVector3_t targetHoldPos;
+        // calculateInitialHoldPosition(&targetHoldPos);
+        // setDesiredPosition(&targetHoldPos, posControl.actualState.yaw, NAV_POS_UPDATE_XY | NAV_POS_UPDATE_HEADING);
+    // }
 
     return NAV_FSM_EVENT_SUCCESS;
 }
@@ -1066,7 +1090,6 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_POSHOLD_3D_IN_PROGRESS(
 
     return NAV_FSM_EVENT_NONE;
 }
-/////////////////
 
 static navigationFSMEvent_t navOnEnteringState_NAV_STATE_COURSE_HOLD_INITIALIZE(navigationFSMState_t previousState)
 {
@@ -1074,9 +1097,10 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_COURSE_HOLD_INITIALIZE(
 
     if (!STATE(FIXED_WING_LEGACY)) { return NAV_FSM_EVENT_ERROR; } // Only on FW for now
 
+    // Switch to IDLE if we do not have an healty position. Try the next iteration.
     if (checkForPositionSensorTimeout()) {
         return NAV_FSM_EVENT_SWITCH_TO_IDLE;
-    }  // Switch to IDLE if we do not have an healty position. Try the next iteration.
+    }
 
     resetPositionController();
 
@@ -1157,7 +1181,8 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_CRUISE_ADJUSTING(naviga
 
 static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_INITIALIZE(navigationFSMState_t previousState)
 {
-    navigationFSMStateFlags_t prevFlags = navGetStateFlags(previousState);
+    UNUSED(previousState);  // CR95
+    // navigationFSMStateFlags_t prevFlags = navGetStateFlags(previousState);
 
     if ((posControl.flags.estHeadingStatus == EST_NONE) || (posControl.flags.estAltStatus == EST_NONE) || !STATE(GPS_FIX_HOME)) {
         // Heading sensor, altitude sensor and HOME fix are mandatory for RTH. If not satisfied - switch to emergency landing
@@ -1173,17 +1198,25 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_INITIALIZE(navigati
 
     // If we have valid position sensor or configured to ignore its loss at initial stage - continue
     if ((posControl.flags.estPosStatus >= EST_USABLE) || navConfig()->general.flags.rth_climb_ignore_emerg) {
-        // Reset altitude and position controllers if necessary
-        if ((prevFlags & NAV_CTL_POS) == 0) {
-            resetPositionController();
-        }
+// CR95
+        // Reset controllers
+        resetPositionController();
 
-        // Reset altitude controller if it was not enabled or if we are in terrain follow mode
-        if ((prevFlags & NAV_CTL_ALT) == 0 || posControl.flags.isTerrainFollowEnabled) {
-            // Make sure surface tracking is not enabled - RTH uses global altitude, not AGL
-            resetAltitudeController(false);
-            setupAltitudeController();
-        }
+        // Make sure surface tracking is not enabled - RTH uses global altitude, not AGL
+        resetAltitudeController(false);
+        setupAltitudeController();
+// CR95
+        // // Reset altitude and position controllers if necessary
+        // if ((prevFlags & NAV_CTL_POS) == 0) {
+            // resetPositionController();
+        // }
+
+        // // Reset altitude controller if it was not enabled or if we are in terrain follow mode
+        // if ((prevFlags & NAV_CTL_ALT) == 0 || posControl.flags.isTerrainFollowEnabled) {
+            // // Make sure surface tracking is not enabled - RTH uses global altitude, not AGL
+            // resetAltitudeController(false);
+            // setupAltitudeController();
+        // }
 
         // If close to home - reset home position and land
         if (posControl.homeDistance < navConfig()->general.min_rth_distance) {
@@ -1509,34 +1542,34 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_WAYPOINT_INITIALIZE(nav
 {
     UNUSED(previousState);
 
-    if (posControl.waypointCount == 0 || !posControl.waypointListValid) {
+    if (!posControl.waypointCount || !posControl.waypointListValid) {   // CR95
         return NAV_FSM_EVENT_ERROR;
     }
-    else {
-        // Prepare controllers
-        resetPositionController();
 
-        // Make sure surface tracking is not enabled - RTH uses global altitude, not AGL
-        resetAltitudeController(false);
-        setupAltitudeController();
-/*
-  Use p3 as the volatile jump counter, allowing embedded, rearmed jumps
-  Using p3 minimises the risk of saving an invalid counter if a mission is aborted.
-*/
-        if (posControl.activeWaypointIndex == posControl.startWpIndex || posControl.wpMissionRestart) {
-            setupJumpCounters();
-            posControl.activeWaypointIndex = posControl.startWpIndex;
-            wpHeadingControl.mode = NAV_WP_HEAD_MODE_NONE;
-        }
+    // else {   // CR95
+    // Prepare controllers
+    resetPositionController();
 
-        if (navConfig()->general.flags.waypoint_mission_restart == WP_MISSION_SWITCH) {
-            posControl.wpMissionRestart = posControl.activeWaypointIndex > posControl.startWpIndex ? !posControl.wpMissionRestart : false;
-        } else {
-            posControl.wpMissionRestart = navConfig()->general.flags.waypoint_mission_restart == WP_MISSION_START;
-        }
+    // Make sure surface tracking is not enabled - WP uses global altitude, not AGL  CR95
+    resetAltitudeController(false);
+    setupAltitudeController();
 
-        return NAV_FSM_EVENT_SUCCESS;   // will switch to NAV_STATE_WAYPOINT_PRE_ACTION
+    if (posControl.activeWaypointIndex == posControl.startWpIndex || posControl.wpMissionRestart) {
+        /* Use p3 as the volatile jump counter, allowing embedded, rearmed jumps
+        Using p3 minimises the risk of saving an invalid counter if a mission is aborted */  // CR95
+        setupJumpCounters();
+        posControl.activeWaypointIndex = posControl.startWpIndex;
+        wpHeadingControl.mode = NAV_WP_HEAD_MODE_NONE;
     }
+
+    if (navConfig()->general.flags.waypoint_mission_restart == WP_MISSION_SWITCH) {
+        posControl.wpMissionRestart = posControl.activeWaypointIndex > posControl.startWpIndex ? !posControl.wpMissionRestart : false;
+    } else {
+        posControl.wpMissionRestart = navConfig()->general.flags.waypoint_mission_restart == WP_MISSION_START;
+    }
+
+    return NAV_FSM_EVENT_SUCCESS;   // will switch to NAV_STATE_WAYPOINT_PRE_ACTION
+    // }   // CR95
 }
 
 static navigationFSMEvent_t nextForNonGeoStates(void)
@@ -1565,8 +1598,8 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_WAYPOINT_PRE_ACTION(nav
             posControl.wpAltitudeReached = false;
             return NAV_FSM_EVENT_SUCCESS;       // will switch to NAV_STATE_WAYPOINT_IN_PROGRESS
 
-                // We use p3 as the volatile jump counter (p2 is the static value)
         case NAV_WP_ACTION_JUMP:
+            // We use p3 as the volatile jump counter (p2 is the static value) CR95
             if (posControl.waypointList[posControl.activeWaypointIndex].p3 != -1) {
                 if (posControl.waypointList[posControl.activeWaypointIndex].p3 == 0) {
                     resetJumpCounter();
@@ -1786,9 +1819,6 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_EMERGENCY_LANDING_INITI
     // Emergency landing MAY use common altitude controller if vertical position is valid - initialize it
     // Make sure terrain following is not enabled
     resetAltitudeController(false);
-    // if (posControl.flags.estAltStatus >= EST_USABLE) {
-        // setDesiredPosition(&navGetCurrentActualPositionAndVelocity()->pos, 0, NAV_POS_UPDATE_Z);
-    // }
 
     return NAV_FSM_EVENT_SUCCESS;
 }
