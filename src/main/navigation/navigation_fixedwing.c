@@ -117,13 +117,13 @@ bool adjustFixedWingAltitudeFromRCInput(void)
     if (rcAdjustment) {
         // set velocity proportional to stick movement
         float rcClimbRate = -rcAdjustment * navConfig()->general.max_manual_climb_rate / (500.0f - rcControlsConfig()->alt_hold_deadband);
-        updateClimbRateToAltitudeController(rcClimbRate, ROC_TO_ALT_NORMAL);
+        updateClimbRateToAltitudeController(rcClimbRate, 0, ROC_TO_ALT_NORMAL); // CR96
         return true;
     }
     else {
         // Adjusting finished - reset desired position to stay exactly where pilot released the stick
         if (posControl.flags.isAdjustingAltitude) {
-            updateClimbRateToAltitudeController(0, ROC_TO_ALT_RESET);
+            updateClimbRateToAltitudeController(0, 0, ROC_TO_ALT_RESET);   // CR96
         }
         return false;
     }
@@ -408,7 +408,7 @@ static void updatePositionHeadingController_FW(timeUs_t currentTimeUs, timeDelta
         // We have virtual position target, calculate heading error
         virtualTargetBearing = calculateBearingToDestination(&virtualDesiredPosition);
     }
-
+    // DEBUG_SET(DEBUG_ALWAYS, 0, virtualTargetBearing);
     /* If waypoint tracking enabled force craft toward waypoint course line and hold on course line */
     if (navConfig()->fw.wp_tracking_accuracy && isWaypointNavTrackingActive() && !needToCalculateCircularLoiter) {
         // courseVirtualCorrection initially used to determine current position relative to course line for later use
@@ -418,9 +418,12 @@ static void updatePositionHeadingController_FW(timeUs_t currentTimeUs, timeDelta
         // tracking only active when certain distance and heading conditions are met
         if ((ABS(wrap_18000(virtualTargetBearing - posControl.actualState.cog)) < 9000 || posControl.wpDistance < 1000.0f) && navCrossTrackError > 200) {
             int32_t courseHeadingError = wrap_18000(posControl.activeWaypoint.bearing - posControl.actualState.cog);
+            DEBUG_SET(DEBUG_ALWAYS, 2, courseHeadingError);
+            DEBUG_SET(DEBUG_ALWAYS, 3, posControl.activeWaypoint.bearing);
             // captureFactor adjusts distance/heading sensitivity balance when closing in on course line.
             // Closing distance threashold based on speed and an assumed 1 second response time.
             float captureFactor = navCrossTrackError < posControl.actualState.velXY ? constrainf(2.0f - ABS(courseHeadingError) / 500.0f, 0.0f, 2.0f) : 1.0f;
+            DEBUG_SET(DEBUG_ALWAYS, 5, captureFactor * 100);
             // bias between reducing distance to course line and aligning with course heading adjusted by waypoint_tracking_accuracy
             // initial courseCorrectionFactor based on distance to course line
             float courseCorrectionFactor = constrainf(captureFactor * navCrossTrackError / (1000.0f * navConfig()->fw.wp_tracking_accuracy), 0.0f, 1.0f);
@@ -429,8 +432,9 @@ static void updatePositionHeadingController_FW(timeUs_t currentTimeUs, timeDelta
             // course heading alignment factor
             float courseHeadingFactor = constrainf(courseHeadingError / 18000.0f, 0.0f, 1.0f);
             courseHeadingFactor = courseHeadingError < 0 ? -courseHeadingFactor : courseHeadingFactor;
-
+            DEBUG_SET(DEBUG_ALWAYS, 7, courseHeadingFactor * 100);
             courseCorrectionFactor = constrainf(courseCorrectionFactor - courseHeadingFactor, -1.0f, 1.0f);
+            DEBUG_SET(DEBUG_ALWAYS, 6, courseCorrectionFactor * 100);
 
             // final courseVirtualCorrection value
             courseVirtualCorrection = DEGREES_TO_CENTIDEGREES(navConfig()->fw.wp_tracking_max_angle) * courseCorrectionFactor;
@@ -438,7 +442,8 @@ static void updatePositionHeadingController_FW(timeUs_t currentTimeUs, timeDelta
             virtualTargetBearing = wrap_36000(posControl.activeWaypoint.bearing - courseVirtualCorrection);
         }
     }
-
+    // DEBUG_SET(DEBUG_ALWAYS, 1, virtualTargetBearing);
+    DEBUG_SET(DEBUG_ALWAYS, 4, navCrossTrackError);
     /*
      * Calculate NAV heading error
      * Units are centidegrees
@@ -762,7 +767,7 @@ void applyFixedWingEmergencyLandingController(timeUs_t currentTimeUs)
     rcCommand[THROTTLE] = currentBatteryProfile->failsafe_throttle;
 
     if (posControl.flags.estAltStatus >= EST_USABLE) {
-        updateClimbRateToAltitudeController(-1.0f * navConfig()->general.emerg_descent_rate, ROC_TO_ALT_NORMAL);
+        updateClimbRateToAltitudeController(-1.0f * navConfig()->general.emerg_descent_rate, 0, ROC_TO_ALT_NORMAL);     // CR96
         applyFixedWingAltitudeAndThrottleController(currentTimeUs);
 
         int16_t pitchCorrection = constrain(posControl.rcAdjustment[PITCH], -DEGREES_TO_DECIDEGREES(navConfig()->fw.max_dive_angle), DEGREES_TO_DECIDEGREES(navConfig()->fw.max_climb_angle));
