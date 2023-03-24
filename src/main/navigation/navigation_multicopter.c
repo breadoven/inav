@@ -137,7 +137,7 @@ bool adjustMulticopterAltitudeFromRCInput(void)
             posControl.desiredState.pos.z = altTarget;
         }
         else {
-            updateClimbRateToAltitudeController(-50.0f, 0, ROC_TO_ALT_NORMAL);  // CR96
+            updateClimbRateToAltitudeController(-50.0f, 0, ROC_TO_ALT_CONSTANT);  // CR96
         }
 
         // In surface tracking we always indicate that we're adjusting altitude
@@ -159,7 +159,7 @@ bool adjustMulticopterAltitudeFromRCInput(void)
                 rcClimbRate = rcThrottleAdjustment * navConfig()->general.max_manual_climb_rate / (float)(altHoldThrottleRCZero - getThrottleIdleValue() - rcControlsConfig()->alt_hold_deadband);
             }
 
-            updateClimbRateToAltitudeController(rcClimbRate, 0, ROC_TO_ALT_NORMAL);     // CR96
+            updateClimbRateToAltitudeController(rcClimbRate, 0, ROC_TO_ALT_CONSTANT);     // CR96
 
             return true;
         }
@@ -901,7 +901,7 @@ static void applyMulticopterEmergencyLandingController(timeUs_t currentTimeUs)
 
         // Check if last correction was not too long ago
         if (deltaMicrosPositionUpdate < MAX_POSITION_UPDATE_INTERVAL_US) {
-            updateClimbRateToAltitudeController(-1.0f * navConfig()->general.emerg_descent_rate, 0, ROC_TO_ALT_NORMAL); // CR96
+            updateClimbRateToAltitudeController(-1.0f * navConfig()->general.emerg_descent_rate, 0, ROC_TO_ALT_TARGET); // CR96
             updateAltitudeVelocityController_MC(deltaMicrosPositionUpdate);
             updateAltitudeThrottleController_MC(deltaMicrosPositionUpdate);
         }

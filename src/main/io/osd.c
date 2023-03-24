@@ -4960,7 +4960,7 @@ static textAttributes_t osdGetMultiFunctionMessage(char *buff)
 
     // Vibration levels
     const float vibrationLevel = accGetVibrationLevel();
-    DEBUG_SET(DEBUG_ALWAYS, 0, vibrationLevel * 100);
+    // DEBUG_SET(DEBUG_ALWAYS, 0, vibrationLevel * 100);
     warningCondition = vibrationLevel > 1.5f;
     if (osdCheckWarning(warningCondition, warningFlagID <<= 1, &warningsCount)) {
         messages[messageCount++] = vibrationLevel > 2.5f ? "BAD VIBRTN" : "VIBRATION!";

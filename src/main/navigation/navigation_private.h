@@ -61,7 +61,7 @@ typedef enum {
 
 typedef enum {
     ROC_TO_ALT_RESET,
-    ROC_TO_ALT_NORMAL,
+    ROC_TO_ALT_CONSTANT,
     ROC_TO_ALT_TARGET   // CR96
 } climbRateToAltitudeControllerMode_e;
 
