@@ -157,9 +157,17 @@ static void updateAltitudeVelocityAndPitchController_FW(timeDelta_t deltaMicros)
     const float pitchGainInv = 1.0f / 1.0f;
 
     // Here we use negative values for dive for better clarity
-    const float maxClimbDeciDeg = DEGREES_TO_DECIDEGREES(navConfig()->fw.max_climb_angle);
+    float maxClimbDeciDeg = DEGREES_TO_DECIDEGREES(navConfig()->fw.max_climb_angle);  // CR96
     const float minDiveDeciDeg = -DEGREES_TO_DECIDEGREES(navConfig()->fw.max_dive_angle);
 
+    // CR96
+    // Reduce max allowed climb pitch if performing loiter
+    DEBUG_SET(DEBUG_ALWAYS, 2, 101);
+    if (needToCalculateCircularLoiter) {
+        maxClimbDeciDeg = maxClimbDeciDeg * 0.67f;
+        DEBUG_SET(DEBUG_ALWAYS, 2, 201);
+    }
+    // CR96
     // PID controller to translate energy balance error [J] into pitch angle [decideg]
     float targetPitchAngle = navPidApply3(&posControl.pids.fw_alt, demSEB, estSEB, US2S(deltaMicros), minDiveDeciDeg, maxClimbDeciDeg, 0, pitchGainInv, 1.0f);
 
@@ -418,7 +426,7 @@ static void updatePositionHeadingController_FW(timeUs_t currentTimeUs, timeDelta
         // tracking only active when certain distance and heading conditions are met
         if ((ABS(wrap_18000(virtualTargetBearing - posControl.actualState.cog)) < 9000 || posControl.wpDistance < 1000.0f) && navCrossTrackError > 200) {
             int32_t courseHeadingError = wrap_18000(posControl.activeWaypoint.bearing - posControl.actualState.cog);
-            DEBUG_SET(DEBUG_ALWAYS, 2, courseHeadingError);
+            // DEBUG_SET(DEBUG_ALWAYS, 2, courseHeadingError);
             DEBUG_SET(DEBUG_ALWAYS, 3, posControl.activeWaypoint.bearing);
             // captureFactor adjusts distance/heading sensitivity balance when closing in on course line.
             // Closing distance threashold based on speed and an assumed 1 second response time.
@@ -767,7 +775,7 @@ void applyFixedWingEmergencyLandingController(timeUs_t currentTimeUs)
     rcCommand[THROTTLE] = currentBatteryProfile->failsafe_throttle;
 
     if (posControl.flags.estAltStatus >= EST_USABLE) {
-        updateClimbRateToAltitudeController(-1.0f * navConfig()->general.emerg_descent_rate, 0, ROC_TO_ALT_TARGET);     // CR96
+        updateClimbRateToAltitudeController(-navConfig()->general.emerg_descent_rate, 1000, ROC_TO_ALT_TARGET);     // CR96
         applyFixedWingAltitudeAndThrottleController(currentTimeUs);
 
         int16_t pitchCorrection = constrain(posControl.rcAdjustment[PITCH], -DEGREES_TO_DECIDEGREES(navConfig()->fw.max_dive_angle), DEGREES_TO_DECIDEGREES(navConfig()->fw.max_climb_angle));
