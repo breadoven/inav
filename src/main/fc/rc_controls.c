@@ -27,7 +27,7 @@
 
 #include "blackbox/blackbox.h"
 
-#include "cms/cms.h"    // CR94
+#include "cms/cms.h"
 
 #include "common/axis.h"
 #include "common/maths.h"
@@ -252,7 +252,6 @@ void processRcStickPositions(bool isThrottleLow)
         return;
     }
 
-// CR94
     /* Disable stick commands when armed, in CLI mode or CMS is active */
     bool disableStickCommands = ARMING_FLAG(ARMED) || cliMode;
 #ifdef USE_CMS
