@@ -260,7 +260,6 @@ void processRcStickPositions(bool isThrottleLow)
     if (disableStickCommands) {
         return;
     }
-// CR94
 
     /* REMAINING SECTION HANDLES STICK COMANDS ONLY */
 
