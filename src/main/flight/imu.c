@@ -115,6 +115,7 @@ STATIC_FASTRAM pt1Filter_t GPS3DspeedFilter;
 FASTRAM bool gpsHeadingInitialized;
 
 FASTRAM uint16_t compassGpsCogError;                         // heading difference between compass and GPS (degrees)    // CR27
+FASTRAM bool imuUpdated = false;
 
 PG_REGISTER_WITH_RESET_TEMPLATE(imuConfig_t, imuConfig, PG_IMU_CONFIG, 2);
 
@@ -367,7 +368,7 @@ static void imuMahonyAHRSupdate(float dt, const fpVector3_t * gyroBF, const fpVe
                 vectorNormalize(&vMag, &vMag);
 
 #ifdef USE_SIMULATOR
-            if (ARMING_FLAG(SIMULATOR_MODE)) {
+            if (ARMING_FLAG(SIMULATOR_MODE_HITL) || ARMING_FLAG(SIMULATOR_MODE_SITL)) {
                 imuSetMagneticDeclination(0);
             }
 #endif
@@ -516,7 +517,7 @@ static void imuMahonyAHRSupdate(float dt, const fpVector3_t * gyroBF, const fpVe
 STATIC_UNIT_TESTED void imuUpdateEulerAngles(void)
 {
 #ifdef USE_SIMULATOR
-	if (ARMING_FLAG(SIMULATOR_MODE) && !SIMULATOR_HAS_OPTION(HITL_USE_IMU)) {
+	if ((ARMING_FLAG(SIMULATOR_MODE_HITL) && !SIMULATOR_HAS_OPTION(HITL_USE_IMU)) || (ARMING_FLAG(SIMULATOR_MODE_SITL) && imuUpdated)) {
 		imuComputeQuaternionFromRPY(attitude.values.roll, attitude.values.pitch, attitude.values.yaw);
 		imuComputeRotationMatrix();
 	}
@@ -638,7 +639,7 @@ static void imuCalculateTurnRateacceleration(fpVector3_t *vEstcentrifugalAccelBF
 {
     //fixed wing only
     static float lastspeed = -1.0f;
-    float currentspeed;
+    float currentspeed = 0;
     if (isGPSTrustworthy()){
         //first speed choice is gps
         currentspeed = GPS3DspeedFiltered;
@@ -866,3 +867,15 @@ float calculateCosTiltAngle(void)
 {
     return 1.0f - 2.0f * sq(orientation.q1) - 2.0f * sq(orientation.q2);
 }
+
+#if defined(SITL_BUILD) || defined (USE_SIMULATOR)
+
+void imuSetAttitudeRPY(int16_t roll, int16_t pitch, int16_t yaw)
+{
+    attitude.values.roll = roll;
+    attitude.values.pitch = pitch;
+    attitude.values.yaw = yaw;
+    imuUpdated = true;
+}
+#endif
+
