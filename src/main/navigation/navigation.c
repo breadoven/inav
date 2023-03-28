@@ -1323,13 +1323,8 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_CLIMB_TO_SAFE_ALT(n
         // Until the initial climb phase is complete target slightly *above* the cruise altitude to ensure we actually reach
         // it in a reasonable time. Immediately after we finish this phase - target the original altitude.
         if (STATE(FIXED_WING_LEGACY)) { // CR96
-            // if (navConfig()->general.flags.rth_climb_first == RTH_CLIMB_ON_FW_SPIRAL) {
-                // float altitudeChangeDirection = (tmpHomePos->z += FW_RTH_CLIMB_OVERSHOOT_CM) > navGetCurrentActualPositionAndVelocity()->pos.z ? 1 : -1;
-                // updateClimbRateToAltitudeController(altitudeChangeDirection * navConfig()->general.max_auto_climb_rate, 0, ROC_TO_ALT_CONSTANT);  // CR96
-            // } else {
-                tmpHomePos->z += FW_RTH_CLIMB_OVERSHOOT_CM;
-                setDesiredPosition(tmpHomePos, 0, NAV_POS_UPDATE_Z);
-            // }
+            tmpHomePos->z += FW_RTH_CLIMB_OVERSHOOT_CM;
+            setDesiredPosition(tmpHomePos, 0, NAV_POS_UPDATE_Z);
         } else {
             tmpHomePos->z += MR_RTH_CLIMB_OVERSHOOT_CM;
 
@@ -1451,21 +1446,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_HOVER_ABOVE_HOME(na
     }
 
     fpVector3_t * tmpHomePos = rthGetHomeTargetPosition(RTH_HOME_FINAL_HOVER);
-
-    // if (navConfig()->general.rth_home_altitude) {
-        // float timeToReachHomeAltitude = fabsf(tmpHomePos->z - navGetCurrentActualPositionAndVelocity()->pos.z) / navConfig()->general.max_auto_climb_rate;
-
-        // if (timeToReachHomeAltitude < 1 || STATE(AIRPLANE)) {  // CR96
-            // // we almost reached the target home altitude so set the desired altitude to the desired home altitude
-            // setDesiredPosition(tmpHomePos, 0, NAV_POS_UPDATE_Z);
-        // } else {
-            // float altitudeChangeDirection = tmpHomePos->z > navGetCurrentActualPositionAndVelocity()->pos.z ? 1 : -1;
-            // updateClimbRateToAltitudeController(altitudeChangeDirection * navConfig()->general.max_auto_climb_rate, tmpHomePos->z, ROC_TO_ALT_TARGET);// CR96
-        // }
-    // }
-    // else {
-        setDesiredPosition(tmpHomePos, 0, NAV_POS_UPDATE_Z);
-    // }
+    setDesiredPosition(tmpHomePos, 0, NAV_POS_UPDATE_Z);    // CR96
 
     return NAV_FSM_EVENT_NONE;
 }
@@ -1738,13 +1719,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_WAYPOINT_HOLD_TIME(navi
 
     if (navConfig()->general.waypoint_enforce_altitude && !posControl.wpAltitudeReached) {
         // Adjust altitude to waypoint setting
-        // if (STATE(AIRPLANE)) {
-            // int8_t altitudeChangeDirection = posControl.activeWaypoint.pos.z > navGetCurrentActualPositionAndVelocity()->pos.z ? 1 : -1;
-            // updateClimbRateToAltitudeController(altitudeChangeDirection * navConfig()->general.max_auto_climb_rate, posControl.activeWaypoint.pos.z, ROC_TO_ALT_TARGET);  // CR96
-        // } else {
-            setDesiredPosition(&posControl.activeWaypoint.pos, 0, NAV_POS_UPDATE_Z);
-        // }
-
+        setDesiredPosition(&posControl.activeWaypoint.pos, 0, NAV_POS_UPDATE_Z);    // CR96
         posControl.wpAltitudeReached = isWaypointAltitudeReached();
 
         if (posControl.wpAltitudeReached) {
@@ -2965,7 +2940,6 @@ void updateClimbRateToAltitudeController(float desiredClimbRate, float targetAlt
             desiredClimbRate = direction * constrainf(verticalVelScaled, MIN_TARGET_CLIMB_RATE, absClimbRate);
         }
         DEBUG_SET(DEBUG_ALWAYS, 1, desiredClimbRate);
-        // CR96
         /*
          * If max altitude is set, reset climb rate if altitude is reached and climb rate is > 0
          * In other words, when altitude is reached, allow it only to shrink
@@ -2996,12 +2970,12 @@ void updateClimbRateToAltitudeController(float desiredClimbRate, float targetAlt
             // Multicopter climb-rate control is closed-loop, it's possible to directly calculate desired altitude setpoint to yield the required RoC/RoD
             posControl.desiredState.pos.z = altitudeToUse + (desiredClimbRate / posControl.pids.pos[Z].param.kP);
         }
-    // CR96
     } else {    // ROC_TO_ALT_RESET or zero desired climbrate
         posControl.desiredState.pos.z = altitudeToUse;
     }
 
-    lastUpdateTimeUs = currentTimeUs;   // CR96
+    lastUpdateTimeUs = currentTimeUs;
+    // CR96
 }
 
 static void resetAltitudeController(bool useTerrainFollowing)
@@ -3505,18 +3479,11 @@ bool isNavHoldPositionActive(void)
     if (FLIGHT_MODE(NAV_WP_MODE)) {
         return isLastMissionWaypoint() || NAV_Status.state == MW_NAV_STATE_HOLD_TIMED;
     }
-    // CR96
-    // RTH mode. Hold active at Home position and during initial climb (only if spiral climb set for FW)
-    if (FLIGHT_MODE(NAV_RTH_MODE)) {
-        if (NAV_Status.state == MW_NAV_STATE_RTH_CLIMB && STATE(AIRPLANE) && navConfig()->general.flags.rth_climb_first == RTH_CLIMB_ON_FW_SPIRAL) {
-            return true;
-        }
-        return NAV_Status.state != MW_NAV_STATE_RTH_ENROUTE;
-    }
-
-    // POSHOLD mode and Emergency landing descent (only if position available)
-    return FLIGHT_MODE(NAV_POSHOLD_MODE) || navigationIsExecutingAnEmergencyLanding();
-    // CR96
+    // RTH mode (spiral climb and Home positions but excluding RTH Trackback point positions) and POSHOLD mode
+    // Also hold position during emergency landing if position valid
+    return (FLIGHT_MODE(NAV_RTH_MODE) && !posControl.flags.rthTrackbackActive) ||
+            FLIGHT_MODE(NAV_POSHOLD_MODE) ||
+            navigationIsExecutingAnEmergencyLanding();
 }
 
 float getActiveWaypointSpeed(void)
