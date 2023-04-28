@@ -48,8 +48,7 @@ else()
     endif()
 endif()
 
-# project(INAV VERSION 7.0.0)
-project(INAV VERSION 6.1.0)
+project(INAV VERSION 7.0.0)
 
 enable_language(ASM)
 

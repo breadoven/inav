@@ -175,7 +175,7 @@
 // Wind estimator
 #define USE_WIND_ESTIMATOR   // CR46 removed to free up memory with Flywood F411 mainly, but don't use anyway
 
-// #define USE_SIMULATOR
+#define USE_SIMULATOR
 #define USE_PITOT_VIRTUAL
 #define USE_FAKE_BATT_SENSOR
 

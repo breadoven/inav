@@ -136,41 +136,33 @@ static void updateAltitudeVelocityAndPitchController_FW(timeDelta_t deltaMicros)
 
     // On a fixed wing we might not have a reliable climb rate source (if no BARO available), so we can't apply PID controller to
     // velocity error. We use PID controller on altitude error and calculate desired pitch angle
+    // CR97
+    int32_t targetAltitude = posControl.desiredState.pos.z;
+    float currentVerticalPosition = navGetCurrentActualPositionAndVelocity()->pos.z;
+    int8_t direction = targetAltitude > currentVerticalPosition ? 1 : -1;
+    float maxClimbRate = navConfig()->general.max_auto_climb_rate;
+    float currentClimbRate = navGetCurrentActualPositionAndVelocity()->vel.z;
 
-    // Update energies
-    const float demSPE = (posControl.desiredState.pos.z * 0.01f) * GRAVITY_MSS;
-    const float demSKE = 0.0f;
-
-    const float estSPE = (navGetCurrentActualPositionAndVelocity()->pos.z * 0.01f) * GRAVITY_MSS;
-    const float estSKE = 0.0f;
-
-    // speedWeight controls balance between potential and kinetic energy used for pitch controller
-    //  speedWeight = 1.0 : pitch will only control airspeed and won't control altitude
-    //  speedWeight = 0.5 : pitch will be used to control both airspeed and altitude
-    //  speedWeight = 0.0 : pitch will only control altitude
-    const float speedWeight = 0.0f; // no speed sensing for now
-
-    const float demSEB = demSPE * (1.0f - speedWeight) - demSKE * speedWeight;
-    const float estSEB = estSPE * (1.0f - speedWeight) - estSKE * speedWeight;
-
-    // SEB to pitch angle gain to account for airspeed (with respect to specified reference (tuning) speed
-    const float pitchGainInv = 1.0f / 1.0f;
-
-    // Here we use negative values for dive for better clarity
-    float maxClimbDeciDeg = DEGREES_TO_DECIDEGREES(navConfig()->fw.max_climb_angle);  // CR96
-    const float minDiveDeciDeg = -DEGREES_TO_DECIDEGREES(navConfig()->fw.max_dive_angle);
-
+    float verticalVelScaled = scaleRangef(currentVerticalPosition - targetAltitude, 0.0f, -500 * direction, 0.0f, maxClimbRate);
+    float desiredClimbRate = direction * constrainf(verticalVelScaled, 0, maxClimbRate);
     // CR96
-    // Reduce max allowed climb pitch if performing loiter
-    DEBUG_SET(DEBUG_ALWAYS, 2, 101);
-    if (needToCalculateCircularLoiter) {
-        maxClimbDeciDeg = maxClimbDeciDeg * 0.67f;
-        DEBUG_SET(DEBUG_ALWAYS, 2, 201);
+    // Reduce max allowed climb if performing loiter
+    // DEBUG_SET(DEBUG_ALWAYS, 2, 101);
+    if (needToCalculateCircularLoiter && desiredClimbRate > 0.0f) {
+        desiredClimbRate *= 0.67f;
+        // DEBUG_SET(DEBUG_ALWAYS, 2, 201);
     }
     // CR96
-    // PID controller to translate energy balance error [J] into pitch angle [decideg]
-    float targetPitchAngle = navPidApply3(&posControl.pids.fw_alt, demSEB, estSEB, US2S(deltaMicros), minDiveDeciDeg, maxClimbDeciDeg, 0, pitchGainInv, 1.0f);
+    DEBUG_SET(DEBUG_ALWAYS, 3, desiredClimbRate);
+    // Here we use negative values for dive for better clarity
+    const float maxClimbDeciDeg = DEGREES_TO_DECIDEGREES(navConfig()->fw.max_climb_angle);
+    const float minDiveDeciDeg = -DEGREES_TO_DECIDEGREES(navConfig()->fw.max_dive_angle);
 
+    // PID controller to translate energy balance error [J] into pitch angle [decideg]
+    const pidControllerFlags_e pidFlags = PID_DTERM_FROM_ERROR;
+    float targetPitchAngle = navPidApply2(&posControl.pids.fw_alt, desiredClimbRate, currentClimbRate, US2S(deltaMicros), minDiveDeciDeg, maxClimbDeciDeg, pidFlags);
+    // CR97
+DEBUG_SET(DEBUG_ALWAYS, 2, targetPitchAngle);
     // Apply low-pass filter to prevent rapid correction
     targetPitchAngle = pt1FilterApply4(&velzFilterState, targetPitchAngle, getSmoothnessCutoffFreq(NAV_FW_BASE_PITCH_CUTOFF_FREQUENCY_HZ), US2S(deltaMicros));
 
@@ -178,6 +170,54 @@ static void updateAltitudeVelocityAndPitchController_FW(timeDelta_t deltaMicros)
     targetPitchAngle = constrainf(targetPitchAngle, minDiveDeciDeg, maxClimbDeciDeg);
     posControl.rcAdjustment[PITCH] = targetPitchAngle;
 }
+
+// static void updateAltitudeVelocityAndPitchController_FW(timeDelta_t deltaMicros)
+// {
+    // static pt1Filter_t velzFilterState;
+
+    // // On a fixed wing we might not have a reliable climb rate source (if no BARO available), so we can't apply PID controller to
+    // // velocity error. We use PID controller on altitude error and calculate desired pitch angle
+    // // Update energies
+    // const float demSPE = (posControl.desiredState.pos.z * 0.01f) * GRAVITY_MSS;
+    // const float demSKE = 0.0f;
+
+    // const float estSPE = (navGetCurrentActualPositionAndVelocity()->pos.z * 0.01f) * GRAVITY_MSS;
+    // const float estSKE = 0.0f;
+
+    // // speedWeight controls balance between potential and kinetic energy used for pitch controller
+    // //  speedWeight = 1.0 : pitch will only control airspeed and won't control altitude
+    // //  speedWeight = 0.5 : pitch will be used to control both airspeed and altitude
+    // //  speedWeight = 0.0 : pitch will only control altitude
+    // const float speedWeight = 0.0f; // no speed sensing for now
+
+    // const float demSEB = demSPE * (1.0f - speedWeight) - demSKE * speedWeight;
+    // const float estSEB = estSPE * (1.0f - speedWeight) - estSKE * speedWeight;
+
+    // // SEB to pitch angle gain to account for airspeed (with respect to specified reference (tuning) speed
+    // const float pitchGainInv = 1.0f / 1.0f;
+
+    // // Here we use negative values for dive for better clarity
+    // float maxClimbDeciDeg = DEGREES_TO_DECIDEGREES(navConfig()->fw.max_climb_angle);  // CR96
+    // const float minDiveDeciDeg = -DEGREES_TO_DECIDEGREES(navConfig()->fw.max_dive_angle);
+
+    // // CR96
+    // // Reduce max allowed climb pitch if performing loiter
+    // // DEBUG_SET(DEBUG_ALWAYS, 2, 101);
+    // if (needToCalculateCircularLoiter) {
+        // maxClimbDeciDeg = maxClimbDeciDeg * 0.67f;
+        // // DEBUG_SET(DEBUG_ALWAYS, 2, 201);
+    // }
+    // // CR96
+    // // PID controller to translate energy balance error [J] into pitch angle [decideg]
+    // float targetPitchAngle = navPidApply3(&posControl.pids.fw_alt, demSEB, estSEB, US2S(deltaMicros), minDiveDeciDeg, maxClimbDeciDeg, 0, pitchGainInv, 1.0f);
+
+    // // Apply low-pass filter to prevent rapid correction
+    // targetPitchAngle = pt1FilterApply4(&velzFilterState, targetPitchAngle, getSmoothnessCutoffFreq(NAV_FW_BASE_PITCH_CUTOFF_FREQUENCY_HZ), US2S(deltaMicros));
+
+    // // Reconstrain pitch angle ( >0 - climb, <0 - dive)
+    // targetPitchAngle = constrainf(targetPitchAngle, minDiveDeciDeg, maxClimbDeciDeg);
+    // posControl.rcAdjustment[PITCH] = targetPitchAngle;
+// }
 
 void applyFixedWingAltitudeAndThrottleController(timeUs_t currentTimeUs)
 {
@@ -427,11 +467,11 @@ static void updatePositionHeadingController_FW(timeUs_t currentTimeUs, timeDelta
         if ((ABS(wrap_18000(virtualTargetBearing - posControl.actualState.cog)) < 9000 || posControl.wpDistance < 1000.0f) && navCrossTrackError > 200) {
             int32_t courseHeadingError = wrap_18000(posControl.activeWaypoint.bearing - posControl.actualState.cog);
             // DEBUG_SET(DEBUG_ALWAYS, 2, courseHeadingError);
-            DEBUG_SET(DEBUG_ALWAYS, 3, posControl.activeWaypoint.bearing);
+            // DEBUG_SET(DEBUG_ALWAYS, 3, posControl.activeWaypoint.bearing);
             // captureFactor adjusts distance/heading sensitivity balance when closing in on course line.
             // Closing distance threashold based on speed and an assumed 1 second response time.
             float captureFactor = navCrossTrackError < posControl.actualState.velXY ? constrainf(2.0f - ABS(courseHeadingError) / 500.0f, 0.0f, 2.0f) : 1.0f;
-            DEBUG_SET(DEBUG_ALWAYS, 5, captureFactor * 100);
+            // DEBUG_SET(DEBUG_ALWAYS, 5, captureFactor * 100);
             // bias between reducing distance to course line and aligning with course heading adjusted by waypoint_tracking_accuracy
             // initial courseCorrectionFactor based on distance to course line
             float courseCorrectionFactor = constrainf(captureFactor * navCrossTrackError / (1000.0f * navConfig()->fw.wp_tracking_accuracy), 0.0f, 1.0f);
@@ -440,9 +480,9 @@ static void updatePositionHeadingController_FW(timeUs_t currentTimeUs, timeDelta
             // course heading alignment factor
             float courseHeadingFactor = constrainf(courseHeadingError / 18000.0f, 0.0f, 1.0f);
             courseHeadingFactor = courseHeadingError < 0 ? -courseHeadingFactor : courseHeadingFactor;
-            DEBUG_SET(DEBUG_ALWAYS, 7, courseHeadingFactor * 100);
+            // DEBUG_SET(DEBUG_ALWAYS, 7, courseHeadingFactor * 100);
             courseCorrectionFactor = constrainf(courseCorrectionFactor - courseHeadingFactor, -1.0f, 1.0f);
-            DEBUG_SET(DEBUG_ALWAYS, 6, courseCorrectionFactor * 100);
+            // DEBUG_SET(DEBUG_ALWAYS, 6, courseCorrectionFactor * 100);
 
             // final courseVirtualCorrection value
             courseVirtualCorrection = DEGREES_TO_CENTIDEGREES(navConfig()->fw.wp_tracking_max_angle) * courseCorrectionFactor;
@@ -451,7 +491,7 @@ static void updatePositionHeadingController_FW(timeUs_t currentTimeUs, timeDelta
         }
     }
     // DEBUG_SET(DEBUG_ALWAYS, 1, virtualTargetBearing);
-    DEBUG_SET(DEBUG_ALWAYS, 4, navCrossTrackError);
+    // DEBUG_SET(DEBUG_ALWAYS, 4, navCrossTrackError);
     /*
      * Calculate NAV heading error
      * Units are centidegrees
