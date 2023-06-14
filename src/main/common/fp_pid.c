@@ -42,13 +42,13 @@ float navPidApply3(
     const float dt,
     const float outMin,
     const float outMax,
-    const pidControllerFlags_e pidFlags,
+    pidControllerFlags_e pidFlags,  // CR99
     const float gainScaler,
     const float dTermScaler
 ) {
     float newProportional, newDerivative, newFeedForward;
     float error = 0.0f;
-    
+
     if (pid->errorLpfHz > 0.0f) {
         error = pt1FilterApply4(&pid->error_filter_state, setpoint - measurement, pid->errorLpfHz, dt);
     } else {
@@ -81,7 +81,12 @@ float navPidApply3(
     }
 
     newDerivative = newDerivative * gainScaler * dTermScaler;
-
+    // CR99
+    // zero integral if proportional saturated
+    if (newProportional > outMax || newProportional < outMin) {
+        pidFlags |= PID_ZERO_INTEGRATOR;
+    }
+    // CR99
     if (pidFlags & PID_ZERO_INTEGRATOR) {
         pid->integrator = 0.0f;
     }
@@ -104,7 +109,7 @@ float navPidApply3(
     /* Update I-term */
     if (
         !(pidFlags & PID_ZERO_INTEGRATOR) &&
-        !(pidFlags & PID_FREEZE_INTEGRATOR) 
+        !(pidFlags & PID_FREEZE_INTEGRATOR)
     ) {
         const float newIntegrator = pid->integrator + (error * pid->param.kI * gainScaler * dt) + ((outValConstrained - outVal) * pid->param.kT * dt);
 
@@ -118,10 +123,10 @@ float navPidApply3(
             pid->integrator = newIntegrator;
         }
     }
-    
+
     if (pidFlags & PID_LIMIT_INTEGRATOR) {
         pid->integrator = constrainf(pid->integrator, outMin, outMax);
-    } 
+    }
 
     return outValConstrained;
 }

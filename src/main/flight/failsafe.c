@@ -157,6 +157,7 @@ void failsafeReset(void)
     failsafeState.phase = FAILSAFE_IDLE;
     failsafeState.rxLinkState = FAILSAFE_RXLINK_DOWN;
     failsafeState.activeProcedure = failsafeConfig()->failsafe_procedure;
+    failsafeState.controlling = false;  // CR98
 
     failsafeState.lastGoodRcCommand[ROLL] = 0;
     failsafeState.lastGoodRcCommand[PITCH] = 0;

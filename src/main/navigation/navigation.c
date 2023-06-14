@@ -126,6 +126,7 @@ PG_RESET_TEMPLATE(navConfig_t, navConfig,
             .soaring_motor_stop = SETTING_NAV_FW_SOARING_MOTOR_STOP_DEFAULT,                // stops motor when Saoring mode enabled
             .rth_trackback_mode = SETTING_NAV_RTH_TRACKBACK_MODE_DEFAULT,                   // RTH trackback useage mode
             .rth_use_linear_descent = SETTING_NAV_RTH_USE_LINEAR_DESCENT_DEFAULT,           // Use linear descent during RTH
+            .landing_bump_detection = SETTING_NAV_LANDING_BUMP_DETECTION_DEFAULT,           // Detect landing G bump   CR91
         },
 
         // General navigation parameters
@@ -1695,6 +1696,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_WAYPOINT_HOLD_TIME(navi
     timeMs_t currentTime = millis();
 
     if (posControl.waypointList[posControl.activeWaypointIndex].p1 <= 0 ||
+        posControl.waypointList[posControl.activeWaypointIndex].action == NAV_WP_ACTION_WAYPOINT ||  // CR100
         (posControl.wpReachedTime != 0 && currentTime - posControl.wpReachedTime >= (timeMs_t)posControl.waypointList[posControl.activeWaypointIndex].p1*1000L)) {
         return NAV_FSM_EVENT_SUCCESS;
     }
@@ -4182,9 +4184,9 @@ void navigationUsePIDs(void)
                                         0.0f
     );
 
-    navPidInit(&posControl.pids.fw_alt, (float)pidProfile()->bank_fw.pid[PID_POS_Z].P / 100.0f,  // CR97  was 10
-                                        (float)pidProfile()->bank_fw.pid[PID_POS_Z].I / 100.0f,  // CR97  was 10
-                                        (float)pidProfile()->bank_fw.pid[PID_POS_Z].D / 100.0f,  // CR97  was 10
+    navPidInit(&posControl.pids.fw_alt, (float)pidProfile()->bank_fw.pid[PID_POS_Z].P / 10.0f,  // CR97 uses 100, original was 10
+                                        (float)pidProfile()->bank_fw.pid[PID_POS_Z].I / 10.0f,  // CR97 uses 100, original was 10
+                                        (float)pidProfile()->bank_fw.pid[PID_POS_Z].D / 10.0f,  // CR97 uses 100, original was 10
                                         0.0f,
                                         NAV_DTERM_CUT_HZ,
                                         0.0f
