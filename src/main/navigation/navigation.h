@@ -267,6 +267,7 @@ typedef struct navConfig_s {
         uint8_t  land_detect_sensitivity;           // Sensitivity of landing detector
         uint16_t auto_disarm_delay;                 // safety time delay for landing detector
         uint16_t rth_linear_descent_start_distance; // Distance from home to start the linear descent (0 = immediately)
+        uint8_t  cruise_yaw_rate;                   // Max yaw rate (dps) when CRUISE MODE is enabled       CR101
     } general;
 
     struct {
@@ -317,7 +318,7 @@ typedef struct navConfig_s {
         // xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
         bool     launch_manual_throttle;     // Allows launch with manual throttle control
         uint8_t  launch_abort_deadband;      // roll/pitch stick movement deadband for launch abort
-        uint8_t  cruise_yaw_rate;            // Max yaw rate (dps) when CRUISE MODE is enabled
+        // uint8_t  cruise_yaw_rate;            // Max yaw rate (dps) when CRUISE MODE is enabled  CR101
         bool     allow_manual_thr_increase;
         bool     useFwNavYawControl;
         uint8_t  yawControlDeadband;

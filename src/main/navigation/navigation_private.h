@@ -328,6 +328,7 @@ typedef struct {
     int32_t                     course;
     int32_t                     previousCourse;
     timeMs_t                    lastCourseAdjustmentTime;
+    float                       multicopterSpeed;   // CR101
 } navCruise_t;
 
 typedef struct {

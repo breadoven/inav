@@ -229,6 +229,8 @@ void initActiveBoxIds(void)
         if (!STATE(ALTITUDE_CONTROL) || (STATE(ALTITUDE_CONTROL) && navReadyAltControl)) {
             ADD_ACTIVE_BOX(BOXNAVRTH);
             ADD_ACTIVE_BOX(BOXNAVWP);
+            ADD_ACTIVE_BOX(BOXNAVCOURSEHOLD);   // CR101
+            ADD_ACTIVE_BOX(BOXNAVCRUISE);   // CR101
             ADD_ACTIVE_BOX(BOXHOMERESET);
             ADD_ACTIVE_BOX(BOXGCSNAV);
             ADD_ACTIVE_BOX(BOXPLANWPMISSION);
@@ -238,8 +240,8 @@ void initActiveBoxIds(void)
         }
 
         if (STATE(AIRPLANE)) {
-            ADD_ACTIVE_BOX(BOXNAVCRUISE);
-            ADD_ACTIVE_BOX(BOXNAVCOURSEHOLD);
+            // ADD_ACTIVE_BOX(BOXNAVCRUISE);  // CR101
+            // ADD_ACTIVE_BOX(BOXNAVCOURSEHOLD);
             ADD_ACTIVE_BOX(BOXSOARING);
         }
     }
