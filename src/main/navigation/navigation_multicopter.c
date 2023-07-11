@@ -327,7 +327,7 @@ static void processMulticopterBrakingMode(const bool isAdjusting)
         !STATE(NAV_CRUISE_BRAKING_LOCKED) &&
         posControl.actualState.velXY > navConfig()->mc.braking_speed_threshold &&
         !isAdjusting &&
-        navConfig()->general.flags.user_control_mode == NAV_GPS_CRUISE &&   // CR101
+        navConfig()->general.flags.user_control_mode == NAV_GPS_CRUISE &&
         navConfig()->mc.braking_speed_threshold > 0;
 
 
@@ -406,7 +406,7 @@ void resetMulticopterPositionController(void)
     }
 }
 // CR101
-bool adjustMulticopterCruiseSpeed(int16_t rcPitchAdjustment)
+static bool adjustMulticopterCruiseSpeed(int16_t rcPitchAdjustment)
 {
     static timeMs_t lastUpdateTimeMs;
     const timeMs_t currentTimeMs = millis();
@@ -424,9 +424,16 @@ bool adjustMulticopterCruiseSpeed(int16_t rcPitchAdjustment)
     } else {
         return false;
     }
-    posControl.cruise.multicopterSpeed = constrainf(posControl.cruise.multicopterSpeed, 100.0f, navConfig()->general.max_manual_speed);
+    posControl.cruise.multicopterSpeed = constrainf(posControl.cruise.multicopterSpeed, 40.0f, navConfig()->general.max_manual_speed);
 
     return true;
+}
+
+static void setMulticopterStopPosition(void)
+{
+    fpVector3_t stopPosition;
+    calculateMulticopterInitialHoldPosition(&stopPosition);
+    setDesiredPosition(&stopPosition, 0, NAV_POS_UPDATE_XY);
 }
 // CR101
 bool adjustMulticopterPositionFromRCInput(int16_t rcPitchAdjustment, int16_t rcRollAdjustment)
@@ -464,9 +471,12 @@ bool adjustMulticopterPositionFromRCInput(int16_t rcPitchAdjustment, int16_t rcR
     else {
         // Adjusting finished - reset desired position to stay exactly where pilot released the stick
         if (posControl.flags.isAdjustingPosition) {
-            fpVector3_t stopPosition;
-            calculateMulticopterInitialHoldPosition(&stopPosition);
-            setDesiredPosition(&stopPosition, 0, NAV_POS_UPDATE_XY);
+            // CR101
+            setMulticopterStopPosition();
+            // fpVector3_t stopPosition;
+            // calculateMulticopterInitialHoldPosition(&stopPosition);
+            // setDesiredPosition(&stopPosition, 0, NAV_POS_UPDATE_XY);
+            // CR101
         }
 
         return false;
@@ -501,11 +511,15 @@ static void updatePositionVelocityController_MC(const float maxSpeed)
 {
     // CR101
     if (FLIGHT_MODE(NAV_COURSE_HOLD_MODE)) {
-        // Rotate multicopter x velocity from body frame to earth frame
-        posControl.desiredState.vel.x = posControl.cruise.multicopterSpeed * posControl.actualState.cosYaw;
-        posControl.desiredState.vel.y = posControl.cruise.multicopterSpeed * posControl.actualState.sinYaw;
+        if (posControl.cruise.multicopterSpeed >= 50) {
+            // Rotate multicopter x velocity from body frame to earth frame
+            posControl.desiredState.vel.x = posControl.cruise.multicopterSpeed * posControl.actualState.cosYaw;
+            posControl.desiredState.vel.y = posControl.cruise.multicopterSpeed * posControl.actualState.sinYaw;
 
-        return;
+            return;
+        } else if (posControl.flags.isAdjustingPosition) {
+            setMulticopterStopPosition();
+        }
     }
     // CR101
     const float posErrorX = posControl.desiredState.pos.x - navGetCurrentActualPositionAndVelocity()->pos.x;
@@ -931,15 +945,21 @@ static void applyMulticopterEmergencyLandingController(timeUs_t currentTimeUs)
 
     /* Attempt to stabilise */
     rcCommand[YAW] = 0;
+    // CR102
+    rcCommand[ROLL] = 0;
+    rcCommand[PITCH] = 0;
+    rcCommand[THROTTLE] = currentBatteryProfile->failsafe_throttle == SETTING_FAILSAFE_THROTTLE_DEFAULT ?
+                          1000 + 0.9 * (currentBatteryProfile->nav.mc.hover_throttle - 1000) : currentBatteryProfile->failsafe_throttle;
+    // CR102
 
     if ((posControl.flags.estAltStatus < EST_USABLE)) {
         /* Sensors has gone haywire, attempt to land regardless */
         if (failsafeConfig()->failsafe_procedure == FAILSAFE_PROCEDURE_DROP_IT) {
             rcCommand[THROTTLE] = getThrottleIdleValue();
         }
-        else {
-            rcCommand[THROTTLE] = currentBatteryProfile->failsafe_throttle;
-        }
+        // else {   // CR102
+            // rcCommand[THROTTLE] = currentBatteryProfile->failsafe_throttle;
+        // }
 
         return;
     }
@@ -954,6 +974,9 @@ static void applyMulticopterEmergencyLandingController(timeUs_t currentTimeUs)
             updateClimbRateToAltitudeController(-navConfig()->general.emerg_descent_rate, 500, ROC_TO_ALT_TARGET); // CR96
             updateAltitudeVelocityController_MC(deltaMicrosPositionUpdate);
             updateAltitudeThrottleController_MC(deltaMicrosPositionUpdate);
+
+            // Update throttle
+            rcCommand[THROTTLE] = posControl.rcAdjustment[THROTTLE];
         }
         else {
             // due to some glitch position update has not occurred in time, reset altitude controller
@@ -964,15 +987,14 @@ static void applyMulticopterEmergencyLandingController(timeUs_t currentTimeUs)
         posControl.flags.verticalPositionDataConsumed = true;
     }
 
-    // Update throttle controller
-    rcCommand[THROTTLE] = posControl.rcAdjustment[THROTTLE];
+
 
     // Hold position if possible
     if ((posControl.flags.estPosStatus >= EST_USABLE)) {
         applyMulticopterPositionController(currentTimeUs);
-    } else {
-        rcCommand[ROLL] = 0;
-        rcCommand[PITCH] = 0;
+    // } else {   // CR102
+        // rcCommand[ROLL] = 0;
+        // rcCommand[PITCH] = 0;
     }
 }
 

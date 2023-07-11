@@ -1080,11 +1080,15 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_COURSE_HOLD_INITIALIZE(
 
     resetPositionController();
     // CR101
-    if (STATE(FIXED_WING_LEGACY)) {
+    if (STATE(AIRPLANE)) {
         posControl.cruise.course = posControl.actualState.cog;  // Store the course to follow
     } else {    // Multicopter
         posControl.cruise.course = posControl.actualState.yaw;
-        posControl.cruise.multicopterSpeed = constrainf(posControl.actualState.velXY, 100.0f, navConfig()->general.max_manual_speed);
+        posControl.cruise.multicopterSpeed = constrainf(posControl.actualState.velXY, 40.0f, navConfig()->general.max_manual_speed);
+        // **** Alternative using target position:
+        // fpVector3_t posControl.cruise.targetPos;
+        // calculateFarAwayTarget(&posControl.cruise.targetPos, posControl.cruise.course, 1000000.0f);  // 10km away
+        // ****
     }
     // CR101
     posControl.cruise.previousCourse = posControl.cruise.course;
@@ -1103,20 +1107,25 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_COURSE_HOLD_IN_PROGRESS
         return NAV_FSM_EVENT_SWITCH_TO_IDLE;
     } // Switch to IDLE if we do not have an healty position. Do the CRUISE init the next iteration.
 
-    if (STATE(FIXED_WING_LEGACY) && posControl.flags.isAdjustingPosition) {     // CR101 inhibit for MR, pitch adjusts only speed
+    if (STATE(AIRPLANE) && posControl.flags.isAdjustingPosition) {     // CR101 inhibit for MR, pitch adjusts only speed
         return NAV_FSM_EVENT_SWITCH_TO_COURSE_ADJ;
     }
     // User is yawing. We record the desidered course and change the desidered target in the meanwhile
     if (posControl.flags.isAdjustingHeading) {
         timeMs_t timeDifference = currentTimeMs - posControl.cruise.lastCourseAdjustmentTime;
         if (timeDifference > 100) timeDifference = 0;   // if adjustment was called long time ago, reset the time difference.
-        float rateTarget = scaleRangef((float)rcCommand[YAW], -500.0f, 500.0f, -DEGREES_TO_CENTIDEGREES(navConfig()->general.cruise_yaw_rate), DEGREES_TO_CENTIDEGREES(navConfig()->general.cruise_yaw_rate));  // CR101 change cruise_yaw_rate to general use or split for MR
+        float rateTarget = scaleRangef((float)rcCommand[YAW], -500.0f, 500.0f, -DEGREES_TO_CENTIDEGREES(navConfig()->general.cruise_yaw_rate), DEGREES_TO_CENTIDEGREES(navConfig()->general.cruise_yaw_rate));  // CR101
         float centidegsPerIteration = rateTarget * MS2S(timeDifference);
         posControl.cruise.course = wrap_36000(posControl.cruise.course - centidegsPerIteration);
         posControl.cruise.lastCourseAdjustmentTime = currentTimeMs;
     } else if (currentTimeMs - posControl.cruise.lastCourseAdjustmentTime > 4000) {
         posControl.cruise.previousCourse = posControl.cruise.course;
     }
+    // **** alternative using target position:  CR101
+    // if (STATE(MULTIROTOR) && isWaypointReached(posControl.cruise.targetPos, 0) OR course adjusted) {
+        // calculateFarAwayTarget(&posControl.cruise.targetPos, posControl.cruise.course, 1000000.0f);  // 10km away
+    // }
+    // ****   CR101
     setDesiredPosition(NULL, posControl.cruise.course, NAV_POS_UPDATE_HEADING);
 
     return NAV_FSM_EVENT_NONE;
@@ -3053,7 +3062,7 @@ static bool adjustPositionFromRCInput(void)
     if (STATE(FIXED_WING_LEGACY)) {
         retValue = adjustFixedWingPositionFromRCInput();
     }
-    else {  // CR101
+    else {
         const int16_t rcPitchAdjustment = applyDeadbandRescaled(rcCommand[PITCH], rcControlsConfig()->pos_hold_deadband, -500, 500);
         const int16_t rcRollAdjustment = applyDeadbandRescaled(rcCommand[ROLL], rcControlsConfig()->pos_hold_deadband, -500, 500);
 
@@ -3456,7 +3465,7 @@ bool isNavHoldPositionActive(void)
             navigationIsExecutingAnEmergencyLanding();
 }
 
-float getActiveWaypointSpeed(void)  // CR101
+float getActiveWaypointSpeed(void)
 {
     if (posControl.flags.isAdjustingPosition) {
         // In manual control mode use different cap for speed
@@ -4463,11 +4472,12 @@ bool isAdjustingHeading(void) {
 }
 
 int32_t getCruiseHeadingAdjustment(void) {
-    return wrap_18000(posControl.cruise.course - posControl.cruise.previousCourse);
+    return posControl.cruise.course;
+    // return wrap_18000(posControl.cruise.course - posControl.cruise.previousCourse);
 }
 // CR101
 int32_t navigationGetHeadingError(void)
 {
-    int32_t actualHeading = STATE(FIXED_WING_LEGACY) ? posControl.actualState.cog : posControl.actualState.yaw;
+    int32_t actualHeading = STATE(AIRPLANE) ? posControl.actualState.cog : posControl.actualState.yaw;
     return wrap_18000(posControl.desiredState.yaw - actualHeading);
 }
