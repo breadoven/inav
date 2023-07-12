@@ -1085,10 +1085,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_COURSE_HOLD_INITIALIZE(
     } else {    // Multicopter
         posControl.cruise.course = posControl.actualState.yaw;
         posControl.cruise.multicopterSpeed = constrainf(posControl.actualState.velXY, 40.0f, navConfig()->general.max_manual_speed);
-        // **** Alternative using target position:
-        // fpVector3_t posControl.cruise.targetPos;
-        // calculateFarAwayTarget(&posControl.cruise.targetPos, posControl.cruise.course, 1000000.0f);  // 10km away
-        // ****
+        posControl.desiredState.pos = posControl.actualState.abs.pos;
     }
     // CR101
     posControl.cruise.previousCourse = posControl.cruise.course;
@@ -1110,7 +1107,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_COURSE_HOLD_IN_PROGRESS
     if (STATE(AIRPLANE) && posControl.flags.isAdjustingPosition) {     // CR101 inhibit for MR, pitch adjusts only speed
         return NAV_FSM_EVENT_SWITCH_TO_COURSE_ADJ;
     }
-    // User is yawing. We record the desidered course and change the desidered target in the meanwhile
+    // User is yawing. We record the desired course and change the desired target in the meanwhile
     if (posControl.flags.isAdjustingHeading) {
         timeMs_t timeDifference = currentTimeMs - posControl.cruise.lastCourseAdjustmentTime;
         if (timeDifference > 100) timeDifference = 0;   // if adjustment was called long time ago, reset the time difference.
@@ -1121,12 +1118,14 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_COURSE_HOLD_IN_PROGRESS
     } else if (currentTimeMs - posControl.cruise.lastCourseAdjustmentTime > 4000) {
         posControl.cruise.previousCourse = posControl.cruise.course;
     }
-    // **** alternative using target position:  CR101
-    // if (STATE(MULTIROTOR) && isWaypointReached(posControl.cruise.targetPos, 0) OR course adjusted) {
-        // calculateFarAwayTarget(&posControl.cruise.targetPos, posControl.cruise.course, 1000000.0f);  // 10km away
-    // }
+    // **** Correct for course error to COG:   CR101
+    int32_t desiredHeading = posControl.cruise.course;
+    if (STATE(MULTIROTOR)) {
+        desiredHeading = wrap_36000(posControl.actualState.yaw + posControl.cruise.course - posControl.actualState.cog);
+    }
+    DEBUG_SET(DEBUG_ALWAYS, 3, desiredHeading);
     // ****   CR101
-    setDesiredPosition(NULL, posControl.cruise.course, NAV_POS_UPDATE_HEADING);
+    setDesiredPosition(NULL, desiredHeading, NAV_POS_UPDATE_HEADING);
 
     return NAV_FSM_EVENT_NONE;
 }
