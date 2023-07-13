@@ -834,7 +834,7 @@ static bool mspFcProcessOutCommand(uint16_t cmdMSP, sbuf_t *dst, mspPostProcessF
         sbufWriteU32(dst, getFlightTime()); // Flight time (seconds)
 
         // Throttle
-        sbufWriteU8(dst, getThrottlePercent()); // Throttle Percent
+        sbufWriteU8(dst, getThrottlePercent(true)); // Throttle Percent
         sbufWriteU8(dst, navigationIsControllingThrottle() ? 1 : 0); // Auto Throttle Flag (0 or 1)
 
         break;
@@ -1058,7 +1058,7 @@ static bool mspFcProcessOutCommand(uint16_t cmdMSP, sbuf_t *dst, mspPostProcessF
             legacyLedConfig |= ledConfig->led_function << shiftCount;
             shiftCount += 4;
             legacyLedConfig |= (ledConfig->led_overlay & 0x3F) << (shiftCount);
-            shiftCount += 6; 
+            shiftCount += 6;
             legacyLedConfig |= (ledConfig->led_color) << (shiftCount);
             shiftCount += 4;
             legacyLedConfig |= (ledConfig->led_direction) << (shiftCount);
@@ -2349,8 +2349,11 @@ static mspResult_e mspFcProcessInCommand(uint16_t cmdMSP, sbuf_t *src)
 
     case MSP_RESET_CONF:
         if (!ARMING_FLAG(ARMED)) {
+            suspendRxSignal();
             resetEEPROM();
+            writeEEPROM();
             readEEPROM();
+            resumeRxSignal();
         } else
             return MSP_RESULT_ERROR;
         break;
@@ -2380,8 +2383,10 @@ static mspResult_e mspFcProcessInCommand(uint16_t cmdMSP, sbuf_t *src)
 
     case MSP_EEPROM_WRITE:
         if (!ARMING_FLAG(ARMED)) {
+            suspendRxSignal();
             writeEEPROM();
             readEEPROM();
+            resumeRxSignal();
         } else
             return MSP_RESULT_ERROR;
         break;
@@ -2512,15 +2517,16 @@ static mspResult_e mspFcProcessInCommand(uint16_t cmdMSP, sbuf_t *src)
 #ifdef USE_GPS
     case MSP_SET_RAW_GPS:
         if (dataSize == 14) {
-	    gpsSol.fixType = sbufReadU8(src);
-	    if (gpsSol.fixType) {
-		ENABLE_STATE(GPS_FIX);
+        gpsSol.fixType = sbufReadU8(src);
+        if (gpsSol.fixType) {
+        ENABLE_STATE(GPS_FIX);
             } else {
                 DISABLE_STATE(GPS_FIX);
             }
             gpsSol.flags.validVelNE = false;
             gpsSol.flags.validVelD = false;
             gpsSol.flags.validEPE = false;
+            gpsSol.flags.validTime = false;
             gpsSol.numSat = sbufReadU8(src);
             gpsSol.llh.lat = sbufReadU32(src);
             gpsSol.llh.lon = sbufReadU32(src);
@@ -2739,7 +2745,7 @@ static mspResult_e mspFcProcessInCommand(uint16_t cmdMSP, sbuf_t *src)
             ledConfig->led_position = legacyConfig & 0xFF;
             ledConfig->led_function = (legacyConfig >> 8) & 0xF;
             ledConfig->led_overlay = (legacyConfig >> 12) & 0x3F;
-            ledConfig->led_color = (legacyConfig >> 18) & 0xF; 
+            ledConfig->led_color = (legacyConfig >> 18) & 0xF;
             ledConfig->led_direction = (legacyConfig >> 22) & 0x3F;
             ledConfig->led_params = (legacyConfig >> 28) & 0xF;
 
@@ -2835,15 +2841,15 @@ static mspResult_e mspFcProcessInCommand(uint16_t cmdMSP, sbuf_t *src)
 
     case MSP2_INAV_SET_MIXER:
         if (dataSize == 9) {
-	    mixerConfigMutable()->motorDirectionInverted = sbufReadU8(src);
-	    sbufReadU16(src); // Was yaw_jump_prevention_limit
-	    mixerConfigMutable()->platformType = sbufReadU8(src);
-	    mixerConfigMutable()->hasFlaps = sbufReadU8(src);
-	    mixerConfigMutable()->appliedMixerPreset = sbufReadU16(src);
-	    sbufReadU8(src); //Read and ignore MAX_SUPPORTED_MOTORS
-	    sbufReadU8(src); //Read and ignore MAX_SUPPORTED_SERVOS
-	    mixerUpdateStateFlags();
-	} else
+        mixerConfigMutable()->motorDirectionInverted = sbufReadU8(src);
+        sbufReadU16(src); // Was yaw_jump_prevention_limit
+        mixerConfigMutable()->platformType = sbufReadU8(src);
+        mixerConfigMutable()->hasFlaps = sbufReadU8(src);
+        mixerConfigMutable()->appliedMixerPreset = sbufReadU16(src);
+        sbufReadU8(src); //Read and ignore MAX_SUPPORTED_MOTORS
+        sbufReadU8(src); //Read and ignore MAX_SUPPORTED_SERVOS
+        mixerUpdateStateFlags();
+    } else
             return MSP_RESULT_ERROR;
         break;
 
@@ -3248,8 +3254,8 @@ static bool mspParameterGroupsCommand(sbuf_t *dst, sbuf_t *src)
 bool isOSDTypeSupportedBySimulator(void)
 {
 #ifdef USE_OSD
-	displayPort_t *osdDisplayPort = osdGetDisplayPort();
-	return (osdDisplayPort && osdDisplayPort->cols == 30 && (osdDisplayPort->rows == 13 || osdDisplayPort->rows == 16));
+    displayPort_t *osdDisplayPort = osdGetDisplayPort();
+    return (osdDisplayPort && osdDisplayPort->cols == 30 && (osdDisplayPort->rows == 13 || osdDisplayPort->rows == 16));
 #else
     return false;
 #endif
@@ -3257,130 +3263,130 @@ bool isOSDTypeSupportedBySimulator(void)
 
 void mspWriteSimulatorOSD(sbuf_t *dst)
 {
-	//RLE encoding
-	//scan displayBuffer iteratively
-	//no more than 80+3+2 bytes output in single run
-	//0 and 255 are special symbols
-	//255 - font bank switch
-	//0  - font bank switch, blink switch and character repeat
+    //RLE encoding
+    //scan displayBuffer iteratively
+    //no more than 80+3+2 bytes output in single run
+    //0 and 255 are special symbols
+    //255 - font bank switch
+    //0  - font bank switch, blink switch and character repeat
 
-	static uint8_t osdPos_y = 0;
-	static uint8_t osdPos_x = 0;
+    static uint8_t osdPos_y = 0;
+    static uint8_t osdPos_x = 0;
 
 
-	if (isOSDTypeSupportedBySimulator())
-	{
-		displayPort_t *osdDisplayPort = osdGetDisplayPort();
+    if (isOSDTypeSupportedBySimulator())
+    {
+        displayPort_t *osdDisplayPort = osdGetDisplayPort();
 
-		sbufWriteU8(dst, osdPos_y | (osdDisplayPort->rows == 16 ? 128: 0));
-		sbufWriteU8(dst, osdPos_x);
+        sbufWriteU8(dst, osdPos_y | (osdDisplayPort->rows == 16 ? 128: 0));
+        sbufWriteU8(dst, osdPos_x);
 
-		int bytesCount = 0;
+        int bytesCount = 0;
 
-		uint16_t c = 0;
-		textAttributes_t attr = 0;
-		bool highBank = false;
-		bool blink = false;
-		int count = 0;
+        uint16_t c = 0;
+        textAttributes_t attr = 0;
+        bool highBank = false;
+        bool blink = false;
+        int count = 0;
 
-		int processedRows = 16;
+        int processedRows = 16;
 
-		while (bytesCount < 80) //whole response should be less 155 bytes at worst.
-		{
-			bool blink1;
-			uint16_t lastChar;
+        while (bytesCount < 80) //whole response should be less 155 bytes at worst.
+        {
+            bool blink1;
+            uint16_t lastChar;
 
-			count = 0;
-			while ( true )
-			{
-				displayReadCharWithAttr(osdDisplayPort, osdPos_x, osdPos_y, &c, &attr);
-				if (c == 0 || c == 255) c = 32;
+            count = 0;
+            while ( true )
+            {
+                displayReadCharWithAttr(osdDisplayPort, osdPos_x, osdPos_y, &c, &attr);
+                if (c == 0 || c == 255) c = 32;
 
-				//REVIEW: displayReadCharWithAttr() should return mode with _TEXT_ATTRIBUTES_BLINK_BIT !
-				//for max7456 it returns mode with MAX7456_MODE_BLINK instead (wrong)
-				//because max7456ReadChar() does not decode from MAX7456_MODE_BLINK to _TEXT_ATTRIBUTES_BLINK_BIT
-				//it should!
+                //REVIEW: displayReadCharWithAttr() should return mode with _TEXT_ATTRIBUTES_BLINK_BIT !
+                //for max7456 it returns mode with MAX7456_MODE_BLINK instead (wrong)
+                //because max7456ReadChar() does not decode from MAX7456_MODE_BLINK to _TEXT_ATTRIBUTES_BLINK_BIT
+                //it should!
 
-				//bool blink2 = TEXT_ATTRIBUTES_HAVE_BLINK(attr);
-				bool blink2 = attr & (1<<4); //MAX7456_MODE_BLINK
+                //bool blink2 = TEXT_ATTRIBUTES_HAVE_BLINK(attr);
+                bool blink2 = attr & (1<<4); //MAX7456_MODE_BLINK
 
-				if (count == 0)
-				{
-					lastChar = c;
-					blink1 = blink2;
-				}
-				else if (lastChar != c || blink2 != blink1 || count == 63)
-				{
-					break;
-				}
+                if (count == 0)
+                {
+                    lastChar = c;
+                    blink1 = blink2;
+                }
+                else if (lastChar != c || blink2 != blink1 || count == 63)
+                {
+                    break;
+                }
 
-				count++;
+                count++;
 
-				osdPos_x++;
-				if (osdPos_x == 30)
-				{
-					osdPos_x = 0;
-					osdPos_y++;
-					processedRows--;
-					if (osdPos_y == 16)
-					{
-						osdPos_y = 0;
-					}
-				}
-			}
+                osdPos_x++;
+                if (osdPos_x == 30)
+                {
+                    osdPos_x = 0;
+                    osdPos_y++;
+                    processedRows--;
+                    if (osdPos_y == 16)
+                    {
+                        osdPos_y = 0;
+                    }
+                }
+            }
 
-			uint8_t cmd = 0;
-			if (blink1 != blink)
-			{
-				cmd |= 128;//switch blink attr
-				blink = blink1;
-			}
+            uint8_t cmd = 0;
+            if (blink1 != blink)
+            {
+                cmd |= 128;//switch blink attr
+                blink = blink1;
+            }
 
-			bool highBank1 = lastChar > 255;
-			if (highBank1 != highBank)
-			{
-				cmd |= 64;//switch bank attr
-				highBank = highBank1;
-			}
+            bool highBank1 = lastChar > 255;
+            if (highBank1 != highBank)
+            {
+                cmd |= 64;//switch bank attr
+                highBank = highBank1;
+            }
 
-			if (count == 1 && cmd == 64)
-			{
-				sbufWriteU8(dst, 255);  //short command for bank switch
-				sbufWriteU8(dst, lastChar & 0xff);
-				bytesCount += 2;
-			}
-			else if (count > 2 || cmd !=0 )
-			{
-				cmd |= count;  //long command for blink/bank switch and symbol repeat
-				sbufWriteU8(dst, 0);
-				sbufWriteU8(dst, cmd);
-				sbufWriteU8(dst, lastChar & 0xff);
-				bytesCount += 3;
-			}
-			else if (count == 2)  //cmd == 0 here
-			{
-				sbufWriteU8(dst, lastChar & 0xff);
-				sbufWriteU8(dst, lastChar & 0xff);
-				bytesCount+=2;
-			}
-			else
-			{
-				sbufWriteU8(dst, lastChar & 0xff);
-				bytesCount++;
-			}
+            if (count == 1 && cmd == 64)
+            {
+                sbufWriteU8(dst, 255);  //short command for bank switch
+                sbufWriteU8(dst, lastChar & 0xff);
+                bytesCount += 2;
+            }
+            else if (count > 2 || cmd !=0 )
+            {
+                cmd |= count;  //long command for blink/bank switch and symbol repeat
+                sbufWriteU8(dst, 0);
+                sbufWriteU8(dst, cmd);
+                sbufWriteU8(dst, lastChar & 0xff);
+                bytesCount += 3;
+            }
+            else if (count == 2)  //cmd == 0 here
+            {
+                sbufWriteU8(dst, lastChar & 0xff);
+                sbufWriteU8(dst, lastChar & 0xff);
+                bytesCount+=2;
+            }
+            else
+            {
+                sbufWriteU8(dst, lastChar & 0xff);
+                bytesCount++;
+            }
 
-			if ( processedRows <= 0 )
-			{
-				break;
-			}
-		}
-		sbufWriteU8(dst, 0);  //command 0 with length=0 -> stop
-		sbufWriteU8(dst, 0);
-	}
-	else
-	{
-		sbufWriteU8(dst, 255);
-	}
+            if ( processedRows <= 0 )
+            {
+                break;
+            }
+        }
+        sbufWriteU8(dst, 0);  //command 0 with length=0 -> stop
+        sbufWriteU8(dst, 0);
+    }
+    else
+    {
+        sbufWriteU8(dst, 255);
+    }
 }
 #endif
 
@@ -3465,123 +3471,131 @@ bool mspFCProcessInOutCommand(uint16_t cmdMSP, sbuf_t *dst, sbuf_t *src, mspResu
 
 #ifdef USE_SIMULATOR
     case MSP_SIMULATOR:
-		tmp_u8 = sbufReadU8(src); // Get the Simulator MSP version
+        tmp_u8 = sbufReadU8(src); // Get the Simulator MSP version
 
         // Check the MSP version of simulator
-		if (tmp_u8 != SIMULATOR_MSP_VERSION) {
+        if (tmp_u8 != SIMULATOR_MSP_VERSION) {
             break;
         }
 
-		simulatorData.flags = sbufReadU8(src);
+        simulatorData.flags = sbufReadU8(src);
 
         if (!SIMULATOR_HAS_OPTION(HITL_ENABLE)) {
 
-			if (ARMING_FLAG(SIMULATOR_MODE_HITL)) { // Just once
-				DISABLE_ARMING_FLAG(SIMULATOR_MODE_HITL);
+            if (ARMING_FLAG(SIMULATOR_MODE_HITL)) { // Just once
+                DISABLE_ARMING_FLAG(SIMULATOR_MODE_HITL);
 
 #ifdef USE_BARO
-				baroStartCalibration();
+            if ( requestedSensors[SENSOR_INDEX_BARO] != BARO_NONE ) {
+                baroStartCalibration();
+            }
 #endif
 #ifdef USE_MAG
-				DISABLE_STATE(COMPASS_CALIBRATED);
-				compassInit();
+                DISABLE_STATE(COMPASS_CALIBRATED);
+                compassInit();
 #endif
-				simulatorData.flags = HITL_RESET_FLAGS;
+                simulatorData.flags = HITL_RESET_FLAGS;
                 // Review: Many states were affected. Reboot?
 
-				disarm(DISARM_SWITCH);  // Disarm to prevent motor output!!!
-			}   
-		} else if (!areSensorsCalibrating()) {
-			if (!ARMING_FLAG(SIMULATOR_MODE_HITL)) { // Just once
+                disarm(DISARM_SWITCH);  // Disarm to prevent motor output!!!
+            }
+        } else {
+            if (!ARMING_FLAG(SIMULATOR_MODE_HITL)) { // Just once
 #ifdef USE_BARO
-				baroStartCalibration();
+                if ( requestedSensors[SENSOR_INDEX_BARO] != BARO_NONE ) {
+                    sensorsSet(SENSOR_BARO);
+                    setTaskEnabled(TASK_BARO, true);
+                    DISABLE_ARMING_FLAG(ARMING_DISABLED_HARDWARE_FAILURE);
+                    baroStartCalibration();
+                }
 #endif
 
 #ifdef USE_MAG
-				if (compassConfig()->mag_hardware != MAG_NONE) {
-					sensorsSet(SENSOR_MAG);
-					ENABLE_STATE(COMPASS_CALIBRATED);
-					DISABLE_ARMING_FLAG(ARMING_DISABLED_HARDWARE_FAILURE);
-					mag.magADC[X] = 800;
-					mag.magADC[Y] = 0;
-					mag.magADC[Z] = 0;
-				}
+                if (compassConfig()->mag_hardware != MAG_NONE) {
+                    sensorsSet(SENSOR_MAG);
+                    ENABLE_STATE(COMPASS_CALIBRATED);
+                    DISABLE_ARMING_FLAG(ARMING_DISABLED_HARDWARE_FAILURE);
+                    mag.magADC[X] = 800;
+                    mag.magADC[Y] = 0;
+                    mag.magADC[Z] = 0;
+                }
 #endif
-				ENABLE_ARMING_FLAG(SIMULATOR_MODE_HITL);
-				LOG_DEBUG(SYSTEM, "Simulator enabled");
-			}
+                ENABLE_ARMING_FLAG(SIMULATOR_MODE_HITL);
+                LOG_DEBUG(SYSTEM, "Simulator enabled");
+            }
 
-			if (dataSize >= 14) {
+            if (dataSize >= 14) {
 
-				if (feature(FEATURE_GPS) && SIMULATOR_HAS_OPTION(HITL_HAS_NEW_GPS_DATA)) {
-					gpsSol.fixType = sbufReadU8(src);
-					gpsSol.hdop = gpsSol.fixType == GPS_NO_FIX ? 9999 : 100;
-					gpsSol.flags.hasNewData = true;
-					gpsSol.numSat = sbufReadU8(src);
+                if (feature(FEATURE_GPS) && SIMULATOR_HAS_OPTION(HITL_HAS_NEW_GPS_DATA)) {
+                    gpsSol.fixType = sbufReadU8(src);
+                    gpsSol.hdop = gpsSol.fixType == GPS_NO_FIX ? 9999 : 100;
+                    gpsSol.flags.hasNewData = true;
+                    gpsSol.numSat = sbufReadU8(src);
 
-					if (gpsSol.fixType != GPS_NO_FIX) {
-						gpsSol.flags.validVelNE = true;
-						gpsSol.flags.validVelD = true;
-						gpsSol.flags.validEPE = true;
+                    if (gpsSol.fixType != GPS_NO_FIX) {
+                        gpsSol.flags.validVelNE = true;
+                        gpsSol.flags.validVelD = true;
+                        gpsSol.flags.validEPE = true;
+                        gpsSol.flags.validTime = false;
 
-						gpsSol.llh.lat = sbufReadU32(src);
-						gpsSol.llh.lon = sbufReadU32(src);
-						gpsSol.llh.alt = sbufReadU32(src);
-						gpsSol.groundSpeed = (int16_t)sbufReadU16(src);
-						gpsSol.groundCourse = (int16_t)sbufReadU16(src);
+                        gpsSol.llh.lat = sbufReadU32(src);
+                        gpsSol.llh.lon = sbufReadU32(src);
+                        gpsSol.llh.alt = sbufReadU32(src);
+                        gpsSol.groundSpeed = (int16_t)sbufReadU16(src);
+                        gpsSol.groundCourse = (int16_t)sbufReadU16(src);
 
-						gpsSol.velNED[X] = (int16_t)sbufReadU16(src);
-						gpsSol.velNED[Y] = (int16_t)sbufReadU16(src);
-						gpsSol.velNED[Z] = (int16_t)sbufReadU16(src);
+                        gpsSol.velNED[X] = (int16_t)sbufReadU16(src);
+                        gpsSol.velNED[Y] = (int16_t)sbufReadU16(src);
+                        gpsSol.velNED[Z] = (int16_t)sbufReadU16(src);
 
-						gpsSol.eph = 100;
-						gpsSol.epv = 100;
+                        gpsSol.eph = 100;
+                        gpsSol.epv = 100;
 
-						ENABLE_STATE(GPS_FIX);
-					} else {
-						sbufAdvance(src, sizeof(uint32_t) + sizeof(uint32_t) + sizeof(uint32_t) + sizeof(uint16_t) + sizeof(uint16_t) + sizeof(uint16_t) * 3);
-					}
+                        ENABLE_STATE(GPS_FIX);
+                    } else {
+                        sbufAdvance(src, sizeof(uint32_t) + sizeof(uint32_t) + sizeof(uint32_t) + sizeof(uint16_t) + sizeof(uint16_t) + sizeof(uint16_t) * 3);
+                    }
                     // Feed data to navigation
-					gpsProcessNewSolutionData();
-				} else {
-					sbufAdvance(src, sizeof(uint8_t) + sizeof(uint8_t) + sizeof(uint32_t) + sizeof(uint32_t) + sizeof(uint32_t) + sizeof(uint16_t) + sizeof(uint16_t) + sizeof(uint16_t) * 3);
-				}
+                    gpsProcessNewSolutionData();
+                } else {
+                    sbufAdvance(src, sizeof(uint8_t) + sizeof(uint8_t) + sizeof(uint32_t) + sizeof(uint32_t) + sizeof(uint32_t) + sizeof(uint16_t) + sizeof(uint16_t) + sizeof(uint16_t) * 3);
+                }
 
-				if (!SIMULATOR_HAS_OPTION(HITL_USE_IMU)) {
-					attitude.values.roll = (int16_t)sbufReadU16(src);
-					attitude.values.pitch = (int16_t)sbufReadU16(src);
-					attitude.values.yaw = (int16_t)sbufReadU16(src);
-				} else {
-					sbufAdvance(src, sizeof(uint16_t) * XYZ_AXIS_COUNT);
-				}
+                if (!SIMULATOR_HAS_OPTION(HITL_USE_IMU)) {
+                    attitude.values.roll = (int16_t)sbufReadU16(src);
+                    attitude.values.pitch = (int16_t)sbufReadU16(src);
+                    attitude.values.yaw = (int16_t)sbufReadU16(src);
+                } else {
+                    sbufAdvance(src, sizeof(uint16_t) * XYZ_AXIS_COUNT);
+                }
 
                 // Get the acceleration in 1G units
-				acc.accADCf[X] = ((int16_t)sbufReadU16(src)) / 1000.0f;
-				acc.accADCf[Y] = ((int16_t)sbufReadU16(src)) / 1000.0f;
-				acc.accADCf[Z] = ((int16_t)sbufReadU16(src)) / 1000.0f;
-				acc.accVibeSq[X] = 0.0f;
-				acc.accVibeSq[Y] = 0.0f;
-				acc.accVibeSq[Z] = 0.0f;
+                acc.accADCf[X] = ((int16_t)sbufReadU16(src)) / 1000.0f;
+                acc.accADCf[Y] = ((int16_t)sbufReadU16(src)) / 1000.0f;
+                acc.accADCf[Z] = ((int16_t)sbufReadU16(src)) / 1000.0f;
+                acc.accVibeSq[X] = 0.0f;
+                acc.accVibeSq[Y] = 0.0f;
+                acc.accVibeSq[Z] = 0.0f;
 
                 // Get the angular velocity in DPS
-				gyro.gyroADCf[X] = ((int16_t)sbufReadU16(src)) / 16.0f;
-				gyro.gyroADCf[Y] = ((int16_t)sbufReadU16(src)) / 16.0f;
-				gyro.gyroADCf[Z] = ((int16_t)sbufReadU16(src)) / 16.0f;
+                gyro.gyroADCf[X] = ((int16_t)sbufReadU16(src)) / 16.0f;
+                gyro.gyroADCf[Y] = ((int16_t)sbufReadU16(src)) / 16.0f;
+                gyro.gyroADCf[Z] = ((int16_t)sbufReadU16(src)) / 16.0f;
 
-				if (sensors(SENSOR_BARO)) {
-					baro.baroPressure = (int32_t)sbufReadU32(src);
-					baro.baroTemperature = DEGREES_TO_CENTIDEGREES(SIMULATOR_BARO_TEMP);
-				} else {
-					sbufAdvance(src, sizeof(uint32_t));
-				}
+                if (sensors(SENSOR_BARO)) {
+                    baro.baroPressure = (int32_t)sbufReadU32(src);
+                    baro.baroTemperature = DEGREES_TO_CENTIDEGREES(SIMULATOR_BARO_TEMP);
+                } else {
+                    sbufAdvance(src, sizeof(uint32_t));
+                }
 
-				if (sensors(SENSOR_MAG)) {
-					mag.magADC[X] = ((int16_t)sbufReadU16(src)) / 20;  // 16000 / 20 = 800uT
-					mag.magADC[Y] = ((int16_t)sbufReadU16(src)) / 20;
-					mag.magADC[Z] = ((int16_t)sbufReadU16(src)) / 20;
-				} else {
-					sbufAdvance(src, sizeof(uint16_t) * XYZ_AXIS_COUNT);
-				}
+                if (sensors(SENSOR_MAG)) {
+                    mag.magADC[X] = ((int16_t)sbufReadU16(src)) / 20;  // 16000 / 20 = 800uT
+                    mag.magADC[Y] = ((int16_t)sbufReadU16(src)) / 20;   //note that mag failure is simulated by setting all readings to zero
+                    mag.magADC[Z] = ((int16_t)sbufReadU16(src)) / 20;
+                } else {
+                    sbufAdvance(src, sizeof(uint16_t) * XYZ_AXIS_COUNT);
+                }
 
 #if defined(USE_FAKE_BATT_SENSOR)
                 if (SIMULATOR_HAS_OPTION(HITL_EXT_BATTERY_VOLTAGE)) {
@@ -3595,36 +3609,44 @@ bool mspFCProcessInOutCommand(uint16_t cmdMSP, sbuf_t *dst, sbuf_t *src, mspResu
 
                 if (SIMULATOR_HAS_OPTION(HITL_AIRSPEED)) {
                     simulatorData.airSpeed = sbufReadU16(src);
-			    }
-			} else {
-				DISABLE_STATE(GPS_FIX);
-			}
-		}
+                } else {
+                    if (SIMULATOR_HAS_OPTION(HITL_EXTENDED_FLAGS)) {
+                        sbufReadU16(src);
+                    }
+                }
 
-		sbufWriteU16(dst, (uint16_t)simulatorData.input[INPUT_STABILIZED_ROLL]);
-		sbufWriteU16(dst, (uint16_t)simulatorData.input[INPUT_STABILIZED_PITCH]);
-		sbufWriteU16(dst, (uint16_t)simulatorData.input[INPUT_STABILIZED_YAW]);
-		sbufWriteU16(dst, (uint16_t)(ARMING_FLAG(ARMED) ? simulatorData.input[INPUT_STABILIZED_THROTTLE] : -500));
+                if (SIMULATOR_HAS_OPTION(HITL_EXTENDED_FLAGS)) {
+                    simulatorData.flags |= ((uint16_t)sbufReadU8(src)) << 8;
+                }
+            } else {
+                DISABLE_STATE(GPS_FIX);
+            }
+        }
 
-		simulatorData.debugIndex++;
-		if (simulatorData.debugIndex == 8) {
-			simulatorData.debugIndex = 0;
-		}
+        sbufWriteU16(dst, (uint16_t)simulatorData.input[INPUT_STABILIZED_ROLL]);
+        sbufWriteU16(dst, (uint16_t)simulatorData.input[INPUT_STABILIZED_PITCH]);
+        sbufWriteU16(dst, (uint16_t)simulatorData.input[INPUT_STABILIZED_YAW]);
+        sbufWriteU16(dst, (uint16_t)(ARMING_FLAG(ARMED) ? simulatorData.input[INPUT_STABILIZED_THROTTLE] : -500));
 
-		tmp_u8 = simulatorData.debugIndex |
-			((mixerConfig()->platformType == PLATFORM_AIRPLANE) ? 128 : 0) |
-			(ARMING_FLAG(ARMED) ? 64 : 0) |
-			(!feature(FEATURE_OSD) ? 32: 0) |
-			(!isOSDTypeSupportedBySimulator() ? 16 : 0);
+        simulatorData.debugIndex++;
+        if (simulatorData.debugIndex == 8) {
+            simulatorData.debugIndex = 0;
+        }
 
-		sbufWriteU8(dst, tmp_u8);
-		sbufWriteU32(dst, debug[simulatorData.debugIndex]);
+        tmp_u8 = simulatorData.debugIndex |
+            ((mixerConfig()->platformType == PLATFORM_AIRPLANE) ? 128 : 0) |
+            (ARMING_FLAG(ARMED) ? 64 : 0) |
+            (!feature(FEATURE_OSD) ? 32: 0) |
+            (!isOSDTypeSupportedBySimulator() ? 16 : 0);
 
-		sbufWriteU16(dst, attitude.values.roll);
-		sbufWriteU16(dst, attitude.values.pitch);
-		sbufWriteU16(dst, attitude.values.yaw);
+        sbufWriteU8(dst, tmp_u8);
+        sbufWriteU32(dst, debug[simulatorData.debugIndex]);
 
-		mspWriteSimulatorOSD(dst);
+        sbufWriteU16(dst, attitude.values.roll);
+        sbufWriteU16(dst, attitude.values.pitch);
+        sbufWriteU16(dst, attitude.values.yaw);
+
+        mspWriteSimulatorOSD(dst);
 
         *ret = MSP_RESULT_ACK;
         break;

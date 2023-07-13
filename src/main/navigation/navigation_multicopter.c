@@ -796,7 +796,6 @@ bool isMulticopterFlying(void)
 /*-----------------------------------------------------------
  * Multicopter landing detector
  *-----------------------------------------------------------*/
-// CR91
 #if defined(USE_BARO)
 float updateBaroAltitudeRate(float newBaroAltRate, bool updateValue)
 {
@@ -810,41 +809,44 @@ float updateBaroAltitudeRate(float newBaroAltRate, bool updateValue)
 
 static bool isLandingGbumpDetected(timeMs_t currentTimeMs)
 {
-    /* Detection based on G bump at touchdown, falling Baro altitude and throttle below hover */
+    /* Detection based on G bump at touchdown, falling Baro altitude and throttle below hover.
+     * G bump trigger: > 2g then falling back below 1g in < 0.1s.
+     * Baro trigger: rate must be -ve at initial trigger g and < -2 m/s when g falls back below 1g
+     * Throttle trigger: must be below hover throttle with lower threshold for manual throttle control */
+
     static timeMs_t gSpikeDetectTimeMs = 0;
-    const float baroAltRate = updateBaroAltitudeRate(0, false);
-    // DEBUG_SET(DEBUG_ALWAYS, 1, baroAltRate);
+    float baroAltRate = updateBaroAltitudeRate(0, false);
+
     if (!gSpikeDetectTimeMs && acc.accADCf[Z] > 2.0f && baroAltRate < 0.0f) {
         gSpikeDetectTimeMs = currentTimeMs;
     } else if (gSpikeDetectTimeMs) {
-        if (currentTimeMs < gSpikeDetectTimeMs + 100) {             // G spike must be < 0.1s duration
-            if (acc.accADCf[Z] < 1.0f && baroAltRate < -200.0f) {   // check if landing bump detected
+        if (currentTimeMs < gSpikeDetectTimeMs + 100) {
+            if (acc.accADCf[Z] < 1.0f && baroAltRate < -200.0f) {
                 const uint16_t idleThrottle = getThrottleIdleValue();
                 const uint16_t hoverThrottleRange = currentBatteryProfile->nav.mc.hover_throttle - idleThrottle;
-                return rcCommand[THROTTLE] < idleThrottle + ((navigationInAutomaticThrottleMode() ? 0.9 : 0.5) * hoverThrottleRange);
+                return rcCommand[THROTTLE] < idleThrottle + ((navigationInAutomaticThrottleMode() ? 0.8 : 0.5) * hoverThrottleRange);
             }
         } else if (acc.accADCf[Z] <= 1.0f) {
             gSpikeDetectTimeMs = 0;
         }
     }
     // DEBUG_SET(DEBUG_ALWAYS, 2, gSpikeDetectTimeMs);
+
     return false;
 }
 #endif
-// CR91
 bool isMulticopterLandingDetected(void)
 {
     DEBUG_SET(DEBUG_LANDING, 4, 0);
     DEBUG_SET(DEBUG_LANDING, 3, averageAbsGyroRates() * 100);
-    // CR91
+
     const timeMs_t currentTimeMs = millis();
 
 #if defined(USE_BARO)
     if (sensors(SENSOR_BARO) && navConfig()->general.flags.landing_bump_detection && isLandingGbumpDetected(currentTimeMs)) {
-        return true;
+        return true;    // Landing flagged immediately if landing bump detected
     }
 #endif
-    // CR91
     bool throttleIsBelowMidHover = rcCommand[THROTTLE] < (0.5 * (currentBatteryProfile->nav.mc.hover_throttle + getThrottleIdleValue()));
 
     /* Basic condition to start looking for landing
@@ -873,7 +875,6 @@ bool isMulticopterLandingDetected(void)
     // DEBUG_SET(DEBUG_LANDING, 3, gyroCondition);
 
     bool possibleLandingDetected = false;
-    // const timeUs_t currentTimeUs = micros();   // CR91
 
     if (navGetCurrentStateFlags() & NAV_CTL_LAND) {
         // We have likely landed if throttle is 40 units below average descend throttle
