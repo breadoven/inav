@@ -433,7 +433,7 @@ static const navigationFSMStateDescriptor_t navFSM[NAV_STATE_COUNT] = {
         .persistentId = NAV_PERSISTENT_ID_COURSE_HOLD_IN_PROGRESS,
         .onEntry = navOnEnteringState_NAV_STATE_COURSE_HOLD_IN_PROGRESS,
         .timeoutMs = 10,
-        .stateFlags = NAV_CTL_POS | NAV_CTL_YAW | NAV_REQUIRE_ANGLE | NAV_RC_POS | NAV_RC_YAW,
+        .stateFlags = NAV_CTL_POS | NAV_CTL_YAW | NAV_REQUIRE_ANGLE | NAV_REQUIRE_MAGHOLD | NAV_RC_POS | NAV_RC_YAW,    // CR101
         .mapToFlightModes = NAV_COURSE_HOLD_MODE,
         .mwState = MW_NAV_STATE_NONE,
         .mwError = MW_NAV_ERROR_NONE,
@@ -492,7 +492,7 @@ static const navigationFSMStateDescriptor_t navFSM[NAV_STATE_COUNT] = {
         .persistentId = NAV_PERSISTENT_ID_CRUISE_IN_PROGRESS,
         .onEntry = navOnEnteringState_NAV_STATE_CRUISE_IN_PROGRESS,
         .timeoutMs = 10,
-        .stateFlags = NAV_CTL_ALT | NAV_CTL_POS | NAV_CTL_YAW | NAV_REQUIRE_ANGLE | NAV_RC_POS | NAV_RC_YAW | NAV_RC_ALT,
+        .stateFlags = NAV_CTL_ALT | NAV_CTL_POS | NAV_CTL_YAW | NAV_REQUIRE_ANGLE | NAV_REQUIRE_MAGHOLD | NAV_RC_POS | NAV_RC_YAW | NAV_RC_ALT,  // CR101
         .mapToFlightModes = NAV_ALTHOLD_MODE | NAV_COURSE_HOLD_MODE,
         .mwState = MW_NAV_STATE_NONE,
         .mwError = MW_NAV_ERROR_NONE,
@@ -1087,7 +1087,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_COURSE_HOLD_INITIALIZE(
         posControl.cruise.course = posControl.actualState.cog;  // Store the course to follow
     } else {    // Multicopter
         posControl.cruise.course = posControl.actualState.yaw;
-        posControl.cruise.multicopterSpeed = constrainf(posControl.actualState.velXY, 40.0f, navConfig()->general.max_manual_speed);
+        posControl.cruise.multicopterSpeed = constrainf(posControl.actualState.velXY, 10.0f, navConfig()->general.max_manual_speed);
         posControl.desiredState.pos = posControl.actualState.abs.pos;
     }
     // CR101
@@ -1113,22 +1113,29 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_COURSE_HOLD_IN_PROGRESS
     }
     // User is yawing. We record the desired course and change the desired target in the meanwhile
     if (posControl.flags.isAdjustingHeading) {
-        timeMs_t timeDifference = currentTimeMs - posControl.cruise.lastCourseAdjustmentTime;
-        if (timeDifference > 100) timeDifference = 0;   // if adjustment was called long time ago, reset the time difference.
-        float rateTarget = scaleRangef((float)rcCommand[YAW], -500.0f, 500.0f, -DEGREES_TO_CENTIDEGREES(navConfig()->general.cruise_yaw_rate), DEGREES_TO_CENTIDEGREES(navConfig()->general.cruise_yaw_rate));  // CR101
-        float centidegsPerIteration = rateTarget * MS2S(timeDifference);
-        posControl.cruise.course = wrap_36000(posControl.cruise.course - centidegsPerIteration);
-        posControl.cruise.lastCourseAdjustmentTime = currentTimeMs;
+        // CR101
+        if (STATE(MULTIROTOR)) {
+            posControl.cruise.course = posControl.actualState.yaw;
+        } else {
+        // CR101
+            timeMs_t timeDifference = currentTimeMs - posControl.cruise.lastCourseAdjustmentTime;
+            if (timeDifference > 100) timeDifference = 0;   // if adjustment was called long time ago, reset the time difference.
+            float rateTarget = scaleRangef((float)rcCommand[YAW], -500.0f, 500.0f, -DEGREES_TO_CENTIDEGREES(navConfig()->general.cruise_yaw_rate), DEGREES_TO_CENTIDEGREES(navConfig()->general.cruise_yaw_rate));  // CR101
+            float centidegsPerIteration = rateTarget * MS2S(timeDifference);
+            posControl.cruise.course = wrap_36000(posControl.cruise.course - centidegsPerIteration);
+        }
+        posControl.cruise.lastCourseAdjustmentTime = currentTimeMs; // CR101
     } else if (currentTimeMs - posControl.cruise.lastCourseAdjustmentTime > 4000) {
         posControl.cruise.previousCourse = posControl.cruise.course;
     }
-    // **** Correct for course error to COG:   CR101
+    // CR101
     int32_t desiredHeading = posControl.cruise.course;
+    // Correct for course error to COG on multirotor:
     if (STATE(MULTIROTOR)) {
         desiredHeading = wrap_36000(posControl.actualState.yaw + posControl.cruise.course - posControl.actualState.cog);
     }
     DEBUG_SET(DEBUG_ALWAYS, 3, desiredHeading);
-    // ****   CR101
+    // CR101
     setDesiredPosition(NULL, desiredHeading, NAV_POS_UPDATE_HEADING);
 
     return NAV_FSM_EVENT_NONE;
@@ -3465,37 +3472,38 @@ bool isNavHoldPositionActive(void)
             FLIGHT_MODE(NAV_POSHOLD_MODE) ||
             navigationIsExecutingAnEmergencyLanding();
 }
-
-float getActiveWaypointSpeed(void)
+// CR101
+float getActiveSpeed(void)
 {
-    if (posControl.flags.isAdjustingPosition) {
-        // In manual control mode use different cap for speed
+    /* Only applicable for multicopter */
+
+    // In manual control mode and during multicoper cruise use different cap for speed
+    if (posControl.flags.isAdjustingPosition || FLIGHT_MODE(NAV_COURSE_HOLD_MODE)) {
         return navConfig()->general.max_manual_speed;
     }
-    else {
-        uint16_t waypointSpeed = navConfig()->general.auto_speed;
 
-        if (navGetStateFlags(posControl.navState) & NAV_AUTO_WP) {
-            if (posControl.waypointCount > 0 && (posControl.waypointList[posControl.activeWaypointIndex].action == NAV_WP_ACTION_WAYPOINT || posControl.waypointList[posControl.activeWaypointIndex].action == NAV_WP_ACTION_HOLD_TIME || posControl.waypointList[posControl.activeWaypointIndex].action == NAV_WP_ACTION_LAND)) {
-                float wpSpecificSpeed = 0.0f;
-                if (posControl.waypointList[posControl.activeWaypointIndex].action == NAV_WP_ACTION_HOLD_TIME) {
-                    wpSpecificSpeed = posControl.waypointList[posControl.activeWaypointIndex].p2; // P1 is hold time
-                } else {
-                    wpSpecificSpeed = posControl.waypointList[posControl.activeWaypointIndex].p1; // default case
-                }
+    uint16_t waypointSpeed = navConfig()->general.auto_speed;
 
-                if (wpSpecificSpeed >= 50.0f && wpSpecificSpeed <= navConfig()->general.max_auto_speed) {
-                    waypointSpeed = wpSpecificSpeed;
-                } else if (wpSpecificSpeed > navConfig()->general.max_auto_speed) {
-                    waypointSpeed = navConfig()->general.max_auto_speed;
-                }
+    // get required waypoint specific speed for each leg during waypoint mode, don't allow to move slower than 0.5 m/s
+    if (navGetStateFlags(posControl.navState) & NAV_AUTO_WP) {
+        if (posControl.waypointCount > 0 && (posControl.waypointList[posControl.activeWaypointIndex].action == NAV_WP_ACTION_WAYPOINT || posControl.waypointList[posControl.activeWaypointIndex].action == NAV_WP_ACTION_HOLD_TIME || posControl.waypointList[posControl.activeWaypointIndex].action == NAV_WP_ACTION_LAND)) {
+            float wpSpecificSpeed = 0.0f;
+            if(posControl.waypointList[posControl.activeWaypointIndex].action == NAV_WP_ACTION_HOLD_TIME)
+                wpSpecificSpeed = posControl.waypointList[posControl.activeWaypointIndex].p2; // P1 is hold time
+            else
+                wpSpecificSpeed = posControl.waypointList[posControl.activeWaypointIndex].p1; // default case
+
+            if (wpSpecificSpeed >= 50.0f && wpSpecificSpeed <= navConfig()->general.max_auto_speed) {
+                waypointSpeed = wpSpecificSpeed;
+            } else if (wpSpecificSpeed > navConfig()->general.max_auto_speed) {
+                waypointSpeed = navConfig()->general.max_auto_speed;
             }
         }
-
-        return waypointSpeed;
     }
-}
 
+    return waypointSpeed;
+}
+// CR101
 bool isWaypointNavTrackingActive(void)
 {
     // NAV_WP_MODE flag used rather than state flag NAV_AUTO_WP to ensure heading to initial waypoint

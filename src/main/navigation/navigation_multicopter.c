@@ -222,7 +222,7 @@ void resetMulticopterAltitudeController(void)
     pt1FilterReset(&posControl.pids.vel[Z].dterm_filter_state, 0.0f);
 
     if (FLIGHT_MODE(FAILSAFE_MODE) || FLIGHT_MODE(NAV_RTH_MODE) || FLIGHT_MODE(NAV_WP_MODE) || navigationIsExecutingAnEmergencyLanding()) {
-        const float maxSpeed = getActiveWaypointSpeed();
+        const float maxSpeed = getActiveSpeed();    // CR101
         nav_speed_up = maxSpeed;
         nav_accel_z = maxSpeed;
         nav_speed_down = navConfig()->general.max_auto_climb_rate;
@@ -424,7 +424,7 @@ static bool adjustMulticopterCruiseSpeed(int16_t rcPitchAdjustment)
     } else {
         return false;
     }
-    posControl.cruise.multicopterSpeed = constrainf(posControl.cruise.multicopterSpeed, 40.0f, navConfig()->general.max_manual_speed);
+    posControl.cruise.multicopterSpeed = constrainf(posControl.cruise.multicopterSpeed, 10.0f, navConfig()->general.max_manual_speed);
 
     return true;
 }
@@ -736,7 +736,7 @@ static void applyMulticopterPositionController(timeUs_t currentTimeUs)
 {
     static timeUs_t previousTimePositionUpdate = 0;     // Occurs @ GPS update rate
     bool bypassPositionController;
-
+DEBUG_SET(DEBUG_ALWAYS, 2, posControl.cruise.multicopterSpeed);
     // We should passthrough rcCommand is adjusting position in GPS_ATTI mode
     bypassPositionController = navConfig()->general.flags.user_control_mode == NAV_GPS_ATTI && posControl.flags.isAdjustingPosition &&
                                !FLIGHT_MODE(NAV_COURSE_HOLD_MODE);  // CR101
@@ -753,14 +753,13 @@ static void applyMulticopterPositionController(timeUs_t currentTimeUs)
                 // Update position controller
                 if (deltaMicrosPositionUpdate < MAX_POSITION_UPDATE_INTERVAL_US) {
                     // CR101
-                    // Get max speed from generic NAV (waypoint specific), don't allow to move slower than 0.5 m/s
-                    float maxSpeed = FLIGHT_MODE(NAV_COURSE_HOLD_MODE) ? posControl.cruise.multicopterSpeed : getActiveWaypointSpeed();
+                    // Get max speed for current NAV mode
+                    float maxSpeed = getActiveSpeed();
                     updatePositionVelocityController_MC(maxSpeed);
                     updatePositionAccelController_MC(deltaMicrosPositionUpdate, NAV_ACCELERATION_XY_MAX, maxSpeed);
                     navDesiredVelocity[X] = constrain(lrintf(posControl.desiredState.vel.x), -32678, 32767);
                     navDesiredVelocity[Y] = constrain(lrintf(posControl.desiredState.vel.y), -32678, 32767);
                     // CR101
-                    DEBUG_SET(DEBUG_ALWAYS, 2, posControl.cruise.multicopterSpeed);
                 }
                 else {
                     // Position update has not occurred in time (first start or glitch), reset position controller
