@@ -1113,18 +1113,12 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_COURSE_HOLD_IN_PROGRESS
     }
     // User is yawing. We record the desired course and change the desired target in the meanwhile
     if (posControl.flags.isAdjustingHeading) {
-        // CR101
-        if (STATE(MULTIROTOR)) {
-            posControl.cruise.course = posControl.actualState.yaw;
-        } else {
-        // CR101
-            timeMs_t timeDifference = currentTimeMs - posControl.cruise.lastCourseAdjustmentTime;
-            if (timeDifference > 100) timeDifference = 0;   // if adjustment was called long time ago, reset the time difference.
-            float rateTarget = scaleRangef((float)rcCommand[YAW], -500.0f, 500.0f, -DEGREES_TO_CENTIDEGREES(navConfig()->general.cruise_yaw_rate), DEGREES_TO_CENTIDEGREES(navConfig()->general.cruise_yaw_rate));  // CR101
-            float centidegsPerIteration = rateTarget * MS2S(timeDifference);
-            posControl.cruise.course = wrap_36000(posControl.cruise.course - centidegsPerIteration);
-        }
-        posControl.cruise.lastCourseAdjustmentTime = currentTimeMs; // CR101
+        timeMs_t timeDifference = currentTimeMs - posControl.cruise.lastCourseAdjustmentTime;
+        if (timeDifference > 100) timeDifference = 0;   // if adjustment was called long time ago, reset the time difference.
+        float rateTarget = scaleRangef((float)rcCommand[YAW], -500.0f, 500.0f, -DEGREES_TO_CENTIDEGREES(navConfig()->general.cruise_yaw_rate), DEGREES_TO_CENTIDEGREES(navConfig()->general.cruise_yaw_rate));  // CR101
+        float centidegsPerIteration = rateTarget * MS2S(timeDifference);
+        posControl.cruise.course = wrap_36000(posControl.cruise.course - centidegsPerIteration);
+        posControl.cruise.lastCourseAdjustmentTime = currentTimeMs;
     } else if (currentTimeMs - posControl.cruise.lastCourseAdjustmentTime > 4000) {
         posControl.cruise.previousCourse = posControl.cruise.course;
     }
@@ -3536,30 +3530,6 @@ static void processNavigationRCAdjustments(void)
     posControl.flags.isAdjustingPosition = navStateFlags & NAV_RC_POS && adjustPositionFromRCInput();
     posControl.flags.isAdjustingHeading = navStateFlags & NAV_RC_YAW && adjustHeadingFromRCInput();
     // CR101
-
-    // if ((navStateFlags & NAV_RC_ALT) && (!FLIGHT_MODE(FAILSAFE_MODE))) {
-        // posControl.flags.isAdjustingAltitude = adjustAltitudeFromRCInput();
-    // }
-    // else {
-        // posControl.flags.isAdjustingAltitude = false;
-    // }
-
-    // if (navStateFlags & NAV_RC_POS) {
-        // posControl.flags.isAdjustingPosition = adjustPositionFromRCInput() && !FLIGHT_MODE(FAILSAFE_MODE);
-        // if (STATE(MULTIROTOR) && FLIGHT_MODE(FAILSAFE_MODE)) {
-            // resetMulticopterBrakingMode();
-        // }
-    // }
-    // else {
-        // posControl.flags.isAdjustingPosition = false;
-    // }
-
-    // if ((navStateFlags & NAV_RC_YAW) && (!FLIGHT_MODE(FAILSAFE_MODE))) {
-        // posControl.flags.isAdjustingHeading = adjustHeadingFromRCInput();
-    // }
-    // else {
-        // posControl.flags.isAdjustingHeading = false;
-    // }
 }
 
 /*-----------------------------------------------------------
@@ -3929,16 +3899,14 @@ int8_t navigationGetHeadingControlState(void)
 
     // For multirotors it depends on navigation system mode
     if (navGetStateFlags(posControl.navState) & NAV_REQUIRE_MAGHOLD) {
-        if (posControl.flags.isAdjustingHeading) {
+        if (posControl.flags.isAdjustingHeading && !FLIGHT_MODE(NAV_COURSE_HOLD_MODE)) {    // CR101
             return NAV_HEADING_CONTROL_MANUAL;
         }
-        else {
-            return NAV_HEADING_CONTROL_AUTO;
-        }
+
+        return NAV_HEADING_CONTROL_AUTO;
     }
-    else {
-        return NAV_HEADING_CONTROL_NONE;
-    }
+
+    return NAV_HEADING_CONTROL_NONE;
 }
 
 bool navigationTerrainFollowingEnabled(void)
@@ -4487,6 +4455,5 @@ int32_t getCruiseHeadingAdjustment(void) {
 // CR101
 int32_t navigationGetHeadingError(void)
 {
-    int32_t actualHeading = STATE(AIRPLANE) ? posControl.actualState.cog : posControl.actualState.yaw;
-    return wrap_18000(posControl.desiredState.yaw - actualHeading);
+    return wrap_18000(posControl.desiredState.yaw - posControl.actualState.cog);
 }

@@ -289,14 +289,17 @@ static void applyMulticopterAltitudeController(timeUs_t currentTimeUs)
 bool adjustMulticopterHeadingFromRCInput(void)
 {
     if (ABS(rcCommand[YAW]) > rcControlsConfig()->pos_hold_deadband) {
-        // Can only allow pilot to set the new heading if doing PH, during RTH copter will target itself to home  // CR101 reword
-        posControl.desiredState.yaw = posControl.actualState.yaw;
+        // CR101
+        // Heading during Cruise Hold mode set by Nav function so no adjustment required here
+        if (!FLIGHT_MODE(NAV_COURSE_HOLD_MODE)) {
+            posControl.desiredState.yaw = posControl.actualState.yaw;
+        }
 
         return true;
     }
-    else {
-        return false;
-    }
+
+    return false;
+    // CR101
 }
 
 /*-----------------------------------------------------------
@@ -471,12 +474,7 @@ bool adjustMulticopterPositionFromRCInput(int16_t rcPitchAdjustment, int16_t rcR
     else {
         // Adjusting finished - reset desired position to stay exactly where pilot released the stick
         if (posControl.flags.isAdjustingPosition) {
-            // CR101
-            setMulticopterStopPosition();
-            // fpVector3_t stopPosition;
-            // calculateMulticopterInitialHoldPosition(&stopPosition);
-            // setDesiredPosition(&stopPosition, 0, NAV_POS_UPDATE_XY);
-            // CR101
+            setMulticopterStopPosition();   // CR101
         }
 
         return false;
@@ -526,11 +524,11 @@ static void updatePositionVelocityController_MC(const float maxSpeed)
     const float posErrorY = posControl.desiredState.pos.y - navGetCurrentActualPositionAndVelocity()->pos.y;
 
     // Calculate target velocity
-    float newVelX = posErrorX * posControl.pids.pos[X].param.kP;    // CR101 should be neu NOT new ?
-    float newVelY = posErrorY * posControl.pids.pos[Y].param.kP;
+    float neuVelX = posErrorX * posControl.pids.pos[X].param.kP;    // CR101 new to neu
+    float neuVelY = posErrorY * posControl.pids.pos[Y].param.kP;
 
     // Scale velocity to respect max_speed
-    float newVelTotal = calc_length_pythagorean_2D(newVelX, newVelY);
+    float neuVelTotal = calc_length_pythagorean_2D(neuVelX, neuVelY);
 
     /*
      * We override computed speed with max speed in following cases:
@@ -540,23 +538,23 @@ static void updatePositionVelocityController_MC(const float maxSpeed)
     if (
         ((navGetCurrentStateFlags() & NAV_AUTO_WP || posControl.flags.rthTrackbackActive) &&
         !isNavHoldPositionActive() &&
-        newVelTotal < maxSpeed &&
+        neuVelTotal < maxSpeed &&
         !navConfig()->mc.slowDownForTurning
-        ) || newVelTotal > maxSpeed
+        ) || neuVelTotal > maxSpeed
     ) {
-        newVelX = maxSpeed * (newVelX / newVelTotal);
-        newVelY = maxSpeed * (newVelY / newVelTotal);
-        newVelTotal = maxSpeed;
+        neuVelX = maxSpeed * (neuVelX / neuVelTotal);
+        neuVelY = maxSpeed * (neuVelY / neuVelTotal);
+        neuVelTotal = maxSpeed;
     }
 
-    posControl.pids.pos[X].output_constrained = newVelX;
-    posControl.pids.pos[Y].output_constrained = newVelY;
+    posControl.pids.pos[X].output_constrained = neuVelX;
+    posControl.pids.pos[Y].output_constrained = neuVelY;
 
     // Apply expo & attenuation if heading in wrong direction - turn first, accelerate later (effective only in WP mode)
     const float velHeadFactor = getVelocityHeadingAttenuationFactor();
-    const float velExpoFactor = getVelocityExpoAttenuationFactor(newVelTotal, maxSpeed);
-    posControl.desiredState.vel.x = newVelX * velHeadFactor * velExpoFactor;
-    posControl.desiredState.vel.y = newVelY * velHeadFactor * velExpoFactor;
+    const float velExpoFactor = getVelocityExpoAttenuationFactor(neuVelTotal, maxSpeed);
+    posControl.desiredState.vel.x = neuVelX * velHeadFactor * velExpoFactor;
+    posControl.desiredState.vel.y = neuVelY * velHeadFactor * velExpoFactor;
 
     // navDesiredVelocity[X] = constrain(lrintf(posControl.desiredState.vel.x), -32678, 32767);    // CR101 move
     // navDesiredVelocity[Y] = constrain(lrintf(posControl.desiredState.vel.y), -32678, 32767);
@@ -735,11 +733,11 @@ static void updatePositionAccelController_MC(timeDelta_t deltaMicros, float maxA
 static void applyMulticopterPositionController(timeUs_t currentTimeUs)
 {
     static timeUs_t previousTimePositionUpdate = 0;     // Occurs @ GPS update rate
-    bool bypassPositionController;
 DEBUG_SET(DEBUG_ALWAYS, 2, posControl.cruise.multicopterSpeed);
     // We should passthrough rcCommand is adjusting position in GPS_ATTI mode
-    bypassPositionController = navConfig()->general.flags.user_control_mode == NAV_GPS_ATTI && posControl.flags.isAdjustingPosition &&
-                               !FLIGHT_MODE(NAV_COURSE_HOLD_MODE);  // CR101
+    bool bypassPositionController = !FLIGHT_MODE(NAV_COURSE_HOLD_MODE) &&
+                                    navConfig()->general.flags.user_control_mode == NAV_GPS_ATTI &&
+                                    posControl.flags.isAdjustingPosition;  // CR101
 
     // Apply controller only if position source is valid. In absence of valid pos sensor (GPS loss), we'd stick in forced ANGLE mode
     // and pilots input would be passed thru to PID controller
@@ -757,6 +755,7 @@ DEBUG_SET(DEBUG_ALWAYS, 2, posControl.cruise.multicopterSpeed);
                     float maxSpeed = getActiveSpeed();
                     updatePositionVelocityController_MC(maxSpeed);
                     updatePositionAccelController_MC(deltaMicrosPositionUpdate, NAV_ACCELERATION_XY_MAX, maxSpeed);
+
                     navDesiredVelocity[X] = constrain(lrintf(posControl.desiredState.vel.x), -32678, 32767);
                     navDesiredVelocity[Y] = constrain(lrintf(posControl.desiredState.vel.y), -32678, 32767);
                     // CR101
@@ -1017,6 +1016,12 @@ void resetMulticopterHeadingController(void)
 
 static void applyMulticopterHeadingController(void)
 {
+    // CR101
+    if (FLIGHT_MODE(NAV_COURSE_HOLD_MODE)) {
+        rcCommand[YAW] = 0;
+    }
+    DEBUG_SET(DEBUG_ALWAYS, 4, posControl.desiredState.yaw);
+    // CR101
     updateHeadingHoldTarget(CENTIDEGREES_TO_DEGREES(posControl.desiredState.yaw));
 }
 
