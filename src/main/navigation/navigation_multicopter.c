@@ -730,59 +730,110 @@ static void updatePositionAccelController_MC(timeDelta_t deltaMicros, float maxA
     // DEBUG_SET(DEBUG_ALWAYS, 5, posControl.rcAdjustment[PITCH]);
 }
 
+// static void applyMulticopterPositionController(timeUs_t currentTimeUs)
+// {
+    // static timeUs_t previousTimePositionUpdate = 0;     // Occurs @ GPS update rate
+// DEBUG_SET(DEBUG_ALWAYS, 2, posControl.cruise.multicopterSpeed);
+    // // We should passthrough rcCommand is adjusting position in GPS_ATTI mode
+    // bool bypassPositionController = !FLIGHT_MODE(NAV_COURSE_HOLD_MODE) &&
+                                    // navConfig()->general.flags.user_control_mode == NAV_GPS_ATTI &&
+                                    // posControl.flags.isAdjustingPosition;  // CR101
+
+    // // Apply controller only if position source is valid. In absence of valid pos sensor (GPS loss), we'd stick in forced ANGLE mode
+    // // and pilots input would be passed thru to PID controller
+    // if ((posControl.flags.estPosStatus >= EST_USABLE)) {
+        // // If we have new position - update velocity and acceleration controllers
+        // if (posControl.flags.horizontalPositionDataNew) {
+            // const timeDeltaLarge_t deltaMicrosPositionUpdate = currentTimeUs - previousTimePositionUpdate;
+            // previousTimePositionUpdate = currentTimeUs;
+
+            // if (!bypassPositionController) {
+                // // Update position controller
+                // if (deltaMicrosPositionUpdate < MAX_POSITION_UPDATE_INTERVAL_US) {
+                    // // CR101
+                    // // Get max speed for current NAV mode
+                    // float maxSpeed = getActiveSpeed();
+                    // updatePositionVelocityController_MC(maxSpeed);
+                    // updatePositionAccelController_MC(deltaMicrosPositionUpdate, NAV_ACCELERATION_XY_MAX, maxSpeed);
+
+                    // navDesiredVelocity[X] = constrain(lrintf(posControl.desiredState.vel.x), -32678, 32767);
+                    // navDesiredVelocity[Y] = constrain(lrintf(posControl.desiredState.vel.y), -32678, 32767);
+                    // // CR101
+                // }
+                // else {
+                    // // Position update has not occurred in time (first start or glitch), reset position controller
+                    // resetMulticopterPositionController();
+                // }
+            // }
+
+            // // Indicate that information is no longer usable
+            // posControl.flags.horizontalPositionDataConsumed = true;
+        // }
+    // }
+    // else {
+        // /* No position data, disable automatic adjustment, rcCommand passthrough */
+        // posControl.rcAdjustment[PITCH] = 0;
+        // posControl.rcAdjustment[ROLL] = 0;
+        // bypassPositionController = true;
+    // }
+
+    // if (!bypassPositionController) {
+        // rcCommand[PITCH] = pidAngleToRcCommand(posControl.rcAdjustment[PITCH], pidProfile()->max_angle_inclination[FD_PITCH]);
+        // rcCommand[ROLL] = pidAngleToRcCommand(posControl.rcAdjustment[ROLL], pidProfile()->max_angle_inclination[FD_ROLL]);
+    // }
+// }
+
+// CR101
 static void applyMulticopterPositionController(timeUs_t currentTimeUs)
 {
-    static timeUs_t previousTimePositionUpdate = 0;     // Occurs @ GPS update rate
-DEBUG_SET(DEBUG_ALWAYS, 2, posControl.cruise.multicopterSpeed);
-    // We should passthrough rcCommand is adjusting position in GPS_ATTI mode
-    bool bypassPositionController = !FLIGHT_MODE(NAV_COURSE_HOLD_MODE) &&
-                                    navConfig()->general.flags.user_control_mode == NAV_GPS_ATTI &&
-                                    posControl.flags.isAdjustingPosition;  // CR101
-
-    // Apply controller only if position source is valid. In absence of valid pos sensor (GPS loss), we'd stick in forced ANGLE mode
-    // and pilots input would be passed thru to PID controller
-    if ((posControl.flags.estPosStatus >= EST_USABLE)) {
-        // If we have new position - update velocity and acceleration controllers
-        if (posControl.flags.horizontalPositionDataNew) {
-            const timeDeltaLarge_t deltaMicrosPositionUpdate = currentTimeUs - previousTimePositionUpdate;
-            previousTimePositionUpdate = currentTimeUs;
-
-            if (!bypassPositionController) {
-                // Update position controller
-                if (deltaMicrosPositionUpdate < MAX_POSITION_UPDATE_INTERVAL_US) {
-                    // CR101
-                    // Get max speed for current NAV mode
-                    float maxSpeed = getActiveSpeed();
-                    updatePositionVelocityController_MC(maxSpeed);
-                    updatePositionAccelController_MC(deltaMicrosPositionUpdate, NAV_ACCELERATION_XY_MAX, maxSpeed);
-
-                    navDesiredVelocity[X] = constrain(lrintf(posControl.desiredState.vel.x), -32678, 32767);
-                    navDesiredVelocity[Y] = constrain(lrintf(posControl.desiredState.vel.y), -32678, 32767);
-                    // CR101
-                }
-                else {
-                    // Position update has not occurred in time (first start or glitch), reset position controller
-                    resetMulticopterPositionController();
-                }
-            }
-
-            // Indicate that information is no longer usable
-            posControl.flags.horizontalPositionDataConsumed = true;
-        }
-    }
-    else {
+    if (posControl.flags.estPosStatus < EST_USABLE) {
         /* No position data, disable automatic adjustment, rcCommand passthrough */
         posControl.rcAdjustment[PITCH] = 0;
         posControl.rcAdjustment[ROLL] = 0;
-        bypassPositionController = true;
+
+        return;
+    }
+DEBUG_SET(DEBUG_ALWAYS, 2, posControl.cruise.multicopterSpeed);
+    bool bypassPositionController = !FLIGHT_MODE(NAV_COURSE_HOLD_MODE) &&
+                                    navConfig()->general.flags.user_control_mode == NAV_GPS_ATTI &&
+                                    posControl.flags.isAdjustingPosition;
+
+    // If we have new position - update velocity and acceleration controllers
+    if (posControl.flags.horizontalPositionDataNew) {
+        // Indicate that information is no longer usable
+        posControl.flags.horizontalPositionDataConsumed = true;
+
+        static timeUs_t previousTimePositionUpdate = 0;     // Occurs @ GPS update rate
+        const timeDeltaLarge_t deltaMicrosPositionUpdate = currentTimeUs - previousTimePositionUpdate;
+        previousTimePositionUpdate = currentTimeUs;
+
+        // We should passthrough rcCommand if adjusting position in GPS_ATTI mode
+        if (bypassPositionController) {
+            return;
+        }
+
+        // Update position controller
+        if (deltaMicrosPositionUpdate < MAX_POSITION_UPDATE_INTERVAL_US) {
+            // Get max speed for current NAV mode
+            float maxSpeed = getActiveSpeed();
+            updatePositionVelocityController_MC(maxSpeed);
+            updatePositionAccelController_MC(deltaMicrosPositionUpdate, NAV_ACCELERATION_XY_MAX, maxSpeed);
+
+            navDesiredVelocity[X] = constrain(lrintf(posControl.desiredState.vel.x), -32678, 32767);
+            navDesiredVelocity[Y] = constrain(lrintf(posControl.desiredState.vel.y), -32678, 32767);
+        }
+        else {
+            // Position update has not occurred in time (first start or glitch), reset position controller
+            resetMulticopterPositionController();
+        }
+    } else if (bypassPositionController) {
+        return;
     }
 
-    if (!bypassPositionController) {
-        rcCommand[PITCH] = pidAngleToRcCommand(posControl.rcAdjustment[PITCH], pidProfile()->max_angle_inclination[FD_PITCH]);
-        rcCommand[ROLL] = pidAngleToRcCommand(posControl.rcAdjustment[ROLL], pidProfile()->max_angle_inclination[FD_ROLL]);
-    }
+    rcCommand[PITCH] = pidAngleToRcCommand(posControl.rcAdjustment[PITCH], pidProfile()->max_angle_inclination[FD_PITCH]);
+    rcCommand[ROLL] = pidAngleToRcCommand(posControl.rcAdjustment[ROLL], pidProfile()->max_angle_inclination[FD_ROLL]);
 }
-
+// CR101
 bool isMulticopterFlying(void)
 {
     bool throttleCondition = rcCommand[THROTTLE] > currentBatteryProfile->nav.mc.hover_throttle;
@@ -973,9 +1024,6 @@ static void applyMulticopterEmergencyLandingController(timeUs_t currentTimeUs)
             updateClimbRateToAltitudeController(-navConfig()->general.emerg_descent_rate, 500, ROC_TO_ALT_TARGET); // CR96
             updateAltitudeVelocityController_MC(deltaMicrosPositionUpdate);
             updateAltitudeThrottleController_MC(deltaMicrosPositionUpdate);
-
-            // Update throttle
-            rcCommand[THROTTLE] = posControl.rcAdjustment[THROTTLE];
         }
         else {
             // due to some glitch position update has not occurred in time, reset altitude controller
@@ -986,7 +1034,8 @@ static void applyMulticopterEmergencyLandingController(timeUs_t currentTimeUs)
         posControl.flags.verticalPositionDataConsumed = true;
     }
 
-
+    // Update throttle
+    rcCommand[THROTTLE] = posControl.rcAdjustment[THROTTLE];
 
     // Hold position if possible
     if ((posControl.flags.estPosStatus >= EST_USABLE)) {
@@ -1020,7 +1069,6 @@ static void applyMulticopterHeadingController(void)
     if (FLIGHT_MODE(NAV_COURSE_HOLD_MODE)) {
         rcCommand[YAW] = 0;
     }
-    DEBUG_SET(DEBUG_ALWAYS, 4, posControl.desiredState.yaw);
     // CR101
     updateHeadingHoldTarget(CENTIDEGREES_TO_DEGREES(posControl.desiredState.yaw));
 }

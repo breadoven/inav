@@ -1125,9 +1125,9 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_COURSE_HOLD_IN_PROGRESS
     // CR101
     int32_t desiredHeading = posControl.cruise.course;
     // Correct for course error to COG on multirotor:
-    if (STATE(MULTIROTOR)) {
-        desiredHeading = wrap_36000(posControl.actualState.yaw + posControl.cruise.course - posControl.actualState.cog);
-    }
+    // if (STATE(MULTIROTOR)) {
+        // desiredHeading = wrap_36000(posControl.actualState.yaw + posControl.cruise.course - posControl.actualState.cog);
+    // }
     DEBUG_SET(DEBUG_ALWAYS, 3, desiredHeading);
     // CR101
     setDesiredPosition(NULL, desiredHeading, NAV_POS_UPDATE_HEADING);
@@ -4457,3 +4457,9 @@ int32_t navigationGetHeadingError(void)
 {
     return wrap_18000(posControl.desiredState.yaw - posControl.actualState.cog);
 }
+
+int32_t navigationGetGroundCourse(void)
+{
+    return posControl.actualState.cog;
+}
+// CR101

@@ -4237,25 +4237,25 @@ static void osdShowStats(bool isSinglePageStatsCompatible, uint8_t page)
 
     displayBeginTransaction(osdDisplayPort, DISPLAY_TRANSACTION_OPT_RESET_DRAWING);
     displayClearScreen(osdDisplayPort);
-    //CR4 xxxxxxxxxxxxxxxxxxxxxxx
-    // dateTime_t dt;
-    // char buf[MAX(32, FORMATTED_DATE_TIME_BUFSIZE)];
-    // char *date;
-    // char *time;
-    // if (rtcGetDateTime(&dt)) {
-        // dateTimeFormatLocal(buf, &dt);
-        // dateTimeSplitFormatted(buf, &date, &time);
-        // tfp_sprintf(buff, "-STATS-(%s) 1/2 ->", date);
-        // displayWrite(osdDisplayPort, statNameX, top++, buff);
-    // } else {
-        // displayWrite(osdDisplayPort, statNameX, top++, "--- STATS ---      1/2 ->");
-    // }
-    //CR4 xxxxxxxxxxxxxxxxxxxxxxx
 
     if (isSinglePageStatsCompatible) {
         displayWrite(osdDisplayPort, statNameX, top++, "--- STATS ---");
     } else if (page == 0) {
-        displayWrite(osdDisplayPort, statNameX, top++, "--- STATS ---      1/2 ->");
+        //CR4 xxxxxxxxxxxxxxxxxxxxxxx
+        dateTime_t dt;
+        char buf[MAX(32, FORMATTED_DATE_TIME_BUFSIZE)];
+        char *date;
+        char *time;
+        if (rtcGetDateTime(&dt)) {
+            dateTimeFormatLocal(buf, &dt);
+            dateTimeSplitFormatted(buf, &date, &time);
+            tfp_sprintf(buff, "-STATS-(%s) 1/2 ->", date);
+            displayWrite(osdDisplayPort, statNameX, top++, buff);
+        } else {
+            displayWrite(osdDisplayPort, statNameX, top++, "--- STATS ---      1/2 ->");
+        }
+        //CR4 xxxxxxxxxxxxxxxxxxxxxxx
+        // displayWrite(osdDisplayPort, statNameX, top++, "--- STATS ---      1/2 ->");
     } else if (page == 1) {
         displayWrite(osdDisplayPort, statNameX, top++, "--- STATS ---   <- 2/2");
     }
@@ -5029,6 +5029,11 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
                         // by OSD_FLYMODE.
                         messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_ALTITUDE_HOLD);
                     }
+                    // CR101
+                    if (STATE(MULTIROTOR) && FLIGHT_MODE(NAV_COURSE_HOLD_MODE) && isGPSHeadingValid()) {
+                        messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_COG_ACTIVE);
+                    }
+                    // CR101
                     if (IS_RC_MODE_ACTIVE(BOXAUTOTRIM) && !feature(FEATURE_FW_AUTOTRIM)) {
                         messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_AUTOTRIM);
                     }

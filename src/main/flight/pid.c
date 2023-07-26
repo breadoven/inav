@@ -899,20 +899,26 @@ static uint8_t getHeadingHoldState(void)
 float pidHeadingHold(float dT)
 {
     float headingHoldRate;
+    // CR101
+    int32_t datumHeading = STATE(MULTIROTOR) && FLIGHT_MODE(NAV_COURSE_HOLD_MODE) ?
+                           navigationGetGroundCourse() : DECIDEGREES_TO_CENTIDEGREES(attitude.values.yaw);
 
-    int16_t error = DECIDEGREES_TO_DEGREES(attitude.values.yaw) - headingHoldTarget;
+    int16_t error = CENTIDEGREES_TO_DEGREES(wrap_18000(datumHeading - DEGREES_TO_CENTIDEGREES(headingHoldTarget)));
+    DEBUG_SET(DEBUG_ALWAYS, 4, error);
+    DEBUG_SET(DEBUG_ALWAYS, 5, datumHeading);
+    // int16_t error = DECIDEGREES_TO_DEGREES(attitude.values.yaw) - headingHoldTarget;
 
     /*
      * Convert absolute error into relative to current heading
      */
-    if (error < -180) {  // CR101
-        error += 360;
-    }
+    // if (error < -180) {  // CR101
+        // error += 360;
+    // }
 
-    if (error > 180) {  // CR101
-        error -= 360;
-    }
-
+    // if (error > 180) {  // CR101
+        // error -= 360;
+    // }
+// CR101
     /*
         New MAG_HOLD controller work slightly different that previous one.
         Old one mapped error to rotation speed in following way:
