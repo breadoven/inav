@@ -627,7 +627,7 @@ float navigationGetCrossTrackError(void);
 int32_t getCruiseHeadingAdjustment(void);
 bool isAdjustingPosition(void);
 bool isAdjustingHeading(void);
-int32_t navigationGetGroundCourse(void);    // CR101
+// int32_t getMulticopterCourseholdCog(void);    // CR101
 
 float getEstimatedAglPosition(void);
 bool isEstimatedAglTrusted(void);

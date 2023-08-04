@@ -899,25 +899,15 @@ static uint8_t getHeadingHoldState(void)
 float pidHeadingHold(float dT)
 {
     float headingHoldRate;
-    // CR101
-    int32_t datumHeading = STATE(MULTIROTOR) && FLIGHT_MODE(NAV_COURSE_HOLD_MODE) ?
-                           navigationGetGroundCourse() : DECIDEGREES_TO_CENTIDEGREES(attitude.values.yaw);
-
-    int16_t error = CENTIDEGREES_TO_DEGREES(wrap_18000(datumHeading - DEGREES_TO_CENTIDEGREES(headingHoldTarget)));
+    //  CR101
+    int16_t error = DECIDEGREES_TO_DEGREES(attitude.values.yaw) - headingHoldTarget;
     DEBUG_SET(DEBUG_ALWAYS, 4, error);
-    DEBUG_SET(DEBUG_ALWAYS, 5, datumHeading);
-    // int16_t error = DECIDEGREES_TO_DEGREES(attitude.values.yaw) - headingHoldTarget;
-
-    /*
-     * Convert absolute error into relative to current heading
-     */
-    // if (error < -180) {  // CR101
-        // error += 360;
-    // }
-
-    // if (error > 180) {  // CR101
-        // error -= 360;
-    // }
+    /* Convert absolute error into relative to current heading */
+    if (error > 180) {
+        error -= 360;
+    } else if (error < -180) {
+        error += 360;
+    }
 // CR101
     /*
         New MAG_HOLD controller work slightly different that previous one.
@@ -949,7 +939,7 @@ float pidHeadingHold(float dT)
         New controller for 2deg error requires 2,6dps. 4dps for 3deg and so on up until mag_hold_rate_limit is reached.
     */
 
-    headingHoldRate = error * pidBank()->pid[PID_HEADING].P / 30.0f;
+    headingHoldRate = error * pidBank()->pid[PID_HEADING].P / 30.0f;  //(30.0f * courseHoldRateFactor);   // CR101
     headingHoldRate = constrainf(headingHoldRate, -pidProfile()->heading_hold_rate_limit, pidProfile()->heading_hold_rate_limit);
     headingHoldRate = pt1FilterApply4(&headingHoldRateFilter, headingHoldRate, HEADING_HOLD_ERROR_LPF_FREQ, dT);
 

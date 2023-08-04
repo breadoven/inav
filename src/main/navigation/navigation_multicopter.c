@@ -511,8 +511,8 @@ static void updatePositionVelocityController_MC(const float maxSpeed)
     if (FLIGHT_MODE(NAV_COURSE_HOLD_MODE)) {
         if (posControl.cruise.multicopterSpeed >= 50) {
             // Rotate multicopter x velocity from body frame to earth frame
-            posControl.desiredState.vel.x = posControl.cruise.multicopterSpeed * posControl.actualState.cosYaw;
-            posControl.desiredState.vel.y = posControl.cruise.multicopterSpeed * posControl.actualState.sinYaw;
+            posControl.desiredState.vel.x = posControl.cruise.multicopterSpeed * cos_approx(CENTIDEGREES_TO_RADIANS(posControl.cruise.course));
+            posControl.desiredState.vel.y = posControl.cruise.multicopterSpeed * sin_approx(CENTIDEGREES_TO_RADIANS(posControl.cruise.course));
 
             return;
         } else if (posControl.flags.isAdjustingPosition) {
@@ -729,60 +729,6 @@ static void updatePositionAccelController_MC(timeDelta_t deltaMicros, float maxA
     // DEBUG_SET(DEBUG_ALWAYS, 4, accelForward * 1000);
     // DEBUG_SET(DEBUG_ALWAYS, 5, posControl.rcAdjustment[PITCH]);
 }
-
-// static void applyMulticopterPositionController(timeUs_t currentTimeUs)
-// {
-    // static timeUs_t previousTimePositionUpdate = 0;     // Occurs @ GPS update rate
-// DEBUG_SET(DEBUG_ALWAYS, 2, posControl.cruise.multicopterSpeed);
-    // // We should passthrough rcCommand is adjusting position in GPS_ATTI mode
-    // bool bypassPositionController = !FLIGHT_MODE(NAV_COURSE_HOLD_MODE) &&
-                                    // navConfig()->general.flags.user_control_mode == NAV_GPS_ATTI &&
-                                    // posControl.flags.isAdjustingPosition;  // CR101
-
-    // // Apply controller only if position source is valid. In absence of valid pos sensor (GPS loss), we'd stick in forced ANGLE mode
-    // // and pilots input would be passed thru to PID controller
-    // if ((posControl.flags.estPosStatus >= EST_USABLE)) {
-        // // If we have new position - update velocity and acceleration controllers
-        // if (posControl.flags.horizontalPositionDataNew) {
-            // const timeDeltaLarge_t deltaMicrosPositionUpdate = currentTimeUs - previousTimePositionUpdate;
-            // previousTimePositionUpdate = currentTimeUs;
-
-            // if (!bypassPositionController) {
-                // // Update position controller
-                // if (deltaMicrosPositionUpdate < MAX_POSITION_UPDATE_INTERVAL_US) {
-                    // // CR101
-                    // // Get max speed for current NAV mode
-                    // float maxSpeed = getActiveSpeed();
-                    // updatePositionVelocityController_MC(maxSpeed);
-                    // updatePositionAccelController_MC(deltaMicrosPositionUpdate, NAV_ACCELERATION_XY_MAX, maxSpeed);
-
-                    // navDesiredVelocity[X] = constrain(lrintf(posControl.desiredState.vel.x), -32678, 32767);
-                    // navDesiredVelocity[Y] = constrain(lrintf(posControl.desiredState.vel.y), -32678, 32767);
-                    // // CR101
-                // }
-                // else {
-                    // // Position update has not occurred in time (first start or glitch), reset position controller
-                    // resetMulticopterPositionController();
-                // }
-            // }
-
-            // // Indicate that information is no longer usable
-            // posControl.flags.horizontalPositionDataConsumed = true;
-        // }
-    // }
-    // else {
-        // /* No position data, disable automatic adjustment, rcCommand passthrough */
-        // posControl.rcAdjustment[PITCH] = 0;
-        // posControl.rcAdjustment[ROLL] = 0;
-        // bypassPositionController = true;
-    // }
-
-    // if (!bypassPositionController) {
-        // rcCommand[PITCH] = pidAngleToRcCommand(posControl.rcAdjustment[PITCH], pidProfile()->max_angle_inclination[FD_PITCH]);
-        // rcCommand[ROLL] = pidAngleToRcCommand(posControl.rcAdjustment[ROLL], pidProfile()->max_angle_inclination[FD_ROLL]);
-    // }
-// }
-
 // CR101
 static void applyMulticopterPositionController(timeUs_t currentTimeUs)
 {

@@ -2097,7 +2097,7 @@ static bool osdDrawSingleElement(uint8_t item)
     case OSD_ALTITUDE:
         {
             int32_t alt = osdGetAltitude();
-            // osdFormatAltitudeSymbol(buff, alt);
+            osdFormatAltitudeSymbol(buff, alt);
 
             uint16_t alt_alarm = osdConfig()->alt_alarm;
             uint16_t neg_alt_alarm = osdConfig()->neg_alt_alarm;
@@ -2106,13 +2106,12 @@ static bool osdDrawSingleElement(uint8_t item)
 
                 TEXT_ATTRIBUTES_ADD_BLINK(elemAttr);
             }
-            // CR41
-            if (alt < 0) {
-                // alt = -alt;
+            // CR103
+            if (STATE(MULTIROTOR) && posControl.flags.isAdjustingAltitude) {
                 TEXT_ATTRIBUTES_ADD_INVERTED(elemAttr);
+                TEXT_ATTRIBUTES_ADD_BLINK(elemAttr);
             }
-            osdFormatAltitudeSymbol(buff, alt);
-            // CR41
+            // CR103
             break;
         }
 
@@ -5029,11 +5028,6 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
                         // by OSD_FLYMODE.
                         messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_ALTITUDE_HOLD);
                     }
-                    // CR101
-                    if (STATE(MULTIROTOR) && FLIGHT_MODE(NAV_COURSE_HOLD_MODE) && isGPSHeadingValid()) {
-                        messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_COG_ACTIVE);
-                    }
-                    // CR101
                     if (IS_RC_MODE_ACTIVE(BOXAUTOTRIM) && !feature(FEATURE_FW_AUTOTRIM)) {
                         messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_AUTOTRIM);
                     }
