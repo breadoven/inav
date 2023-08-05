@@ -939,7 +939,7 @@ float pidHeadingHold(float dT)
         New controller for 2deg error requires 2,6dps. 4dps for 3deg and so on up until mag_hold_rate_limit is reached.
     */
 
-    headingHoldRate = error * pidBank()->pid[PID_HEADING].P / 30.0f;  //(30.0f * courseHoldRateFactor);   // CR101
+    headingHoldRate = error * pidBank()->pid[PID_HEADING].P / 30.0f;
     headingHoldRate = constrainf(headingHoldRate, -pidProfile()->heading_hold_rate_limit, pidProfile()->heading_hold_rate_limit);
     headingHoldRate = pt1FilterApply4(&headingHoldRateFilter, headingHoldRate, HEADING_HOLD_ERROR_LPF_FREQ, dT);
 
