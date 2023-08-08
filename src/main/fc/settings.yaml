@@ -3473,14 +3473,6 @@ groups:
         min: -36
         max: 36
 
-        # CR22
-      - name: osd_infocycle_interval_time
-        description: Info Cycle field item display time (milliseconds).
-        field: infocycle_interval_time
-        default_value: 2000
-        min: 500
-        max: 5000
-        # CR22
       - name: osd_pan_servo_offcentre_warning
         description: Degrees either side of the pan servo centre; where it is assumed camera is wanted to be facing forwards, but isn't at 0. If in this range and not 0 for longer than 10 seconds, the pan servo offset OSD element will blink. 0 means the warning is disabled.
         field: pan_servo_offcentre_warning

@@ -2396,8 +2396,8 @@ static void cliFlashRead(char *cmdline)
 #ifdef USE_OSD
 static void printOsdLayout(uint8_t dumpMask, const osdLayoutsConfig_t *config, const osdLayoutsConfig_t *configDefault, int layout, int item)
 {
-    // "<layout> <item> <col> <row> <visible> <infocycle>"  // CR22
-    const char *format = "osd_layout %d %d %d %d %c %c";    // CR22
+    // "<layout> <item> <col> <row> <visible>"
+    const char *format = "osd_layout %d %d %d %d %c";
     for (int ii = 0; ii < OSD_LAYOUT_COUNT; ii++) {
         if (layout >= 0 && layout != ii) {
             continue;
@@ -2413,15 +2413,13 @@ static void printOsdLayout(uint8_t dumpMask, const osdLayoutsConfig_t *config, c
                 ii, jj,
                 OSD_X(defaultLayoutItems[jj]),
                 OSD_Y(defaultLayoutItems[jj]),
-                OSD_VISIBLE(defaultLayoutItems[jj]) ? 'V' : 'H',       // CR22
-                OSD_INFOCYCLE(defaultLayoutItems[jj]) ? 'O' : 'A');     // CR22
+                OSD_VISIBLE(defaultLayoutItems[jj]) ? 'V' : 'H');
 
             cliDumpPrintLinef(dumpMask, equalsDefault, format,
                 ii, jj,
                 OSD_X(layoutItems[jj]),
                 OSD_Y(layoutItems[jj]),
-                OSD_VISIBLE(layoutItems[jj]) ? 'V' : 'H',          // CR22
-                OSD_INFOCYCLE(layoutItems[jj]) ? 'A' : 'O');        // CR22
+                OSD_VISIBLE(layoutItems[jj]) ? 'V' : 'H');
         }
     }
 }
@@ -2435,7 +2433,6 @@ static void cliOsdLayout(char *cmdline)
     int col = 0;
     int row = 0;
     bool visible = false;
-    bool infocycle = false; // CR22
     char *tok = strtok_r(cmdline, " ", &saveptr);
 
     int ii;
@@ -2483,21 +2480,6 @@ static void cliOsdLayout(char *cmdline)
                         return;
                 }
                 break;
-            // CR22
-            case 5:
-                switch (*tok) {
-                    case 'O':
-                        infocycle = false;
-                        break;
-                    case 'A':
-                        infocycle = true;
-                        break;
-                    default:
-                        cliShowParseError();
-                        return;
-                }
-                break;
-            // CR22
             default:
                 cliShowParseError();
                 return;
@@ -2519,18 +2501,9 @@ static void cliOsdLayout(char *cmdline)
             // No visibility provided. Keep the previous one.
             visible = OSD_VISIBLE(osdLayoutsConfig()->item_pos[layout][item]);
             FALLTHROUGH;
-        // CR22
         case 5:
-            // No infocycle provided. Keep the previous one.
-            infocycle = OSD_INFOCYCLE(osdLayoutsConfig()->item_pos[layout][item]);
-            FALLTHROUGH;
-        case 6:
-            // Layout, item, pos, visibility and infocycle. Set the item.
-            if (item == OSD_INFO_CYCLE) {
-                infocycle = false;      // always exclude Infocycle field, for obvious reasons
-            }
-            osdLayoutsConfigMutable()->item_pos[layout][item] = OSD_POS(col, row) | (visible ? OSD_VISIBLE_FLAG : 0) | (infocycle ? OSD_INFOCYCLE_FLAG : 0);
-        // CR22
+            // Layout, item, pos and visibility. Set the item.
+            osdLayoutsConfigMutable()->item_pos[layout][item] = OSD_POS(col, row) | (visible ? OSD_VISIBLE_FLAG : 0);
             break;
         default:
             // Unhandled
@@ -3344,8 +3317,8 @@ static void cliStatus(char *cmdline)
 #if defined(AT32F43x)
     cliPrintLine("AT32 system clocks:");
     crm_clocks_freq_type clocks;
-    crm_clocks_freq_get(&clocks); 
-    
+    crm_clocks_freq_get(&clocks);
+
     cliPrintLinef("  SYSCLK = %d MHz", clocks.sclk_freq / 1000000);
     cliPrintLinef("  ABH    = %d MHz", clocks.ahb_freq  / 1000000);
     cliPrintLinef("  ABP1   = %d MHz", clocks.apb1_freq / 1000000);
@@ -3993,7 +3966,7 @@ const clicmd_t cmdTable[] = {
     CLI_COMMAND_DEF("wp", "waypoint list", NULL, cliWaypoints),
 #endif
 #ifdef USE_OSD
-    CLI_COMMAND_DEF("osd_layout", "get or set the layout of OSD items", "[<layout> [<item> [<col> <row> [<visible>] [<infocycle>]]]]", cliOsdLayout),   // CR22
+    CLI_COMMAND_DEF("osd_layout", "get or set the layout of OSD items", "[<layout> [<item> [<col> <row> [<visible>]]]]", cliOsdLayout),
 #endif
 };
 

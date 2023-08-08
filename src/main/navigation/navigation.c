@@ -2809,7 +2809,7 @@ void setDesiredPosition(const fpVector3_t * pos, int32_t yaw, navSetWaypointFlag
     if ((useMask & NAV_POS_UPDATE_XY) != 0 && !STATE(NAV_CRUISE_BRAKING)) {
         posControl.desiredState.pos.x = pos->x;
         posControl.desiredState.pos.y = pos->y;
-    }
+    }  // CR99 - add check if target changed significantly -> reset PIDS if so. Same for Altitude
 
     // Z-position
     if ((useMask & NAV_POS_UPDATE_Z) != 0) {

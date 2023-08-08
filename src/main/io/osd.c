@@ -188,7 +188,6 @@ static bool fullRedraw = false;
 
 static uint8_t armState;
 
-static bool infocycleSuspended = false;     // CR22
 // Multifunction display  CR88
 static textAttributes_t osdGetMultiFunctionMessage(char *buff);
 static uint8_t osdWarningsFlags = 0;
@@ -1659,90 +1658,15 @@ void osdDisplaySwitchIndicator(const char *swName, int rcValue, char *buff) {
 
     buff[ptr] = '\0';
 }
-// CR22
-bool hiddenInfocycleItem(uint8_t item)
-{
-    if (item == OSD_ARTIFICIAL_HORIZON) {
-        return true;
-    }
-    return false;
-}
-
-bool isItemSelectedForDisplay(uint8_t *elemPosX, uint8_t *elemPosY, uint8_t item)
-{
-    static uint8_t infocycleItemCounter;
-    if (item == 0) {
-        infocycleItemCounter = 0;
-    }
-
-    uint16_t pos = osdLayoutsConfig()->item_pos[currentLayout][item];
-
-    if (!OSD_VISIBLE(pos)) {
-        return false;
-    }
-    // normal position of item if not active in Infocycle field
-    *elemPosX = OSD_X(pos);
-    *elemPosY = OSD_Y(pos);
-
-    /* Infocycle routine to direct selected OSD items to Info Cycle field on OSD.
-    Items cycled in field unless BOXOSD mode selected for < 2s in which case items are displayed in normal positions
-    and Infocycle is suspended. Infocycle starts again by selecting BOXOSD again for < 2s.
-    BOXOSD switches off OSD if selected for > 2s*/
-
-    uint16_t infocyclePos = osdLayoutsConfig()->item_pos[currentLayout][OSD_INFO_CYCLE];
-
-    if (OSD_VISIBLE(infocyclePos)) {
-        static uint8_t infocycleNumItems;
-        static uint8_t infocycleLastLayout = 5;
-
-        if (currentLayout != infocycleLastLayout) {
-            infocycleNumItems = 0;
-            for (uint8_t i = 0; i < OSD_ITEM_COUNT; i++) {
-                if (OSD_INFOCYCLE(osdLayoutsConfig()->item_pos[currentLayout][i])) {   // count number infocycle items
-                    infocycleNumItems += 1;
-                }
-            }
-            infocycleLastLayout = currentLayout;
-            infocycleSuspended = true;
-        }
-
-        if (infocycleNumItems > 0 && !infocycleSuspended) {
-            static uint8_t infocyclePreviousItem;
-
-            if (OSD_INFOCYCLE(pos)) {
-                infocycleItemCounter += 1;
-                if (infocycleItemCounter == OSD_ALTERNATING_CHOICES(osdConfig()->infocycle_interval_time, infocycleNumItems) + 1) {
-                    if (hiddenInfocycleItem(item)) {
-                        return false;
-                    }
-                    *elemPosX = OSD_X(infocyclePos);
-                    *elemPosY = OSD_Y(infocyclePos);
-                    if (infocyclePreviousItem != item) {     // clear infocycle field before displaying new item
-                        infocyclePreviousItem = item;
-                        displayWrite(osdDisplayPort, *elemPosX, *elemPosY, "            ");   // 12 characters long
-                    }
-                } else {
-                    return false;
-                }
-            }
-        }
-    }
-
-    return true;
-}
-// CR22
 
 static bool osdDrawSingleElement(uint8_t item)
 {
-    // CR22
-    uint8_t elemPosX;
-    uint8_t elemPosY;
-
-    if (!isItemSelectedForDisplay(&elemPosX, &elemPosY, item)) {
+    uint16_t pos = osdLayoutsConfig()->item_pos[currentLayout][item];
+    if (!OSD_VISIBLE(pos)) {
         return false;
     }
-    // CR22
-
+    uint8_t elemPosX = OSD_X(pos);
+    uint8_t elemPosY = OSD_Y(pos);
     textAttributes_t elemAttr = TEXT_ATTRIBUTES_NONE;
     char buff[32] = {0};
 
@@ -3524,13 +3448,6 @@ static bool osdDrawSingleElement(uint8_t item)
             displayWrite(osdDisplayPort, elemPosX, elemPosY, buff);
             return true;
         }
-    // CR22
-    case OSD_INFO_CYCLE:
-        {
-            // deliberately left blank
-            return true;
-        }
-    // CR22
     // CR88
     case OSD_MULTI_FUNCTION:
         {
@@ -3783,7 +3700,6 @@ PG_RESET_TEMPLATE(osdConfig_t, osdConfig,
     .osd_home_position_arm_screen = SETTING_OSD_HOME_POSITION_ARM_SCREEN_DEFAULT,
     .pan_servo_index = SETTING_OSD_PAN_SERVO_INDEX_DEFAULT,
     .pan_servo_pwm2centideg = SETTING_OSD_PAN_SERVO_PWM2CENTIDEG_DEFAULT,
-    .infocycle_interval_time = SETTING_OSD_INFOCYCLE_INTERVAL_TIME_DEFAULT,    // CR22
     .pan_servo_offcentre_warning = SETTING_OSD_PAN_SERVO_OFFCENTRE_WARNING_DEFAULT,
     .pan_servo_indicator_show_degrees = SETTING_OSD_PAN_SERVO_INDICATOR_SHOW_DEGREES_DEFAULT,
     .esc_rpm_precision = SETTING_OSD_ESC_RPM_PRECISION_DEFAULT,
@@ -3962,7 +3878,6 @@ void pgResetFn_osdLayoutsConfig(osdLayoutsConfig_t *osdLayoutsConfig)
     osdLayoutsConfig->item_pos[0][OSD_GVAR_2] = OSD_POS(1, 3);
     osdLayoutsConfig->item_pos[0][OSD_GVAR_3] = OSD_POS(1, 4);
 
-    osdLayoutsConfig->item_pos[0][OSD_INFO_CYCLE] = OSD_POS(1, 1);    // CR22
     osdLayoutsConfig->item_pos[0][OSD_MULTI_FUNCTION] = OSD_POS(1, 4);    // CR88
 
     osdLayoutsConfig->item_pos[0][OSD_SWITCH_INDICATOR_0] = OSD_POS(2, 7);
@@ -4656,28 +4571,10 @@ static void osdRefresh(timeUs_t currentTimeUs)
 {
     osdFilterData(currentTimeUs);
 
-    // CR22
-    bool boxOsdClearDisplay = false;
-    static timeMs_t boxOsdTimer = 0;
-    const uint16_t boxOsdTimeDelay_Ms = 1000;
-
-    if (IS_RC_MODE_ACTIVE(BOXOSD)) {
-        if (boxOsdTimer == 0) {
-            boxOsdTimer = millis();
-        }
-        boxOsdClearDisplay = millis() - boxOsdTimer > boxOsdTimeDelay_Ms;
-    } else {
-        if (millis() - boxOsdTimer < boxOsdTimeDelay_Ms) {
-            infocycleSuspended = !infocycleSuspended;
-            displayClearScreen(osdDisplayPort);
-        }
-        boxOsdTimer = 0;
-    }
-    // CR22
 #ifdef USE_CMS
-    if (boxOsdClearDisplay && (!cmsInMenu) && !(osdConfig()->osd_failsafe_switch_layout && FLIGHT_MODE(FAILSAFE_MODE))) {   // CR22
+    if (IS_RC_MODE_ACTIVE(BOXOSD) && (!cmsInMenu) && !(osdConfig()->osd_failsafe_switch_layout && FLIGHT_MODE(FAILSAFE_MODE))) {
 #else
-    if (boxOsdClearDisplay && !(osdConfig()->osd_failsafe_switch_layout && FLIGHT_MODE(FAILSAFE_MODE))) {   // CR22
+    if (IS_RC_MODE_ACTIVE(BOXOSD) && !(osdConfig()->osd_failsafe_switch_layout && FLIGHT_MODE(FAILSAFE_MODE))) {
 #endif
       displayClearScreen(osdDisplayPort);
       armState = ARMING_FLAG(ARMED);

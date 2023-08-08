@@ -29,13 +29,11 @@
 #endif
 #define OSD_LAYOUT_COUNT (OSD_ALTERNATE_LAYOUT_COUNT + 1)
 
-// 0ivb yyyy yyxx xxxx                          CR22x
-// (infocycle)(visible)(blink)(yCoord)(xCoord)  CR22x
+// 00vb yyyy yyxx xxxx
+// (visible)(blink)(yCoord)(xCoord)
 
 #define OSD_VISIBLE_FLAG    0x2000
-#define OSD_INFOCYCLE_FLAG  0x4000  // CR22x   changed for HD system bit changes 270222
 #define OSD_VISIBLE(x)      ((x) & OSD_VISIBLE_FLAG)
-#define OSD_INFOCYCLE(x)    ((x) & OSD_INFOCYCLE_FLAG)  // CR22
 
 #define OSD_POS(x,y)        (((x) & 0x3F) | (((y) & 0x3F) << 6))
 #define OSD_X(x)            ((x) & 0x3F)
@@ -274,7 +272,6 @@ typedef enum {
     OSD_PILOT_NAME,
     OSD_PAN_SERVO_CENTRED,
     OSD_MULTI_FUNCTION,     // 144  CR88
-    OSD_INFO_CYCLE, // 145  CR22
     OSD_ITEM_COUNT // MUST BE LAST
 } osd_items_e;
 
@@ -438,7 +435,6 @@ typedef struct osdConfig_s {
     uint8_t telemetry; 				            // use telemetry on displayed pixel line 0
     uint8_t esc_rpm_precision;                  // Number of characters used for the RPM numbers.
     uint16_t system_msg_display_time;           // system message display time for multiple messages (ms)
-    uint16_t infocycle_interval_time;           // Info Cycle field item display time interval (ms)   CR22
     uint8_t mAh_used_precision;                 // Number of numbers used for mAh drawn. Plently of packs now are > 9999 mAh
     uint8_t ahi_pitch_interval;                 // redraws AHI at set pitch interval (Not pixel OSD)
     char    osd_switch_indicator0_name[OSD_SWITCH_INDICATOR_NAME_LENGTH + 1];      // Name to use for switch indicator 0.
