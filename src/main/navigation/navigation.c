@@ -1117,19 +1117,19 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_COURSE_HOLD_IN_PROGRESS
     }
     // CR101
     int16_t cruiseYawRate = DEGREES_TO_CENTIDEGREES(navConfig()->general.cruise_yaw_rate);
-    int16_t headingAdjustCommand = 0;
+    const bool mcRollStickHeadingAdjustmentActive = STATE(MULTIROTOR) && ABS(rcCommand[ROLL]) > rcControlsConfig()->pos_hold_deadband;
 
-    // User demanding yaw (yaw on FW, yaw and roll on MR). We record the desired course and change the desired target in the meanwhile
-    if (posControl.flags.isAdjustingHeading || posControl.flags.isAdjustingPosition) {
-        headingAdjustCommand = rcCommand[YAW];
-        if (posControl.flags.isAdjustingPosition && rcCommand[ROLL] > headingAdjustCommand) {
-            headingAdjustCommand = rcCommand[ROLL];
+    // User demanding yaw -> yaw stick on FW, yaw and roll sticks on MR
+    // We record the desired course and change the desired target in the meanwhile
+    if (posControl.flags.isAdjustingHeading || mcRollStickHeadingAdjustmentActive) {
+        int16_t headingAdjustCommand = rcCommand[YAW];
+        if (mcRollStickHeadingAdjustmentActive && ABS(rcCommand[ROLL]) > ABS(headingAdjustCommand)) {
+            headingAdjustCommand = -rcCommand[ROLL];
         }
-    // if (posControl.flags.isAdjustingHeading) {
+
         timeMs_t timeDifference = currentTimeMs - posControl.cruise.lastCourseAdjustmentTime;
         if (timeDifference > 100) timeDifference = 0;   // if adjustment was called long time ago, reset the time difference.
         float rateTarget = scaleRangef((float)headingAdjustCommand, -500.0f, 500.0f, -cruiseYawRate, cruiseYawRate);  // CR101
-        // float rateTarget = scaleRangef((float)rcCommand[YAW], -500.0f, 500.0f, -DEGREES_TO_CENTIDEGREES(navConfig()->general.cruise_yaw_rate), DEGREES_TO_CENTIDEGREES(navConfig()->general.cruise_yaw_rate));
         float centidegsPerIteration = rateTarget * MS2S(timeDifference);
         posControl.cruise.course = wrap_36000(posControl.cruise.course - centidegsPerIteration);
         posControl.cruise.lastCourseAdjustmentTime = currentTimeMs;
@@ -1160,6 +1160,9 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_COURSE_HOLD_ADJUSTING(n
 
 static navigationFSMEvent_t navOnEnteringState_NAV_STATE_CRUISE_INITIALIZE(navigationFSMState_t previousState)
 {
+    if (STATE(MULTIROTOR) && !navConfig()->general.cruise_yaw_rate) {  // course hole not possible on MR without yaw control
+        return NAV_FSM_EVENT_ERROR;
+    }
     // if (!STATE(FIXED_WING_LEGACY)) { return NAV_FSM_EVENT_ERROR; } // only on FW for now    // CR101
 
     navOnEnteringState_NAV_STATE_ALTHOLD_INITIALIZE(previousState);

@@ -2654,7 +2654,7 @@ Speed in fully autonomous modes (RTH, WP) [cm/s]. Used for WP mode when no speci
 
 ### nav_cruise_yaw_rate
 
-Max YAW rate when NAV CRUISE mode is enabled (set to 0 to disable) [dps]
+Max YAW rate when NAV COURSE HOLD/CRUISE mode is enabled. Set to 0 to disable on fixed wing (Note: On multirotor setting to 0 will disable Course Hold/Cruise mode completely) [dps]
 
 | Default | Min | Max |
 | --- | --- | --- |
@@ -4309,16 +4309,6 @@ Temperature under which the IMU temperature OSD element will start blinking (dec
 | Default | Min | Max |
 | --- | --- | --- |
 | -200 | -550 | 1250 |
-
----
-
-### osd_infocycle_interval_time
-
-Info Cycle field item display time (milliseconds).
-
-| Default | Min | Max |
-| --- | --- | --- |
-| 2000 | 500 | 5000 |
 
 ---
 

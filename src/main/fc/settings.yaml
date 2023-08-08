@@ -2588,7 +2588,7 @@ groups:
         type: bool
         # CR101
       - name: nav_cruise_yaw_rate
-        description: "Max YAW rate when NAV CRUISE mode is enabled (set to 0 to disable) [dps]"
+        description: "Max YAW rate when NAV COURSE HOLD/CRUISE mode is enabled. Set to 0 to disable on fixed wing (Note: On multirotor setting to 0 will disable Course Hold/Cruise mode completely) [dps]"
         default_value: 20
         field: general.cruise_yaw_rate
         min: 0
