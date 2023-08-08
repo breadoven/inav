@@ -2592,7 +2592,7 @@ groups:
         default_value: 20
         field: general.cruise_yaw_rate
         min: 0
-        max: 60
+        max: 120
         # CR101
       - name: nav_mc_bank_angle
         description: "Maximum banking angle (deg) that multicopter navigation is allowed to set. Machine must be able to satisfy this angle without loosing altitude"
