@@ -113,16 +113,15 @@ static void updateAltitudeVelocityController_MC(timeDelta_t deltaMicros)
 static void updateAltitudeThrottleController_MC(timeDelta_t deltaMicros)
 {
     // Calculate min and max throttle boundaries (to compensate for integral windup)
-    const int16_t thrAdjustmentMin = (int16_t)getThrottleIdleValue() - (int16_t)currentBatteryProfile->nav.mc.hover_throttle;
-    const int16_t thrAdjustmentMax = (int16_t)motorConfig()->maxthrottle - (int16_t)currentBatteryProfile->nav.mc.hover_throttle;
+    const int16_t thrCorrectionMin = getThrottleIdleValue() - currentBatteryProfile->nav.mc.hover_throttle; // CR102
+    const int16_t thrCorrectionMax = motorConfig()->maxthrottle - currentBatteryProfile->nav.mc.hover_throttle; // CR102
 
-    float velocity_controller = navPidApply2(&posControl.pids.vel[Z], posControl.desiredState.vel.z, navGetCurrentActualPositionAndVelocity()->vel.z, US2S(deltaMicros), thrAdjustmentMin, thrAdjustmentMax, 0);
-
-    posControl.rcAdjustment[THROTTLE] = pt1FilterApply4(&altholdThrottleFilterState, velocity_controller, NAV_THROTTLE_CUTOFF_FREQENCY_HZ, US2S(deltaMicros));
-
-    posControl.rcAdjustment[THROTTLE] = constrain(posControl.rcAdjustment[THROTTLE], thrAdjustmentMin, thrAdjustmentMax);
-
-    posControl.rcAdjustment[THROTTLE] = constrain((int16_t)currentBatteryProfile->nav.mc.hover_throttle + posControl.rcAdjustment[THROTTLE], getThrottleIdleValue(), motorConfig()->maxthrottle);
+    float velocity_controller = navPidApply2(&posControl.pids.vel[Z], posControl.desiredState.vel.z, navGetCurrentActualPositionAndVelocity()->vel.z, US2S(deltaMicros), thrCorrectionMin, thrCorrectionMax, 0);
+    // CR102
+    int16_t rcThrottleCorrection = pt1FilterApply4(&altholdThrottleFilterState, velocity_controller, NAV_THROTTLE_CUTOFF_FREQENCY_HZ, US2S(deltaMicros));
+    rcThrottleCorrection = constrain(rcThrottleCorrection, thrCorrectionMin, thrCorrectionMax);
+    // CR102
+    posControl.rcAdjustment[THROTTLE] = constrain(currentBatteryProfile->nav.mc.hover_throttle + rcThrottleCorrection, getThrottleIdleValue(), motorConfig()->maxthrottle);    // CR102
 }
 
 bool adjustMulticopterAltitudeFromRCInput(void)
@@ -211,7 +210,7 @@ void resetMulticopterAltitudeController(void)
     navPidReset(&posControl.pids.vel[Z]);
     navPidReset(&posControl.pids.surface);
 
-    posControl.rcAdjustment[THROTTLE] = 0;
+    posControl.rcAdjustment[THROTTLE] = currentBatteryProfile->nav.mc.hover_throttle;   // CR102
 
     posControl.desiredState.vel.z = posToUse->vel.z;   // Gradually transition from current climb
 
@@ -440,7 +439,7 @@ static void setMulticopterStopPosition(void)
 bool adjustMulticopterPositionFromRCInput(int16_t rcPitchAdjustment, int16_t rcRollAdjustment)
 {
     // CR101
-    if (FLIGHT_MODE(NAV_COURSE_HOLD_MODE)) {
+    if (navGetMappedFlightModes(posControl.navState) & NAV_COURSE_HOLD_MODE) {
         if (rcPitchAdjustment) {
             return adjustMulticopterCruiseSpeed(rcPitchAdjustment);
         }
@@ -468,15 +467,14 @@ bool adjustMulticopterPositionFromRCInput(int16_t rcPitchAdjustment, int16_t rcR
         }
 
         return true;
-    }
-    else {
+    }// CR101
+    else if (posControl.flags.isAdjustingPosition) {
         // Adjusting finished - reset desired position to stay exactly where pilot released the stick
-        if (posControl.flags.isAdjustingPosition) {
-            setMulticopterStopPosition();   // CR101
-        }
-
-        return false;
+        setMulticopterStopPosition();
     }
+
+    return false;
+    // CR101
 }
 
 static float getVelocityHeadingAttenuationFactor(void)

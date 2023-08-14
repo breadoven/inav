@@ -2031,10 +2031,10 @@ static bool osdDrawSingleElement(uint8_t item)
                 TEXT_ATTRIBUTES_ADD_BLINK(elemAttr);
             }
             // CR103
-            if (STATE(MULTIROTOR) && posControl.flags.isAdjustingAltitude) {
-                TEXT_ATTRIBUTES_ADD_INVERTED(elemAttr);
-                TEXT_ATTRIBUTES_ADD_BLINK(elemAttr);
-            }
+            // if (STATE(MULTIROTOR) && posControl.flags.isAdjustingAltitude) {
+                // TEXT_ATTRIBUTES_ADD_INVERTED(elemAttr);
+                // TEXT_ATTRIBUTES_ADD_BLINK(elemAttr);
+            // }
             // CR103
             break;
         }
@@ -4926,17 +4926,23 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
                         messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_ALTITUDE_HOLD);
                     }
                     // CR101
-                    if (STATE(MULTIROTOR) && FLIGHT_MODE(NAV_COURSE_HOLD_MODE)) {
-                        if (posControl.cruise.multicopterSpeed >= 50.0f) {
-                            char buf[6];
-                            osdFormatVelocityStr(buf, posControl.cruise.multicopterSpeed, false, false);
-                            tfp_sprintf(messageBuf, "(SPD %s)", buf);
-                        } else {
-                            strcpy(messageBuf, "(HOLD)");
+                    if (STATE(MULTIROTOR)) {
+                        if (FLIGHT_MODE(NAV_COURSE_HOLD_MODE)) {
+                            if (posControl.cruise.multicopterSpeed >= 50.0f) {
+                                char buf[6];
+                                osdFormatVelocityStr(buf, posControl.cruise.multicopterSpeed, false, false);
+                                tfp_sprintf(messageBuf, "(SPD %s)", buf);
+                            } else {
+                                strcpy(messageBuf, "(HOLD)");
+                            }
+                            messages[messageCount++] = messageBuf;
                         }
-                        messages[messageCount++] = messageBuf;
+                        // CR101 // CR103
+                        if (posControl.flags.isAdjustingAltitude) {
+                            messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_ALT_ADJUST);
+                        }
+                        // CR103
                     }
-                    // CR101
                     if (IS_RC_MODE_ACTIVE(BOXAUTOTRIM) && !feature(FEATURE_FW_AUTOTRIM)) {
                         messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_AUTOTRIM);
                     }

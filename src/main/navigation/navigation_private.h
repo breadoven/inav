@@ -455,6 +455,7 @@ bool isFixedWingFlying(void);
 bool isMulticopterFlying(void);
 
 navigationFSMStateFlags_t navGetCurrentStateFlags(void);
+flightModeFlags_e navGetMappedFlightModes(navigationFSMState_t state);   // CR101
 
 void setHomePosition(const fpVector3_t * pos, int32_t heading, navSetWaypointFlags_t useMask, navigationHomeFlags_t homeFlags);
 void setDesiredPosition(const fpVector3_t * pos, int32_t yaw, navSetWaypointFlags_t useMask);
