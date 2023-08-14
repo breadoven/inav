@@ -3595,10 +3595,10 @@ uint8_t osdIncElementIndex(uint8_t elementIndex)
             elementIndex = OSD_AIR_MAX_SPEED;
         }
         if (elementIndex == OSD_GLIDE_RANGE) {
-            elementIndex = feature(FEATURE_CURRENT_METER) ? OSD_CLIMB_EFFICIENCY : OSD_MULTI_FUNCTION;  // CR88
+            elementIndex = feature(FEATURE_CURRENT_METER) ? OSD_CLIMB_EFFICIENCY : OSD_PILOT_NAME;
         }
         if (elementIndex == OSD_NAV_WP_MULTI_MISSION_INDEX) {
-            elementIndex = OSD_MULTI_FUNCTION;   // CR88
+            elementIndex = OSD_PILOT_NAME;
         }
     }
 

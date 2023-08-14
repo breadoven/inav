@@ -113,15 +113,15 @@ static void updateAltitudeVelocityController_MC(timeDelta_t deltaMicros)
 static void updateAltitudeThrottleController_MC(timeDelta_t deltaMicros)
 {
     // Calculate min and max throttle boundaries (to compensate for integral windup)
-    const int16_t thrCorrectionMin = getThrottleIdleValue() - currentBatteryProfile->nav.mc.hover_throttle; // CR102
-    const int16_t thrCorrectionMax = motorConfig()->maxthrottle - currentBatteryProfile->nav.mc.hover_throttle; // CR102
+    const int16_t thrCorrectionMin = getThrottleIdleValue() - currentBatteryProfile->nav.mc.hover_throttle;
+    const int16_t thrCorrectionMax = motorConfig()->maxthrottle - currentBatteryProfile->nav.mc.hover_throttle;
 
     float velocity_controller = navPidApply2(&posControl.pids.vel[Z], posControl.desiredState.vel.z, navGetCurrentActualPositionAndVelocity()->vel.z, US2S(deltaMicros), thrCorrectionMin, thrCorrectionMax, 0);
-    // CR102
+
     int16_t rcThrottleCorrection = pt1FilterApply4(&altholdThrottleFilterState, velocity_controller, NAV_THROTTLE_CUTOFF_FREQENCY_HZ, US2S(deltaMicros));
     rcThrottleCorrection = constrain(rcThrottleCorrection, thrCorrectionMin, thrCorrectionMax);
-    // CR102
-    posControl.rcAdjustment[THROTTLE] = constrain(currentBatteryProfile->nav.mc.hover_throttle + rcThrottleCorrection, getThrottleIdleValue(), motorConfig()->maxthrottle);    // CR102
+
+    posControl.rcAdjustment[THROTTLE] = constrain(currentBatteryProfile->nav.mc.hover_throttle + rcThrottleCorrection, getThrottleIdleValue(), motorConfig()->maxthrottle);
 }
 
 bool adjustMulticopterAltitudeFromRCInput(void)
@@ -132,11 +132,11 @@ bool adjustMulticopterAltitudeFromRCInput(void)
         // In terrain follow mode we apply different logic for terrain control
         if (posControl.flags.estAglStatus == EST_TRUSTED && altTarget > 10.0f) {
             // We have solid terrain sensor signal - directly map throttle to altitude
-            updateClimbRateToAltitudeController(0, 0, ROC_TO_ALT_RESET);    // CR96
+            updateClimbRateToAltitudeController(0, 0, ROC_TO_ALT_RESET);
             posControl.desiredState.pos.z = altTarget;
         }
         else {
-            updateClimbRateToAltitudeController(-50.0f, 0, ROC_TO_ALT_CONSTANT);  // CR96
+            updateClimbRateToAltitudeController(-50.0f, 0, ROC_TO_ALT_CONSTANT);
         }
 
         // In surface tracking we always indicate that we're adjusting altitude
@@ -158,14 +158,14 @@ bool adjustMulticopterAltitudeFromRCInput(void)
                 rcClimbRate = rcThrottleAdjustment * navConfig()->general.max_manual_climb_rate / (float)(altHoldThrottleRCZero - getThrottleIdleValue() - rcControlsConfig()->alt_hold_deadband);
             }
 
-            updateClimbRateToAltitudeController(rcClimbRate, 0, ROC_TO_ALT_CONSTANT);     // CR96
+            updateClimbRateToAltitudeController(rcClimbRate, 0, ROC_TO_ALT_CONSTANT);
 
             return true;
         }
         else {
             // Adjusting finished - reset desired position to stay exactly where pilot released the stick
             if (posControl.flags.isAdjustingAltitude) {
-                updateClimbRateToAltitudeController(0, 0, ROC_TO_ALT_RESET);    // CR96
+                updateClimbRateToAltitudeController(0, 0, ROC_TO_ALT_RESET);
             }
 
             return false;
@@ -210,7 +210,7 @@ void resetMulticopterAltitudeController(void)
     navPidReset(&posControl.pids.vel[Z]);
     navPidReset(&posControl.pids.surface);
 
-    posControl.rcAdjustment[THROTTLE] = currentBatteryProfile->nav.mc.hover_throttle;   // CR102
+    posControl.rcAdjustment[THROTTLE] = currentBatteryProfile->nav.mc.hover_throttle;
 
     posControl.desiredState.vel.z = posToUse->vel.z;   // Gradually transition from current climb
 
@@ -937,33 +937,27 @@ static void applyMulticopterEmergencyLandingController(timeUs_t currentTimeUs)
 
     /* Attempt to stabilise */
     rcCommand[YAW] = 0;
-    // CR102
     rcCommand[ROLL] = 0;
     rcCommand[PITCH] = 0;
-    rcCommand[THROTTLE] = currentBatteryProfile->failsafe_throttle == SETTING_FAILSAFE_THROTTLE_DEFAULT ?
-                          1000 + 0.9 * (currentBatteryProfile->nav.mc.hover_throttle - 1000) : currentBatteryProfile->failsafe_throttle;
-    // CR102
+    rcCommand[THROTTLE] = currentBatteryProfile->failsafe_throttle;
 
-    if ((posControl.flags.estAltStatus < EST_USABLE)) {
-        /* Sensors has gone haywire, attempt to land regardless */
+    /* Altitude sensors gone haywire, attempt to land regardless */
+    if (posControl.flags.estAltStatus < EST_USABLE) {
         if (failsafeConfig()->failsafe_procedure == FAILSAFE_PROCEDURE_DROP_IT) {
             rcCommand[THROTTLE] = getThrottleIdleValue();
         }
-        // else {   // CR102
-            // rcCommand[THROTTLE] = currentBatteryProfile->failsafe_throttle;
-        // }
-
         return;
     }
 
-    // Normal sensor data
+    // Normal sensor data available, use controlled landing descent
     if (posControl.flags.verticalPositionDataNew) {
         const timeDeltaLarge_t deltaMicrosPositionUpdate = currentTimeUs - previousTimePositionUpdate;
         previousTimePositionUpdate = currentTimeUs;
 
         // Check if last correction was not too long ago
         if (deltaMicrosPositionUpdate < MAX_POSITION_UPDATE_INTERVAL_US) {
-            updateClimbRateToAltitudeController(-navConfig()->general.emerg_descent_rate, 500, ROC_TO_ALT_TARGET); // CR96
+            // target min descent rate 5m above takeoff altitude
+            updateClimbRateToAltitudeController(-navConfig()->general.emerg_descent_rate, 500.0f, ROC_TO_ALT_TARGET);
             updateAltitudeVelocityController_MC(deltaMicrosPositionUpdate);
             updateAltitudeThrottleController_MC(deltaMicrosPositionUpdate);
         }
@@ -982,9 +976,6 @@ static void applyMulticopterEmergencyLandingController(timeUs_t currentTimeUs)
     // Hold position if possible
     if ((posControl.flags.estPosStatus >= EST_USABLE)) {
         applyMulticopterPositionController(currentTimeUs);
-    // } else {   // CR102
-        // rcCommand[ROLL] = 0;
-        // rcCommand[PITCH] = 0;
     }
 }
 

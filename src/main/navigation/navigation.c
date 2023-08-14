@@ -1311,7 +1311,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_CLIMB_TO_SAFE_ALT(n
         // Climb to safe altitude and turn to correct direction
         // Until the initial climb phase is complete target slightly *above* the cruise altitude to ensure we actually reach
         // it in a reasonable time. Immediately after we finish this phase - target the original altitude.
-        if (STATE(FIXED_WING_LEGACY)) { // CR96
+        if (STATE(FIXED_WING_LEGACY)) {
             tmpHomePos->z += FW_RTH_CLIMB_OVERSHOOT_CM;
             setDesiredPosition(tmpHomePos, 0, NAV_POS_UPDATE_Z);
         } else {
@@ -1425,7 +1425,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_HOVER_PRIOR_TO_LAND
     // Wait until target heading is reached for MR (with 15 deg margin for error), or continue for Fixed Wing
     if ((ABS(wrap_18000(posControl.rthState.homePosition.heading - posControl.actualState.yaw)) < DEGREES_TO_CENTIDEGREES(15)) || STATE(FIXED_WING_LEGACY)) {
         resetLandingDetector();     // force reset landing detector just in case
-        updateClimbRateToAltitudeController(0, 0, ROC_TO_ALT_RESET);    // CR96
+        updateClimbRateToAltitudeController(0, 0, ROC_TO_ALT_RESET);
         return navigationRTHAllowsLanding() ? NAV_FSM_EVENT_SUCCESS : NAV_FSM_EVENT_SWITCH_TO_RTH_HOVER_ABOVE_HOME; // success = land
     } else {
         fpVector3_t * tmpHomePos = rthGetHomeTargetPosition(RTH_HOME_ENROUTE_FINAL);
@@ -1444,7 +1444,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_HOVER_ABOVE_HOME(na
     }
 
     fpVector3_t * tmpHomePos = rthGetHomeTargetPosition(RTH_HOME_FINAL_HOVER);
-    setDesiredPosition(tmpHomePos, 0, NAV_POS_UPDATE_Z);    // CR96
+    setDesiredPosition(tmpHomePos, 0, NAV_POS_UPDATE_Z);
 
     return NAV_FSM_EVENT_NONE;
 }
@@ -1486,7 +1486,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_LANDING(navigationF
         descentVelLimited = constrainf(descentVelScaled, navConfig()->general.land_minalt_vspd, navConfig()->general.land_maxalt_vspd);
     }
 
-    updateClimbRateToAltitudeController(-descentVelLimited, 0, ROC_TO_ALT_CONSTANT);  // CR96
+    updateClimbRateToAltitudeController(-descentVelLimited, 0, ROC_TO_ALT_CONSTANT);
 
     return NAV_FSM_EVENT_NONE;
 }
@@ -1509,7 +1509,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_FINISHED(navigation
     UNUSED(previousState);
 
     if (STATE(ALTITUDE_CONTROL)) {
-        updateClimbRateToAltitudeController(-1.1f * navConfig()->general.land_minalt_vspd, 0, ROC_TO_ALT_CONSTANT);  // FIXME  CR96
+        updateClimbRateToAltitudeController(-1.1f * navConfig()->general.land_minalt_vspd, 0, ROC_TO_ALT_CONSTANT);  // FIXME
     }
 
     // Prevent I-terms growing when already landed
@@ -1711,7 +1711,8 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_WAYPOINT_HOLD_TIME(navi
 
     if (navConfig()->general.waypoint_enforce_altitude && !posControl.wpAltitudeReached) {
         // Adjust altitude to waypoint setting
-        setDesiredPosition(&posControl.activeWaypoint.pos, 0, NAV_POS_UPDATE_Z);    // CR96
+        setDesiredPosition(&posControl.activeWaypoint.pos, 0, NAV_POS_UPDATE_Z);
+
         posControl.wpAltitudeReached = isWaypointAltitudeReached();
 
         if (posControl.wpAltitudeReached) {
@@ -2816,7 +2817,7 @@ void setDesiredPosition(const fpVector3_t * pos, int32_t yaw, navSetWaypointFlag
 
     // Z-position
     if ((useMask & NAV_POS_UPDATE_Z) != 0) {
-        updateClimbRateToAltitudeController(0, 0, ROC_TO_ALT_RESET);   // Reset RoC/RoD -> altitude controller  CR96
+        updateClimbRateToAltitudeController(0, 0, ROC_TO_ALT_RESET);   // Reset RoC/RoD -> altitude controller
         posControl.desiredState.pos.z = pos->z;
     }
 
@@ -2907,31 +2908,31 @@ bool isFlightDetected(void)
 /*-----------------------------------------------------------
  * Z-position controller
  *-----------------------------------------------------------*/
-void updateClimbRateToAltitudeController(float desiredClimbRate, float targetAltitude, climbRateToAltitudeControllerMode_e mode)  // CR96
+void updateClimbRateToAltitudeController(float desiredClimbRate, float targetAltitude, climbRateToAltitudeControllerMode_e mode)
 {
-#define MIN_TARGET_CLIMB_RATE   100.0f    // CR96
+#define MIN_TARGET_CLIMB_RATE   100.0f  // cm/s
 
     static timeUs_t lastUpdateTimeUs;
     timeUs_t currentTimeUs = micros();
 
     // Terrain following uses different altitude measurement
     const float altitudeToUse = navGetCurrentActualPositionAndVelocity()->pos.z;
-    // CR96
+
     if (mode != ROC_TO_ALT_RESET && desiredClimbRate) {
-        // DEBUG_SET(DEBUG_ALWAYS, 0, posControl.desiredState.pos.z);
-        /* ROC_TO_ALT_CONSTANT - constant climb rate always
-         * ROC_TO_ALT_TARGET - constant climb rate until close to target altitude reducing to min value when altitude reached
+        /* ROC_TO_ALT_CONSTANT - constant climb rate
+         * ROC_TO_ALT_TARGET - constant climb rate until close to target altitude reducing to min rate when altitude reached
          * Rate reduction starts at distance from target altitude of 5 x climb rate for FW, 1 x climb rate for MC */
+
         if (mode == ROC_TO_ALT_TARGET && fabsf(desiredClimbRate) > MIN_TARGET_CLIMB_RATE) {
-            int8_t direction = desiredClimbRate > 0 ? 1 : -1;
-            float absClimbRate = fabsf(desiredClimbRate);
-            uint16_t maxRateCutoffAlt = STATE(AIRPLANE) ? absClimbRate * 5 : absClimbRate;
-            float verticalVelScaled = scaleRangef(navGetCurrentActualPositionAndVelocity()->pos.z - targetAltitude,
-                                      0.0f, -maxRateCutoffAlt * direction, MIN_TARGET_CLIMB_RATE, absClimbRate);
+            const int8_t direction = desiredClimbRate > 0 ? 1 : -1;
+            const float absClimbRate = fabsf(desiredClimbRate);
+            const uint16_t maxRateCutoffAlt = STATE(AIRPLANE) ? absClimbRate * 5 : absClimbRate;
+            const float verticalVelScaled = scaleRangef(navGetCurrentActualPositionAndVelocity()->pos.z - targetAltitude,
+                                            0.0f, -maxRateCutoffAlt * direction, MIN_TARGET_CLIMB_RATE, absClimbRate);
 
             desiredClimbRate = direction * constrainf(verticalVelScaled, MIN_TARGET_CLIMB_RATE, absClimbRate);
         }
-        // DEBUG_SET(DEBUG_ALWAYS, 1, desiredClimbRate);
+
         /*
          * If max altitude is set, reset climb rate if altitude is reached and climb rate is > 0
          * In other words, when altitude is reached, allow it only to shrink
@@ -2967,7 +2968,6 @@ void updateClimbRateToAltitudeController(float desiredClimbRate, float targetAlt
     }
 
     lastUpdateTimeUs = currentTimeUs;
-    // CR96
 }
 
 static void resetAltitudeController(bool useTerrainFollowing)
