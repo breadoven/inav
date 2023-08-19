@@ -2031,7 +2031,7 @@ static bool osdDrawSingleElement(uint8_t item)
                 TEXT_ATTRIBUTES_ADD_BLINK(elemAttr);
             }
             // CR103
-            if (posControl.flags.isAdjustingAltitude) {
+            if (STATE(MULTIROTOR) && posControl.flags.isAdjustingAltitude) {
                 if (buff[0] == SYM_BLANK) {
                     buff[0] = 'A';
                     break;
