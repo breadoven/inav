@@ -402,7 +402,7 @@ static const blackboxSimpleFieldDefinition_t blackboxGpsHFields[] = {
 #endif
 
 // Rarely-updated fields
-static const blackboxSimpleFieldDefinition_t blackboxSlowFields[] = {   // CR104
+static const blackboxSimpleFieldDefinition_t blackboxSlowFields[] = {
     {"flightModeFlags",       -1, UNSIGNED, PREDICT(0),      ENCODING(UNSIGNED_VB)},
     {"stateFlags",            -1, UNSIGNED, PREDICT(0),      ENCODING(UNSIGNED_VB)},
 
@@ -531,7 +531,7 @@ typedef struct blackboxGpsState_s {
 } blackboxGpsState_t;
 
 // This data is updated really infrequently:
-typedef struct blackboxSlowState_s {   // CR104
+typedef struct blackboxSlowState_s {
     uint32_t flightModeFlags; // extend this data size (from uint16_t)
     uint32_t stateFlags;
     uint8_t failsafePhase;
@@ -1256,7 +1256,7 @@ static void writeSlowFrame(void)
 
     blackboxWrite('S');
 
-    blackboxWriteUnsignedVB(slowHistory.flightModeFlags);   // CR104
+    blackboxWriteUnsignedVB(slowHistory.flightModeFlags);
     blackboxWriteUnsignedVB(slowHistory.stateFlags);
 
     /*
@@ -1300,9 +1300,20 @@ static void writeSlowFrame(void)
 /**
  * Load rarely-changing values from the FC into the given structure
  */
-static void loadSlowState(blackboxSlowState_t *slow)   // CR104
+static void loadSlowState(blackboxSlowState_t *slow)
 {
     memcpy(&slow->flightModeFlags, &rcModeActivationMask, sizeof(slow->flightModeFlags)); //was flightModeFlags;
+    // Also log auto selected flight modes rather than just those selected by mode switches CR104
+    if (!IS_RC_MODE_ACTIVE(BOXANGLE) && FLIGHT_MODE(ANGLE_MODE)) {
+        slow->flightModeFlags |= (1 << BOXANGLE);
+    }
+    if (navigationGetHeadingControlState() == HEADING_HOLD_ENABLED) {
+        slow->flightModeFlags |= (1 << BOXHEADINGHOLD);
+    }
+    if (navigationRequiresTurnAssistance()) {
+        slow->flightModeFlags |= (1 << BOXTURNASSIST);
+    }
+    // CR104
     slow->stateFlags = stateFlags;
     slow->failsafePhase = failsafePhase();
     slow->rxSignalReceived = rxIsReceivingSignal();
