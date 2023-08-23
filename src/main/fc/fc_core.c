@@ -105,6 +105,7 @@ enum {
 #define EMERGENCY_ARMING_TIME_WINDOW_MS 10000
 #define EMERGENCY_ARMING_COUNTER_STEP_MS 1000
 #define EMERGENCY_ARMING_MIN_ARM_COUNT 10
+#define EMERGENCY_INFLIGHT_REARM_TIME_WINDOW_MS 5000    // CR105
 
 timeDelta_t cycleTime = 0;         // this is the number in micro second to achieve a full loop, it can differ a little and is taken into account in the PID loop
 static timeUs_t flightTime = 0;
@@ -120,6 +121,7 @@ static bool isRXDataNew;
 static disarmReason_t lastDisarmReason = DISARM_NONE;
 timeUs_t lastDisarmTimeUs = 0;
 timeMs_t emergInflightRearmTimeout = 0; // CR105
+timeMs_t mcEmergRearmStabiliseTimeout = 0; // CR105
 
 static bool prearmWasReset = false; // Prearm must be reset (RC Mode not active) before arming is possible
 static timeMs_t prearmActivationTime = 0;
@@ -434,7 +436,11 @@ void disarm(disarmReason_t disarmReason)
     if (ARMING_FLAG(ARMED)) {
         lastDisarmReason = disarmReason;
         lastDisarmTimeUs = micros();
-        emergInflightRearmTimeout = US2MS(lastDisarmTimeUs) + (isProbablyStillFlying() ?  5000 : 0); // CR105
+        // CR105
+        if (disarmReason == DISARM_SWITCH || disarmReason == DISARM_KILLSWITCH) {
+            emergInflightRearmTimeout = isProbablyStillFlying() ? US2MS(lastDisarmTimeUs) + EMERGENCY_INFLIGHT_REARM_TIME_WINDOW_MS : 0;
+        }
+        // CR105
         DISABLE_ARMING_FLAG(ARMED);
 
 #ifdef USE_BLACKBOX
@@ -505,20 +511,24 @@ bool emergencyArmingUpdate(bool armingSwitchIsOn, bool forceArm)    // CR88
     // CR88
     return counter >= EMERGENCY_ARMING_MIN_ARM_COUNT;
 }
-
-#define TELEMETRY_FUNCTION_MASK (FUNCTION_TELEMETRY_HOTT | FUNCTION_TELEMETRY_SMARTPORT | FUNCTION_TELEMETRY_LTM | FUNCTION_TELEMETRY_MAVLINK | FUNCTION_TELEMETRY_IBUS)
-
-void releaseSharedTelemetryPorts(void) {
-    serialPort_t *sharedPort = findSharedSerialPort(TELEMETRY_FUNCTION_MASK, FUNCTION_MSP);
-    while (sharedPort) {
-        mspSerialReleasePortIfAllocated(sharedPort);
-        sharedPort = findNextSharedSerialPort(TELEMETRY_FUNCTION_MASK, FUNCTION_MSP);
-    }
-}
 // CR105
 bool emergInflightRearmEnabled(void)
 {
-    return millis() < emergInflightRearmTimeout;
+    timeMs_t currentTimeMs = millis();
+    if (!emergInflightRearmTimeout || currentTimeMs > emergInflightRearmTimeout) {
+        return false;
+    }
+
+    if (STATE(MULTIROTOR)) {
+        uint16_t mcFlightSanityCheckTime = EMERGENCY_INFLIGHT_REARM_TIME_WINDOW_MS - 1500;  // check MR vertical speed at least 1.5 sec after disarm
+        if (fabsf(getEstimatedActualVelocity(Z)) < 100.0f && (emergInflightRearmTimeout - currentTimeMs < mcFlightSanityCheckTime)) {
+            return false;
+        } else {
+            mcEmergRearmStabiliseTimeout = currentTimeMs + 5000; // used to activate Angle mode for 5s after rearm to help stabilise MC
+        }
+    }
+
+    return true;
 }
 // CR105
 void tryArm(void)
@@ -556,6 +566,7 @@ void tryArm(void)
         }
 
         lastDisarmReason = DISARM_NONE;
+        emergInflightRearmTimeout = 0;  // CR105
 
         ENABLE_ARMING_FLAG(ARMED);
         ENABLE_ARMING_FLAG(WAS_EVER_ARMED);
@@ -595,6 +606,16 @@ void tryArm(void)
 
     if (!ARMING_FLAG(ARMED)) {
         beeperConfirmationBeeps(1);
+    }
+}
+
+#define TELEMETRY_FUNCTION_MASK (FUNCTION_TELEMETRY_HOTT | FUNCTION_TELEMETRY_SMARTPORT | FUNCTION_TELEMETRY_LTM | FUNCTION_TELEMETRY_MAVLINK | FUNCTION_TELEMETRY_IBUS)
+
+void releaseSharedTelemetryPorts(void) {
+    serialPort_t *sharedPort = findSharedSerialPort(TELEMETRY_FUNCTION_MASK, FUNCTION_MSP);
+    while (sharedPort) {
+        mspSerialReleasePortIfAllocated(sharedPort);
+        sharedPort = findNextSharedSerialPort(TELEMETRY_FUNCTION_MASK, FUNCTION_MSP);
     }
 }
 
@@ -648,9 +669,11 @@ void processRx(timeUs_t currentTimeUs)
         processRcAdjustments(CONST_CAST(controlRateConfig_t*, currentControlRateProfile), canUseRxData);
     }
 
+    bool mcEmergRearmAngleEnforce = STATE(MULTIROTOR) && mcEmergRearmStabiliseTimeout > US2MS(currentTimeUs);  // CR105
+    bool autoEnableAngle = failsafeRequiresAngleMode() || navigationRequiresAngleMode() || mcEmergRearmAngleEnforce;   // CR105
     bool canUseHorizonMode = true;
 
-    if ((IS_RC_MODE_ACTIVE(BOXANGLE) || failsafeRequiresAngleMode() || navigationRequiresAngleMode()) && sensors(SENSOR_ACC)) {
+    if (sensors(SENSOR_ACC) && (IS_RC_MODE_ACTIVE(BOXANGLE) || autoEnableAngle)) { // CR105
         // bumpless transfer to Level mode
         canUseHorizonMode = false;
 
@@ -817,7 +840,6 @@ void processRx(timeUs_t currentTimeUs)
         }
     }
 #endif
-
 }
 
 // Function for loop trigger

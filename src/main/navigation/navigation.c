@@ -2861,12 +2861,9 @@ void updateLandingStatus(timeMs_t currentTimeMs)
     DEBUG_SET(DEBUG_LANDING, 1, STATE(LANDING_DETECTED));
 
     if (!ARMING_FLAG(ARMED)) {
-        // CR105
-        if (!emergInflightRearmEnabled()) {
-            resetLandingDetector();
-            landingDetectorIsActive = false;
-        }
-        // CR105
+        resetLandingDetector();
+        landingDetectorIsActive = false;
+
         if (!IS_RC_MODE_ACTIVE(BOXARM)) {
             DISABLE_ARMING_FLAG(ARMING_DISABLED_LANDING_DETECTED);
         }
@@ -2910,12 +2907,8 @@ bool isFlightDetected(void)
 // CR105
 bool isProbablyStillFlying(void)
 {
-    bool inFlightSanityCheck = false;
-    if (STATE(AIRPLANE)) {
-        inFlightSanityCheck = isGPSHeadingValid();
-    } else {
-        inFlightSanityCheck = false;   // what to check for MR ?
-    }
+    bool inFlightSanityCheck = STATE(MULTIROTOR) || (STATE(AIRPLANE) && isGPSHeadingValid());
+
     return landingDetectorIsActive && !STATE(LANDING_DETECTED) && inFlightSanityCheck;
 }
 // CR105
@@ -3866,7 +3859,7 @@ static navigationFSMEvent_t selectNavEventFromBoxModeInput(bool launchBypass)   
             }
         }
 
-        if (IS_RC_MODE_ACTIVE(BOXNAVALTHOLD)) {
+        if (IS_RC_MODE_ACTIVE(BOXNAVALTHOLD)) { // CR105 (NC) add fccore function call checking if needs enabling
             if ((FLIGHT_MODE(NAV_ALTHOLD_MODE)) || (canActivateAltHold))
                 return NAV_FSM_EVENT_SWITCH_TO_ALTHOLD;
         }
