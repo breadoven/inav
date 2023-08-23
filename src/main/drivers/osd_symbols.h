@@ -175,6 +175,8 @@
 #define SYM_FLIGHT_HOURS_REMAINING  0xDB  // 219 Flight time (hours) remaining
 #define SYM_GROUND_COURSE           0xDC  // 220 Ground course
 #define SYM_ALERT                   0xDD  // 221 General alert symbol  CR88
+
+#define SYM_TERRAIN_FOLLOWING       0xFB  // 251 Terrain following (also Alt Adjust)  CR103
 #define SYM_CROSS_TRACK_ERROR       0xFC  // 252 Cross track error
 
 #define SYM_LOGO_START              0x101 // 257 to 297, INAV logo

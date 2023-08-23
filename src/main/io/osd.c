@@ -2030,16 +2030,22 @@ static bool osdDrawSingleElement(uint8_t item)
 
                 TEXT_ATTRIBUTES_ADD_BLINK(elemAttr);
             }
+            displayWriteWithAttr(osdDisplayPort, elemPosX, elemPosY, buff, elemAttr);
             // CR103
             if (STATE(MULTIROTOR) && posControl.flags.isAdjustingAltitude) {
-                if (buff[0] == SYM_BLANK) {
-                    buff[0] = 'A';
-                    break;
+                int8_t blankPos;
+                for (blankPos = 2; blankPos >= 0; blankPos--) {
+                    if (buff[blankPos] == SYM_BLANK) {
+                        break;
+                    }
                 }
-                buff[0] = OSD_ALTERNATING_CHOICES(600, 2) == 0 ? 'A' : buff[0];
+                if (blankPos >= 0 || OSD_ALTERNATING_CHOICES(600, 2) == 0) {
+                    blankPos = blankPos < 0 ? 0 : blankPos;
+                    displayWriteChar(osdDisplayPort, elemPosX + blankPos, elemPosY, SYM_TERRAIN_FOLLOWING);
+                }
             }
+            return true;
             // CR103
-            break;
         }
 
     case OSD_ALTITUDE_MSL:
