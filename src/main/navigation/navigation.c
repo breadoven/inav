@@ -62,6 +62,7 @@
 #include "sensors/acceleration.h"
 #include "sensors/boardalignment.h"
 #include "sensors/battery.h"
+#include "sensors/gyro.h"   // CR105
 
 #include "programming/global_variables.h"
 
@@ -232,7 +233,7 @@ PG_RESET_TEMPLATE(navConfig_t, navConfig,
 static navWapointHeading_t wpHeadingControl;
 navigationPosControl_t posControl;
 navSystemStatus_t NAV_Status;
-static bool landingDetectorIsActive;   // CR105
+static bool landingDetectorIsActive = false;   // CR105
 
 EXTENDED_FASTRAM multicopterPosXyCoefficients_t multicopterPosXyCoefficients;
 
@@ -2850,7 +2851,8 @@ void updateLandingStatus(timeMs_t currentTimeMs)
     // if (STATE(AIRPLANE) && !navConfig()->general.flags.disarm_on_landing) {
         // return;     // no point using this with a fixed wing if not set to disarm
     // }
-
+DEBUG_SET(DEBUG_ALWAYS, 5, averageAbsGyroRates());
+DEBUG_SET(DEBUG_ALWAYS, 4, landingDetectorIsActive);
     static timeMs_t lastUpdateTimeMs = 0;
     if ((currentTimeMs - lastUpdateTimeMs) <= HZ2MS(100)) {  // limit update to 100Hz
         return;
@@ -2859,17 +2861,20 @@ void updateLandingStatus(timeMs_t currentTimeMs)
 
     DEBUG_SET(DEBUG_LANDING, 0, landingDetectorIsActive);
     DEBUG_SET(DEBUG_LANDING, 1, STATE(LANDING_DETECTED));
-
+    // CR105
     if (!ARMING_FLAG(ARMED)) {
-        resetLandingDetector();
-        landingDetectorIsActive = false;
-
+        if (STATE(LANDING_DETECTED)) {
+            resetLandingDetector();
+            landingDetectorIsActive = false;
+        }
         if (!IS_RC_MODE_ACTIVE(BOXARM)) {
             DISABLE_ARMING_FLAG(ARMING_DISABLED_LANDING_DETECTED);
         }
         return;
+    } else if (getArmTime() < 0.25f && landingDetectorIsActive) {
+        landingDetectorIsActive = false;
     }
-
+    // CR105
     if (!landingDetectorIsActive) {
         if (isFlightDetected()) {
             landingDetectorIsActive = true;
@@ -2907,9 +2912,15 @@ bool isFlightDetected(void)
 // CR105
 bool isProbablyStillFlying(void)
 {
-    bool inFlightSanityCheck = STATE(MULTIROTOR) || (STATE(AIRPLANE) && isGPSHeadingValid());
+    bool inFlightSanityCheck;
+    if (STATE(MULTIROTOR)) {
+        inFlightSanityCheck = posControl.actualState.velXY > MC_LAND_CHECK_VEL_XY_MOVING || averageAbsGyroRates() > 4.0f;
+        DEBUG_SET(DEBUG_ALWAYS, 7, averageAbsGyroRates());
+    } else {
+        inFlightSanityCheck = isGPSHeadingValid();
+    }
 
-    return landingDetectorIsActive && !STATE(LANDING_DETECTED) && inFlightSanityCheck;
+    return landingDetectorIsActive && inFlightSanityCheck;  //&& !STATE(LANDING_DETECTED)
 }
 // CR105
 /*-----------------------------------------------------------

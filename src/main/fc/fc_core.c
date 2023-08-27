@@ -120,8 +120,7 @@ uint8_t motorControlEnable = false;
 static bool isRXDataNew;
 static disarmReason_t lastDisarmReason = DISARM_NONE;
 timeUs_t lastDisarmTimeUs = 0;
-timeMs_t emergInflightRearmTimeout = 0; // CR105
-timeMs_t mcEmergRearmStabiliseTimeout = 0; // CR105
+timeMs_t emergRearmStabiliseTimeout = 0; // CR105
 
 static bool prearmWasReset = false; // Prearm must be reset (RC Mode not active) before arming is possible
 static timeMs_t prearmActivationTime = 0;
@@ -436,11 +435,6 @@ void disarm(disarmReason_t disarmReason)
     if (ARMING_FLAG(ARMED)) {
         lastDisarmReason = disarmReason;
         lastDisarmTimeUs = micros();
-        // CR105
-        if (disarmReason == DISARM_SWITCH || disarmReason == DISARM_KILLSWITCH) {
-            emergInflightRearmTimeout = isProbablyStillFlying() ? US2MS(lastDisarmTimeUs) + EMERGENCY_INFLIGHT_REARM_TIME_WINDOW_MS : 0;
-        }
-        // CR105
         DISABLE_ARMING_FLAG(ARMED);
 
 #ifdef USE_BLACKBOX
@@ -515,20 +509,22 @@ bool emergencyArmingUpdate(bool armingSwitchIsOn, bool forceArm)    // CR88
 bool emergInflightRearmEnabled(void)
 {
     timeMs_t currentTimeMs = millis();
-    if (!emergInflightRearmTimeout || currentTimeMs > emergInflightRearmTimeout) {
+    emergRearmStabiliseTimeout = 0;
+
+    if ((lastDisarmReason != DISARM_SWITCH && lastDisarmReason != DISARM_KILLSWITCH) ||
+        (currentTimeMs > US2MS(lastDisarmTimeUs) + EMERGENCY_INFLIGHT_REARM_TIME_WINDOW_MS)) {
         return false;
     }
 
-    if (STATE(MULTIROTOR)) {
-        uint16_t mcFlightSanityCheckTime = EMERGENCY_INFLIGHT_REARM_TIME_WINDOW_MS - 1500;  // check MR vertical speed at least 1.5 sec after disarm
-        if (fabsf(getEstimatedActualVelocity(Z)) < 100.0f && (emergInflightRearmTimeout - currentTimeMs < mcFlightSanityCheckTime)) {
-            return false;
-        } else {
-            mcEmergRearmStabiliseTimeout = currentTimeMs + 5000; // used to activate Angle mode for 5s after rearm to help stabilise MC
-        }
+    if (isProbablyStillFlying()) {
+        emergRearmStabiliseTimeout = currentTimeMs + 5000; // used to activate Angle mode for 5s after rearm to help stabilise craft
+        return true;
+    } else if (STATE(MULTIROTOR) && (currentTimeMs > US2MS(lastDisarmTimeUs) + 1500) && fabsf(getEstimatedActualVelocity(Z)) > 100.0f) {
+        DEBUG_SET(DEBUG_ALWAYS, 6, currentTimeMs - US2MS(lastDisarmTimeUs));
+        return true;
     }
 
-    return true;
+    return false;
 }
 // CR105
 void tryArm(void)
@@ -566,7 +562,6 @@ void tryArm(void)
         }
 
         lastDisarmReason = DISARM_NONE;
-        emergInflightRearmTimeout = 0;  // CR105
 
         ENABLE_ARMING_FLAG(ARMED);
         ENABLE_ARMING_FLAG(WAS_EVER_ARMED);
@@ -669,8 +664,8 @@ void processRx(timeUs_t currentTimeUs)
         processRcAdjustments(CONST_CAST(controlRateConfig_t*, currentControlRateProfile), canUseRxData);
     }
 
-    bool mcEmergRearmAngleEnforce = STATE(MULTIROTOR) && mcEmergRearmStabiliseTimeout > US2MS(currentTimeUs);  // CR105
-    bool autoEnableAngle = failsafeRequiresAngleMode() || navigationRequiresAngleMode() || mcEmergRearmAngleEnforce;   // CR105
+    bool emergRearmAngleEnforce = STATE(MULTIROTOR) && emergRearmStabiliseTimeout > US2MS(currentTimeUs);  // CR105
+    bool autoEnableAngle = failsafeRequiresAngleMode() || navigationRequiresAngleMode() || emergRearmAngleEnforce;   // CR105
     bool canUseHorizonMode = true;
 
     if (sensors(SENSOR_ACC) && (IS_RC_MODE_ACTIVE(BOXANGLE) || autoEnableAngle)) { // CR105
