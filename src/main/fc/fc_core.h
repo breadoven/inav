@@ -42,7 +42,6 @@ void tryArm(void);
 disarmReason_t getDisarmReason(void);
 
 bool emergencyArmingUpdate(bool armingSwitchIsOn, bool forceArm);  // CR88
-bool emergInflightRearmEnabled(void);   // CR105
 
 bool areSensorsCalibrating(void);
 float getFlightTime(void);
