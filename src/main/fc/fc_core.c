@@ -560,6 +560,7 @@ void tryArm(void)
         if (usedBypass) {
             ENABLE_STATE(NAV_EXTRA_ARMING_SAFETY_BYPASSED);
         }
+        resetLandingDetectorActiveState();   // CR105
 
         lastDisarmReason = DISARM_NONE;
 

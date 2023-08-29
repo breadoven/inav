@@ -35,7 +35,9 @@
 #include "navigation/navigation.h"
 
 // CR88
+multi_function_e selectedItem = MULTI_FUNC_NONE;
 uint8_t multiFunctionFlags;
+bool nextItemAvailable = false;
 
 static void multiFunctionApply(multi_function_e selectedItem)
 {
@@ -76,11 +78,20 @@ static void multiFunctionApply(multi_function_e selectedItem)
     }
 }
 
+bool isNextMultifunctionItemAvailable(void)
+{
+    return nextItemAvailable;
+}
+
+void incrementMultifunctionSelection(void)
+{
+    selectedItem = selectedItem == MULTI_FUNC_END - 1 ? MULTI_FUNC_1 : selectedItem + 1;
+}
+
 multi_function_e multiFunctionSelection(void)
 {
     static timeMs_t startTimer;
     static timeMs_t selectTimer;
-    static multi_function_e selectedItem = MULTI_FUNC_NONE;
     static bool toggle = true;
     const timeMs_t currentTime = millis();
 
@@ -96,19 +107,21 @@ multi_function_e multiFunctionSelection(void)
                 selectedItem++;
             } else {
                 selectTimer = currentTime;
+                nextItemAvailable = true;
             }
         }
         startTimer = currentTime;
         toggle = false;
     } else if (startTimer) {
         if (!toggle && selectTimer) {
-            selectedItem = selectedItem == MULTI_FUNC_END - 1 ? MULTI_FUNC_1 : selectedItem + 1;
+            incrementMultifunctionSelection();
+            nextItemAvailable = false;
         }
-        selectTimer = 0;
         if (currentTime - startTimer > 2000) {
             startTimer = 0;
             selectedItem = MULTI_FUNC_NONE;
         }
+        selectTimer = 0;
         toggle = true;
     }
 

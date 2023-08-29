@@ -627,6 +627,7 @@ float calculateAverageSpeed(void);
 
 void updateLandingStatus(timeMs_t currentTimeMs);
 bool isProbablyStillFlying(void); // CR105
+void resetLandingDetectorActiveState(void);   // CR105
 
 const navigationPIDControllers_t* getNavigationPIDControllers(void);
 
@@ -635,7 +636,6 @@ float navigationGetCrossTrackError(void);
 int32_t getCruiseHeadingAdjustment(void);
 bool isAdjustingPosition(void);
 bool isAdjustingHeading(void);
-// int32_t getMulticopterCourseholdCog(void);    // CR101
 
 float getEstimatedAglPosition(void);
 bool isEstimatedAglTrusted(void);

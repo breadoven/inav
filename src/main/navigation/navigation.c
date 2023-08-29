@@ -2861,20 +2861,16 @@ DEBUG_SET(DEBUG_ALWAYS, 4, landingDetectorIsActive);
 
     DEBUG_SET(DEBUG_LANDING, 0, landingDetectorIsActive);
     DEBUG_SET(DEBUG_LANDING, 1, STATE(LANDING_DETECTED));
-    // CR105
+
     if (!ARMING_FLAG(ARMED)) {
-        if (STATE(LANDING_DETECTED)) {
-            resetLandingDetector();
-            landingDetectorIsActive = false;
-        }
+        resetLandingDetector();  // CR105
+
         if (!IS_RC_MODE_ACTIVE(BOXARM)) {
             DISABLE_ARMING_FLAG(ARMING_DISABLED_LANDING_DETECTED);
         }
         return;
-    } else if (getArmTime() < 0.25f && landingDetectorIsActive) {
-        landingDetectorIsActive = false;
     }
-    // CR105
+
     if (!landingDetectorIsActive) {
         if (isFlightDetected()) {
             landingDetectorIsActive = true;
@@ -2904,7 +2900,12 @@ void resetLandingDetector(void)
     DISABLE_STATE(LANDING_DETECTED);
     posControl.flags.resetLandingDetector = true;
 }
-
+// CR105
+void resetLandingDetectorActiveState(void)
+{
+    landingDetectorIsActive = false;
+}
+// CR105
 bool isFlightDetected(void)
 {
     return STATE(AIRPLANE) ? isFixedWingFlying() : isMulticopterFlying();
@@ -2920,7 +2921,7 @@ bool isProbablyStillFlying(void)
         inFlightSanityCheck = isGPSHeadingValid();
     }
 
-    return landingDetectorIsActive && inFlightSanityCheck;  //&& !STATE(LANDING_DETECTED)
+    return landingDetectorIsActive && inFlightSanityCheck;
 }
 // CR105
 /*-----------------------------------------------------------

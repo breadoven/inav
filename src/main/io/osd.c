@@ -5095,7 +5095,6 @@ static textAttributes_t osdGetMultiFunctionMessage(char *buff)
     multi_function_e selectedFunction = multiFunctionSelection();
 
     if (selectedFunction) {
-        message = "N/A NEXT >";     // Default message if function unavailable
         switch (selectedFunction) {
         case MULTI_FUNC_NONE:
         case MULTI_FUNC_1:
@@ -5130,7 +5129,16 @@ static textAttributes_t osdGetMultiFunctionMessage(char *buff)
             break;
         }
 
-        strcpy(buff, message);
+        if (message == NULL) {
+            incrementMultifunctionSelection();
+        } else {
+            strcpy(buff, message);
+
+            if (isNextMultifunctionItemAvailable()) {
+                buff[9] = '>';
+            }
+        }
+
         return elemAttr;
     }
 
