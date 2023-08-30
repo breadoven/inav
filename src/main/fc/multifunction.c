@@ -80,12 +80,13 @@ static void multiFunctionApply(multi_function_e selectedItem)
 
 bool isNextMultifunctionItemAvailable(void)
 {
-    return nextItemAvailable;
+    return nextItemIsAvailable;
 }
 
-void incrementMultifunctionSelection(void)
+void setMultifunctionSelection(multi_function_e item)
 {
-    selectedItem = selectedItem == MULTI_FUNC_END - 1 ? MULTI_FUNC_1 : selectedItem + 1;
+    selectedItem = item == MULTI_FUNC_END ? MULTI_FUNC_1 : item;
+    nextItemIsAvailable = false;
 }
 
 multi_function_e multiFunctionSelection(void)
@@ -101,23 +102,23 @@ multi_function_e multiFunctionSelection(void)
                 multiFunctionApply(selectedItem);
                 selectTimer = 0;
                 selectedItem = MULTI_FUNC_NONE;
+                nextItemIsAvailable = false;
             }
         } else if (toggle) {
             if (selectedItem == MULTI_FUNC_NONE) {
                 selectedItem++;
             } else {
                 selectTimer = currentTime;
-                nextItemAvailable = true;
+                nextItemIsAvailable = true;
             }
         }
         startTimer = currentTime;
         toggle = false;
     } else if (startTimer) {
         if (!toggle && selectTimer) {
-            incrementMultifunctionSelection();
-            nextItemAvailable = false;
+            setMultifunctionSelection(++selectedItem);
         }
-        if (currentTime - startTimer > 2000) {
+        if (currentTime - startTimer > 4000) {
             startTimer = 0;
             selectedItem = MULTI_FUNC_NONE;
         }

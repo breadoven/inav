@@ -5095,6 +5095,8 @@ static textAttributes_t osdGetMultiFunctionMessage(char *buff)
     multi_function_e selectedFunction = multiFunctionSelection();
 
     if (selectedFunction) {
+        multi_function_e activeFunction = selectedFunction;
+
         switch (selectedFunction) {
         case MULTI_FUNC_NONE:
         case MULTI_FUNC_1:
@@ -5107,21 +5109,27 @@ static textAttributes_t osdGetMultiFunctionMessage(char *buff)
 #if defined(USE_SAFE_HOME)
             if (navConfig()->general.flags.safehome_usage_mode != SAFEHOME_USAGE_OFF) {
                 message = MULTI_FUNC_FLAG(MF_SUSPEND_SAFEHOMES) ? "USE SFHOME" : "SUS SFHOME";
+                break;
             }
 #endif
-            break;
+            activeFunction++;
+            FALLTHROUGH;
         case MULTI_FUNC_4:
             if (navConfig()->general.flags.rth_trackback_mode != RTH_TRACKBACK_OFF) {
                 message = MULTI_FUNC_FLAG(MF_SUSPEND_TRACKBACK) ? "USE TKBACK" : "SUS TKBACK";
+                break;
             }
-            break;
+            activeFunction++;
+            FALLTHROUGH;
         case MULTI_FUNC_5:
 #ifdef USE_DSHOT
             if (STATE(MULTIROTOR)) {
                 message = MULTI_FUNC_FLAG(MF_TURTLE_MODE) ? "TURTLE OFF" : "TURTLE ON ";
+                break;
             }
 #endif
-            break;
+            activeFunction++;
+            FALLTHROUGH;
         case MULTI_FUNC_6:
             message = ARMING_FLAG(ARMED) ? "NOW ARMED " : "EMERG ARM ";
             break;
@@ -5129,14 +5137,14 @@ static textAttributes_t osdGetMultiFunctionMessage(char *buff)
             break;
         }
 
-        if (message == NULL) {
-            incrementMultifunctionSelection();
-        } else {
-            strcpy(buff, message);
+        if (activeFunction != selectedFunction) {
+            setMultifunctionSelection(activeFunction);
+        }
 
-            if (isNextMultifunctionItemAvailable()) {
-                buff[9] = '>';
-            }
+        strcpy(buff, message);
+
+        if (isNextMultifunctionItemAvailable()) {
+            buff[9] = '>';
         }
 
         return elemAttr;
