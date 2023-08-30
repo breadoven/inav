@@ -261,6 +261,7 @@ static uint16_t handleOutputScaling(
     }
     return value;
 }
+
 static void applyTurtleModeToMotors(void) {
 
     if (ARMING_FLAG(ARMED)) {
@@ -472,7 +473,7 @@ void FAST_CODE mixTable(void)
 
     int16_t input[3];   // RPY, range [-500:+500]
     // Allow direct stick input to motors in passthrough mode on airplanes
-    if (STATE(FIXED_WING_LEGACY) && FLIGHT_MODE(MANUAL_MODE)) {
+    if (STATE(FIXED_WING_LEGACY) && FLIGHT_MODE(MANUAL_MODE)) { // CR106 why is even here ... it does nothing seemingly ?
         // Direct passthru from RX
         input[ROLL] = rcCommand[ROLL];
         input[PITCH] = rcCommand[PITCH];
@@ -483,7 +484,14 @@ void FAST_CODE mixTable(void)
         input[PITCH] = axisPID[PITCH];
         input[YAW] = axisPID[YAW];
     }
-
+    // CR106 - set motors to off and return here if disarmed ... no point going any further
+    // if (!ARMING_FLAG(ARMED)) {
+        // for (int i = 0; i < motorCount; i++) {
+            // motor[i] = motor_disarmed[i];
+        // }
+        // return;
+    // }
+    // CR106
     // Initial mixer concept by bdoiron74 reused and optimized for Air Mode
     int16_t rpyMix[MAX_SUPPORTED_MOTORS];
     int16_t rpyMixMax = 0; // assumption: symetrical about zero.
@@ -612,11 +620,11 @@ void FAST_CODE mixTable(void)
     }
 }
 
-int16_t getThrottlePercent(bool useScaled)
+int16_t getThrottlePercent(bool useScaled)  // CR106 should use actual throttle sent to motors not throttle stick position
 {
     int16_t thr = constrain(rcCommand[THROTTLE], PWM_RANGE_MIN, PWM_RANGE_MAX);
     const int idleThrottle = getThrottleIdleValue();
-    
+
     if (useScaled) {
        thr = (thr - idleThrottle) * 100 / (motorConfig()->maxthrottle - idleThrottle);
     } else {

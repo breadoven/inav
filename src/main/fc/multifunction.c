@@ -26,6 +26,8 @@
 #include "build/debug.h"
 #include "drivers/time.h"
 
+#ifdef USE_MULTI_FUNCTIONS
+
 #include "fc/fc_core.h"
 #include "fc/multifunction.h"
 #include "fc/rc_modes.h"
@@ -37,7 +39,7 @@
 // CR88
 multi_function_e selectedItem = MULTI_FUNC_NONE;
 uint8_t multiFunctionFlags;
-bool nextItemAvailable = false;
+bool nextItemIsAvailable = false;
 
 static void multiFunctionApply(multi_function_e selectedItem)
 {
@@ -128,4 +130,5 @@ multi_function_e multiFunctionSelection(void)
 
     return selectedItem;
 }
+#endif
 // CR88

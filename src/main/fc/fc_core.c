@@ -536,9 +536,12 @@ void tryArm(void)
     }
 
 #ifdef USE_DSHOT
-    if (STATE(MULTIROTOR) && (IS_RC_MODE_ACTIVE(BOXTURTLE) || MULTI_FUNC_FLAG(MF_TURTLE_MODE)) && !FLIGHT_MODE(TURTLE_MODE) &&  // CR88
-        emergencyArmingCanOverrideArmingDisabled() && isMotorProtocolDshot()
-        ) {
+#ifdef USE_MULTI_FUNCTIONS  // CR88
+    bool turtleIsActive = IS_RC_MODE_ACTIVE(BOXTURTLE) || MULTI_FUNC_FLAG(MF_TURTLE_MODE);
+#else
+    bool turtleIsActive = IS_RC_MODE_ACTIVE(BOXTURTLE);
+#endif
+    if (STATE(MULTIROTOR) && turtleIsActive && !FLIGHT_MODE(TURTLE_MODE) && emergencyArmingCanOverrideArmingDisabled() && isMotorProtocolDshot()) {
         sendDShotCommand(DSHOT_CMD_SPIN_DIRECTION_REVERSED);
         ENABLE_ARMING_FLAG(ARMED);
         enableFlightMode(TURTLE_MODE);

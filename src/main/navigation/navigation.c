@@ -1341,9 +1341,14 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_TRACKBACK(navigatio
 
     if (posControl.flags.estPosStatus >= EST_USABLE) {
         const int32_t distFromStartTrackback = calculateDistanceToDestination(&posControl.rthTBPointsList[posControl.rthTBLastSavedIndex]) / 100;
+#ifdef USE_MULTI_FUNCTIONS        // CR88
+        bool overrideTrackback = rthAltControlStickOverrideCheck(ROLL) || MULTI_FUNC_FLAG(MF_SUSPEND_TRACKBACK);
+#else
+        bool overrideTrackback = rthAltControlStickOverrideCheck(ROLL);
+#endif
         const bool cancelTrackback = distFromStartTrackback > navConfig()->general.rth_trackback_distance ||
-                                     ((rthAltControlStickOverrideCheck(ROLL) || MULTI_FUNC_FLAG(MF_SUSPEND_TRACKBACK)) && !posControl.flags.forcedRTHActivated);// CR88;
-
+                                     (overrideTrackback && !posControl.flags.forcedRTHActivated);
+// CR88
         if (posControl.activeRthTBPointIndex < 0 || cancelTrackback) {
             posControl.rthTBWrapAroundCounter = posControl.activeRthTBPointIndex = -1;
             posControl.flags.rthTrackbackActive = false;
@@ -2493,32 +2498,33 @@ static navigationHomeFlags_t navigationActualStateHomeValidity(void)
 #if defined(USE_SAFE_HOME)
 void checkSafeHomeState(bool shouldBeEnabled)
 {
-    const bool safehomeNotApplicable = navConfig()->general.flags.safehome_usage_mode == SAFEHOME_USAGE_OFF ||
-                                       (MULTI_FUNC_FLAG(MF_SUSPEND_SAFEHOMES) && !posControl.flags.forcedRTHActivated) ||  // CR88
-                                       posControl.flags.rthTrackbackActive ||
-                                       (!posControl.safehomeState.isApplied && posControl.homeDistance < navConfig()->general.min_rth_distance); // CR88
+    bool safehomeNotApplicable = navConfig()->general.flags.safehome_usage_mode == SAFEHOME_USAGE_OFF || posControl.flags.rthTrackbackActive ||
+                                 (!posControl.safehomeState.isApplied && posControl.homeDistance < navConfig()->general.min_rth_distance);
+#ifdef USE_MULTI_FUNCTIONS
+    safehomeNotApplicable = safehomeNotApplicable || (MULTI_FUNC_FLAG(MF_SUSPEND_SAFEHOMES) && !posControl.flags.forcedRTHActivated);  // CR88
+#endif
 
-	if (safehomeNotApplicable) {
-		shouldBeEnabled = false;
-	} else if (navConfig()->general.flags.safehome_usage_mode == SAFEHOME_USAGE_RTH_FS && shouldBeEnabled) {
-		// if safehomes are only used with failsafe and we're trying to enable safehome
-		// then enable the safehome only with failsafe
-		shouldBeEnabled = posControl.flags.forcedRTHActivated;
-	}
+    if (safehomeNotApplicable) {
+        shouldBeEnabled = false;
+    } else if (navConfig()->general.flags.safehome_usage_mode == SAFEHOME_USAGE_RTH_FS && shouldBeEnabled) {
+        // if safehomes are only used with failsafe and we're trying to enable safehome
+        // then enable the safehome only with failsafe
+        shouldBeEnabled = posControl.flags.forcedRTHActivated;
+    }
     // no safe homes found when arming or safehome feature in the correct state, then we don't need to do anything
-	if (posControl.safehomeState.distance == 0 || (posControl.safehomeState.isApplied == shouldBeEnabled)) { // CR88
-		return;
-	}
+    if (posControl.safehomeState.distance == 0 || (posControl.safehomeState.isApplied == shouldBeEnabled)) { // CR88
+        return;
+    }
     if (shouldBeEnabled) {
-		// set home to safehome
+        // set home to safehome
         setHomePosition(&posControl.safehomeState.nearestSafeHome, 0, NAV_POS_UPDATE_XY | NAV_POS_UPDATE_Z | NAV_POS_UPDATE_HEADING, navigationActualStateHomeValidity());// CR88
-		posControl.safehomeState.isApplied = true;
-	} else {
-		// set home to original arming point
+        posControl.safehomeState.isApplied = true;
+    } else {
+        // set home to original arming point
         setHomePosition(&posControl.rthState.originalHomePosition, 0, NAV_POS_UPDATE_XY | NAV_POS_UPDATE_Z | NAV_POS_UPDATE_HEADING, navigationActualStateHomeValidity());
-		posControl.safehomeState.isApplied = false;  // CR88
-	}
-	// if we've changed the home position, update the distance and direction
+        posControl.safehomeState.isApplied = false;  // CR88
+    }
+    // if we've changed the home position, update the distance and direction
     updateHomePosition();
 }
 
@@ -2535,8 +2541,8 @@ bool findNearestSafeHome(void)
     gpsLocation_t shLLH;
     shLLH.alt = 0;
     for (uint8_t i = 0; i < MAX_SAFE_HOMES; i++) {
-		if (!safeHomeConfig(i)->enabled)
-		    continue;
+        if (!safeHomeConfig(i)->enabled)
+            continue;
 
         shLLH.lat = safeHomeConfig(i)->lat;
         shLLH.lon = safeHomeConfig(i)->lon;
@@ -2553,7 +2559,7 @@ bool findNearestSafeHome(void)
         }
     }
     if (posControl.safehomeState.index >= 0) { // CR88
-		posControl.safehomeState.distance = nearest_safehome_distance; // CR88
+        posControl.safehomeState.distance = nearest_safehome_distance; // CR88
     } else {
         posControl.safehomeState.distance = 0;
     }
@@ -3702,7 +3708,7 @@ void checkManualEmergencyLandingControl(bool forcedActivation)  // CR88
 
 static navigationFSMEvent_t selectNavEventFromBoxModeInput(bool launchBypass)   // CR6
 {
-	// General use debugs
+    // General use debugs
     // DEBUG_SET(DEBUG_ALWAYS, 0, posControl.rthTBPointsList[0].x);
     // DEBUG_SET(DEBUG_ALWAYS, 1, posControl.rthTBPointsList[1].x);
     // DEBUG_SET(DEBUG_ALWAYS, 2, isFixedWingFlying());
