@@ -54,7 +54,7 @@
 #include "fc/cli.h"
 #include "fc/config.h"
 #include "fc/controlrate_profile.h"
-#include "fc/multifunction.h"   // CR88
+#include "fc/multifunction.h"
 #include "fc/rc_adjustments.h"
 #include "fc/rc_smoothing.h"
 #include "fc/rc_controls.h"
@@ -378,7 +378,7 @@ static bool emergencyArmingCanOverrideArmingDisabled(void)
 
 static bool emergencyArmingIsEnabled(void)
 {
-    return emergencyArmingUpdate(IS_RC_MODE_ACTIVE(BOXARM), false) && emergencyArmingCanOverrideArmingDisabled();  // CR88
+    return emergencyArmingUpdate(IS_RC_MODE_ACTIVE(BOXARM), false) && emergencyArmingCanOverrideArmingDisabled();
 }
 
 static void processPilotAndFailSafeActions(float dT)
@@ -470,7 +470,7 @@ disarmReason_t getDisarmReason(void)
     return lastDisarmReason;
 }
 
-bool emergencyArmingUpdate(bool armingSwitchIsOn, bool forceArm)    // CR88
+bool emergencyArmingUpdate(bool armingSwitchIsOn, bool forceArm)
 {
     if (ARMING_FLAG(ARMED)) {
         return false;
@@ -498,11 +498,11 @@ bool emergencyArmingUpdate(bool armingSwitchIsOn, bool forceArm)    // CR88
     } else {
         toggle = true;
     }
-    // CR88
+
     if (forceArm) {
         counter = EMERGENCY_ARMING_MIN_ARM_COUNT;
     }
-    // CR88
+
     return counter >= EMERGENCY_ARMING_MIN_ARM_COUNT;
 }
 // CR105
@@ -536,10 +536,10 @@ void tryArm(void)
     }
 
 #ifdef USE_DSHOT
-#ifdef USE_MULTI_FUNCTIONS  // CR88
-    bool turtleIsActive = IS_RC_MODE_ACTIVE(BOXTURTLE) || MULTI_FUNC_FLAG(MF_TURTLE_MODE);
+#ifdef USE_MULTI_FUNCTIONS
+    const bool turtleIsActive = IS_RC_MODE_ACTIVE(BOXTURTLE) || MULTI_FUNC_FLAG(MF_TURTLE_MODE);
 #else
-    bool turtleIsActive = IS_RC_MODE_ACTIVE(BOXTURTLE);
+    const bool turtleIsActive = IS_RC_MODE_ACTIVE(BOXTURTLE);
 #endif
     if (STATE(MULTIROTOR) && turtleIsActive && !FLIGHT_MODE(TURTLE_MODE) && emergencyArmingCanOverrideArmingDisabled() && isMotorProtocolDshot()) {
         sendDShotCommand(DSHOT_CMD_SPIN_DIRECTION_REVERSED);

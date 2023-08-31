@@ -76,7 +76,7 @@
 #include "fc/controlrate_profile.h"
 #include "fc/fc_core.h"
 #include "fc/fc_tasks.h"
-#include "fc/multifunction.h"   // CR88
+#include "fc/multifunction.h"
 #include "fc/rc_adjustments.h"
 #include "fc/rc_controls.h"
 #include "fc/rc_modes.h"
@@ -100,6 +100,7 @@
 #include "sensors/acceleration.h"
 #include "sensors/battery.h"
 #include "sensors/boardalignment.h"
+#include "sensors/compass.h"
 #include "sensors/diagnostics.h"
 #include "sensors/compass.h"    // CR88
 #include "sensors/sensors.h"
@@ -188,10 +189,9 @@ static bool fullRedraw = false;
 
 static uint8_t armState;
 
-// Multifunction display  CR88
+// Multifunction display
 static textAttributes_t osdGetMultiFunctionMessage(char *buff);
 static uint8_t osdWarningsFlags = 0;
-// CR88
 
 typedef struct osdMapData_s {
     uint32_t scale;
@@ -993,7 +993,7 @@ static const char * osdFailsafeInfoMessage(void)
 #if defined(USE_SAFE_HOME)
 static const char * divertingToSafehomeMessage(void)
 {
-	if (NAV_Status.state != MW_NAV_STATE_HOVER_ABOVE_HOME && posControl.safehomeState.isApplied) {   // CR88
+	if (NAV_Status.state != MW_NAV_STATE_HOVER_ABOVE_HOME && posControl.safehomeState.isApplied) {
 	    return OSD_MESSAGE_STR(OSD_MSG_DIVERT_SAFEHOME);
 	}
 	return NULL;
@@ -1039,7 +1039,7 @@ static const char * navigationStateMessage(void)
         case MW_NAV_STATE_HOVER_ABOVE_HOME:
             if (STATE(FIXED_WING_LEGACY)) {
 #if defined(USE_SAFE_HOME)
-                if (posControl.safehomeState.isApplied) {    // CR88
+                if (posControl.safehomeState.isApplied) {
                     return OSD_MESSAGE_STR(OSD_MSG_LOITERING_SAFEHOME);
                 }
 #endif
@@ -1794,7 +1794,8 @@ static bool osdDrawSingleElement(uint8_t item)
         buff[1] = SYM_SAT_R;
         tfp_sprintf(buff + 2, "%2d", gpsSol.numSat);
         if (!STATE(GPS_FIX)) {
-            if (getHwGPSStatus() == HW_SENSOR_UNAVAILABLE) {
+            hardwareSensorStatus_e sensorStatus = getHwGPSStatus();
+            if (sensorStatus == HW_SENSOR_UNAVAILABLE || sensorStatus == HW_SENSOR_UNHEALTHY) {
                 buff[2] = SYM_ALERT;
                 buff[3] = '\0';
             }
@@ -2031,8 +2032,10 @@ static bool osdDrawSingleElement(uint8_t item)
                 TEXT_ATTRIBUTES_ADD_BLINK(elemAttr);
             }
             displayWriteWithAttr(osdDisplayPort, elemPosX, elemPosY, buff, elemAttr);
-            // CR103
+
             if (STATE(MULTIROTOR) && posControl.flags.isAdjustingAltitude) {
+                /* Indicate MR altitude adjustment active with constant symbol at first blank position.
+                 * Alternate symbol on/off with 600ms cycle if first position not blank (to maintain visibility of -ve sign) */
                 int8_t blankPos;
                 for (blankPos = 2; blankPos >= 0; blankPos--) {
                     if (buff[blankPos] == SYM_BLANK) {
@@ -2045,7 +2048,6 @@ static bool osdDrawSingleElement(uint8_t item)
                 }
             }
             return true;
-            // CR103
         }
 
     case OSD_ALTITUDE_MSL:
@@ -3511,6 +3513,21 @@ static bool osdDrawSingleElement(uint8_t item)
         }
 #endif // USE_ADC
 #endif // USE_POWER_LIMITS
+    case OSD_MULTI_FUNCTION:
+        {
+            // message shown infrequently so only write when needed
+            static bool clearMultiFunction = true;
+            elemAttr = osdGetMultiFunctionMessage(buff);
+            if (buff[0] == 0) {
+                if (clearMultiFunction) {
+                    displayWrite(osdDisplayPort, elemPosX, elemPosY, "          ");
+                    clearMultiFunction = false;
+                }
+                return true;
+            }
+            clearMultiFunction = true;
+            break;
+        }
 
     default:
         return false;
@@ -3888,7 +3905,7 @@ void pgResetFn_osdLayoutsConfig(osdLayoutsConfig_t *osdLayoutsConfig)
     osdLayoutsConfig->item_pos[0][OSD_GVAR_2] = OSD_POS(1, 3);
     osdLayoutsConfig->item_pos[0][OSD_GVAR_3] = OSD_POS(1, 4);
 
-    osdLayoutsConfig->item_pos[0][OSD_MULTI_FUNCTION] = OSD_POS(1, 4);    // CR88
+    osdLayoutsConfig->item_pos[0][OSD_MULTI_FUNCTION] = OSD_POS(1, 4);
 
     osdLayoutsConfig->item_pos[0][OSD_SWITCH_INDICATOR_0] = OSD_POS(2, 7);
     osdLayoutsConfig->item_pos[0][OSD_SWITCH_INDICATOR_1] = OSD_POS(2, 8);
@@ -4471,13 +4488,14 @@ static void osdShowArmed(void)
             }
             y += 4;
 #if defined (USE_SAFE_HOME)
-            if (posControl.safehomeState.distance) { // safehome found during arming CR88
+            if (posControl.safehomeState.distance) { // safehome found during arming
                 if (navConfig()->general.flags.safehome_usage_mode == SAFEHOME_USAGE_OFF) {
                     strcpy(buf, "SAFEHOME FOUND; MODE OFF");
 				} else {
 					char buf2[12]; // format the distance first
-					osdFormatDistanceStr(buf2, posControl.safehomeState.distance); // CR88
-					tfp_sprintf(buf, "%c - %s -> SAFEHOME %u", SYM_HOME, buf2, posControl.safehomeState.index);    // CR88
+					osdFormatDistanceStr(buf2, posControl.safehomeState.distance);
+					tfp_sprintf(buf, "%c - %s -> SAFEHOME %u", SYM_HOME, buf2, posControl.safehomeState.index);
+
 				}
 				textAttributes_t elemAttr = _TEXT_ATTRIBUTES_BLINK_BIT;
 				// write this message above the ARMED message to make it obvious
@@ -4605,7 +4623,8 @@ static void osdRefresh(timeUs_t currentTimeUs)
             osdShowArmed();
             uint32_t delay = ARMED_SCREEN_DISPLAY_TIME;
 #if defined(USE_SAFE_HOME)
-            if (posControl.safehomeState.distance) // CR88
+            if (posControl.safehomeState.distance)
+
                 delay *= 3;
 #endif
             osdSetNextRefreshIn(delay);
@@ -5042,7 +5061,7 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
     }
     return elemAttr;
 }
-// CR88
+
 void osdResetWarningFlags(void)
 {
     osdWarningsFlags = 0;
@@ -5050,13 +5069,15 @@ void osdResetWarningFlags(void)
 
 static bool osdCheckWarning(bool condition, uint8_t warningFlag, uint8_t *warningsCount)
 {
+#define WARNING_REDISPLAY_DURATION 5000;    // milliseconds
+
     const timeMs_t currentTimeMs = millis();
     static timeMs_t warningDisplayStartTime = 0;
     static timeMs_t redisplayStartTimeMs = 0;
     static uint16_t osdWarningTimerDuration;
     static uint8_t newWarningFlags;
 
-    if (condition) {
+    if (condition) {    // condition required to trigger warning
         if (!(osdWarningsFlags & warningFlag)) {
             osdWarningsFlags |= warningFlag;
             newWarningFlags |= warningFlag;
@@ -5067,14 +5088,17 @@ static bool osdCheckWarning(bool condition, uint8_t warningFlag, uint8_t *warnin
             return true;
         }
 #endif
+        /* Warnings displayed in full for set time before shrinking down to alert symbol with warning count only.
+         * All current warnings then redisplayed for 5s on 30s rolling cycle.
+         * New warnings dislayed individually for 10s */
         if (currentTimeMs > redisplayStartTimeMs) {
             warningDisplayStartTime = currentTimeMs;
-            osdWarningTimerDuration = newWarningFlags ? 10000 : 5000;
+            osdWarningTimerDuration = newWarningFlags ? 10000 : WARNING_REDISPLAY_DURATION;
             redisplayStartTimeMs = currentTimeMs + osdWarningTimerDuration + 30000;
         }
 
         if (currentTimeMs - warningDisplayStartTime < osdWarningTimerDuration) {
-            return (newWarningFlags & warningFlag) || osdWarningTimerDuration == 5000;
+            return (newWarningFlags & warningFlag) || osdWarningTimerDuration == WARNING_REDISPLAY_DURATION;
         } else {
             newWarningFlags = 0;
         }
@@ -5088,11 +5112,14 @@ static bool osdCheckWarning(bool condition, uint8_t warningFlag, uint8_t *warnin
 
 static textAttributes_t osdGetMultiFunctionMessage(char *buff)
 {
+    /* Message length limit 10 char max */
+
     textAttributes_t elemAttr = TEXT_ATTRIBUTES_NONE;
     static uint8_t warningsCount;
     const char *message = NULL;
 
 #ifdef USE_MULTI_FUNCTIONS
+    /* --- FUNCTIONS --- */
     multi_function_e selectedFunction = multiFunctionSelection();
 
     if (selectedFunction) {
@@ -5145,13 +5172,15 @@ static textAttributes_t osdGetMultiFunctionMessage(char *buff)
         strcpy(buff, message);
 
         if (isNextMultifunctionItemAvailable()) {
+            // provides feedback indicating when a new selection command has been received by flight controller
             buff[9] = '>';
         }
 
         return elemAttr;
     }
-#endif  // functions only, warnings always defined
-/* WARNINGS --------------------------------------------- */
+#endif  // MULTIFUNCTION - functions only, warnings always defined
+
+    /* --- WARNINGS --- */
     const char *messages[8];
     uint8_t messageCount = 0;
     bool warningCondition = false;
@@ -5173,15 +5202,6 @@ static textAttributes_t osdGetMultiFunctionMessage(char *buff)
             messages[messageCount++] = batteryState == BATTERY_CRITICAL ? "BATT EMPTY" : "BATT LOW  ";
         }
     }
-
-    // Vibration levels
-    const float vibrationLevel = accGetVibrationLevel();
-    // DEBUG_SET(DEBUG_ALWAYS, 0, vibrationLevel * 100);
-    warningCondition = vibrationLevel > 1.5f;
-    if (osdCheckWarning(warningCondition, warningFlagID <<= 1, &warningsCount)) {
-        messages[messageCount++] = vibrationLevel > 2.5f ? "BAD VIBRTN" : "VIBRATION!";
-    }
-
 #if defined(USE_GPS)
     // GPS Fix and Failure
     if (feature(FEATURE_GPS)) {
@@ -5191,19 +5211,18 @@ static textAttributes_t osdGetMultiFunctionMessage(char *buff)
         }
     }
 
-    // RTH sanity
+    // RTH sanity (warning if RTH heads 200m further away from home than closest point)
     warningCondition = NAV_Status.state == MW_NAV_STATE_RTH_ENROUTE && !posControl.flags.rthTrackbackActive &&
-                       (posControl.homeDistance - posControl.rthSanityChecker.minimalDistanceToHome) > 10000;
+                       (posControl.homeDistance - posControl.rthSanityChecker.minimalDistanceToHome) > 20000;
     if (osdCheckWarning(warningCondition, warningFlagID <<= 1, &warningsCount)) {
         messages[messageCount++] = "RTH SANITY";
     }
 
-    // Altitude sanity (estimated vs GPS raw)
+    // Altitude sanity (warning if significant mismatch between estimated and GPS altitude)
     if (osdCheckWarning(posControl.flags.gpsCfEstimatedAltitudeMismatch, warningFlagID <<= 1, &warningsCount)) {
         messages[messageCount++] = "ALT SANITY";
     }
 #endif
-
 #if defined(USE_MAG)
     // Magnetometer failure
     if (requestedSensors[SENSOR_INDEX_MAG] != MAG_NONE) {
@@ -5213,6 +5232,13 @@ static textAttributes_t osdGetMultiFunctionMessage(char *buff)
         }
     }
 #endif
+    Vibration levels   TODO - needs better vibration measurement to be useful
+    const float vibrationLevel = accGetVibrationLevel();
+    // DEBUG_SET(DEBUG_ALWAYS, 0, vibrationLevel * 100);
+    warningCondition = vibrationLevel > 1.5f;
+    if (osdCheckWarning(warningCondition, warningFlagID <<= 1, &warningsCount)) {
+        messages[messageCount++] = vibrationLevel > 2.5f ? "BAD VIBRTN" : "VIBRATION!";
+    }
 
 #ifdef USE_DEV_TOOLS
     if (osdCheckWarning(systemConfig()->groundTestMode, warningFlagID <<= 1, &warningsCount)) {
@@ -5227,7 +5253,7 @@ static textAttributes_t osdGetMultiFunctionMessage(char *buff)
 // #endif
 
     if (messageCount) {
-        message = messages[OSD_ALTERNATING_CHOICES(1000, messageCount)];
+        message = messages[OSD_ALTERNATING_CHOICES(1000, messageCount)];    // display each warning on 1s cycle
         strcpy(buff, message);
         TEXT_ATTRIBUTES_ADD_BLINK(elemAttr);
     } else if (warningsCount) {
@@ -5247,7 +5273,7 @@ static textAttributes_t osdGetMultiFunctionMessage(char *buff)
         }
     }
     // CR27
+
     return elemAttr;
 }
-// CR88
 #endif // OSD

@@ -271,7 +271,7 @@ typedef enum {
     OSD_CROSS_TRACK_ERROR,
     OSD_PILOT_NAME,
     OSD_PAN_SERVO_CENTRED,
-    OSD_MULTI_FUNCTION,     // 144  CR88
+    OSD_MULTI_FUNCTION,
     OSD_ITEM_COUNT // MUST BE LAST
 } osd_items_e;
 
@@ -487,7 +487,8 @@ void osdFormatVelocityStr(char* buff, int32_t vel, bool _3D, bool _max);
 // Returns a heading angle in degrees normalized to [0, 360).
 int osdGetHeadingAngle(int angle);
 
-void osdResetWarningFlags(void);    // CR88
+void osdResetWarningFlags(void);
+
 int16_t osdGetPanServoOffset(void);
 
 /**

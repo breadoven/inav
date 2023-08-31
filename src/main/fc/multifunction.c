@@ -36,7 +36,6 @@
 #include "io/osd.h"
 #include "navigation/navigation.h"
 
-// CR88
 multi_function_e selectedItem = MULTI_FUNC_NONE;
 uint8_t multiFunctionFlags;
 bool nextItemIsAvailable = false;
@@ -46,32 +45,32 @@ static void multiFunctionApply(multi_function_e selectedItem)
     switch (selectedItem) {
     case MULTI_FUNC_NONE:
         break;
-    case MULTI_FUNC_1:
+    case MULTI_FUNC_1:  // redisplay current warnings
         osdResetWarningFlags();
         break;
     case MULTI_FUNC_2:  // control manual emergency landing
         checkManualEmergencyLandingControl(ARMING_FLAG(ARMED));
         break;
-    case MULTI_FUNC_3:
+    case MULTI_FUNC_3:  // toggle Safehome suspend
 #if defined(USE_SAFE_HOME)
         if (navConfig()->general.flags.safehome_usage_mode != SAFEHOME_USAGE_OFF) {
             MULTI_FUNC_FLAG(MF_SUSPEND_SAFEHOMES) ? MULTI_FUNC_FLAG_DISABLE(MF_SUSPEND_SAFEHOMES) : MULTI_FUNC_FLAG_ENABLE(MF_SUSPEND_SAFEHOMES);
         }
 #endif
         break;
-    case MULTI_FUNC_4:
+    case MULTI_FUNC_4:  // toggle RTH Trackback suspend
         if (navConfig()->general.flags.rth_trackback_mode != RTH_TRACKBACK_OFF) {
             MULTI_FUNC_FLAG(MF_SUSPEND_TRACKBACK) ? MULTI_FUNC_FLAG_DISABLE(MF_SUSPEND_TRACKBACK) : MULTI_FUNC_FLAG_ENABLE(MF_SUSPEND_TRACKBACK);
         }
         break;
     case MULTI_FUNC_5:
 #ifdef USE_DSHOT
-        if (STATE(MULTIROTOR)) {
+        if (STATE(MULTIROTOR)) {    // toggle Turtle mode
             MULTI_FUNC_FLAG(MF_TURTLE_MODE) ? MULTI_FUNC_FLAG_DISABLE(MF_TURTLE_MODE) : MULTI_FUNC_FLAG_ENABLE(MF_TURTLE_MODE);
         }
 #endif
         break;
-    case MULTI_FUNC_6:
+    case MULTI_FUNC_6:  // emergency ARM
         if (!ARMING_FLAG(ARMED)) {
             emergencyArmingUpdate(true, true);
         }
@@ -100,7 +99,7 @@ multi_function_e multiFunctionSelection(void)
 
     if (IS_RC_MODE_ACTIVE(BOXMULTIFUNCTION)) {
         if (selectTimer) {
-            if (currentTime - selectTimer > 3000) {
+            if (currentTime - selectTimer > 3000) {     // 3s selection duration to activate selected function
                 multiFunctionApply(selectedItem);
                 selectTimer = 0;
                 selectedItem = MULTI_FUNC_NONE;
@@ -120,7 +119,7 @@ multi_function_e multiFunctionSelection(void)
         if (!toggle && selectTimer) {
             setMultifunctionSelection(++selectedItem);
         }
-        if (currentTime - startTimer > 4000) {
+        if (currentTime - startTimer > 4000) {      // 4s reset delay after mode deselected
             startTimer = 0;
             selectedItem = MULTI_FUNC_NONE;
         }
@@ -131,4 +130,3 @@ multi_function_e multiFunctionSelection(void)
     return selectedItem;
 }
 #endif
-// CR88

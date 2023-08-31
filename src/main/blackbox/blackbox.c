@@ -366,9 +366,7 @@ static const blackboxDeltaFieldDefinition_t blackboxMainFields[] = {
     {"navTgtPos",  0, SIGNED,   .Ipredict = PREDICT(0),       .Iencode = ENCODING(SIGNED_VB),   .Ppredict = PREDICT(PREVIOUS),      .Pencode = ENCODING(SIGNED_VB), FLIGHT_LOG_FIELD_CONDITION_NAV_POS},
     {"navTgtPos",  1, SIGNED,   .Ipredict = PREDICT(0),       .Iencode = ENCODING(SIGNED_VB),   .Ppredict = PREDICT(PREVIOUS),      .Pencode = ENCODING(SIGNED_VB), FLIGHT_LOG_FIELD_CONDITION_NAV_POS},
     {"navTgtPos",  2, SIGNED,   .Ipredict = PREDICT(0),       .Iencode = ENCODING(SIGNED_VB),   .Ppredict = PREDICT(PREVIOUS),      .Pencode = ENCODING(SIGNED_VB), FLIGHT_LOG_FIELD_CONDITION_NAV_POS},
-    // CR104
     {"navTgtHdg", -1, UNSIGNED, .Ipredict = PREDICT(0),       .Iencode = ENCODING(SIGNED_VB),   .Ppredict = PREDICT(PREVIOUS),      .Pencode = ENCODING(SIGNED_VB), FLIGHT_LOG_FIELD_CONDITION_NAV_POS},
-    // CR104
     {"navSurf",   -1, SIGNED,   .Ipredict = PREDICT(0),       .Iencode = ENCODING(SIGNED_VB),   .Ppredict = PREDICT(PREVIOUS),      .Pencode = ENCODING(SIGNED_VB), FLIGHT_LOG_FIELD_CONDITION_NAV_POS},
     {"navAcc",     0, SIGNED,   .Ipredict = PREDICT(0),       .Iencode = ENCODING(SIGNED_VB),   .Ppredict = PREDICT(AVERAGE_2),     .Pencode = ENCODING(SIGNED_VB), FLIGHT_LOG_FIELD_CONDITION_NAV_ACC},
     {"navAcc",     1, SIGNED,   .Ipredict = PREDICT(0),       .Iencode = ENCODING(SIGNED_VB),   .Ppredict = PREDICT(AVERAGE_2),     .Pencode = ENCODING(SIGNED_VB), FLIGHT_LOG_FIELD_CONDITION_NAV_ACC},
@@ -520,7 +518,8 @@ typedef struct blackboxMainState_s {
     int16_t navTargetVel[XYZ_AXIS_COUNT];
     int32_t navTargetPos[XYZ_AXIS_COUNT];
     int16_t navHeading;
-    uint16_t navTargetHeading;   // CR104
+    uint16_t navTargetHeading;
+
     int16_t navSurface;
 } blackboxMainState_t;
 
@@ -973,7 +972,7 @@ static void writeIntraframe(void)
             blackboxWriteSignedVB(blackboxCurrent->navTargetPos[x]);
         }
 
-        blackboxWriteSignedVB(blackboxCurrent->navTargetHeading);   // CR104
+        blackboxWriteSignedVB(blackboxCurrent->navTargetHeading);
         blackboxWriteSignedVB(blackboxCurrent->navSurface);
     }
 
@@ -1230,7 +1229,8 @@ static void writeInterframe(void)
             blackboxWriteSignedVB(blackboxHistory[0]->navTargetPos[x] - blackboxLast->navTargetPos[x]);
         }
 
-        blackboxWriteSignedVB(blackboxCurrent->navTargetHeading - blackboxLast->navTargetHeading);  // CR104
+        blackboxWriteSignedVB(blackboxCurrent->navTargetHeading - blackboxLast->navTargetHeading);
+
         blackboxWriteSignedVB(blackboxCurrent->navSurface - blackboxLast->navSurface);
     }
 
@@ -1303,7 +1303,7 @@ static void writeSlowFrame(void)
 static void loadSlowState(blackboxSlowState_t *slow)
 {
     memcpy(&slow->flightModeFlags, &rcModeActivationMask, sizeof(slow->flightModeFlags)); //was flightModeFlags;
-    // Also log auto selected flight modes rather than just those selected by mode switches CR104
+    // Also log Nav auto selected flight modes rather than just those selected by boxmode
     if (!IS_RC_MODE_ACTIVE(BOXANGLE) && FLIGHT_MODE(ANGLE_MODE)) {
         slow->flightModeFlags |= (1 << BOXANGLE);
     }
@@ -1313,7 +1313,6 @@ static void loadSlowState(blackboxSlowState_t *slow)
     if (navigationRequiresTurnAssistance()) {
         slow->flightModeFlags |= (1 << BOXTURNASSIST);
     }
-    // CR104
     slow->stateFlags = stateFlags;
     slow->failsafePhase = failsafePhase();
     slow->rxSignalReceived = rxIsReceivingSignal();
@@ -1677,7 +1676,7 @@ static void loadMainState(timeUs_t currentTimeUs)
         blackboxCurrent->navTargetVel[i] = navDesiredVelocity[i];
         blackboxCurrent->navTargetPos[i] = navTargetPosition[i];
     }
-    blackboxCurrent->navTargetHeading = navDesiredHeading;   // CR104
+    blackboxCurrent->navTargetHeading = navDesiredHeading;
     blackboxCurrent->navSurface = navActualSurface;
 }
 

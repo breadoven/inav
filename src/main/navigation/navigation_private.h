@@ -92,7 +92,8 @@ typedef struct navigationFlags_s {
     navigationEstimateStatus_e estAglStatus;
     navigationEstimateStatus_e estHeadingStatus;    // Indicate valid heading - wither mag or GPS at certain speed on airplane
     bool compassGpsCogMismatchError;                // mismatch between compass heading and valid GPS heading   // CR27
-    bool gpsCfEstimatedAltitudeMismatch;            // Indicates mismatch between GPS altitude and estimated altitude   // CR88
+    bool gpsCfEstimatedAltitudeMismatch;            // Indicates a mismatch between GPS altitude and estimated altitude
+
 
     bool isAdjustingPosition;
     bool isAdjustingAltitude;
@@ -339,7 +340,7 @@ typedef struct {
     float                   rthFinalAltitude;       // Altitude at end of RTH approach
     float                   rthInitialDistance;     // Distance when starting flight home
     fpVector3_t             homeTmpWaypoint;        // Temporary storage for home target
-    fpVector3_t             originalHomePosition;   // the original rth home - save it, since it could be replaced by safehome or HOME_RESET    CR88
+    fpVector3_t             originalHomePosition;   // the original rth home - save it, since it could be replaced by safehome or HOME_RESET
 } rthState_t;
 
 typedef enum {
@@ -357,6 +358,13 @@ typedef struct {
     bool        isApplied;          // whether the safehome has been applied to home.
 } safehomeState_t;
 // CR88
+typedef struct {
+    fpVector3_t nearestSafeHome;    // The nearestSafeHome found during arming
+    uint32_t    distance;           // distance to the nearest safehome
+    int8_t      index;              // -1 if no safehome, 0 to MAX_SAFEHOMES -1 otherwise
+    bool        isApplied;          // whether the safehome has been applied to home
+} safehomeState_t;
+
 typedef struct {
     /* Flags and navigation system state */
     navigationFSMState_t        navState;
@@ -379,13 +387,13 @@ typedef struct {
     /* INAV GPS origin (position where GPS fix first acquired) */
     gpsOrigin_t                 gpsOrigin;
 
-    /* Return To Home parameters - NEU coordinates (geodetic position of home (LLH) is stored in GPS_home variable) */
+    /* Home/RTH parameters - NEU coordinates (geodetic position of home (LLH) is stored in GPS_home variable) */
     rthSanityChecker_t          rthSanityChecker;
     rthState_t                  rthState;
     uint32_t                    homeDistance;   // cm
     int32_t                     homeDirection;  // deg*100
 
-    /* Safehome parameters */   // CR88
+    /* Safehome parameters */
     safehomeState_t             safehomeState;
 
     /* Cruise */
@@ -470,7 +478,7 @@ bool isWaypointNavTrackingActive(void);
 
 void updateActualHeading(bool headingValid, int32_t newHeading, int32_t newGroundCourse);
 void updateActualHorizontalPositionAndVelocity(bool estPosValid, bool estVelValid, float newX, float newY, float newVelX, float newVelY);
-void updateActualAltitudeAndClimbRate(bool estimateValid, float newAltitude, float newVelocity, float surfaceDistance, float surfaceVelocity, navigationEstimateStatus_e surfaceStatus, float gpsCfEstimatedAltitudeError);  // CR88
+void updateActualAltitudeAndClimbRate(bool estimateValid, float newAltitude, float newVelocity, float surfaceDistance, float surfaceVelocity, navigationEstimateStatus_e surfaceStatus, float gpsCfEstimatedAltitudeError);
 
 bool checkForPositionSensorTimeout(void);
 

@@ -356,7 +356,7 @@ static failsafeProcedure_e failsafeChooseFailsafeProcedure(void)
     // GPS must also be working, and home position set
     if (failsafeConfig()->failsafe_min_distance > 0 && sensors(SENSOR_GPS) && STATE(GPS_FIX) && STATE(GPS_FIX_HOME)) {
         // get the distance to the original arming point
-        uint32_t distance = calculateDistanceToDestination(&posControl.rthState.originalHomePosition);  // CR88
+        uint32_t distance = calculateDistanceToDestination(&posControl.rthState.originalHomePosition);
         if (distance < failsafeConfig()->failsafe_min_distance) {
             // Use the alternate, minimum distance failsafe procedure instead
             return failsafeConfig()->failsafe_min_distance_procedure;

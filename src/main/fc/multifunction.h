@@ -23,7 +23,7 @@
  */
 
 #pragma once
-// cr88
+
 #ifdef USE_MULTI_FUNCTIONS
 
 extern uint8_t multiFunctionFlags;
@@ -53,4 +53,3 @@ multi_function_e multiFunctionSelection(void);
 bool isNextMultifunctionItemAvailable(void);
 void setMultifunctionSelection(multi_function_e item);
 #endif
-// cr88
