@@ -350,14 +350,7 @@ typedef enum {
     RTH_HOME_FINAL_HOVER,           // Final hover altitude (if rth_home_altitude is set)
     RTH_HOME_FINAL_LAND,            // Home position and altitude
 } rthTargetMode_e;
-// CR88
-typedef struct {
-    fpVector3_t nearestSafeHome;    // The nearestSafeHome found during arming
-    uint32_t    distance;           // distance to the nearest safehome
-    int8_t      index;              // -1 if no safehome, 0 to MAX_SAFEHOMES -1 otherwise
-    bool        isApplied;          // whether the safehome has been applied to home.
-} safehomeState_t;
-// CR88
+
 typedef struct {
     fpVector3_t nearestSafeHome;    // The nearestSafeHome found during arming
     uint32_t    distance;           // distance to the nearest safehome

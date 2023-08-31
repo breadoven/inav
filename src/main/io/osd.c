@@ -102,7 +102,6 @@
 #include "sensors/boardalignment.h"
 #include "sensors/compass.h"
 #include "sensors/diagnostics.h"
-#include "sensors/compass.h"    // CR88
 #include "sensors/sensors.h"
 #include "sensors/pitotmeter.h"
 #include "sensors/temperature.h"
@@ -3460,23 +3459,6 @@ static bool osdDrawSingleElement(uint8_t item)
             displayWrite(osdDisplayPort, elemPosX, elemPosY, buff);
             return true;
         }
-    // CR88
-    case OSD_MULTI_FUNCTION:
-        {
-            // message shown infrequently so only write when needed
-            static bool clearMultiFunction = true;
-            elemAttr = osdGetMultiFunctionMessage(buff);
-            if (buff[0] == 0) {
-                if (clearMultiFunction) {
-                    displayWrite(osdDisplayPort, elemPosX, elemPosY, "          ");
-                    clearMultiFunction = false;
-                }
-                return true;
-            }
-            clearMultiFunction = true;
-            break;
-        }
-    // CR88
 
 #ifdef USE_POWER_LIMITS
     case OSD_PLIMIT_REMAINING_BURST_TIME:
@@ -5232,7 +5214,7 @@ static textAttributes_t osdGetMultiFunctionMessage(char *buff)
         }
     }
 #endif
-    Vibration levels   TODO - needs better vibration measurement to be useful
+    // Vibration levels   TODO - needs better vibration measurement to be useful
     const float vibrationLevel = accGetVibrationLevel();
     // DEBUG_SET(DEBUG_ALWAYS, 0, vibrationLevel * 100);
     warningCondition = vibrationLevel > 1.5f;

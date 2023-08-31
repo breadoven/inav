@@ -592,8 +592,6 @@ void activateForcedEmergLanding(void);
 void abortForcedEmergLanding(void);
 emergLandState_e getStateOfForcedEmergLanding(void);
 
-void checkManualEmergencyLandingControl(bool forcedActivation);  // CR88
-
 /* Getter functions which return data about the state of the navigation system */
 bool navigationInAutomaticThrottleMode(void);
 // CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
