@@ -208,6 +208,7 @@ void mixerInit(void)
 
 void mixerResetDisarmedMotors(void)
 {
+    getThrottleIdleValue();     // CR106
 
     if (feature(FEATURE_REVERSIBLE_MOTORS)) {
         motorZeroCommand = reversibleMotorsConfig()->neutral;
@@ -215,7 +216,7 @@ void mixerResetDisarmedMotors(void)
         throttleRangeMax = motorConfig()->maxthrottle;
     } else {
         motorZeroCommand = motorConfig()->mincommand;
-        throttleRangeMin = getThrottleIdleValue();
+        throttleRangeMin = throttleIdleValue;       // CR106
         throttleRangeMax = motorConfig()->maxthrottle;
     }
 
@@ -224,7 +225,7 @@ void mixerResetDisarmedMotors(void)
     if (feature(FEATURE_MOTOR_STOP)) {
         motorValueWhenStopped = motorZeroCommand;
     } else {
-        motorValueWhenStopped = getThrottleIdleValue();
+        motorValueWhenStopped = throttleIdleValue;  // CR106
     }
 
     // set disarmed motor values
@@ -470,10 +471,24 @@ void FAST_CODE mixTable(void)
         return;
     }
 #endif
-
+    // CR106 - set motors to off and return if disarmed ... no point going any further
+#ifdef USE_DEV_TOOLS
+    bool isDisarmed = !ARMING_FLAG(ARMED) || systemConfig()->groundTestMode;
+#else
+    bool isDisarmed = !ARMING_FLAG(ARMED);
+#endif
+    bool motorStopIsActive = getMotorStatus() != MOTOR_RUNNING && !isDisarmed;
+    if (isDisarmed || motorStopIsActive) {
+        for (int i = 0; i < motorCount; i++) {
+            motor[i] = isDisarmed ? motor_disarmed[i] : motorValueWhenStopped;
+        }
+        mixerThrottleCommand = motor[0];
+        return;
+    }
+    // CR106
     int16_t input[3];   // RPY, range [-500:+500]
     // Allow direct stick input to motors in passthrough mode on airplanes
-    if (STATE(FIXED_WING_LEGACY) && FLIGHT_MODE(MANUAL_MODE)) { // CR106 why is even here ... it does nothing seemingly ?
+    if (STATE(FIXED_WING_LEGACY) && FLIGHT_MODE(MANUAL_MODE)) {
         // Direct passthru from RX
         input[ROLL] = rcCommand[ROLL];
         input[PITCH] = rcCommand[PITCH];
@@ -484,14 +499,7 @@ void FAST_CODE mixTable(void)
         input[PITCH] = axisPID[PITCH];
         input[YAW] = axisPID[YAW];
     }
-    // CR106 - set motors to off and return here if disarmed ... no point going any further
-    // if (!ARMING_FLAG(ARMED)) {
-        // for (int i = 0; i < motorCount; i++) {
-            // motor[i] = motor_disarmed[i];
-        // }
-        // return;
-    // }
-    // CR106
+
     // Initial mixer concept by bdoiron74 reused and optimized for Air Mode
     int16_t rpyMix[MAX_SUPPORTED_MOTORS];
     int16_t rpyMixMax = 0; // assumption: symetrical about zero.
@@ -572,7 +580,6 @@ void FAST_CODE mixTable(void)
 
     throttleMin = throttleRangeMin;
     throttleMax = throttleRangeMax;
-
     throttleRange = throttleMax - throttleMin;
 
     #define THROTTLE_CLIPPING_FACTOR    0.33f
@@ -589,44 +596,29 @@ void FAST_CODE mixTable(void)
         throttleMin = MIN(throttleMin + (rpyMixRange / 2), throttleMin + (throttleRange / 2) - (throttleRange * THROTTLE_CLIPPING_FACTOR / 2));
         throttleMax = MAX(throttleMax - (rpyMixRange / 2), throttleMin + (throttleRange / 2) + (throttleRange * THROTTLE_CLIPPING_FACTOR / 2));
     }
-
+    // CR106
     // Now add in the desired throttle, but keep in a range that doesn't clip adjusted
     // roll/pitch/yaw. This could move throttle down, but also up for those low throttle flips.
-    if (ARMING_FLAG(ARMED)) {
-        const motorStatus_e currentMotorStatus = getMotorStatus();
-        for (int i = 0; i < motorCount; i++) {
-            motor[i] = rpyMix[i] + constrain(mixerThrottleCommand * currentMixer[i].throttle, throttleMin, throttleMax);
+    for (int i = 0; i < motorCount; i++) {
+        motor[i] = rpyMix[i] + constrain(mixerThrottleCommand * currentMixer[i].throttle, throttleMin, throttleMax);
 
-            if (failsafeIsActive()) {
-                motor[i] = constrain(motor[i], motorConfig()->mincommand, motorConfig()->maxthrottle);
-            } else {
-                motor[i] = constrain(motor[i], throttleRangeMin, throttleRangeMax);
-            }
-
-            // Motor stop handling
-            if (currentMotorStatus != MOTOR_RUNNING) {
-                motor[i] = motorValueWhenStopped;
-            }
-#ifdef USE_DEV_TOOLS
-            if (systemConfig()->groundTestMode) {
-                motor[i] = motorZeroCommand;
-            }
-#endif
-        }
-    } else {
-        for (int i = 0; i < motorCount; i++) {
-            motor[i] = motor_disarmed[i];
+        if (failsafeIsActive()) {
+            motor[i] = constrain(motor[i], motorConfig()->mincommand, motorConfig()->maxthrottle);
+        } else {
+            motor[i] = constrain(motor[i], throttleRangeMin, throttleRangeMax);
         }
     }
+    // CR106
 }
 
 int16_t getThrottlePercent(bool useScaled)  // CR106 should use actual throttle sent to motors not throttle stick position
 {
-    int16_t thr = constrain(rcCommand[THROTTLE], PWM_RANGE_MIN, PWM_RANGE_MAX);
-    const int idleThrottle = getThrottleIdleValue();
+    int16_t thr = constrain(mixerThrottleCommand, PWM_RANGE_MIN, PWM_RANGE_MAX);   // CR106  rcCommand[THROTTLE]
+
+    // const int idleThrottle = getThrottleIdleValue(); // CR106
 
     if (useScaled) {
-       thr = (thr - idleThrottle) * 100 / (motorConfig()->maxthrottle - idleThrottle);
+       thr = (thr - throttleIdleValue) * 100 / (motorConfig()->maxthrottle - throttleIdleValue);    // CR106
     } else {
         thr = (rxGetChannelValue(THROTTLE) - PWM_RANGE_MIN) * 100 / (PWM_RANGE_MAX - PWM_RANGE_MIN);
     }

@@ -1117,11 +1117,7 @@ bool osdUsingScaledThrottle(void)
  **/
 static void osdFormatThrottlePosition(char *buff, bool useScaled, textAttributes_t *elemAttr)
 {
-    if (useScaled) {
-        buff[0] = SYM_SCALE;
-    } else {
-        buff[0] = SYM_BLANK;
-    }
+    buff[0] = SYM_BLANK;    // CR106
     buff[1] = SYM_THR;
     if (navigationIsControllingThrottle()) {
         buff[0] = SYM_AUTO_THR0;
@@ -1136,7 +1132,16 @@ static void osdFormatThrottlePosition(char *buff, bool useScaled, textAttributes
         TEXT_ATTRIBUTES_ADD_BLINK(*elemAttr);
     }
 #endif
-    tfp_sprintf(buff + 2, "%3d", getThrottlePercent(useScaled));
+    // CR106
+    int8_t throttlePercent = getThrottlePercent(useScaled);
+    if (useScaled && throttlePercent <= 0) {
+        const char* message = ARMING_FLAG(ARMED) ? throttlePercent == 0 ? "IDLE" : "STOP" : "DARM";
+        buff[0] = SYM_THR;
+        strcpy(buff + 1, message);
+        return;
+    }
+    tfp_sprintf(buff + 2, "%3d", throttlePercent);
+    // CR106
 }
 
 /**
