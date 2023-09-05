@@ -631,7 +631,8 @@ motorStatus_e getMotorStatus(void)
         return MOTOR_STOPPED_AUTO;
     }
 
-    if (!failsafeIsActive() && STATE(NAV_MOTOR_STOP_OR_IDLE)) {
+    if (STATE(NAV_MOTOR_STOP_OR_IDLE)) { // CR107 failsafe ?
+    // if (!failsafeIsActive() && STATE(NAV_MOTOR_STOP_OR_IDLE)) {
         return MOTOR_STOPPED_AUTO;
     }
 

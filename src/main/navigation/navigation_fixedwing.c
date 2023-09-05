@@ -694,7 +694,8 @@ void applyFixedWingPitchRollThrottleController(navigationFSMStateFlags_t navStat
             isAutoThrottleManuallyIncreased = false;
         }
 
-        rcCommand[THROTTLE] = constrain(correctedThrottleValue, getThrottleIdleValue(), motorConfig()->maxthrottle);
+        // rcCommand[THROTTLE] = constrain(correctedThrottleValue, getThrottleIdleValue(), motorConfig()->maxthrottle);
+        setDesiredThrottle(correctedThrottleValue, false); // CR107
     }
 
 #ifdef NAV_FIXED_WING_LANDING
@@ -708,7 +709,7 @@ void applyFixedWingPitchRollThrottleController(navigationFSMStateFlags_t navStat
         if ((posControl.flags.estAltStatus >= EST_USABLE && navGetCurrentActualPositionAndVelocity()->pos.z <= finalAltitude) ||
            (posControl.flags.estAglStatus == EST_TRUSTED && posControl.actualState.agl.pos.z <= navConfig()->general.land_slowdown_minalt)) {
             // Set motor to min. throttle and stop it when MOTOR_STOP feature is enabled
-            rcCommand[THROTTLE] = getThrottleIdleValue();
+            // rcCommand[THROTTLE] = getThrottleIdleValue();   // CR107 required ?
             ENABLE_STATE(NAV_MOTOR_STOP_OR_IDLE);
 
             // Stabilize ROLL axis on 0 degrees banking regardless of loiter radius and position
@@ -810,7 +811,8 @@ bool isFixedWingLandingDetected(void)
  *-----------------------------------------------------------*/
 void applyFixedWingEmergencyLandingController(timeUs_t currentTimeUs)
 {
-    rcCommand[THROTTLE] = currentBatteryProfile->failsafe_throttle;
+    // rcCommand[THROTTLE] = currentBatteryProfile->failsafe_throttle;
+    setDesiredThrottle(currentBatteryProfile->failsafe_throttle, true);   // CR107
 
     if (posControl.flags.estAltStatus >= EST_USABLE) {
         // target min descent rate 10m above takeoff altitude

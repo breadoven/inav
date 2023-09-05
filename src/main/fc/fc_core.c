@@ -415,6 +415,7 @@ static void processPilotAndFailSafeActions(float dT)
 
         //Compute THROTTLE command
         rcCommand[THROTTLE] = throttleStickMixedValue();
+        // setDesiredThrottle(throttleStickMixedValue());  // CR107
 
         // Signal updated rcCommand values to Failsafe system
         failsafeUpdateRcCommandValues();
@@ -858,15 +859,41 @@ void FAST_CODE taskGyro(timeUs_t currentTimeUs) {
 #endif
 }
 
-static float calculateThrottleTiltCompensationFactor(uint8_t throttleTiltCompensationStrength)
+// static float calculateThrottleTiltCompensationFactor(uint8_t throttleTiltCompensationStrength)
+// {
+    // if (throttleTiltCompensationStrength) {
+        // float tiltCompFactor = 1.0f / constrainf(calculateCosTiltAngle(), 0.6f, 1.0f);  // max tilt about 50 deg
+        // return 1.0f + (tiltCompFactor - 1.0f) * (throttleTiltCompensationStrength / 100.f);
+    // } else {
+        // return 1.0f;
+    // }
+// }
+// CR107
+static void calculateThrottleTiltCompensation(void)
 {
-    if (throttleTiltCompensationStrength) {
-        float tiltCompFactor = 1.0f / constrainf(calculateCosTiltAngle(), 0.6f, 1.0f);  // max tilt about 50 deg
-        return 1.0f + (tiltCompFactor - 1.0f) * (throttleTiltCompensationStrength / 100.f);
-    } else {
-        return 1.0f;
+    if (STATE(MULTIROTOR)) {
+        int16_t thrTiltCompStrength = 0;
+
+        if (navigationRequiresThrottleTiltCompensation()) {
+            thrTiltCompStrength = 100;
+        }
+        else if (systemConfig()->throttle_tilt_compensation_strength && (FLIGHT_MODE(ANGLE_MODE) || FLIGHT_MODE(HORIZON_MODE))) {
+            thrTiltCompStrength = systemConfig()->throttle_tilt_compensation_strength;
+        }
+
+        if (thrTiltCompStrength) {
+            const int throttleIdleValue = getThrottleIdleValue();
+            float tiltCompFactor = 1.0f / constrainf(calculateCosTiltAngle(), 0.6f, 1.0f);  // max tilt about 50 deg
+            tiltCompFactor = 1.0f + (tiltCompFactor - 1.0f) * (thrTiltCompStrength / 100.f);
+
+            setDesiredThrottle(throttleIdleValue + (rcCommand[THROTTLE] - throttleIdleValue) * tiltCompFactor, false);     // CR107
+            // rcCommand[THROTTLE] = constrain(throttleIdleValue + (rcCommand[THROTTLE] - throttleIdleValue) * tiltCompFactor,
+                                            // throttleIdleValue, motorConfig()->maxthrottle);
+        }
     }
 }
+// CR107
+
 
 void taskMainPidLoop(timeUs_t currentTimeUs)
 {
@@ -916,26 +943,28 @@ void taskMainPidLoop(timeUs_t currentTimeUs)
     applyWaypointNavigationAndAltitudeHold();
 
     // Apply throttle tilt compensation
-    if (!STATE(FIXED_WING_LEGACY)) {
-        int16_t thrTiltCompStrength = 0;
+    calculateThrottleTiltCompensation();  // CR107 move to single function
+    // if (!STATE(FIXED_WING_LEGACY)) {
+        // int16_t thrTiltCompStrength = 0;
 
-        if (navigationRequiresThrottleTiltCompensation()) {
-            thrTiltCompStrength = 100;
-        }
-        else if (systemConfig()->throttle_tilt_compensation_strength && (FLIGHT_MODE(ANGLE_MODE) || FLIGHT_MODE(HORIZON_MODE))) {
-            thrTiltCompStrength = systemConfig()->throttle_tilt_compensation_strength;
-        }
+        // if (navigationRequiresThrottleTiltCompensation()) {
+            // thrTiltCompStrength = 100;
+        // }
+        // else if (systemConfig()->throttle_tilt_compensation_strength && (FLIGHT_MODE(ANGLE_MODE) || FLIGHT_MODE(HORIZON_MODE))) {
+            // thrTiltCompStrength = systemConfig()->throttle_tilt_compensation_strength;
+        // }
 
-        if (thrTiltCompStrength) {
-            rcCommand[THROTTLE] = constrain(getThrottleIdleValue()
-                                            + (rcCommand[THROTTLE] - getThrottleIdleValue()) * calculateThrottleTiltCompensationFactor(thrTiltCompStrength),
-                                            getThrottleIdleValue(),
-                                            motorConfig()->maxthrottle);
-        }
-    }
-    else {
-        // FIXME: throttle pitch comp for FW
-    }
+        // if (thrTiltCompStrength) {
+            // rcCommand[THROTTLE] = constrain(getThrottleIdleValue()
+                                            // + (rcCommand[THROTTLE] - getThrottleIdleValue()) * calculateThrottleTiltCompensationFactor(thrTiltCompStrength),
+                                            // getThrottleIdleValue(),
+                                            // motorConfig()->maxthrottle);
+        // }
+    // }
+    // else {
+        // // FIXME: throttle pitch comp for FW
+    // }
+    // CR107
 
 #ifdef USE_POWER_LIMITS
     powerLimiterApply(&rcCommand[THROTTLE]);

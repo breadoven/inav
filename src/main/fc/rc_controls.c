@@ -51,6 +51,7 @@
 
 #include "flight/pid.h"
 #include "flight/failsafe.h"
+#include "flight/mixer.h"   // CR107
 
 #include "io/gps.h"
 #include "io/beeper.h"
@@ -110,7 +111,17 @@ bool isRollPitchStickDeflected(uint8_t deadband)
 {
     return (ABS(rcCommand[ROLL]) > deadband) || (ABS(rcCommand[PITCH]) > deadband);
 }
-
+// CR107
+void setDesiredThrottle(uint16_t throttle, bool allowMotorStop)
+{
+    uint16_t throttleIdleValue = getThrottleIdleValue();
+    if (allowMotorStop && throttle < throttleIdleValue) {
+        ENABLE_STATE(NAV_MOTOR_STOP_OR_IDLE);
+        return;
+    }
+    rcCommand[THROTTLE] = constrain(throttle, throttleIdleValue, motorConfig()->maxthrottle);
+}
+// CR107
 throttleStatus_e FAST_CODE NOINLINE calculateThrottleStatus(throttleStatusType_e type)
 {
     int value = rxGetChannelValue(THROTTLE);    // THROTTLE_STATUS_TYPE_RC

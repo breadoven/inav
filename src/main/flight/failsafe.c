@@ -212,7 +212,7 @@ bool failsafeRequiresAngleMode(void)
            failsafeProcedureLogic[failsafeState.activeProcedure].forceAngleMode;
 }
 
-bool failsafeRequiresMotorStop(void)
+bool failsafeRequiresMotorStop(void)    // CR107 still required ?
 {
     return failsafeState.active &&
            failsafeState.activeProcedure == FAILSAFE_PROCEDURE_AUTO_LANDING &&

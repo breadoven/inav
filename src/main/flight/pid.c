@@ -1119,7 +1119,14 @@ void FAST_CODE pidController(float dT)
             pidLevel(angleTarget, &pidState[axis], axis, horizonRateMagnitude, dT);
             canUseFpvCameraMix = false;     // FPVANGLEMIX is incompatible with ANGLE/HORIZON
             levelingEnabled = true;
-        }
+        } // else if (STATE(AIRPLANE)) { // CR108
+            // static float acroTargetAngle[2]; //decidegrees
+            // if (calculateRollPitchCenterStatus() == CENTERED) {
+                // pidLevel(acroTargetAngle[axis], &pidState[axis], axis, 0, dT);
+            // } else {
+                // acroTargetAngle[axis] = constrainf(attitude.raw[axis], -pidProfile()->max_angle_inclination[axis], pidProfile()->max_angle_inclination[axis]);
+            // }
+        // }  // CR108
     }
 
     if ((FLIGHT_MODE(TURN_ASSISTANT) || navigationRequiresTurnAssistance()) && (FLIGHT_MODE(ANGLE_MODE) || FLIGHT_MODE(HORIZON_MODE))) {
