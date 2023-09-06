@@ -112,14 +112,14 @@ bool isRollPitchStickDeflected(uint8_t deadband)
     return (ABS(rcCommand[ROLL]) > deadband) || (ABS(rcCommand[PITCH]) > deadband);
 }
 // CR107
-void setDesiredThrottle(uint16_t throttle, bool allowMotorStop)
+uint16_t setDesiredThrottle(uint16_t throttle, bool allowMotorStop)
 {
     uint16_t throttleIdleValue = getThrottleIdleValue();
     if (allowMotorStop && throttle < throttleIdleValue) {
         ENABLE_STATE(NAV_MOTOR_STOP_OR_IDLE);
-        return;
+        return throttle;
     }
-    rcCommand[THROTTLE] = constrain(throttle, throttleIdleValue, motorConfig()->maxthrottle);
+    return constrain(throttle, throttleIdleValue, motorConfig()->maxthrottle);
 }
 // CR107
 throttleStatus_e FAST_CODE NOINLINE calculateThrottleStatus(throttleStatusType_e type)

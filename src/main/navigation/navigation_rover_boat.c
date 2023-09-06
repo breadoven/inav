@@ -138,7 +138,7 @@ void applyRoverBoatNavigationController(navigationFSMStateFlags_t navStateFlags,
         rcCommand[ROLL] = 0;
         rcCommand[PITCH] = 0;
         rcCommand[YAW] = 0;
-        setDesiredThrottle(currentBatteryProfile->failsafe_throttle, true);   // CR107
+        rcCommand[THROTTLE] = setDesiredThrottle(currentBatteryProfile->failsafe_throttle, true);   // CR107
         // rcCommand[THROTTLE] = currentBatteryProfile->failsafe_throttle;
     } else if (navStateFlags & NAV_CTL_POS) {
         applyRoverBoatPositionController(currentTimeUs);

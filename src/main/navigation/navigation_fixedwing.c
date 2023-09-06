@@ -695,7 +695,7 @@ void applyFixedWingPitchRollThrottleController(navigationFSMStateFlags_t navStat
         }
 
         // rcCommand[THROTTLE] = constrain(correctedThrottleValue, getThrottleIdleValue(), motorConfig()->maxthrottle);
-        setDesiredThrottle(correctedThrottleValue, false); // CR107
+        rcCommand[THROTTLE] = setDesiredThrottle(correctedThrottleValue, false); // CR107
     }
 
 #ifdef NAV_FIXED_WING_LANDING
@@ -812,7 +812,7 @@ bool isFixedWingLandingDetected(void)
 void applyFixedWingEmergencyLandingController(timeUs_t currentTimeUs)
 {
     // rcCommand[THROTTLE] = currentBatteryProfile->failsafe_throttle;
-    setDesiredThrottle(currentBatteryProfile->failsafe_throttle, true);   // CR107
+    rcCommand[THROTTLE] = setDesiredThrottle(currentBatteryProfile->failsafe_throttle, true);   // CR107
 
     if (posControl.flags.estAltStatus >= EST_USABLE) {
         // target min descent rate 10m above takeoff altitude

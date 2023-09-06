@@ -273,7 +273,7 @@ static void applyMulticopterAltitudeController(timeUs_t currentTimeUs)
     }
 
     // Update throttle controller
-    setDesiredThrottle(posControl.rcAdjustment[THROTTLE], false);   // CR107
+    rcCommand[THROTTLE] = setDesiredThrottle(posControl.rcAdjustment[THROTTLE], false);   // CR107
     // rcCommand[THROTTLE] = posControl.rcAdjustment[THROTTLE];
 
     // Save processed throttle for future use
@@ -939,15 +939,17 @@ static void applyMulticopterEmergencyLandingController(timeUs_t currentTimeUs)
     rcCommand[YAW] = 0;
     rcCommand[ROLL] = 0;
     rcCommand[PITCH] = 0;
-    setDesiredThrottle(currentBatteryProfile->failsafe_throttle, true);   // CR107
-    // rcCommand[THROTTLE] = currentBatteryProfile->failsafe_throttle;
+    // rcCommand[THROTTLE] = currentBatteryProfile->failsafe_throttle;  // CR107
 
     /* Altitude sensors gone haywire, attempt to land regardless */
     if (posControl.flags.estAltStatus < EST_USABLE) {
         if (failsafeConfig()->failsafe_procedure == FAILSAFE_PROCEDURE_DROP_IT) {
             // setDesiredThrottle(getThrottleIdleValue());   // CR107
             rcCommand[THROTTLE] = getThrottleIdleValue();
+            return;
         }
+
+        rcCommand[THROTTLE] = setDesiredThrottle(currentBatteryProfile->failsafe_throttle, true);   // CR107
         return;
     }
 
@@ -973,7 +975,7 @@ static void applyMulticopterEmergencyLandingController(timeUs_t currentTimeUs)
     }
 
     // Update throttle
-    setDesiredThrottle(posControl.rcAdjustment[THROTTLE], false);   // CR107
+    rcCommand[THROTTLE] = setDesiredThrottle(posControl.rcAdjustment[THROTTLE], false);   // CR107
     // rcCommand[THROTTLE] = posControl.rcAdjustment[THROTTLE];
 
     // Hold position if possible

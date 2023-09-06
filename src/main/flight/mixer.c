@@ -627,9 +627,9 @@ int16_t getThrottlePercent(bool useScaled)  // CR106 should use actual throttle 
 
 motorStatus_e getMotorStatus(void)
 {
-    if (failsafeRequiresMotorStop()) {
-        return MOTOR_STOPPED_AUTO;
-    }
+    // if (failsafeRequiresMotorStop()) {   // CR107 delete this
+        // return MOTOR_STOPPED_AUTO;
+    // }
 
     if (STATE(NAV_MOTOR_STOP_OR_IDLE)) { // CR107 failsafe ?
     // if (!failsafeIsActive() && STATE(NAV_MOTOR_STOP_OR_IDLE)) {

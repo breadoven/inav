@@ -109,7 +109,7 @@ bool checkStickPosition(stickPositions_e stickPos);
 bool areSticksInApModePosition(uint16_t ap_mode);
 bool areSticksDeflected(void);
 bool isRollPitchStickDeflected(uint8_t deadband);
-void setDesiredThrottle(uint16_t throttle, bool allowMotorStop);     // CR107
+uint16_t setDesiredThrottle(uint16_t throttle, bool allowMotorStop);     // CR107
 throttleStatus_e calculateThrottleStatus(throttleStatusType_e type);
 int16_t throttleStickMixedValue(void);
 rollPitchStatus_e calculateRollPitchCenterStatus(void);

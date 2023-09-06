@@ -415,7 +415,6 @@ static void processPilotAndFailSafeActions(float dT)
 
         //Compute THROTTLE command
         rcCommand[THROTTLE] = throttleStickMixedValue();
-        // setDesiredThrottle(throttleStickMixedValue());  // CR107
 
         // Signal updated rcCommand values to Failsafe system
         failsafeUpdateRcCommandValues();
@@ -886,7 +885,7 @@ static void calculateThrottleTiltCompensation(void)
             float tiltCompFactor = 1.0f / constrainf(calculateCosTiltAngle(), 0.6f, 1.0f);  // max tilt about 50 deg
             tiltCompFactor = 1.0f + (tiltCompFactor - 1.0f) * (thrTiltCompStrength / 100.f);
 
-            setDesiredThrottle(throttleIdleValue + (rcCommand[THROTTLE] - throttleIdleValue) * tiltCompFactor, false);     // CR107
+            rcCommand[THROTTLE] = setDesiredThrottle(throttleIdleValue + (rcCommand[THROTTLE] - throttleIdleValue) * tiltCompFactor, false);     // CR107
             // rcCommand[THROTTLE] = constrain(throttleIdleValue + (rcCommand[THROTTLE] - throttleIdleValue) * tiltCompFactor,
                                             // throttleIdleValue, motorConfig()->maxthrottle);
         }
