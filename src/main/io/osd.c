@@ -830,15 +830,16 @@ static const char * osdArmingDisabledReasonMessage(void)
     switch (isArmingDisabledReason()) {
         case ARMING_DISABLED_FAILSAFE_SYSTEM:
             // See handling of FAILSAFE_RX_LOSS_MONITORING in failsafe.c
-            if (failsafePhase() == FAILSAFE_RX_LOSS_MONITORING) {
+            if (failsafePhase() == FAILSAFE_RX_LOSS_MONITORING) {  // CR109
                 if (failsafeIsReceivingRxData()) {
-                    // If we're not using sticks, it means the ARM switch
-                    // hasn't been off since entering FAILSAFE_RX_LOSS_MONITORING
-                    // yet
-                    return OSD_MESSAGE_STR(OSD_MSG_TURN_ARM_SW_OFF);
+                    // reminder to disarm to exit FAILSAFE_RX_LOSS_MONITORING once timeout period ends
+                    if (IS_RC_MODE_ACTIVE(BOXARM)) {
+                        return OSD_MESSAGE_STR(OSD_MSG_TURN_ARM_SW_OFF);
+                    }
+                } else {
+                    // Not receiving RX data
+                    return OSD_MESSAGE_STR(OSD_MSG_RC_RX_LINK_LOST);
                 }
-                // Not receiving RX data
-                return OSD_MESSAGE_STR(OSD_MSG_RC_RX_LINK_LOST);
             }
             return OSD_MESSAGE_STR(OSD_MSG_DISABLED_BY_FS);
         case ARMING_DISABLED_NOT_LEVEL:
@@ -1134,7 +1135,7 @@ static void osdFormatThrottlePosition(char *buff, bool useScaled, textAttributes
 #endif
     // CR106
     int8_t throttlePercent = getThrottlePercent(useScaled);
-    if (useScaled && throttlePercent <= 0) {
+    if ((useScaled && throttlePercent <= 0) || !ARMING_FLAG(ARMED)) {
         const char* message = ARMING_FLAG(ARMED) ? throttlePercent == 0 ? "IDLE" : "STOP" : "DARM";
         buff[0] = SYM_THR;
         strcpy(buff + 1, message);

@@ -368,7 +368,6 @@ static fixedWingLaunchEvent_t fwLaunchState_FW_LAUNCH_STATE_MOTOR_IDLE(timeUs_t 
         return FW_LAUNCH_EVENT_SUCCESS;
     }
     else {
-        // setDesiredThrottle(scaleRangef(elapsedTimeMs, 0.0f, LAUNCH_MOTOR_IDLE_SPINUP_TIME, getThrottleIdleValue(), currentBatteryProfile->nav.fw.launch_idle_throttle));    // CR107
         rcCommand[THROTTLE] = scaleRangef(elapsedTimeMs, 0.0f, LAUNCH_MOTOR_IDLE_SPINUP_TIME, getThrottleIdleValue(), currentBatteryProfile->nav.fw.launch_idle_throttle);
         fwLaunch.pitchAngle = scaleRangef(elapsedTimeMs, 0.0f, LAUNCH_MOTOR_IDLE_SPINUP_TIME, 0, navConfig()->fw.launch_climb_angle);
     }
@@ -503,7 +502,6 @@ static fixedWingLaunchEvent_t fwLaunchState_FW_LAUNCH_STATE_FINISH(timeUs_t curr
     // CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
     if (navConfig()->fw.launch_allow_throttle_low && throttleStickIsLow()) {
         // default to cruise throttle until switch to preselected Nav mode or pilot takes control
-        // setDesiredThrottle(currentBatteryProfile->nav.fw.cruise_throttle);   // CR107
         rcCommand[THROTTLE] = currentBatteryProfile->nav.fw.cruise_throttle;
     }
     // CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
@@ -544,10 +542,8 @@ static fixedWingLaunchEvent_t fwLaunchState_FW_LAUNCH_STATE_FINISH_THR_LOW(timeU
 
     if (throttleStickIsLow()) {
         throttleRaisedStartTimeMs = US2MS(currentTimeUs);
-        // setDesiredThrottle(currentBatteryProfile->nav.fw.cruise_throttle);   // CR107
         rcCommand[THROTTLE] = currentBatteryProfile->nav.fw.cruise_throttle;
     } else {
-        // setDesiredThrottle(scaleRangef(elapsedTimeMs, 0.0f, endTimeMs,  currentBatteryProfile->nav.fw.cruise_throttle, rcCommand[THROTTLE]));   // CR107
         rcCommand[THROTTLE] = scaleRangef(elapsedTimeMs, 0.0f, endTimeMs,  currentBatteryProfile->nav.fw.cruise_throttle, rcCommand[THROTTLE]);
         if (elapsedTimeMs > endTimeMs) {
             return FW_LAUNCH_EVENT_SUCCESS;

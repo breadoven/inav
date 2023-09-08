@@ -944,7 +944,6 @@ static void applyMulticopterEmergencyLandingController(timeUs_t currentTimeUs)
     /* Altitude sensors gone haywire, attempt to land regardless */
     if (posControl.flags.estAltStatus < EST_USABLE) {
         if (failsafeConfig()->failsafe_procedure == FAILSAFE_PROCEDURE_DROP_IT) {
-            // setDesiredThrottle(getThrottleIdleValue());   // CR107
             rcCommand[THROTTLE] = getThrottleIdleValue();
             return;
         }

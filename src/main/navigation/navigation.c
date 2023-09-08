@@ -1815,7 +1815,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_EMERGENCY_LANDING_FINIS
 {
     UNUSED(previousState);
 
-    disarm(DISARM_NAVIGATION);
+    // disarm(DISARM_NAVIGATION);   CR109
 
     return NAV_FSM_EVENT_NONE;
 }
@@ -2844,8 +2844,8 @@ void updateLandingStatus(timeMs_t currentTimeMs)
     // if (STATE(AIRPLANE) && !navConfig()->general.flags.disarm_on_landing) {
         // return;     // no point using this with a fixed wing if not set to disarm
     // }
-DEBUG_SET(DEBUG_ALWAYS, 5, averageAbsGyroRates());
-DEBUG_SET(DEBUG_ALWAYS, 4, landingDetectorIsActive);
+// DEBUG_SET(DEBUG_ALWAYS, 5, averageAbsGyroRates());
+// DEBUG_SET(DEBUG_ALWAYS, 4, landingDetectorIsActive);
     static timeMs_t lastUpdateTimeMs = 0;
     if ((currentTimeMs - lastUpdateTimeMs) <= HZ2MS(100)) {  // limit update to 100Hz
         return;
@@ -2856,8 +2856,12 @@ DEBUG_SET(DEBUG_ALWAYS, 4, landingDetectorIsActive);
     DEBUG_SET(DEBUG_LANDING, 1, STATE(LANDING_DETECTED));
 
     if (!ARMING_FLAG(ARMED)) {
-        resetLandingDetector();  // CR105
-
+        // CR105
+        if (STATE(LANDING_DETECTED)) {
+            landingDetectorIsActive = false;
+        }
+        resetLandingDetector();
+        // CR105
         if (!IS_RC_MODE_ACTIVE(BOXARM)) {
             DISABLE_ARMING_FLAG(ARMING_DISABLED_LANDING_DETECTED);
         }
@@ -2871,7 +2875,7 @@ DEBUG_SET(DEBUG_ALWAYS, 4, landingDetectorIsActive);
         }
     } else if (STATE(LANDING_DETECTED)) {
         pidResetErrorAccumulators();
-        if (navConfig()->general.flags.disarm_on_landing) {
+        if (navConfig()->general.flags.disarm_on_landing && !FLIGHT_MODE(FAILSAFE_MODE)) {   // CR109
             ENABLE_ARMING_FLAG(ARMING_DISABLED_LANDING_DETECTED);
             disarm(DISARM_LANDING);
         } else if (!navigationInAutomaticThrottleMode()) {
