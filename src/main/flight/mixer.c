@@ -472,6 +472,7 @@ void FAST_CODE mixTable(void)
     }
 #endif
     // CR106 - set motors to off and return if disarmed ... no point going any further
+    DEBUG_SET(DEBUG_ALWAYS, 4, rcCommand[THROTTLE]);
 #ifdef USE_DEV_TOOLS
     bool isDisarmed = !ARMING_FLAG(ARMED) || systemConfig()->groundTestMode;
 #else
@@ -624,7 +625,17 @@ int16_t getThrottlePercent(bool useScaled)  // CR106 should use actual throttle 
     }
     return thr;
 }
-
+// CR107
+uint16_t setDesiredThrottle(uint16_t throttle, bool allowMotorStop)
+{
+    uint16_t throttleIdleValue = getThrottleIdleValue();
+    if (allowMotorStop && throttle < throttleIdleValue) {
+        ENABLE_STATE(NAV_MOTOR_STOP_OR_IDLE);
+        return throttle;
+    }
+    return constrain(throttle, throttleIdleValue, motorConfig()->maxthrottle);
+}
+// CR107
 motorStatus_e getMotorStatus(void)
 {
     // if (failsafeRequiresMotorStop()) {   // CR107 delete this

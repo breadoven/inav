@@ -120,8 +120,8 @@ static void updateAltitudeThrottleController_MC(timeDelta_t deltaMicros)
 
     int16_t rcThrottleCorrection = pt1FilterApply4(&altholdThrottleFilterState, velocity_controller, NAV_THROTTLE_CUTOFF_FREQENCY_HZ, US2S(deltaMicros));
     rcThrottleCorrection = constrain(rcThrottleCorrection, thrCorrectionMin, thrCorrectionMax);
-
-    posControl.rcAdjustment[THROTTLE] = constrain(currentBatteryProfile->nav.mc.hover_throttle + rcThrottleCorrection, getThrottleIdleValue(), motorConfig()->maxthrottle);
+    posControl.rcAdjustment[THROTTLE] = setDesiredThrottle(currentBatteryProfile->nav.mc.hover_throttle + rcThrottleCorrection, false);   // CR107
+    // posControl.rcAdjustment[THROTTLE] = constrain(currentBatteryProfile->nav.mc.hover_throttle + rcThrottleCorrection, getThrottleIdleValue(), motorConfig()->maxthrottle);
 }
 
 bool adjustMulticopterAltitudeFromRCInput(void)
@@ -273,8 +273,7 @@ static void applyMulticopterAltitudeController(timeUs_t currentTimeUs)
     }
 
     // Update throttle controller
-    rcCommand[THROTTLE] = setDesiredThrottle(posControl.rcAdjustment[THROTTLE], false);   // CR107
-    // rcCommand[THROTTLE] = posControl.rcAdjustment[THROTTLE];
+    rcCommand[THROTTLE] = posControl.rcAdjustment[THROTTLE];
 
     // Save processed throttle for future use
     rcCommandAdjustedThrottle = rcCommand[THROTTLE];
@@ -974,8 +973,7 @@ static void applyMulticopterEmergencyLandingController(timeUs_t currentTimeUs)
     }
 
     // Update throttle
-    rcCommand[THROTTLE] = setDesiredThrottle(posControl.rcAdjustment[THROTTLE], false);   // CR107
-    // rcCommand[THROTTLE] = posControl.rcAdjustment[THROTTLE];
+    rcCommand[THROTTLE] = posControl.rcAdjustment[THROTTLE];
 
     // Hold position if possible
     if ((posControl.flags.estPosStatus >= EST_USABLE)) {
