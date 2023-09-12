@@ -171,7 +171,7 @@ flightModeForTelemetry_e getFlightModeForTelemetry(void)
         return FLM_ANGLE;
 
     if (FLIGHT_MODE(HORIZON_MODE))
-        return FLM_HORIZON;
+        return FLM_HORIZON; // CR108M
 
 
     return STATE(AIRMODE_ACTIVE) ? FLM_ACRO_AIR : FLM_ACRO;

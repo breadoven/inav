@@ -2217,6 +2217,8 @@ static bool osdDrawSingleElement(uint8_t item)
                 p = "ANGL";
             else if (FLIGHT_MODE(HORIZON_MODE))
                 p = "HOR ";
+            else if (FLIGHT_MODE(ATTIHOLD_MODE))    // CR108
+                p = "ATTI";
 
             displayWrite(osdDisplayPort, elemPosX, elemPosY, p);
             return true;

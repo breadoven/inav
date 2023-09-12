@@ -1107,27 +1107,55 @@ void FAST_CODE pidController(float dT)
 #endif
     }
 
-    // Step 3: Run control for ANGLE_MODE, HORIZON_MODE, and HEADING_LOCK
-    const float horizonRateMagnitude = calcHorizonRateMagnitude();
+    // Step 3: Run control for ANGLE_MODE, HORIZON_MODE and ATTI_MODE   // CR108
     levelingEnabled = false;
+    static bool resetAttiMode = true;
+    bool attiModeActive = false;
+
     for (uint8_t axis = FD_ROLL; axis <= FD_PITCH; axis++) {
+        // CR108
         if (FLIGHT_MODE(ANGLE_MODE) || FLIGHT_MODE(HORIZON_MODE) || isFlightAxisAngleOverrideActive(axis)) {
-            //If axis angle override, get the correct angle from Logic Conditions
+            const float horizonRateMagnitude = calcHorizonRateMagnitude();
+
+            // If axis angle override, get the correct angle from Logic Conditions
             float angleTarget = getFlightAxisAngleOverride(axis, computePidLevelTarget(axis));
 
-            //Apply the Level PID controller
+            // Apply the Level PID controller
             pidLevel(angleTarget, &pidState[axis], axis, horizonRateMagnitude, dT);
             canUseFpvCameraMix = false;     // FPVANGLEMIX is incompatible with ANGLE/HORIZON
             levelingEnabled = true;
-        } // else if (STATE(AIRPLANE)) { // CR108
-            // static float acroTargetAngle[2]; //decidegrees
-            // if (calculateRollPitchCenterStatus() == CENTERED) {
-                // pidLevel(acroTargetAngle[axis], &pidState[axis], axis, 0, dT);
-            // } else {
-                // acroTargetAngle[axis] = constrainf(attitude.raw[axis], -pidProfile()->max_angle_inclination[axis], pidProfile()->max_angle_inclination[axis]);
-            // }
-        // }  // CR108
+        }
+        else if (FLIGHT_MODE(ATTIHOLD_MODE)) { // CR108
+            static int16_t attiHoldTarget[2]; //decidegrees
+            attiModeActive = true;
+            if (resetAttiMode) {
+                // attiHoldTarget[FD_ROLL] = attiHoldTarget[FD_PITCH] = 0;
+                attiHoldTarget[FD_ROLL] = attitude.raw[FD_ROLL];
+                attiHoldTarget[FD_PITCH] = attitude.raw[FD_PITCH];
+                resetAttiMode = false;
+            }
+
+            uint16_t bankLimit = pidProfile()->max_angle_inclination[axis];
+            if (calculateRollPitchCenterStatus() == CENTERED || ABS(attitude.raw[axis]) >= bankLimit) {
+                attiHoldTarget[axis] = constrain(attiHoldTarget[axis], -bankLimit, bankLimit);
+                // if (ABS(attitude.raw[axis]) >= bankLimit) {
+                    // attiHoldTarget[axis] = constrain(attitude.raw[axis], -bankLimit, bankLimit);
+                // }
+                // if (attiHoldTarget[FD_ROLL] && attiHoldTarget[FD_PITCH]) {
+                    pidLevel(attiHoldTarget[axis], &pidState[axis], axis, 0, dT);
+                // }
+            } else {
+                // if (ABS(attitude.raw[axis]) <= bankLimit) {  // or > (180 - max_angle_inclination) for roll inverted
+                    attiHoldTarget[axis] = attitude.raw[axis];
+                // }
+            }
+        }
+        // CR108
     }
+    if (!attiModeActive) {
+        resetAttiMode = true;
+    }
+
 
     if ((FLIGHT_MODE(TURN_ASSISTANT) || navigationRequiresTurnAssistance()) && (FLIGHT_MODE(ANGLE_MODE) || FLIGHT_MODE(HORIZON_MODE))) {
         float bankAngleTarget = DECIDEGREES_TO_RADIANS(pidRcCommandToAngle(rcCommand[FD_ROLL], pidProfile()->max_angle_inclination[FD_ROLL]));
@@ -1300,7 +1328,7 @@ void updateFixedWingLevelTrim(timeUs_t currentTimeUs)
         areSticksDeflected() ||
         (!FLIGHT_MODE(ANGLE_MODE) && !FLIGHT_MODE(HORIZON_MODE) && !FLIGHT_MODE(NAV_COURSE_HOLD_MODE)) ||
         FLIGHT_MODE(SOARING_MODE) ||
-        navigationIsControllingAltitude()
+        navigationIsControllingAltitude()   // CR108M
     ) {
         flags |= PID_FREEZE_INTEGRATOR;
     }

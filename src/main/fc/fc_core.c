@@ -570,10 +570,10 @@ void tryArm(void)
         ENABLE_ARMING_FLAG(WAS_EVER_ARMED);
         //It is required to inform the mixer that arming was executed and it has to switch to the FORWARD direction
         ENABLE_STATE(SET_REVERSIBLE_MOTORS_FORWARD);
-        logicConditionReset();
+        logicConditionReset();  // CR105M
 
 #ifdef USE_PROGRAMMING_FRAMEWORK
-        programmingPidReset();
+        programmingPidReset();  // CR105M
 #endif
 
         headFreeModeHold = DECIDEGREES_TO_DEGREES(attitude.values.yaw);
@@ -669,28 +669,50 @@ void processRx(timeUs_t currentTimeUs)
 
     bool emergRearmAngleEnforce = STATE(MULTIROTOR) && emergRearmStabiliseTimeout > US2MS(currentTimeUs);  // CR105
     bool autoEnableAngle = failsafeRequiresAngleMode() || navigationRequiresAngleMode() || emergRearmAngleEnforce;   // CR105
-    bool canUseHorizonMode = true;
+    // CR108
+    // bool canUseHorizonMode = true;
 
-    if (sensors(SENSOR_ACC) && (IS_RC_MODE_ACTIVE(BOXANGLE) || autoEnableAngle)) { // CR105
-        // bumpless transfer to Level mode
-        canUseHorizonMode = false;
+    // if (sensors(SENSOR_ACC) && (IS_RC_MODE_ACTIVE(BOXANGLE) || autoEnableAngle)) { // CR105
+        // // bumpless transfer to Level mode
+        // canUseHorizonMode = false;
 
-        if (!FLIGHT_MODE(ANGLE_MODE)) {
-            ENABLE_FLIGHT_MODE(ANGLE_MODE);
+        // if (!FLIGHT_MODE(ANGLE_MODE)) {
+            // ENABLE_FLIGHT_MODE(ANGLE_MODE);
+        // }
+    // } else {
+        // DISABLE_FLIGHT_MODE(ANGLE_MODE); // failsafe support
+    // }
+
+    // if (IS_RC_MODE_ACTIVE(BOXHORIZON) && canUseHorizonMode) {
+
+        // DISABLE_FLIGHT_MODE(ANGLE_MODE);
+
+        // if (!FLIGHT_MODE(HORIZON_MODE)) {
+            // ENABLE_FLIGHT_MODE(HORIZON_MODE);
+        // }
+    // } else {
+        // DISABLE_FLIGHT_MODE(HORIZON_MODE);
+    // }
+
+    // CR108
+    DISABLE_FLIGHT_MODE(ANGLE_MODE);
+    DISABLE_FLIGHT_MODE(HORIZON_MODE);
+    DISABLE_FLIGHT_MODE(ATTIHOLD_MODE);
+
+    if (sensors(SENSOR_ACC)) {
+        if (IS_RC_MODE_ACTIVE(BOXANGLE) || autoEnableAngle) { // CR105
+            if (!FLIGHT_MODE(ANGLE_MODE)) {
+                ENABLE_FLIGHT_MODE(ANGLE_MODE);
+            }
+        } else if (IS_RC_MODE_ACTIVE(BOXHORIZON)) {
+            if (!FLIGHT_MODE(HORIZON_MODE)) {
+                ENABLE_FLIGHT_MODE(HORIZON_MODE);
+            }
+        } else if (STATE(AIRPLANE) && IS_RC_MODE_ACTIVE(BOXATTIHOLD)) {  /* Attitude hold mode */
+            if (!FLIGHT_MODE(ATTIHOLD_MODE)) {
+                ENABLE_FLIGHT_MODE(ATTIHOLD_MODE);
+            }
         }
-    } else {
-        DISABLE_FLIGHT_MODE(ANGLE_MODE); // failsafe support
-    }
-
-    if (IS_RC_MODE_ACTIVE(BOXHORIZON) && canUseHorizonMode) {
-
-        DISABLE_FLIGHT_MODE(ANGLE_MODE);
-
-        if (!FLIGHT_MODE(HORIZON_MODE)) {
-            ENABLE_FLIGHT_MODE(HORIZON_MODE);
-        }
-    } else {
-        DISABLE_FLIGHT_MODE(HORIZON_MODE);
     }
 
     if (FLIGHT_MODE(ANGLE_MODE) || FLIGHT_MODE(HORIZON_MODE)) {
@@ -698,7 +720,7 @@ void processRx(timeUs_t currentTimeUs)
     } else {
         LED1_OFF;
     }
-
+    // CR108
     /* Flaperon mode */
     if (IS_RC_MODE_ACTIVE(BOXFLAPERON) && STATE(FLAPERON_AVAILABLE)) {
         if (!FLIGHT_MODE(FLAPERON)) {
