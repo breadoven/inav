@@ -1109,11 +1109,11 @@ void FAST_CODE pidController(float dT)
 
     // Step 3: Run control for ANGLE_MODE, HORIZON_MODE and ATTI_MODE   // CR108
     levelingEnabled = false;
-    static bool resetAttiMode = true;
+    // CR108
+    static bool restartAttiMode = true;
     bool attiModeActive = false;
 
     for (uint8_t axis = FD_ROLL; axis <= FD_PITCH; axis++) {
-        // CR108
         if (FLIGHT_MODE(ANGLE_MODE) || FLIGHT_MODE(HORIZON_MODE) || isFlightAxisAngleOverrideActive(axis)) {
             const float horizonRateMagnitude = calcHorizonRateMagnitude();
 
@@ -1128,34 +1128,28 @@ void FAST_CODE pidController(float dT)
         else if (FLIGHT_MODE(ATTIHOLD_MODE)) { // CR108
             static int16_t attiHoldTarget[2]; //decidegrees
             attiModeActive = true;
-            if (resetAttiMode) {
-                // attiHoldTarget[FD_ROLL] = attiHoldTarget[FD_PITCH] = 0;
+
+            if (restartAttiMode) {
                 attiHoldTarget[FD_ROLL] = attitude.raw[FD_ROLL];
                 attiHoldTarget[FD_PITCH] = attitude.raw[FD_PITCH];
-                resetAttiMode = false;
+                restartAttiMode = false;
             }
 
+            uint16_t attiAngleTarget;
             uint16_t bankLimit = pidProfile()->max_angle_inclination[axis];
-            if (calculateRollPitchCenterStatus() == CENTERED || ABS(attitude.raw[axis]) >= bankLimit) {
-                attiHoldTarget[axis] = constrain(attiHoldTarget[axis], -bankLimit, bankLimit);
-                // if (ABS(attitude.raw[axis]) >= bankLimit) {
-                    // attiHoldTarget[axis] = constrain(attitude.raw[axis], -bankLimit, bankLimit);
-                // }
-                // if (attiHoldTarget[FD_ROLL] && attiHoldTarget[FD_PITCH]) {
-                    pidLevel(attiHoldTarget[axis], &pidState[axis], axis, 0, dT);
-                // }
+            if (calculateRollPitchCenterStatus() == CENTERED) {
+                attiAngleTarget = constrain(attiHoldTarget[axis], -bankLimit, bankLimit);
             } else {
-                // if (ABS(attitude.raw[axis]) <= bankLimit) {  // or > (180 - max_angle_inclination) for roll inverted
-                    attiHoldTarget[axis] = attitude.raw[axis];
-                // }
+                attiAngleTarget = constrain(attitude.raw[axis] + (bankLimit * rcCommand[axis] / 500), -bankLimit, bankLimit);
+                attiHoldTarget[axis] = attitude.raw[axis];
             }
+            pidLevel(attiAngleTarget, &pidState[axis], axis, 0, dT);
         }
         // CR108
     }
-    if (!attiModeActive) {
-        resetAttiMode = true;
+    if (!restartAttiMode) {
+        restartAttiMode = !attiModeActive;
     }
-
 
     if ((FLIGHT_MODE(TURN_ASSISTANT) || navigationRequiresTurnAssistance()) && (FLIGHT_MODE(ANGLE_MODE) || FLIGHT_MODE(HORIZON_MODE))) {
         float bankAngleTarget = DECIDEGREES_TO_RADIANS(pidRcCommandToAngle(rcCommand[FD_ROLL], pidProfile()->max_angle_inclination[FD_ROLL]));
