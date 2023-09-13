@@ -606,7 +606,7 @@ void FAST_CODE mixTable(void)
         throttleMin = MIN(throttleMin + (rpyMixRange / 2), throttleMin + (throttleRange / 2) - (throttleRange * THROTTLE_CLIPPING_FACTOR / 2));
         throttleMax = MAX(throttleMax - (rpyMixRange / 2), throttleMin + (throttleRange / 2) + (throttleRange * THROTTLE_CLIPPING_FACTOR / 2));
     }
-    // CR106
+
     // Now add in the desired throttle, but keep in a range that doesn't clip adjusted
     // roll/pitch/yaw. This could move throttle down, but also up for those low throttle flips.
     for (int i = 0; i < motorCount; i++) {
@@ -618,10 +618,9 @@ void FAST_CODE mixTable(void)
             motor[i] = constrain(motor[i], throttleRangeMin, throttleRangeMax);
         }
     }
-    // CR106
 }
 
-int16_t getThrottlePercent(bool useScaled)  // CR106 should use actual throttle sent to motors not throttle stick position
+int16_t getThrottlePercent(bool useScaled)
 {
     int16_t thr = constrain(mixerThrottleCommand, PWM_RANGE_MIN, PWM_RANGE_MAX);
 
