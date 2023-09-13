@@ -146,7 +146,7 @@ static const failsafeProcedureLogic_t failsafeProcedureLogic[] = {
  */
 void failsafeReset(void)
 {
-    if (failsafeState.active) {  // can't reset when still active  CR109
+    if (failsafeState.active) {  // can't reset if still active
         return;
     }
 
@@ -161,7 +161,7 @@ void failsafeReset(void)
     failsafeState.phase = FAILSAFE_IDLE;
     failsafeState.rxLinkState = FAILSAFE_RXLINK_DOWN;
     failsafeState.activeProcedure = failsafeConfig()->failsafe_procedure;
-    failsafeState.controlling = false;  // CR98
+    failsafeState.controlling = false;
 
     failsafeState.lastGoodRcCommand[ROLL] = 0;
     failsafeState.lastGoodRcCommand[PITCH] = 0;

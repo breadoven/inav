@@ -993,10 +993,10 @@ static const char * osdFailsafeInfoMessage(void)
 #if defined(USE_SAFE_HOME)
 static const char * divertingToSafehomeMessage(void)
 {
-	if (NAV_Status.state != MW_NAV_STATE_HOVER_ABOVE_HOME && posControl.safehomeState.isApplied) {
-	    return OSD_MESSAGE_STR(OSD_MSG_DIVERT_SAFEHOME);
-	}
-	return NULL;
+    if (NAV_Status.state != MW_NAV_STATE_HOVER_ABOVE_HOME && posControl.safehomeState.isApplied) {
+        return OSD_MESSAGE_STR(OSD_MSG_DIVERT_SAFEHOME);
+    }
+    return NULL;
 }
 #endif
 
@@ -1118,7 +1118,7 @@ bool osdUsingScaledThrottle(void)
  **/
 static void osdFormatThrottlePosition(char *buff, bool useScaled, textAttributes_t *elemAttr)
 {
-    buff[0] = SYM_BLANK;    // CR106
+    buff[0] = SYM_BLANK;
     buff[1] = SYM_THR;
     if (navigationIsControllingThrottle()) {
         buff[0] = SYM_AUTO_THR0;
@@ -1133,7 +1133,6 @@ static void osdFormatThrottlePosition(char *buff, bool useScaled, textAttributes
         TEXT_ATTRIBUTES_ADD_BLINK(*elemAttr);
     }
 #endif
-    // CR106
     int8_t throttlePercent = getThrottlePercent(useScaled);
     if ((useScaled && throttlePercent <= 0) || !ARMING_FLAG(ARMED)) {
         const char* message = ARMING_FLAG(ARMED) ? throttlePercent == 0 ? "IDLE" : "STOP" : "DARM";
@@ -1142,7 +1141,6 @@ static void osdFormatThrottlePosition(char *buff, bool useScaled, textAttributes
         return;
     }
     tfp_sprintf(buff + 2, "%3d", throttlePercent);
-    // CR106
 }
 
 /**
@@ -4481,15 +4479,14 @@ static void osdShowArmed(void)
             if (posControl.safehomeState.distance) { // safehome found during arming
                 if (navConfig()->general.flags.safehome_usage_mode == SAFEHOME_USAGE_OFF) {
                     strcpy(buf, "SAFEHOME FOUND; MODE OFF");
-				} else {
-					char buf2[12]; // format the distance first
-					osdFormatDistanceStr(buf2, posControl.safehomeState.distance);
-					tfp_sprintf(buf, "%c - %s -> SAFEHOME %u", SYM_HOME, buf2, posControl.safehomeState.index);
-
-				}
-				textAttributes_t elemAttr = _TEXT_ATTRIBUTES_BLINK_BIT;
-				// write this message above the ARMED message to make it obvious
-				displayWriteWithAttr(osdDisplayPort, (osdDisplayPort->cols - strlen(buf)) / 2, y - 8, buf, elemAttr);
+                } else {
+                    char buf2[12]; // format the distance first
+                    osdFormatDistanceStr(buf2, posControl.safehomeState.distance);
+                    tfp_sprintf(buf, "%c - %s -> SAFEHOME %u", SYM_HOME, buf2, posControl.safehomeState.index);
+                }
+                textAttributes_t elemAttr = _TEXT_ATTRIBUTES_BLINK_BIT;
+                // write this message above the ARMED message to make it obvious
+                displayWriteWithAttr(osdDisplayPort, (osdDisplayPort->cols - strlen(buf)) / 2, y - 8, buf, elemAttr);
             }
 #endif
         } else {
@@ -4944,7 +4941,6 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
                         // by OSD_FLYMODE.
                         messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_ALTITUDE_HOLD);
                     }
-                    // CR101
                     if (STATE(MULTIROTOR) && FLIGHT_MODE(NAV_COURSE_HOLD_MODE)) {
                         if (posControl.cruise.multicopterSpeed >= 50.0f) {
                             char buf[6];
@@ -4955,7 +4951,6 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
                         }
                         messages[messageCount++] = messageBuf;
                     }
-                    // CR101
                     if (IS_RC_MODE_ACTIVE(BOXAUTOTRIM) && !feature(FEATURE_FW_AUTOTRIM)) {
                         messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_AUTOTRIM);
                     }

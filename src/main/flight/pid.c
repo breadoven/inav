@@ -898,16 +898,17 @@ static uint8_t getHeadingHoldState(void)
 float pidHeadingHold(float dT)
 {
     float headingHoldRate;
-    //  CR101
+
+    /* Convert absolute error into relative to current heading */
     int16_t error = DECIDEGREES_TO_DEGREES(attitude.values.yaw) - headingHoldTarget;
-    DEBUG_SET(DEBUG_ALWAYS, 4, error);
+
     /* Convert absolute error into relative to current heading */
     if (error > 180) {
         error -= 360;
     } else if (error < -180) {
         error += 360;
     }
-// CR101
+
     /*
         New MAG_HOLD controller work slightly different that previous one.
         Old one mapped error to rotation speed in following way:
