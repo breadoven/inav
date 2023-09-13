@@ -189,7 +189,6 @@ void initActiveBoxIds(void)
         ADD_ACTIVE_BOX(BOXANGLE);
         ADD_ACTIVE_BOX(BOXHORIZON);
         ADD_ACTIVE_BOX(BOXTURNASSIST);
-        ADD_ACTIVE_BOX(BOXATTIHOLD);   // CR108
     }
 
     if (!feature(FEATURE_AIRMODE) && STATE(ALTITUDE_CONTROL)) {
@@ -278,6 +277,10 @@ void initActiveBoxIds(void)
 #endif
         if (sensors(SENSOR_BARO)) {
             ADD_ACTIVE_BOX(BOXAUTOLEVEL);
+        }
+        // CR108
+        if (sensors(SENSOR_ACC)) {
+            ADD_ACTIVE_BOX(BOXATTIHOLD);
         }
     }
 
