@@ -162,6 +162,7 @@ typedef enum {
     FLM_CRUISE,
     FLM_LAUNCH,
     FLM_FAILSAFE,
+    FLM_ATTIHOLD,   // CR108
     FLM_COUNT
 } flightModeForTelemetry_e;
 
@@ -202,6 +203,7 @@ extern simulatorData_t simulatorData;
 
 uint32_t enableFlightMode(flightModeFlags_e mask);
 uint32_t disableFlightMode(flightModeFlags_e mask);
+void updateFlightModeChangeBeeper(void); // CR108
 
 bool sensors(uint32_t mask);
 void sensorsSet(uint32_t mask);

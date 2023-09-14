@@ -96,11 +96,7 @@ armingFlag_e isArmingDisabledReason(void)
  */
 uint32_t enableFlightMode(flightModeFlags_e mask)
 {
-    uint32_t oldVal = flightModeFlags;
-
-    flightModeFlags |= (mask);
-    if (flightModeFlags != oldVal)
-        beeperConfirmationBeeps(1);
+    flightModeFlags |= (mask); // CR108
     return flightModeFlags;
 }
 
@@ -110,14 +106,20 @@ uint32_t enableFlightMode(flightModeFlags_e mask)
  */
 uint32_t disableFlightMode(flightModeFlags_e mask)
 {
-    uint32_t oldVal = flightModeFlags;
-
-    flightModeFlags &= ~(mask);
-    if (flightModeFlags != oldVal)
-        beeperConfirmationBeeps(1);
+    flightModeFlags &= ~(mask); // CR108
     return flightModeFlags;
 }
+// CR108
+void updateFlightModeChangeBeeper(void)
+{
+    static uint32_t previousFlightModeFlags = 0;
 
+    if (flightModeFlags != previousFlightModeFlags) {
+        beeperConfirmationBeeps(1);
+    }
+    previousFlightModeFlags = flightModeFlags;
+}
+// CR108
 bool sensors(uint32_t mask)
 {
     return enabledSensors & mask;
@@ -171,8 +173,10 @@ flightModeForTelemetry_e getFlightModeForTelemetry(void)
         return FLM_ANGLE;
 
     if (FLIGHT_MODE(HORIZON_MODE))
-        return FLM_HORIZON; // CR108M
+        return FLM_HORIZON;
 
+    if (FLIGHT_MODE(ATTIHOLD_MODE))
+        return FLM_ATTIHOLD; // CR108
 
     return STATE(AIRMODE_ACTIVE) ? FLM_ACRO_AIR : FLM_ACRO;
 }

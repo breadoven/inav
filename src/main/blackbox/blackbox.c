@@ -519,7 +519,6 @@ typedef struct blackboxMainState_s {
     int32_t navTargetPos[XYZ_AXIS_COUNT];
     int16_t navHeading;
     uint16_t navTargetHeading;
-
     int16_t navSurface;
 } blackboxMainState_t;
 
@@ -1230,7 +1229,6 @@ static void writeInterframe(void)
         }
 
         blackboxWriteSignedVB(blackboxCurrent->navTargetHeading - blackboxLast->navTargetHeading);
-
         blackboxWriteSignedVB(blackboxCurrent->navSurface - blackboxLast->navSurface);
     }
 
