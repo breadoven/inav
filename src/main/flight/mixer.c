@@ -481,7 +481,6 @@ void FAST_CODE mixTable(void)
         return;
     }
 #endif
-    DEBUG_SET(DEBUG_ALWAYS, 4, rcCommand[THROTTLE]);
 #ifdef USE_DEV_TOOLS
     bool isDisarmed = !ARMING_FLAG(ARMED) || systemConfig()->groundTestMode;
 #else

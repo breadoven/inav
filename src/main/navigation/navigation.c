@@ -1130,7 +1130,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_COURSE_HOLD_IN_PROGRESS
     } else if (currentTimeMs - posControl.cruise.lastCourseAdjustmentTime > 4000) {
         posControl.cruise.previousCourse = posControl.cruise.course;
     }
-    DEBUG_SET(DEBUG_ALWAYS, 3, posControl.cruise.course);
+
     setDesiredPosition(NULL, posControl.cruise.course, NAV_POS_UPDATE_HEADING);
 
     return NAV_FSM_EVENT_NONE;
@@ -2587,7 +2587,7 @@ void updateHomePosition(void)
     else {
         static bool isHomeResetAllowed = false;
 
-        // If pilot so desires he may reset home position to current position
+        // If pilot so desires he may reset home position to current position  // CR105M
         if (IS_RC_MODE_ACTIVE(BOXHOMERESET)) {
             if (isHomeResetAllowed && !FLIGHT_MODE(FAILSAFE_MODE) && !FLIGHT_MODE(NAV_RTH_MODE) && !FLIGHT_MODE(NAV_WP_MODE) && (posControl.flags.estPosStatus >= EST_USABLE)) {
                 const navSetWaypointFlags_t homeUpdateFlags = STATE(GPS_FIX_HOME) ? (NAV_POS_UPDATE_XY | NAV_POS_UPDATE_HEADING) : (NAV_POS_UPDATE_XY | NAV_POS_UPDATE_Z | NAV_POS_UPDATE_HEADING);
@@ -2910,7 +2910,7 @@ bool isProbablyStillFlying(void)
     bool inFlightSanityCheck;
     if (STATE(MULTIROTOR)) {
         inFlightSanityCheck = posControl.actualState.velXY > MC_LAND_CHECK_VEL_XY_MOVING || averageAbsGyroRates() > 4.0f;
-        DEBUG_SET(DEBUG_ALWAYS, 7, averageAbsGyroRates());
+        // DEBUG_SET(DEBUG_ALWAYS, 7, averageAbsGyroRates());
     } else {
         inFlightSanityCheck = isGPSHeadingValid();
     }
@@ -3695,14 +3695,15 @@ void checkManualEmergencyLandingControl(bool forcedActivation)
 static navigationFSMEvent_t selectNavEventFromBoxModeInput(bool launchBypass)   // CR6
 {
     // General use debugs
-    // DEBUG_SET(DEBUG_ALWAYS, 0, posControl.rthTBPointsList[0].x);
-    // DEBUG_SET(DEBUG_ALWAYS, 1, posControl.rthTBPointsList[1].x);
-    // DEBUG_SET(DEBUG_ALWAYS, 2, isFixedWingFlying());
-    // DEBUG_SET(DEBUG_ALWAYS, 3, posControl.rthTBPointsList[3].x);
-    // DEBUG_SET(DEBUG_ALWAYS, 4, posControl.rthTBPointsList[4].x);
-    // DEBUG_SET(DEBUG_ALWAYS, 5, posControl.rthTBPointsList[5].x);
-    // DEBUG_SET(DEBUG_ALWAYS, 6, posControl.rthTBPointsList[5].x);
-    // DEBUG_SET(DEBUG_ALWAYS, 7, posControl.activeRthTBPointIndex);
+    // DEBUG_SET(DEBUG_ALWAYS, 0, testBitField );
+    // DEBUG_SET(DEBUG_ALWAYS, 1, testBitField & 1 << 0);
+    // DEBUG_SET(DEBUG_ALWAYS, 2, testBitField & 1 << 1);
+    // DEBUG_SET(DEBUG_ALWAYS, 3, testBitField & 1 << 2);
+    // DEBUG_SET(DEBUG_ALWAYS, 4, testBitField & 1 << 3);
+    // DEBUG_SET(DEBUG_ALWAYS, 5, testBitField & 1 << 4);
+    // DEBUG_SET(DEBUG_ALWAYS, 6, testBitField & 1 << 5);
+    // DEBUG_SET(DEBUG_ALWAYS, 7, testBitField & 1 << 6);
+
 
     static bool canActivateWaypoint = false;
     static bool canActivateLaunchMode = false;

@@ -482,7 +482,8 @@ bool calculateRxChannelsAndUpdateFailsafe(timeUs_t currentTimeUs)
 
         // Store as rxRaw
         rcChannels[channel].raw = sample;
-
+// DEBUG_SET(DEBUG_ALWAYS, 1, rcChannels[1].raw);
+// DEBUG_SET(DEBUG_ALWAYS, 3, rcChannels[9].raw);
         // Apply invalid pulse value logic
         if (!isRxPulseValid(sample)) {
             sample = rcChannels[channel].data;   // hold channel, replace with old value

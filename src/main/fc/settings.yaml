@@ -2157,7 +2157,13 @@ groups:
         field: fixedWingLevelTrimGain
         min: 0
         max: 20
-
+        # CR108
+      - name: fw_acro_atti_stab
+        description: "Activates attitude stabilisation for ACRO mode when roll/pitch angles within ANGLE mode bank angle limits"
+        default_value: OFF
+        field: fixedWingAcroAttiStab
+        type: bool
+        # CR108
   - name: PG_PID_AUTOTUNE_CONFIG
     type: pidAutotuneConfig_t
     condition: USE_AUTOTUNE_FIXED_WING

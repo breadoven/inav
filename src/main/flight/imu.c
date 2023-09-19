@@ -677,7 +677,6 @@ bool compassHeadingGPSCogErrorCheck(void)
 
     compassGpsCogError = 260;
     bool rcCommandCondition = ABS(rcCommand[PITCH]) > 25 || ABS(rcCommand[ROLL]) > 25 || navigationIsFlyingAutonomousMode();
-        // DEBUG_SET(DEBUG_ALWAYS, 0, rcCommand[PITCH]);
 
     if (sensors(SENSOR_MAG) && compassIsHealthy() && rcCommandCondition) {
         static uint16_t compassGpsCogErrorPrev = 10;
