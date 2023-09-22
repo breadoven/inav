@@ -110,6 +110,10 @@ static bool updateTimer(navigationTimer_t * tim, timeUs_t interval, timeUs_t cur
 
 static bool shouldResetReferenceAltitude(void)
 {
+    // if (STATE(IN_FLIGHT_REARM)) {
+        // return false;
+    // }
+
     switch ((nav_reset_type_e)positionEstimationConfig()->reset_altitude_type) {
         case NAV_RESET_NEVER:
             return false;

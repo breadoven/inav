@@ -1130,7 +1130,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_COURSE_HOLD_IN_PROGRESS
     } else if (currentTimeMs - posControl.cruise.lastCourseAdjustmentTime > 4000) {
         posControl.cruise.previousCourse = posControl.cruise.course;
     }
-    DEBUG_SET(DEBUG_ALWAYS, 3, posControl.cruise.course);
+    // DEBUG_SET(DEBUG_ALWAYS, 3, posControl.cruise.course);
     setDesiredPosition(NULL, posControl.cruise.course, NAV_POS_UPDATE_HEADING);
 
     return NAV_FSM_EVENT_NONE;
@@ -2574,7 +2574,8 @@ void updateHomePosition(void)
                     setHome = true;
                     break;
             }
-            if (setHome) {
+
+            if (setHome) { // CR105M  && !STATE(IN_FLIGHT_REARM
 #if defined(USE_SAFE_HOME)
                 findNearestSafeHome();
 #endif
@@ -3789,9 +3790,9 @@ static navigationFSMEvent_t selectNavEventFromBoxModeInput(bool launchBypass)   
             /* Soaring mode, disables altitude control in Position hold and Course hold modes.
              * Pitch allowed to freefloat within defined Angle mode deadband */
             if (IS_RC_MODE_ACTIVE(BOXSOARING) && (FLIGHT_MODE(NAV_POSHOLD_MODE) || FLIGHT_MODE(NAV_COURSE_HOLD_MODE) || IS_RC_MODE_ACTIVE(BOXNAVWP))) {        // CR36
-                if (!FLIGHT_MODE(SOARING_MODE)) {
+                // if (!FLIGHT_MODE(SOARING_MODE)) {
                     ENABLE_FLIGHT_MODE(SOARING_MODE);
-                }
+                // }
             } else {
                 DISABLE_FLIGHT_MODE(SOARING_MODE);
             }

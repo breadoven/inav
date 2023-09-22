@@ -436,6 +436,7 @@ void disarm(disarmReason_t disarmReason)
         lastDisarmReason = disarmReason;
         lastDisarmTimeUs = micros();
         DISABLE_ARMING_FLAG(ARMED);
+        DISABLE_STATE(IN_FLIGHT_REARM); // CR105
 
 #ifdef USE_BLACKBOX
         if (feature(FEATURE_BLACKBOX)) {
@@ -520,6 +521,7 @@ bool emergInflightRearmEnabled(void)
     if (isProbablyStillFlying() || mcDisarmVertVelCheck) {
         DEBUG_SET(DEBUG_ALWAYS, 6, currentTimeMs - US2MS(lastDisarmTimeUs));
         emergRearmStabiliseTimeout = currentTimeMs + 5000; // used to activate Angle mode for 5s after rearm to help stabilise craft
+        ENABLE_STATE(IN_FLIGHT_REARM);
         return true;
     }
 
@@ -543,7 +545,7 @@ void tryArm(void)
     if (STATE(MULTIROTOR) && turtleIsActive && !FLIGHT_MODE(TURTLE_MODE) && emergencyArmingCanOverrideArmingDisabled() && isMotorProtocolDshot()) {
         sendDShotCommand(DSHOT_CMD_SPIN_DIRECTION_REVERSED);
         ENABLE_ARMING_FLAG(ARMED);
-        enableFlightMode(TURTLE_MODE);
+        ENABLE_FLIGHT_MODE(TURTLE_MODE);
         return;
     }
 #endif
@@ -570,12 +572,14 @@ void tryArm(void)
         ENABLE_ARMING_FLAG(WAS_EVER_ARMED);
         //It is required to inform the mixer that arming was executed and it has to switch to the FORWARD direction
         ENABLE_STATE(SET_REVERSIBLE_MOTORS_FORWARD);
-        logicConditionReset();  // CR105M
-
+        // CR105
+        if (!STATE(IN_FLIGHT_REARM)) {
+            logicConditionReset();
 #ifdef USE_PROGRAMMING_FRAMEWORK
-        programmingPidReset();  // CR105M
+            programmingPidReset();
 #endif
-
+        }
+        // CR105
         headFreeModeHold = DECIDEGREES_TO_DEGREES(attitude.values.yaw);
 
         resetHeadingHoldTarget(DECIDEGREES_TO_DEGREES(attitude.values.yaw));
@@ -717,18 +721,18 @@ void processRx(timeUs_t currentTimeUs)
     // CR108
     /* Flaperon mode */
     if (IS_RC_MODE_ACTIVE(BOXFLAPERON) && STATE(FLAPERON_AVAILABLE)) {
-        if (!FLIGHT_MODE(FLAPERON)) {
+        // if (!FLIGHT_MODE(FLAPERON)) {
             ENABLE_FLIGHT_MODE(FLAPERON);
-        }
+        // }
     } else {
         DISABLE_FLIGHT_MODE(FLAPERON);
     }
 
     /* Turn assistant mode */
     if (IS_RC_MODE_ACTIVE(BOXTURNASSIST)) {
-        if (!FLIGHT_MODE(TURN_ASSISTANT)) {
+        // if (!FLIGHT_MODE(TURN_ASSISTANT)) {
             ENABLE_FLIGHT_MODE(TURN_ASSISTANT);
-        }
+        // }
     } else {
         DISABLE_FLIGHT_MODE(TURN_ASSISTANT);
     }
@@ -747,9 +751,9 @@ void processRx(timeUs_t currentTimeUs)
 #if defined(USE_MAG)
     if (sensors(SENSOR_ACC) || sensors(SENSOR_MAG)) {
         if (IS_RC_MODE_ACTIVE(BOXHEADFREE)) {
-            if (!FLIGHT_MODE(HEADFREE_MODE)) {
+            // if (!FLIGHT_MODE(HEADFREE_MODE)) {
                 ENABLE_FLIGHT_MODE(HEADFREE_MODE);
-            }
+            // }
         } else {
             DISABLE_FLIGHT_MODE(HEADFREE_MODE);
         }
@@ -916,7 +920,11 @@ void taskMainPidLoop(timeUs_t currentTimeUs)
 
         processDelayedSave();
     }
-
+    // CR105
+    if (armTime > 1000000) {
+        DISABLE_STATE(IN_FLIGHT_REARM);
+    }
+    // CR105
 #if defined(SITL_BUILD)
     if (lockMainPID()) {
 #endif

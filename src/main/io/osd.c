@@ -4609,11 +4609,15 @@ static void osdRefresh(timeUs_t currentTimeUs)
             osdResetStats();
             osdShowArmed();
             uint32_t delay = ARMED_SCREEN_DISPLAY_TIME;
+             // CR105
+            if (STATE(IN_FLIGHT_REARM)) {
+                delay /= 3;
+            }
 #if defined(USE_SAFE_HOME)
-            if (posControl.safehomeState.distance)
-
+            else if (posControl.safehomeState.distance) {
                 delay *= 3;
-#endif
+            }
+#endif      // CR105
             osdSetNextRefreshIn(delay);
         } else {
             // Display the "Stats" screen

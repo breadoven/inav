@@ -109,8 +109,10 @@ typedef enum {
 
 extern uint32_t flightModeFlags;
 
-#define DISABLE_FLIGHT_MODE(mask) disableFlightMode(mask)
-#define ENABLE_FLIGHT_MODE(mask) enableFlightMode(mask)
+// #define DISABLE_FLIGHT_MODE(mask) disableFlightMode(mask)
+// #define ENABLE_FLIGHT_MODE(mask) enableFlightMode(mask)
+#define DISABLE_FLIGHT_MODE(mask) (flightModeFlags &= ~(mask))  // CR108
+#define ENABLE_FLIGHT_MODE(mask) (flightModeFlags |= (mask))
 #define FLIGHT_MODE(mask) (flightModeFlags & (mask))
 
 typedef enum {
@@ -140,6 +142,7 @@ typedef enum {
     FW_HEADING_USE_YAW                  = (1 << 24),
     ANTI_WINDUP_DEACTIVATED             = (1 << 25),
     LANDING_DETECTED                    = (1 << 26),
+    IN_FLIGHT_REARM                     = (1 << 27),    // CR105
 } stateFlags_t;
 
 #define DISABLE_STATE(mask) (stateFlags &= ~(mask))
@@ -201,8 +204,8 @@ extern simulatorData_t simulatorData;
 
 #endif
 
-uint32_t enableFlightMode(flightModeFlags_e mask);
-uint32_t disableFlightMode(flightModeFlags_e mask);
+// uint32_t enableFlightMode(flightModeFlags_e mask);
+// uint32_t disableFlightMode(flightModeFlags_e mask);
 void updateFlightModeChangeBeeper(void); // CR108
 
 bool sensors(uint32_t mask);

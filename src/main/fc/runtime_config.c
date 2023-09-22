@@ -90,25 +90,25 @@ armingFlag_e isArmingDisabledReason(void)
     return 0;
 }
 
-/**
- * Enables the given flight mode.  A beep is sounded if the flight mode
- * has changed.  Returns the new 'flightModeFlags' value.
- */
-uint32_t enableFlightMode(flightModeFlags_e mask)
-{
-    flightModeFlags |= (mask); // CR108
-    return flightModeFlags;
-}
+// /**
+ // * Enables the given flight mode.  A beep is sounded if the flight mode
+ // * has changed.  Returns the new 'flightModeFlags' value.
+ // */
+// uint32_t enableFlightMode(flightModeFlags_e mask)
+// {
+    // flightModeFlags |= (mask); // CR108
+    // return flightModeFlags;
+// }
 
-/**
- * Disables the given flight mode.  A beep is sounded if the flight mode
- * has changed.  Returns the new 'flightModeFlags' value.
- */
-uint32_t disableFlightMode(flightModeFlags_e mask)
-{
-    flightModeFlags &= ~(mask); // CR108
-    return flightModeFlags;
-}
+// /**
+ // * Disables the given flight mode.  A beep is sounded if the flight mode
+ // * has changed.  Returns the new 'flightModeFlags' value.
+ // */
+// uint32_t disableFlightMode(flightModeFlags_e mask)
+// {
+    // flightModeFlags &= ~(mask); // CR108
+    // return flightModeFlags;
+// }
 // CR108
 void updateFlightModeChangeBeeper(void)
 {

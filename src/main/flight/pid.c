@@ -1112,9 +1112,10 @@ void FAST_CODE pidController(float dT)
     const float horizonRateMagnitude = FLIGHT_MODE(HORIZON_MODE) ? calcHorizonRateMagnitude() : 0.0f;
     levelingEnabled = false;
 
+    bool courseholdAttiActive = IS_RC_MODE_ACTIVE(BOXATTIHOLD) && FLIGHT_MODE(NAV_COURSE_HOLD_MODE) && !FLIGHT_MODE(NAV_ALTHOLD_MODE);
     static bool restartAttiMode = true;
     if (!restartAttiMode) {
-        restartAttiMode = !FLIGHT_MODE(ATTIHOLD_MODE);
+        restartAttiMode = !FLIGHT_MODE(ATTIHOLD_MODE) && !courseholdAttiActive;
     }
 
     for (uint8_t axis = FD_ROLL; axis <= FD_PITCH; axis++) {
@@ -1122,9 +1123,8 @@ void FAST_CODE pidController(float dT)
             // If axis angle override, get the correct angle from Logic Conditions
             float angleTarget = getFlightAxisAngleOverride(axis, computePidLevelTarget(axis));
 
-            if (FLIGHT_MODE(ATTIHOLD_MODE) && !isFlightAxisAngleOverrideActive(axis)) {
+            if ((FLIGHT_MODE(ATTIHOLD_MODE) || (courseholdAttiActive && axis == FD_PITCH)) && !isFlightAxisAngleOverrideActive(axis)) {
                 static int16_t attiHoldTarget[2]; //decidegrees
-
                 if (restartAttiMode) {
                     attiHoldTarget[FD_ROLL] = attitude.raw[FD_ROLL];
                     attiHoldTarget[FD_PITCH] = attitude.raw[FD_PITCH];
