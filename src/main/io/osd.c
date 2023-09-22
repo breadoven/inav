@@ -2215,6 +2215,8 @@ static bool osdDrawSingleElement(uint8_t item)
                 p = "ANGL";
             else if (FLIGHT_MODE(HORIZON_MODE))
                 p = "HOR ";
+            else if (FLIGHT_MODE(ATTIHOLD_MODE))    // CR108
+                p = "ATTI";
 
             displayWrite(osdDisplayPort, elemPosX, elemPosY, p);
             return true;
@@ -4600,7 +4602,7 @@ static void osdRefresh(timeUs_t currentTimeUs)
     static bool statsAutoPagingEnabled = true;
 
     // Detect arm/disarm
-    if (armState != ARMING_FLAG(ARMED)) {   // CR105M
+    if (armState != ARMING_FLAG(ARMED)) {
         if (ARMING_FLAG(ARMED)) {
             // Display the "Arming" screen
             statsDisplayed = false;

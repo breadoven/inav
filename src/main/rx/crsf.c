@@ -258,8 +258,6 @@ STATIC_UNIT_TESTED uint8_t crsfFrameStatus(rxRuntimeConfig_t *rxRuntimeConfig)
             return RX_FRAME_PENDING;
         }
     }
-    // DEBUG_SET(DEBUG_ALWAYS, 0, crsfChannelData[1]);
-    // DEBUG_SET(DEBUG_ALWAYS, 2, crsfChannelData[9]);
     return RX_FRAME_PENDING;
 }
 
@@ -274,7 +272,7 @@ STATIC_UNIT_TESTED uint16_t crsfReadRawRC(const rxRuntimeConfig_t *rxRuntimeConf
      * scale factor = (2012-988) / (1811-172) = 0.62477120195241
      * offset = 988 - 172 * 0.62477120195241 = 880.53935326418548
      */
-    return (crsfChannelData[chan] * 1024 / 1639) + 880.54;  // CR110
+    return (crsfChannelData[chan] * 1024 / 1639) + 881;
 }
 
 void crsfRxWriteTelemetryData(const void *data, int len)

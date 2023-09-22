@@ -518,7 +518,7 @@ bool emergInflightRearmEnabled(void)
 
     bool mcDisarmVertVelCheck = STATE(MULTIROTOR) && (currentTimeMs > US2MS(lastDisarmTimeUs) + 1500) && fabsf(getEstimatedActualVelocity(Z)) > 100.0f;
     if (isProbablyStillFlying() || mcDisarmVertVelCheck) {
-        // DEBUG_SET(DEBUG_ALWAYS, 6, currentTimeMs - US2MS(lastDisarmTimeUs));
+        DEBUG_SET(DEBUG_ALWAYS, 6, currentTimeMs - US2MS(lastDisarmTimeUs));
         emergRearmStabiliseTimeout = currentTimeMs + 5000; // used to activate Angle mode for 5s after rearm to help stabilise craft
         return true;
     }
@@ -697,12 +697,15 @@ void processRx(timeUs_t currentTimeUs)
     // CR108
     DISABLE_FLIGHT_MODE(ANGLE_MODE);
     DISABLE_FLIGHT_MODE(HORIZON_MODE);
+    DISABLE_FLIGHT_MODE(ATTIHOLD_MODE);
 
     if (sensors(SENSOR_ACC)) {
         if (IS_RC_MODE_ACTIVE(BOXANGLE) || autoEnableAngle) { // CR105
             ENABLE_FLIGHT_MODE(ANGLE_MODE);
         } else if (IS_RC_MODE_ACTIVE(BOXHORIZON)) {
             ENABLE_FLIGHT_MODE(HORIZON_MODE);
+        } else if (STATE(AIRPLANE) && IS_RC_MODE_ACTIVE(BOXATTIHOLD)) {  /* Attitude hold mode */
+            ENABLE_FLIGHT_MODE(ATTIHOLD_MODE);
         }
     }
 
