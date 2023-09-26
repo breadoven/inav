@@ -2557,13 +2557,17 @@ bool findNearestSafeHome(void)
 /*-----------------------------------------------------------
  * Update home position, calculate distance and bearing to home
  *-----------------------------------------------------------*/
+// CR105
 void updateHomePosition(void)
 {
     // Disarmed and have a valid position, constantly update home
+    static bool setHome = false;
+    navSetWaypointFlags_t homeUpdateFlags = NAV_POS_UPDATE_XY | NAV_POS_UPDATE_Z | NAV_POS_UPDATE_HEADING;
+
     if (!ARMING_FLAG(ARMED)) {
         if (posControl.flags.estPosStatus >= EST_USABLE) {
             const navigationHomeFlags_t validHomeFlags = NAV_HOME_VALID_XY | NAV_HOME_VALID_Z;
-            bool setHome = (posControl.rthState.homeFlags & validHomeFlags) != validHomeFlags;
+            setHome = (posControl.rthState.homeFlags & validHomeFlags) != validHomeFlags;
             switch ((nav_reset_type_e)positionEstimationConfig()->reset_home_type) {
                 case NAV_RESET_NEVER:
                     break;
@@ -2574,25 +2578,16 @@ void updateHomePosition(void)
                     setHome = true;
                     break;
             }
-
-            if (setHome) { // CR105M  && !STATE(IN_FLIGHT_REARM
-#if defined(USE_SAFE_HOME)
-                findNearestSafeHome();
-#endif
-                setHomePosition(&posControl.actualState.abs.pos, posControl.actualState.yaw, NAV_POS_UPDATE_XY | NAV_POS_UPDATE_Z | NAV_POS_UPDATE_HEADING, navigationActualStateHomeValidity());
-                // save the current location in case it is replaced by a safehome or HOME_RESET
-                posControl.rthState.originalHomePosition = posControl.rthState.homePosition.pos;
-            }
         }
     }
     else {
         static bool isHomeResetAllowed = false;
-
         // If pilot so desires he may reset home position to current position
         if (IS_RC_MODE_ACTIVE(BOXHOMERESET)) {
             if (isHomeResetAllowed && !FLIGHT_MODE(FAILSAFE_MODE) && !FLIGHT_MODE(NAV_RTH_MODE) && !FLIGHT_MODE(NAV_WP_MODE) && (posControl.flags.estPosStatus >= EST_USABLE)) {
-                const navSetWaypointFlags_t homeUpdateFlags = STATE(GPS_FIX_HOME) ? (NAV_POS_UPDATE_XY | NAV_POS_UPDATE_HEADING) : (NAV_POS_UPDATE_XY | NAV_POS_UPDATE_Z | NAV_POS_UPDATE_HEADING);
-                setHomePosition(&posControl.actualState.abs.pos, posControl.actualState.yaw, homeUpdateFlags, navigationActualStateHomeValidity());
+                homeUpdateFlags = 0;
+                homeUpdateFlags = STATE(GPS_FIX_HOME) ? (NAV_POS_UPDATE_XY | NAV_POS_UPDATE_HEADING) : (NAV_POS_UPDATE_XY | NAV_POS_UPDATE_Z | NAV_POS_UPDATE_HEADING);
+                setHome = true;
                 isHomeResetAllowed = false;
             }
         }
@@ -2607,8 +2602,73 @@ void updateHomePosition(void)
             posControl.homeDirection = calculateBearingToDestination(tmpHomePos);
             updateHomePositionCompatibility();
         }
+
+        setHome &= !STATE(IN_FLIGHT_EMERG_REARM);
+    }
+// DEBUG_SET(DEBUG_ALWAYS, 4, setHome);
+    if (setHome && (!ARMING_FLAG(WAS_EVER_ARMED) || ARMING_FLAG(ARMED))) {
+#if defined(USE_SAFE_HOME)
+        findNearestSafeHome();
+#endif
+        setHomePosition(&posControl.actualState.abs.pos, posControl.actualState.yaw, homeUpdateFlags, navigationActualStateHomeValidity());
+        // save the current location in case it is replaced by a safehome or HOME_RESET
+        posControl.rthState.originalHomePosition = posControl.rthState.homePosition.pos;
+        setHome = false;
     }
 }
+// CR105
+// void updateHomePosition(void)
+// {
+    // // Disarmed and have a valid position, constantly update home
+    // if (!ARMING_FLAG(ARMED)) {
+        // if (posControl.flags.estPosStatus >= EST_USABLE) {
+            // const navigationHomeFlags_t validHomeFlags = NAV_HOME_VALID_XY | NAV_HOME_VALID_Z;
+            // bool setHome = (posControl.rthState.homeFlags & validHomeFlags) != validHomeFlags;
+            // switch ((nav_reset_type_e)positionEstimationConfig()->reset_home_type) {
+                // case NAV_RESET_NEVER:
+                    // break;
+                // case NAV_RESET_ON_FIRST_ARM:
+                    // setHome |= !ARMING_FLAG(WAS_EVER_ARMED);
+                    // break;
+                // case NAV_RESET_ON_EACH_ARM:
+                    // setHome = true;
+                    // break;
+            // }
+
+            // if (setHome) {
+// #if defined(USE_SAFE_HOME)
+                // findNearestSafeHome();
+// #endif
+                // setHomePosition(&posControl.actualState.abs.pos, posControl.actualState.yaw, NAV_POS_UPDATE_XY | NAV_POS_UPDATE_Z | NAV_POS_UPDATE_HEADING, navigationActualStateHomeValidity());
+                // // save the current location in case it is replaced by a safehome or HOME_RESET
+                // posControl.rthState.originalHomePosition = posControl.rthState.homePosition.pos;
+            // }
+        // }
+    // }
+    // else {
+        // static bool isHomeResetAllowed = false;
+
+        // // If pilot so desires he may reset home position to current position
+        // if (IS_RC_MODE_ACTIVE(BOXHOMERESET)) {
+            // if (isHomeResetAllowed && !FLIGHT_MODE(FAILSAFE_MODE) && !FLIGHT_MODE(NAV_RTH_MODE) && !FLIGHT_MODE(NAV_WP_MODE) && (posControl.flags.estPosStatus >= EST_USABLE)) {
+                // const navSetWaypointFlags_t homeUpdateFlags = STATE(GPS_FIX_HOME) ? (NAV_POS_UPDATE_XY | NAV_POS_UPDATE_HEADING) : (NAV_POS_UPDATE_XY | NAV_POS_UPDATE_Z | NAV_POS_UPDATE_HEADING);
+                // setHomePosition(&posControl.actualState.abs.pos, posControl.actualState.yaw, homeUpdateFlags, navigationActualStateHomeValidity());
+                // isHomeResetAllowed = false;
+            // }
+        // }
+        // else {
+            // isHomeResetAllowed = true;
+        // }
+
+        // // Update distance and direction to home if armed (home is not updated when armed)
+        // if (STATE(GPS_FIX_HOME)) {
+            // fpVector3_t * tmpHomePos = rthGetHomeTargetPosition(RTH_HOME_FINAL_LAND);
+            // posControl.homeDistance = calculateDistanceToDestination(tmpHomePos);
+            // posControl.homeDirection = calculateBearingToDestination(tmpHomePos);
+            // updateHomePositionCompatibility();
+        // }
+    // }
+// }
 
 /* -----------------------------------------------------------
  * Override RTH preset altitude and Climb First option

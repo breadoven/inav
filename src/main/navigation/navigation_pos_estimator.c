@@ -107,23 +107,45 @@ static bool updateTimer(navigationTimer_t * tim, timeUs_t interval, timeUs_t cur
         return false;
     }
 }
-
-static bool shouldResetReferenceAltitude(void)
+// CR105
+static bool shouldResetReferenceAltitude(uint8_t updateSource)
 {
-    // if (STATE(IN_FLIGHT_REARM)) {
-        // return false;
-    // }
+    static bool resetAltitudeOnArm = false;
+    if (ARMING_FLAG(ARMED) && resetAltitudeOnArm) {
+        static uint8_t sourceCheck = 0;
+        sourceCheck |= updateSource;
+        bool allAltitudeSources = STATE(GPS_FIX) && sensors(SENSOR_BARO);
+        if ((allAltitudeSources && sourceCheck > SENSOR_GPS) || (!allAltitudeSources && sourceCheck)) {
+            resetAltitudeOnArm = false;
+            sourceCheck = 0;
+        }
+        return !STATE(IN_FLIGHT_EMERG_REARM);
+    }
 
-    switch ((nav_reset_type_e)positionEstimationConfig()->reset_altitude_type) {
-        case NAV_RESET_NEVER:
-            return false;
-        case NAV_RESET_ON_FIRST_ARM:
-            return !ARMING_FLAG(ARMED) && !ARMING_FLAG(WAS_EVER_ARMED);
-        case NAV_RESET_ON_EACH_ARM:
-            return !ARMING_FLAG(ARMED);
+    if (!ARMING_FLAG(ARMED)) {
+        switch ((nav_reset_type_e)positionEstimationConfig()->reset_altitude_type) {
+            case NAV_RESET_NEVER:
+                return false;
+            case NAV_RESET_ON_FIRST_ARM:
+                break;
+            case NAV_RESET_ON_EACH_ARM:
+                resetAltitudeOnArm = true;
+        }
+        return !ARMING_FLAG(WAS_EVER_ARMED);
     }
 
     return false;
+    // CR105
+    // switch ((nav_reset_type_e)positionEstimationConfig()->reset_altitude_type) {
+        // case NAV_RESET_NEVER:
+            // return false;
+        // case NAV_RESET_ON_FIRST_ARM:
+            // return !ARMING_FLAG(ARMED) && !ARMING_FLAG(WAS_EVER_ARMED);
+        // case NAV_RESET_ON_EACH_ARM:
+            // return !ARMING_FLAG(ARMED);
+    // }
+
+    // return false;
 }
 
 #if defined(USE_GPS)
@@ -230,7 +252,7 @@ void onNewGPSData(void)
         if (!posControl.gpsOrigin.valid) {
             geoSetOrigin(&posControl.gpsOrigin, &newLLH, GEO_ORIGIN_SET);
         }
-        else if (shouldResetReferenceAltitude()) {
+        else if (shouldResetReferenceAltitude(SENSOR_GPS)) {    // CR105
             /* If we were never armed - keep altitude at zero */
             geoSetOrigin(&posControl.gpsOrigin, &newLLH, GEO_ORIGIN_RESET_ALTITUDE);
         }
@@ -313,7 +335,7 @@ void updatePositionEstimator_BaroTopic(timeUs_t currentTimeUs)
     float newBaroAlt = baroCalculateAltitude();
 
     /* If we are required - keep altitude at zero */
-    if (shouldResetReferenceAltitude()) {
+    if (shouldResetReferenceAltitude(SENSOR_BARO)) {    // CR105
         initialBaroAltitudeOffset = newBaroAlt;
     }
 

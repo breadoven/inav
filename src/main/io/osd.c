@@ -1203,7 +1203,7 @@ int32_t osdGetAltitude(void)
 
 static inline int32_t osdGetAltitudeMsl(void)
 {
-    return getEstimatedActualPosition(Z)+GPS_home.alt;
+    return getEstimatedActualPosition(Z) + GPS_home.alt;
 }
 
 uint16_t osdGetRemainingGlideTime(void) {
@@ -4610,7 +4610,7 @@ static void osdRefresh(timeUs_t currentTimeUs)
             osdShowArmed();
             uint32_t delay = ARMED_SCREEN_DISPLAY_TIME;
              // CR105
-            if (STATE(IN_FLIGHT_REARM)) {
+            if (STATE(IN_FLIGHT_EMERG_REARM)) {
                 delay /= 3;
             }
 #if defined(USE_SAFE_HOME)

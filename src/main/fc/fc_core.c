@@ -436,7 +436,7 @@ void disarm(disarmReason_t disarmReason)
         lastDisarmReason = disarmReason;
         lastDisarmTimeUs = micros();
         DISABLE_ARMING_FLAG(ARMED);
-        DISABLE_STATE(IN_FLIGHT_REARM); // CR105
+        DISABLE_STATE(IN_FLIGHT_EMERG_REARM); // CR105
 
 #ifdef USE_BLACKBOX
         if (feature(FEATURE_BLACKBOX)) {
@@ -521,7 +521,7 @@ bool emergInflightRearmEnabled(void)
     if (isProbablyStillFlying() || mcDisarmVertVelCheck) {
         DEBUG_SET(DEBUG_ALWAYS, 6, currentTimeMs - US2MS(lastDisarmTimeUs));
         emergRearmStabiliseTimeout = currentTimeMs + 5000; // used to activate Angle mode for 5s after rearm to help stabilise craft
-        ENABLE_STATE(IN_FLIGHT_REARM);
+        ENABLE_STATE(IN_FLIGHT_EMERG_REARM);
         return true;
     }
 
@@ -573,7 +573,7 @@ void tryArm(void)
         //It is required to inform the mixer that arming was executed and it has to switch to the FORWARD direction
         ENABLE_STATE(SET_REVERSIBLE_MOTORS_FORWARD);
         // CR105
-        if (!STATE(IN_FLIGHT_REARM)) {
+        if (!STATE(IN_FLIGHT_EMERG_REARM)) {
             logicConditionReset();
 #ifdef USE_PROGRAMMING_FRAMEWORK
             programmingPidReset();
@@ -921,8 +921,8 @@ void taskMainPidLoop(timeUs_t currentTimeUs)
         processDelayedSave();
     }
     // CR105
-    if (armTime > 1000000) {
-        DISABLE_STATE(IN_FLIGHT_REARM);
+    if (armTime > 1 * USECS_PER_SEC) {     // reset in flight emerg rearm flag 1 sec after arming once it's served its purpose
+        DISABLE_STATE(IN_FLIGHT_EMERG_REARM);
     }
     // CR105
 #if defined(SITL_BUILD)

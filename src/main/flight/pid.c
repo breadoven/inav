@@ -1040,21 +1040,22 @@ void checkItermLimitingActive(pidState_t *pidState)
 }
 
 void checkItermFreezingActive(pidState_t *pidState, flight_dynamics_index_t axis)
-{
+{// CR111
+    pidState->itermFreezeActive = false;
     if (usedPidControllerType == PID_TYPE_PIFF && pidProfile()->fixedWingYawItermBankFreeze != 0 && axis == FD_YAW) {
         // Do not allow yaw I-term to grow when bank angle is too large
-        float bankAngle = DECIDEGREES_TO_DEGREES(attitude.values.roll);
-        if (fabsf(bankAngle) > pidProfile()->fixedWingYawItermBankFreeze && !(FLIGHT_MODE(AUTO_TUNE) || FLIGHT_MODE(TURN_ASSISTANT) || navigationRequiresTurnAssistance())){
+        uint8_t bankAngle = ABS(DECIDEGREES_TO_DEGREES(attitude.values.roll));
+        if (bankAngle > pidProfile()->fixedWingYawItermBankFreeze && !(FLIGHT_MODE(AUTO_TUNE) || FLIGHT_MODE(TURN_ASSISTANT) || navigationRequiresTurnAssistance())){
             pidState->itermFreezeActive = true;
-        } else
-        {
-            pidState->itermFreezeActive = false;
-        }
-    } else
-    {
-        pidState->itermFreezeActive = false;
+        } // else
+        // {
+            // pidState->itermFreezeActive = false;
+        // }
+    // } else
+    // {
+        // pidState->itermFreezeActive = false;
     }
-
+    // CR111
 }
 
 void FAST_CODE pidController(float dT)
@@ -1107,15 +1108,15 @@ void FAST_CODE pidController(float dT)
         pidState[axis].gyroRate = applySmithPredictor(axis, &pidState[axis].smithPredictor, pidState[axis].gyroRate);
 #endif
     }
-
-    // Step 3: Run control for ANGLE_MODE, HORIZON_MODE and ATTI_MODE   // CR108
+    // CR108
+    // Step 3: Run control for ANGLE_MODE, HORIZON_MODE and ATTI_MODE
     const float horizonRateMagnitude = FLIGHT_MODE(HORIZON_MODE) ? calcHorizonRateMagnitude() : 0.0f;
     levelingEnabled = false;
 
-    bool courseholdAttiActive = IS_RC_MODE_ACTIVE(BOXATTIHOLD) && FLIGHT_MODE(NAV_COURSE_HOLD_MODE) && !FLIGHT_MODE(NAV_ALTHOLD_MODE);
+    bool navPitchHoldActive = IS_RC_MODE_ACTIVE(BOXATTIHOLD) && FLIGHT_MODE(NAV_COURSE_HOLD_MODE) && !FLIGHT_MODE(NAV_ALTHOLD_MODE);
     static bool restartAttiMode = true;
     if (!restartAttiMode) {
-        restartAttiMode = !FLIGHT_MODE(ATTIHOLD_MODE) && !courseholdAttiActive;
+        restartAttiMode = !FLIGHT_MODE(ATTIHOLD_MODE) && !navPitchHoldActive;
     }
 
     for (uint8_t axis = FD_ROLL; axis <= FD_PITCH; axis++) {
@@ -1123,20 +1124,26 @@ void FAST_CODE pidController(float dT)
             // If axis angle override, get the correct angle from Logic Conditions
             float angleTarget = getFlightAxisAngleOverride(axis, computePidLevelTarget(axis));
 
-            if ((FLIGHT_MODE(ATTIHOLD_MODE) || (courseholdAttiActive && axis == FD_PITCH)) && !isFlightAxisAngleOverrideActive(axis)) {
+            if (STATE(AIRPLANE) && (FLIGHT_MODE(ATTIHOLD_MODE) || (navPitchHoldActive && axis == FD_PITCH)) && !isFlightAxisAngleOverrideActive(axis)) {
                 static int16_t attiHoldTarget[2]; //decidegrees
                 if (restartAttiMode) {
                     attiHoldTarget[FD_ROLL] = attitude.raw[FD_ROLL];
                     attiHoldTarget[FD_PITCH] = attitude.raw[FD_PITCH];
                     restartAttiMode = false;
                 }
-
+    DEBUG_SET(DEBUG_ALWAYS, 0, attiHoldTarget[FD_ROLL]);
+    DEBUG_SET(DEBUG_ALWAYS, 1, attitude.raw[FD_ROLL]);
+    DEBUG_SET(DEBUG_ALWAYS, 2, attiHoldTarget[FD_ROLL]);
+    DEBUG_SET(DEBUG_ALWAYS, 3, attitude.raw[FD_PITCH]);
                 uint16_t bankLimit = pidProfile()->max_angle_inclination[axis];
+                if (navPitchHoldActive) {
+                    bankLimit = DEGREES_TO_DECIDEGREES(navConfig()->fw.max_climb_angle);
+                }
                 if (calculateRollPitchCenterStatus() == CENTERED) {
                     angleTarget = constrain(attiHoldTarget[axis], -bankLimit, bankLimit);
                 } else {
                     angleTarget = constrain(attitude.raw[axis] + angleTarget, -bankLimit, bankLimit);
-                    attiHoldTarget[axis] = attitude.raw[axis];
+                    attiHoldTarget[axis] = 0.95 * attiHoldTarget[axis] + 0.05 * attitude.raw[axis];
                 }
             }
 
