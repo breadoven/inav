@@ -1132,8 +1132,8 @@ void FAST_CODE pidController(float dT)
                     restartAttiMode = false;
                 }
     DEBUG_SET(DEBUG_ALWAYS, 0, attiHoldTarget[FD_ROLL]);
-    DEBUG_SET(DEBUG_ALWAYS, 1, attitude.raw[FD_ROLL]);
-    DEBUG_SET(DEBUG_ALWAYS, 2, attiHoldTarget[FD_ROLL]);
+    DEBUG_SET(DEBUG_ALWAYS, 2, attitude.raw[FD_ROLL]);
+    DEBUG_SET(DEBUG_ALWAYS, 1, attiHoldTarget[FD_PITCH]);
     DEBUG_SET(DEBUG_ALWAYS, 3, attitude.raw[FD_PITCH]);
                 uint16_t bankLimit = pidProfile()->max_angle_inclination[axis];
                 if (navPitchHoldActive) {

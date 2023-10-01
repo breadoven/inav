@@ -519,7 +519,7 @@ bool emergInflightRearmEnabled(void)
 
     bool mcDisarmVertVelCheck = STATE(MULTIROTOR) && (currentTimeMs > US2MS(lastDisarmTimeUs) + 1500) && fabsf(getEstimatedActualVelocity(Z)) > 100.0f;
     if (isProbablyStillFlying() || mcDisarmVertVelCheck) {
-        DEBUG_SET(DEBUG_ALWAYS, 6, currentTimeMs - US2MS(lastDisarmTimeUs));
+        // DEBUG_SET(DEBUG_ALWAYS, 6, currentTimeMs - US2MS(lastDisarmTimeUs));
         emergRearmStabiliseTimeout = currentTimeMs + 5000; // used to activate Angle mode for 5s after rearm to help stabilise craft
         ENABLE_STATE(IN_FLIGHT_EMERG_REARM);
         return true;
@@ -550,10 +550,10 @@ void tryArm(void)
     }
 #endif
 #ifdef USE_PROGRAMMING_FRAMEWORK
-    if (!isArmingDisabled() || emergencyArmingIsEnabled() || emergInflightRearmEnabled() ||
+    if (emergInflightRearmEnabled() || !isArmingDisabled() || emergencyArmingIsEnabled() ||
         LOGIC_CONDITION_GLOBAL_FLAG(LOGIC_CONDITION_GLOBAL_FLAG_OVERRIDE_ARMING_SAFETY)) {    // CR105
 #else
-    if (!isArmingDisabled() || emergencyArmingIsEnabled() || emergInflightRearmEnabled()) {  // CR105
+    if (emergInflightRearmEnabled() || !isArmingDisabled() || emergencyArmingIsEnabled()) {  // CR105
 #endif
         // If nav_extra_arming_safety was bypassed we always
         // allow bypassing it even without the sticks set
@@ -564,7 +564,6 @@ void tryArm(void)
         if (usedBypass) {
             ENABLE_STATE(NAV_EXTRA_ARMING_SAFETY_BYPASSED);
         }
-        resetLandingDetectorActiveState();   // CR105
 
         lastDisarmReason = DISARM_NONE;
 
@@ -574,6 +573,7 @@ void tryArm(void)
         ENABLE_STATE(SET_REVERSIBLE_MOTORS_FORWARD);
         // CR105
         if (!STATE(IN_FLIGHT_EMERG_REARM)) {
+            resetLandingDetectorActiveState();
             logicConditionReset();
 #ifdef USE_PROGRAMMING_FRAMEWORK
             programmingPidReset();

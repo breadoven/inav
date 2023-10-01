@@ -2605,12 +2605,16 @@ void updateHomePosition(void)
 
         setHome &= !STATE(IN_FLIGHT_EMERG_REARM);
     }
-// DEBUG_SET(DEBUG_ALWAYS, 4, setHome);
+DEBUG_SET(DEBUG_ALWAYS, 6, posControl.rthState.homePosition.pos.x);
     if (setHome && (!ARMING_FLAG(WAS_EVER_ARMED) || ARMING_FLAG(ARMED))) {
 #if defined(USE_SAFE_HOME)
         findNearestSafeHome();
 #endif
         setHomePosition(&posControl.actualState.abs.pos, posControl.actualState.yaw, homeUpdateFlags, navigationActualStateHomeValidity());
+
+        if (ARMING_FLAG(ARMED) && positionEstimationConfig()->reset_altitude_type == NAV_RESET_ON_EACH_ARM) {
+            posControl.rthState.homePosition.pos.z = 0;
+        }
         // save the current location in case it is replaced by a safehome or HOME_RESET
         posControl.rthState.originalHomePosition = posControl.rthState.homePosition.pos;
         setHome = false;
