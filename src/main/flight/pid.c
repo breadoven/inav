@@ -158,6 +158,7 @@ typedef void (*pidControllerFnPtr)(pidState_t *pidState, flight_dynamics_index_t
 static EXTENDED_FASTRAM pidControllerFnPtr pidControllerApplyFn;
 static EXTENDED_FASTRAM filterApplyFnPtr dTermLpfFilterApplyFn;
 static EXTENDED_FASTRAM bool levelingEnabled = false;
+static EXTENDED_FASTRAM bool attiHoldIsLevel = false;   // CR108
 
 #define FIXED_WING_LEVEL_TRIM_MAX_ANGLE 10.0f // Max angle auto trimming can demand
 #define FIXED_WING_LEVEL_TRIM_DIVIDER 500.0f
@@ -1057,10 +1058,60 @@ void checkItermFreezingActive(pidState_t *pidState, flight_dynamics_index_t axis
     }
     // CR111
 }
+// CR108
+bool isAttiholdLevel(void)
+{
+    return attiHoldIsLevel;
+}
 
+void updateAttihold(float *angleTarget, uint8_t axis)
+{
+    int8_t navAttiHoldAxis = navCheckActiveAttiHoldAxis();
+    static bool restartAttiMode = true;
+    if (!restartAttiMode) {
+        restartAttiMode = !FLIGHT_MODE(ATTIHOLD_MODE) && navAttiHoldAxis == -1;
+        attiHoldIsLevel = restartAttiMode ? false: attiHoldIsLevel;
+    }
+
+    if ((FLIGHT_MODE(ATTIHOLD_MODE) || axis == navAttiHoldAxis) && !isFlightAxisAngleOverrideActive(axis)) {
+        static int16_t attiHoldTarget[2]; //decidegrees
+
+        DEBUG_SET(DEBUG_ALWAYS, 0, attiHoldTarget[FD_ROLL]);
+        DEBUG_SET(DEBUG_ALWAYS, 2, attitude.raw[FD_ROLL]);
+        DEBUG_SET(DEBUG_ALWAYS, 1, attiHoldTarget[FD_PITCH]);
+        DEBUG_SET(DEBUG_ALWAYS, 3, attitude.raw[FD_PITCH]);
+
+        if (restartAttiMode) {
+            attiHoldTarget[FD_ROLL] = attitude.raw[FD_ROLL];
+            attiHoldTarget[FD_PITCH] = attitude.raw[FD_PITCH];
+            restartAttiMode = false;
+        }
+
+        if (FLIGHT_MODE(ATTIHOLD_MODE)) {
+            attiHoldIsLevel = attiHoldTarget[FD_ROLL] == 0 && attiHoldTarget[FD_PITCH] == 0;
+        } else {
+            attiHoldIsLevel = attiHoldTarget[navAttiHoldAxis] == 0;
+        }
+
+        uint16_t bankLimit = pidProfile()->max_angle_inclination[axis];
+        if (navAttiHoldAxis == FD_ROLL) {
+            bankLimit = DEGREES_TO_DECIDEGREES(navConfig()->fw.max_bank_angle);
+        } else if (navAttiHoldAxis == FD_PITCH) {
+            bankLimit = DEGREES_TO_DECIDEGREES(navConfig()->fw.max_climb_angle);
+        }
+
+        if (calculateRollPitchCenterStatus() == CENTERED) {
+            attiHoldTarget[axis] = ABS(attiHoldTarget[axis]) < 30 ? 0 : attiHoldTarget[axis];
+            *angleTarget = constrain(attiHoldTarget[axis], -bankLimit, bankLimit);
+        } else {
+            *angleTarget = constrain(attitude.raw[axis] + *angleTarget, -bankLimit, bankLimit);
+            attiHoldTarget[axis] = attitude.raw[axis];  //0.95 * attiHoldTarget[axis] + 0.05 * attitude.raw[axis];
+        }
+    }
+}
+// CR108
 void FAST_CODE pidController(float dT)
 {
-
     const float dT_inv = 1.0f / dT;
 
     if (!pidFiltersConfigured) {
@@ -1112,48 +1163,23 @@ void FAST_CODE pidController(float dT)
     // Step 3: Run control for ANGLE_MODE, HORIZON_MODE and ATTI_MODE
     const float horizonRateMagnitude = FLIGHT_MODE(HORIZON_MODE) ? calcHorizonRateMagnitude() : 0.0f;
     levelingEnabled = false;
-
-    bool navPitchHoldActive = IS_RC_MODE_ACTIVE(BOXATTIHOLD) && FLIGHT_MODE(NAV_COURSE_HOLD_MODE) && !FLIGHT_MODE(NAV_ALTHOLD_MODE);
-    static bool restartAttiMode = true;
-    if (!restartAttiMode) {
-        restartAttiMode = !FLIGHT_MODE(ATTIHOLD_MODE) && !navPitchHoldActive;
-    }
-
+    // CR108
     for (uint8_t axis = FD_ROLL; axis <= FD_PITCH; axis++) {
-        if (FLIGHT_MODE(ANGLE_MODE) || FLIGHT_MODE(HORIZON_MODE) || FLIGHT_MODE(ATTIHOLD_MODE) || isFlightAxisAngleOverrideActive(axis)) {
+        if (FLIGHT_MODE(ANGLE_MODE) || FLIGHT_MODE(HORIZON_MODE) || FLIGHT_MODE(ATTIHOLD_MODE) || isFlightAxisAngleOverrideActive(axis)) {  // CR108
             // If axis angle override, get the correct angle from Logic Conditions
             float angleTarget = getFlightAxisAngleOverride(axis, computePidLevelTarget(axis));
-
-            if (STATE(AIRPLANE) && (FLIGHT_MODE(ATTIHOLD_MODE) || (navPitchHoldActive && axis == FD_PITCH)) && !isFlightAxisAngleOverrideActive(axis)) {
-                static int16_t attiHoldTarget[2]; //decidegrees
-                if (restartAttiMode) {
-                    attiHoldTarget[FD_ROLL] = attitude.raw[FD_ROLL];
-                    attiHoldTarget[FD_PITCH] = attitude.raw[FD_PITCH];
-                    restartAttiMode = false;
-                }
-    DEBUG_SET(DEBUG_ALWAYS, 0, attiHoldTarget[FD_ROLL]);
-    DEBUG_SET(DEBUG_ALWAYS, 2, attitude.raw[FD_ROLL]);
-    DEBUG_SET(DEBUG_ALWAYS, 1, attiHoldTarget[FD_PITCH]);
-    DEBUG_SET(DEBUG_ALWAYS, 3, attitude.raw[FD_PITCH]);
-                uint16_t bankLimit = pidProfile()->max_angle_inclination[axis];
-                if (navPitchHoldActive) {
-                    bankLimit = DEGREES_TO_DECIDEGREES(navConfig()->fw.max_climb_angle);
-                }
-                if (calculateRollPitchCenterStatus() == CENTERED) {
-                    angleTarget = constrain(attiHoldTarget[axis], -bankLimit, bankLimit);
-                } else {
-                    angleTarget = constrain(attitude.raw[axis] + angleTarget, -bankLimit, bankLimit);
-                    attiHoldTarget[axis] = 0.95 * attiHoldTarget[axis] + 0.05 * attitude.raw[axis];
-                }
+            // CR108
+            if (STATE(AIRPLANE)) {
+                updateAttihold(&angleTarget, axis);
             }
-
+            // CR108
             // Apply the Level PID controller
             pidLevel(angleTarget, &pidState[axis], axis, horizonRateMagnitude, dT);
             canUseFpvCameraMix = false;     // FPVANGLEMIX is incompatible with ANGLE/HORIZON
             levelingEnabled = true;
         }
     }
-    // CR108
+
     if ((FLIGHT_MODE(TURN_ASSISTANT) || navigationRequiresTurnAssistance()) && (FLIGHT_MODE(ANGLE_MODE) || FLIGHT_MODE(HORIZON_MODE))) {
         float bankAngleTarget = DECIDEGREES_TO_RADIANS(pidRcCommandToAngle(rcCommand[FD_ROLL], pidProfile()->max_angle_inclination[FD_ROLL]));
         float pitchAngleTarget = DECIDEGREES_TO_RADIANS(pidRcCommandToAngle(rcCommand[FD_PITCH], pidProfile()->max_angle_inclination[FD_PITCH]));

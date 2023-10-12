@@ -111,8 +111,8 @@ static bool updateTimer(navigationTimer_t * tim, timeUs_t interval, timeUs_t cur
 
 static bool shouldResetReferenceAltitude(void)
 {
-DEBUG_SET(DEBUG_ALWAYS, 5, posControl.rthState.homePosition.pos.z);
-DEBUG_SET(DEBUG_ALWAYS, 4, posControl.gpsOrigin.alt);
+// DEBUG_SET(DEBUG_ALWAYS, 5, posControl.rthState.homePosition.pos.z);
+// DEBUG_SET(DEBUG_ALWAYS, 4, posControl.gpsOrigin.alt);
 
     // CR105
     // static bool resetAltitudeOnArm = false;
