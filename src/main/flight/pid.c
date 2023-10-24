@@ -161,7 +161,7 @@ static EXTENDED_FASTRAM bool levelingEnabled = false;
 static EXTENDED_FASTRAM bool attiHoldIsLevel = false;   // CR108
 
 #define FIXED_WING_LEVEL_TRIM_MAX_ANGLE 10.0f // Max angle auto trimming can demand
-#define FIXED_WING_LEVEL_TRIM_DIVIDER 500.0f
+#define FIXED_WING_LEVEL_TRIM_DIVIDER 50.0f    // CR111
 #define FIXED_WING_LEVEL_TRIM_MULTIPLIER 1.0f / FIXED_WING_LEVEL_TRIM_DIVIDER
 #define FIXED_WING_LEVEL_TRIM_CONTROLLER_LIMIT FIXED_WING_LEVEL_TRIM_DIVIDER * FIXED_WING_LEVEL_TRIM_MAX_ANGLE
 
@@ -1041,7 +1041,7 @@ void checkItermLimitingActive(pidState_t *pidState)
 }
 
 void checkItermFreezingActive(pidState_t *pidState, flight_dynamics_index_t axis)
-{// CR111
+{// CR112 ?
     pidState->itermFreezeActive = false;
     if (usedPidControllerType == PID_TYPE_PIFF && pidProfile()->fixedWingYawItermBankFreeze != 0 && axis == FD_YAW) {
         // Do not allow yaw I-term to grow when bank angle is too large
@@ -1056,7 +1056,7 @@ void checkItermFreezingActive(pidState_t *pidState, flight_dynamics_index_t axis
     // {
         // pidState->itermFreezeActive = false;
     }
-    // CR111
+    // CR112
 }
 // CR108
 bool isAttiholdLevel(void)
@@ -1083,7 +1083,7 @@ void updateAttihold(float *angleTarget, uint8_t axis)
 
         if (restartAttiMode) {
             attiHoldTarget[FD_ROLL] = attitude.raw[FD_ROLL];
-            attiHoldTarget[FD_PITCH] = attitude.raw[FD_PITCH];
+            attiHoldTarget[FD_PITCH] = attitude.raw[FD_PITCH] + DEGREES_TO_DECIDEGREES(fixedWingLevelTrim);
             restartAttiMode = false;
         }
 
@@ -1100,12 +1100,13 @@ void updateAttihold(float *angleTarget, uint8_t axis)
             bankLimit = DEGREES_TO_DECIDEGREES(navConfig()->fw.max_climb_angle);
         }
 
+        int16_t levelTrim = axis == FD_PITCH ? DEGREES_TO_DECIDEGREES(fixedWingLevelTrim) : 0;
         if (calculateRollPitchCenterStatus() == CENTERED) {
             attiHoldTarget[axis] = ABS(attiHoldTarget[axis]) < 30 ? 0 : attiHoldTarget[axis];
-            *angleTarget = constrain(attiHoldTarget[axis], -bankLimit, bankLimit);
+            *angleTarget = constrain(attiHoldTarget[axis] - levelTrim, -bankLimit, bankLimit);
         } else {
-            *angleTarget = constrain(attitude.raw[axis] + *angleTarget, -bankLimit, bankLimit);
-            attiHoldTarget[axis] = attitude.raw[axis];  //0.95 * attiHoldTarget[axis] + 0.05 * attitude.raw[axis];
+            *angleTarget = constrain(attitude.raw[axis] + *angleTarget + levelTrim, -bankLimit, bankLimit);
+            attiHoldTarget[axis] = attitude.raw[axis] + levelTrim;
         }
     }
 }
@@ -1300,7 +1301,7 @@ void pidInit(void)
     navPidInit(
         &fixedWingLevelTrimController,
         0.0f,
-        (float)pidProfile()->fixedWingLevelTrimGain / 100000.0f,
+        (float)pidProfile()->fixedWingLevelTrimGain / 50.0f,   // CR111
         0.0f,
         0.0f,
         2.0f,
@@ -1312,8 +1313,17 @@ void pidInit(void)
 const pidBank_t * pidBank(void) {
     return usedPidControllerType == PID_TYPE_PIFF ? &pidProfile()->bank_fw : &pidProfile()->bank_mc;
 }
+
 pidBank_t * pidBankMutable(void) {
     return usedPidControllerType == PID_TYPE_PIFF ? &pidProfileMutable()->bank_fw : &pidProfileMutable()->bank_mc;
+}
+// CR111
+bool isFixedWingLevelTrimActive(void)
+{
+    return IS_RC_MODE_ACTIVE(BOXAUTOLEVEL) && !areSticksDeflected() &&
+           (FLIGHT_MODE(ANGLE_MODE) || FLIGHT_MODE(HORIZON_MODE)) &&
+           !FLIGHT_MODE(SOARING_MODE) && !FLIGHT_MODE(MANUAL_MODE) &&
+           !navigationIsControllingAltitude() && !(navCheckActiveAttiHoldAxis() == FD_PITCH && !attiHoldIsLevel);   // CR108
 }
 
 void updateFixedWingLevelTrim(timeUs_t currentTimeUs)
@@ -1322,39 +1332,33 @@ void updateFixedWingLevelTrim(timeUs_t currentTimeUs)
         return;
     }
 
-    static timeUs_t previousUpdateTimeUs;
-    static bool previousArmingState;
-    const float dT = US2S(currentTimeUs - previousUpdateTimeUs);
+    static bool previousArmingState = false;
 
-    /*
-     * On every ARM reset the controller
-     */
-    if (ARMING_FLAG(ARMED) && !previousArmingState) {
-        navPidReset(&fixedWingLevelTrimController);
-    }
-
-    /*
-     * On disarm update the default value
-     */
-    if (!ARMING_FLAG(ARMED) && previousArmingState) {
+    if (ARMING_FLAG(ARMED)) {
+        if (!previousArmingState) {
+            navPidReset(&fixedWingLevelTrimController);     // On every ARM reset the controller
+        }
+    } else if (previousArmingState) {
         pidProfileMutable()->fixedWingLevelTrim = constrainf(fixedWingLevelTrim, -FIXED_WING_LEVEL_TRIM_MAX_ANGLE, FIXED_WING_LEVEL_TRIM_MAX_ANGLE);
     }
+    previousArmingState = ARMING_FLAG(ARMED);
 
-    /*
-     * Prepare flags for the PID controller
-     */
+    if (!IS_RC_MODE_ACTIVE(BOXAUTOLEVEL) || !ARMING_FLAG(ARMED)) {
+        return;
+    }
+
+    static timeUs_t previousUpdateTimeUs;
+    const float dT = US2S(currentTimeUs - previousUpdateTimeUs);
+    previousUpdateTimeUs = currentTimeUs;
+
+    // Prepare flags for the PID controller
     pidControllerFlags_e flags = PID_LIMIT_INTEGRATOR;
 
-    //Iterm should freeze when sticks are deflected
-    if (
-        !IS_RC_MODE_ACTIVE(BOXAUTOLEVEL) ||
-        areSticksDeflected() ||
-        (!FLIGHT_MODE(ANGLE_MODE) && !FLIGHT_MODE(HORIZON_MODE) && !FLIGHT_MODE(NAV_COURSE_HOLD_MODE)) ||
-        FLIGHT_MODE(SOARING_MODE) ||
-        navigationIsControllingAltitude()   // CR108M
-    ) {
+    //Iterm should freeze when conditions for setting level trim aren't met
+    if (!isFixedWingLevelTrimActive()) {
         flags |= PID_FREEZE_INTEGRATOR;
     }
+    DEBUG_SET(DEBUG_AUTOLEVEL, 3, flags);
 
     const float output = navPidApply3(
         &fixedWingLevelTrimController,
@@ -1370,10 +1374,8 @@ void updateFixedWingLevelTrim(timeUs_t currentTimeUs)
 
     DEBUG_SET(DEBUG_AUTOLEVEL, 4, output);
     fixedWingLevelTrim = pidProfile()->fixedWingLevelTrim + (output * FIXED_WING_LEVEL_TRIM_MULTIPLIER);
-
-    previousArmingState = !!ARMING_FLAG(ARMED);
 }
-
+// CR111
 float getFixedWingLevelTrim(void)
 {
     return STATE(AIRPLANE) ? fixedWingLevelTrim : 0;

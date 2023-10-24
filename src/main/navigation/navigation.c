@@ -4550,10 +4550,10 @@ int8_t navCheckActiveAttiHoldAxis(void)
 {
     int8_t activeAxis = -1;
 
-    navigationFSMStateFlags_t stateFlags = navGetCurrentStateFlags();
-    bool altholdActive = stateFlags & NAV_REQUIRE_ANGLE_FW && !(stateFlags & NAV_REQUIRE_ANGLE);
-
     if (IS_RC_MODE_ACTIVE(BOXATTIHOLD)) {
+        navigationFSMStateFlags_t stateFlags = navGetCurrentStateFlags();
+        bool altholdActive = stateFlags & NAV_REQUIRE_ANGLE_FW && !(stateFlags & NAV_REQUIRE_ANGLE);
+
         if (FLIGHT_MODE(NAV_COURSE_HOLD_MODE) && !FLIGHT_MODE(NAV_ALTHOLD_MODE)) {
             activeAxis = FD_PITCH;
         } else if (altholdActive) {

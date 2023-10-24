@@ -225,4 +225,5 @@ void autotuneFixedWingUpdate(const flight_dynamics_index_t axis, float desiredRa
 pidType_e pidIndexGetType(pidIndex_e pidIndex);
 
 void updateFixedWingLevelTrim(timeUs_t currentTimeUs);
+bool isFixedWingLevelTrimActive(void); // CR108
 float getFixedWingLevelTrim(void);
