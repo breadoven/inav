@@ -519,7 +519,6 @@ bool emergInflightRearmEnabled(void)
 
     bool mcDisarmVertVelCheck = STATE(MULTIROTOR) && (currentTimeMs > US2MS(lastDisarmTimeUs) + 1500) && fabsf(getEstimatedActualVelocity(Z)) > 100.0f;
     if (isProbablyStillFlying() || mcDisarmVertVelCheck) {
-        // DEBUG_SET(DEBUG_ALWAYS, 6, currentTimeMs - US2MS(lastDisarmTimeUs));
         emergRearmStabiliseTimeout = currentTimeMs + 5000; // used to activate Angle mode for 5s after rearm to help stabilise craft
         ENABLE_STATE(IN_FLIGHT_EMERG_REARM);
         return true;

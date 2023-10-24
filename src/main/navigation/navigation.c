@@ -2605,7 +2605,7 @@ void updateHomePosition(void)
 
         setHome &= !STATE(IN_FLIGHT_EMERG_REARM);
     }
-DEBUG_SET(DEBUG_ALWAYS, 6, posControl.rthState.homePosition.pos.x);
+
     if (setHome && (!ARMING_FLAG(WAS_EVER_ARMED) || ARMING_FLAG(ARMED))) {
 #if defined(USE_SAFE_HOME)
         findNearestSafeHome();
@@ -2906,8 +2906,7 @@ void updateLandingStatus(timeMs_t currentTimeMs)
     // if (STATE(AIRPLANE) && !navConfig()->general.flags.disarm_on_landing) {
         // return;     // no point using this with a fixed wing if not set to disarm
     // }
-// DEBUG_SET(DEBUG_ALWAYS, 5, averageAbsGyroRates());
-// DEBUG_SET(DEBUG_ALWAYS, 4, landingDetectorIsActive);
+
     static timeMs_t lastUpdateTimeMs = 0;
     if ((currentTimeMs - lastUpdateTimeMs) <= HZ2MS(100)) {  // limit update to 100Hz
         return;
@@ -2975,7 +2974,7 @@ bool isProbablyStillFlying(void)
     bool inFlightSanityCheck;
     if (STATE(MULTIROTOR)) {
         inFlightSanityCheck = posControl.actualState.velXY > MC_LAND_CHECK_VEL_XY_MOVING || averageAbsGyroRates() > 4.0f;
-        DEBUG_SET(DEBUG_ALWAYS, 7, averageAbsGyroRates());
+        // DEBUG_SET(DEBUG_ALWAYS, 7, averageAbsGyroRates());
     } else {
         inFlightSanityCheck = isGPSHeadingValid();
     }
