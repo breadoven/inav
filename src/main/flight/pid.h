@@ -217,7 +217,6 @@ enum {
 void updateHeadingHoldTarget(int16_t heading);
 void resetHeadingHoldTarget(int16_t heading);
 int16_t getHeadingHoldTarget(void);
-bool isAttiholdLevel(void); // CR108
 
 void autotuneUpdateState(void);
 void autotuneFixedWingUpdate(const flight_dynamics_index_t axis, float desiredRateDps, float reachedRateDps, float pidOutput);
@@ -227,3 +226,4 @@ pidType_e pidIndexGetType(pidIndex_e pidIndex);
 void updateFixedWingLevelTrim(timeUs_t currentTimeUs);
 bool isFixedWingLevelTrimActive(void); // CR108
 float getFixedWingLevelTrim(void);
+bool isAngleHoldLevel(void);// CR108

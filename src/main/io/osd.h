@@ -121,10 +121,14 @@
 #define OSD_MSG_SAVING_SETTNGS      "** SAVING SETTINGS **"
 #define OSD_MSG_SETTINGS_SAVED      "** SETTINGS SAVED **"
 // CR108
-#define OSD_MSG_ATTI_ROLL           "(ATTI ROLL)"
-#define OSD_MSG_ATTI_PITCH          "(ATTI PITCH)"
-#define OSD_MSG_ATTI_LEVEL          "(ATTI LEVEL)"
+#define OSD_MSG_ANGLEHOLD_ROLL      "(ANGLEHOLD ROLL)"
+#define OSD_MSG_ANGLEHOLD_PITCH     "(ANGLEHOLD PITCH)"
+#define OSD_MSG_ANGLEHOLD_LEVEL     "(ANGLEHOLD LEVEL)"
 // CR108
+#ifdef USE_DEV_TOOLS
+#define OSD_MSG_GRD_TEST_MODE       "GRD TEST > MOTORS DISABLED"
+#endif
+
 #if defined(USE_SAFE_HOME)
 #define OSD_MSG_DIVERT_SAFEHOME     "DIVERTING TO SAFEHOME"
 #define OSD_MSG_LOITERING_SAFEHOME  "LOITERING AROUND SAFEHOME"
@@ -412,6 +416,7 @@ typedef struct osdConfig_s {
     uint8_t stats_page_auto_swap_time;   // stats page auto swap interval time (seconds)
 
 #ifdef USE_WIND_ESTIMATOR
+// <<<<<<< HEAD
     bool    estimations_wind_compensation; // use wind compensation for estimated remaining flight/distance
 #endif
 
@@ -450,6 +455,47 @@ typedef struct osdConfig_s {
     char    osd_switch_indicator3_name[OSD_SWITCH_INDICATOR_NAME_LENGTH + 1];      // Name to use for switch indicator 3.
     uint8_t osd_switch_indicator3_channel;     // RC Channel to use for switch indicator 3.
     bool    osd_switch_indicators_align_left;   // Align switch indicator name to left of the switch.
+// =======
+    // bool            estimations_wind_compensation;      // use wind compensation for estimated remaining flight/distance
+// #endif
+    // uint8_t         coordinate_digits;
+    // bool            osd_failsafe_switch_layout;
+    // uint8_t         plus_code_digits;                   // Number of digits to use in OSD_PLUS_CODE
+    // uint8_t         plus_code_short;
+    // uint8_t         ahi_style;
+    // uint8_t         force_grid;                         // Force a pixel based OSD to use grid mode.
+    // uint8_t         ahi_bordered;                       // Only used by the AHI widget
+    // uint8_t         ahi_width;                          // In pixels, only used by the AHI widget
+    // uint8_t         ahi_height;                         // In pixels, only used by the AHI widget
+    // int8_t          ahi_vertical_offset;                // Offset from center in pixels. Positive moves the AHI down. Widget only.
+    // int8_t          sidebar_horizontal_offset;          // Horizontal offset from default position. Units are grid slots for grid OSDs, pixels for pixel based OSDs. Positive values move sidebars closer to the edges.
+    // uint8_t         left_sidebar_scroll_step;           // How many units each sidebar step represents. 0 means the default value for the scroll type.
+    // uint8_t         right_sidebar_scroll_step;          // Same as left_sidebar_scroll_step, but for the right sidebar.
+    // bool            osd_home_position_arm_screen;
+    // uint8_t         pan_servo_index;                    // Index of the pan servo used for home direction offset
+    // int8_t          pan_servo_pwm2centideg;             // Centidegrees of servo rotation per us pwm
+    // uint8_t         pan_servo_offcentre_warning;        // Degrees around the centre, that is assumed camera is wanted to be facing forwards, but isn't centred
+    // bool            pan_servo_indicator_show_degrees;   // Show the degrees of offset for the pan servo
+    // uint8_t         crsf_lq_format;
+    // uint8_t         sidebar_height;                     // sidebar height in rows, 0 turns off sidebars leaving only level indicator arrows
+    // uint8_t         telemetry;                          // use telemetry on displayed pixel line 0
+    // uint8_t         esc_rpm_precision;                  // Number of characters used for the RPM numbers.
+    // uint16_t        system_msg_display_time;            // system message display time for multiple messages (ms)
+    // uint8_t         mAh_precision;                 // Number of numbers used for mAh drawn. Plently of packs now are > 9999 mAh
+    // uint8_t         ahi_pitch_interval;                 // redraws AHI at set pitch interval (Not pixel OSD)
+    // char            osd_switch_indicator0_name[OSD_SWITCH_INDICATOR_NAME_LENGTH + 1]; // Name to use for switch indicator 0.
+    // uint8_t         osd_switch_indicator0_channel;      // RC Channel to use for switch indicator 0.
+    // char            osd_switch_indicator1_name[OSD_SWITCH_INDICATOR_NAME_LENGTH + 1]; // Name to use for switch indicator 1.
+    // uint8_t         osd_switch_indicator1_channel;      // RC Channel to use for switch indicator 1.
+    // char            osd_switch_indicator2_name[OSD_SWITCH_INDICATOR_NAME_LENGTH + 1]; // Name to use for switch indicator 2.
+    // uint8_t         osd_switch_indicator2_channel;      // RC Channel to use for switch indicator 2.
+    // char            osd_switch_indicator3_name[OSD_SWITCH_INDICATOR_NAME_LENGTH + 1]; // Name to use for switch indicator 3.
+    // uint8_t         osd_switch_indicator3_channel;      // RC Channel to use for switch indicator 3.
+    // bool            osd_switch_indicators_align_left;   // Align switch indicator name to left of the switch.
+    // bool            use_pilot_logo;                     // If enabled, the pilot logo (last 40 characters of page 2 font) will be used with the INAV logo.
+    // uint8_t         inav_to_pilot_logo_spacing;         // The space between the INAV and pilot logos, if pilot logo is used. This number may be adjusted so that it fits the odd/even col width.
+    // uint16_t        arm_screen_display_time;            // Length of time the arm screen is displayed
+// >>>>>>> b461d8095 (change mode name + fixes)
 } osdConfig_t;
 
 PG_DECLARE(osdConfig_t, osdConfig);

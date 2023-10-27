@@ -79,7 +79,7 @@ typedef enum {
     BOXCHANGEMISSION = 50,
     BOXBEEPERMUTE    = 51,
     BOXMULTIFUNCTION = 52,
-    BOXATTIHOLD      = 53,  // CR108
+    BOXANGLEHOLD     = 53,  // CR108
     CHECKBOX_ITEM_COUNT
 } boxId_e;
 

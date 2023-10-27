@@ -1736,6 +1736,12 @@ static bool osdDrawSingleElement(uint8_t item)
             buff[6] = '\0';
         } else {
             if (osdFormatCentiNumber(buff, getMAhDrawn() * 100, 1000, 0, (mah_digits - 2), mah_digits)) {
+// =======
+        // } else
+// #endif
+        // {
+            // if (osdFormatCentiNumber(buff, getMAhDrawn() * 100, 1000, 0, (mah_digits - 2), mah_digits, false)) {
+// >>>>>>> b461d8095 (change mode name + fixes)
                 // Shown in Ah
                 buff[mah_digits] = SYM_AH;
             } else {
@@ -1762,10 +1768,38 @@ static bool osdDrawSingleElement(uint8_t item)
             tfp_sprintf(buff, "  NA");
         else if (!batteryWasFullWhenPluggedIn())
             tfp_sprintf(buff, "  NF");
+// <<<<<<< HEAD
         else if (currentBatteryProfile->capacity.unit == BAT_CAPACITY_UNIT_MAH)
             tfp_sprintf(buff, "%4lu", (unsigned long)getBatteryRemainingCapacity());
         else // currentBatteryProfile->capacity.unit == BAT_CAPACITY_UNIT_MWH
             osdFormatCentiNumber(buff + 1, getBatteryRemainingCapacity() / 10, 0, 2, 0, 3);
+// =======
+        // else if (currentBatteryProfile->capacity.unit == BAT_CAPACITY_UNIT_MAH) {
+            // uint8_t mah_digits = osdConfig()->mAh_precision; // Initialize to config value
+
+// #ifndef DISABLE_MSP_BF_COMPAT // IF BFCOMPAT is not supported, there's no need to check for it
+            // if (isBfCompatibleVideoSystem(osdConfig())) {
+                // //BFcompat is unable to work with scaled values and it only has mAh symbol to work with
+                // tfp_sprintf(buff, "%5d", (int)getBatteryRemainingCapacity());   // Use 5 digits to allow packs below 100Ah
+                // buff[5] = SYM_MAH;
+                // buff[6] = '\0';
+                // unitsDrawn = true;
+            // } else
+// #endif
+            // {
+                // if (osdFormatCentiNumber(buff, getBatteryRemainingCapacity() * 100, 1000, 0, (mah_digits - 2), mah_digits, false)) {
+                    // // Shown in Ah
+                    // buff[mah_digits] = SYM_AH;
+                // } else {
+                    // // Shown in mAh
+                    // buff[mah_digits] = SYM_MAH;
+                // }
+                // buff[mah_digits + 1] = '\0';
+                // unitsDrawn = true;
+            // }
+        // } else // currentBatteryProfile->capacity.unit == BAT_CAPACITY_UNIT_MWH
+            // osdFormatCentiNumber(buff + 1, getBatteryRemainingCapacity() / 10, 0, 2, 0, 3, false);
+// >>>>>>> b461d8095 (change mode name + fixes)
 
         buff[4] = currentBatteryProfile->capacity.unit == BAT_CAPACITY_UNIT_MAH ? SYM_MAH : SYM_WH;
         buff[5] = '\0';
@@ -2215,8 +2249,8 @@ static bool osdDrawSingleElement(uint8_t item)
                 p = "ANGL";
             else if (FLIGHT_MODE(HORIZON_MODE))
                 p = "HOR ";
-            else if (FLIGHT_MODE(ATTIHOLD_MODE))    // CR108
-                p = "ATTI";
+            else if (FLIGHT_MODE(ANGLEHOLD_MODE))   // CR108
+                p = "AHLD";
 
             displayWrite(osdDisplayPort, elemPosX, elemPosY, p);
             return true;
@@ -4980,14 +5014,14 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
                         messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_LANDED);
                     }
                     // CR108
-                    if (IS_RC_MODE_ACTIVE(BOXATTIHOLD)) {
-                        int8_t navAttiHoldAxis = navCheckActiveAttiHoldAxis();
-                        if (isAttiholdLevel()) {
-                            messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_ATTI_LEVEL);
-                        } else if (navAttiHoldAxis == FD_ROLL) {
-                            messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_ATTI_ROLL);
-                        } else if (navAttiHoldAxis == FD_PITCH) {
-                            messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_ATTI_PITCH);
+                    if (IS_RC_MODE_ACTIVE(BOXANGLEHOLD)) {
+                        int8_t navAngleHoldAxis = navCheckActiveAngleHoldAxis();
+                        if (isAngleHoldLevel()) {
+                            messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_ANGLEHOLD_LEVEL);
+                        } else if (navAngleHoldAxis == FD_ROLL) {
+                            messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_ANGLEHOLD_ROLL);
+                        } else if (navAngleHoldAxis == FD_PITCH) {
+                            messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_ANGLEHOLD_PITCH);
                         }
                     }
                     // CR108

@@ -698,17 +698,20 @@ void processRx(timeUs_t currentTimeUs)
     // }
 
     // CR108
+
+    /* Disable stabilised modes initially, will be enabled as required with priority ANGLE > HORIZON > ANGLEHOLD
+     * MANUAL mode has priority over these modes except when ANGLE auto enabled */
     DISABLE_FLIGHT_MODE(ANGLE_MODE);
     DISABLE_FLIGHT_MODE(HORIZON_MODE);
-    DISABLE_FLIGHT_MODE(ATTIHOLD_MODE);
+    DISABLE_FLIGHT_MODE(ANGLEHOLD_MODE);
 
-    if (sensors(SENSOR_ACC)) {
-        if (IS_RC_MODE_ACTIVE(BOXANGLE) || autoEnableAngle) { // CR105
+    if (sensors(SENSOR_ACC) && (!FLIGHT_MODE(MANUAL_MODE) || autoEnableAngle)) {
+        if (IS_RC_MODE_ACTIVE(BOXANGLE) || autoEnableAngle) {   // CR105
             ENABLE_FLIGHT_MODE(ANGLE_MODE);
         } else if (IS_RC_MODE_ACTIVE(BOXHORIZON)) {
             ENABLE_FLIGHT_MODE(HORIZON_MODE);
-        } else if (STATE(AIRPLANE) && IS_RC_MODE_ACTIVE(BOXATTIHOLD)) {  /* Attitude hold mode */
-            ENABLE_FLIGHT_MODE(ATTIHOLD_MODE);
+        } else if (STATE(AIRPLANE) && IS_RC_MODE_ACTIVE(BOXANGLEHOLD)) {
+            ENABLE_FLIGHT_MODE(ANGLEHOLD_MODE);
         }
     }
 
