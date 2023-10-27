@@ -1082,9 +1082,9 @@ void updateAngleHold(float *angleTarget, uint8_t axis)
 
         static int16_t angleHoldTarget[2];
 
-        DEBUG_SET(DEBUG_ALWAYS, 0, attiHoldTarget[FD_ROLL]);
+        DEBUG_SET(DEBUG_ALWAYS, 0, angleHoldTarget[FD_ROLL]);
         DEBUG_SET(DEBUG_ALWAYS, 2, attitude.raw[FD_ROLL]);
-        DEBUG_SET(DEBUG_ALWAYS, 1, attiHoldTarget[FD_PITCH]);
+        DEBUG_SET(DEBUG_ALWAYS, 1, angleHoldTarget[FD_PITCH]);
         DEBUG_SET(DEBUG_ALWAYS, 3, attitude.raw[FD_PITCH]);
 
         if (restartAngleHoldMode) {      // set target attitude to current attitude on activation
