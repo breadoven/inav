@@ -279,7 +279,6 @@ PG_RESET_TEMPLATE(pidProfile_t, pidProfile,
         .navVelXyDtermAttenuationEnd = SETTING_NAV_MC_VEL_XY_DTERM_ATTENUATION_END_DEFAULT,
         .iterm_relax_cutoff = SETTING_MC_ITERM_RELAX_CUTOFF_DEFAULT,
         .iterm_relax = SETTING_MC_ITERM_RELAX_DEFAULT,
-        .mc_vel_xy_accel_tweak = SETTING_NAV_MC_VEL_XY_ACCEL_TWEAK_DEFAULT,      // CR47
 
 #ifdef USE_D_BOOST
         .dBoostMin = SETTING_D_BOOST_MIN_DEFAULT,
@@ -1068,7 +1067,6 @@ bool isAngleHoldLevel(void)
 void updateAngleHold(float *angleTarget, uint8_t axis)
 {
     int8_t navAngleHoldAxis = navCheckActiveAngleHoldAxis();
-    // static bool restartAngleHoldMode = true;
 
     if (!restartAngleHoldMode) {     // set restart flag when attitude hold is inactive
         restartAngleHoldMode = !FLIGHT_MODE(ANGLEHOLD_MODE) && navAngleHoldAxis == -1;
@@ -1313,7 +1311,7 @@ void pidInit(void)
     navPidInit(
         &fixedWingLevelTrimController,
         0.0f,
-        (float)pidProfile()->fixedWingLevelTrimGain / 50.0f,   // CR111
+        (float)pidProfile()->fixedWingLevelTrimGain / 100.0f,   // CR111
         0.0f,
         0.0f,
         2.0f,
@@ -1383,7 +1381,9 @@ void updateFixedWingLevelTrim(timeUs_t currentTimeUs)
         1.0f,
         1.0f
     );
-
+    // DEBUG_SET(DEBUG_ALWAYS, 4, output);
+    // DEBUG_SET(DEBUG_ALWAYS, 5, fixedWingLevelTrim * 10);
+    // DEBUG_SET(DEBUG_ALWAYS, 6, flags);
     DEBUG_SET(DEBUG_AUTOLEVEL, 4, output);
     fixedWingLevelTrim = pidProfile()->fixedWingLevelTrim + (output * FIXED_WING_LEVEL_TRIM_MULTIPLIER);
 }

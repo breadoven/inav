@@ -66,7 +66,8 @@ bool findNearestSafeHome(void);      // Find nearest safehome
 #define NAV_MAX_WAYPOINTS 15
 #endif
 
-#define NAV_ACCEL_CUTOFF_FREQUENCY_HZ 2       // low-pass filter on XY-acceleration target
+#define NAV_ACCEL_CUTOFF_FREQUENCY_HZ   2       // low-pass filter on XY-acceleration target
+#define NAV_ACCELERATION_XY_MAX         980     // cm/s/s       // approx 45 deg lean angle  CR47
 
 enum {
     NAV_GPS_ATTI    = 0,                    // Pitch/roll stick controls attitude (pitch/roll lean angles)
@@ -288,6 +289,7 @@ typedef struct navConfig_s {
         uint8_t posResponseExpo;                // Position controller expo (taret vel expo for MC)
         bool slowDownForTurning;                // Slow down during WP missions when changing heading on next waypoint
         uint8_t althold_throttle_type;          // throttle zero datum type for alt hold
+        uint16_t xy_accel_max_limit;            // CR47
     } mc;
 
     struct {

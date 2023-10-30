@@ -1956,14 +1956,6 @@ groups:
         min: 0
         max: 255
         default_value: 40
-        # CR47
-      - name: nav_mc_vel_xy_accel_tweak
-        description: "Fiddle factor to tune bank angle response to specific quad performance"
-        field: mc_vel_xy_accel_tweak
-        default_value: 100
-        min: 10
-        max: 100
-        # CR47
       - name: nav_mc_heading_p
         description: "P gain of Heading Hold controller (Multirotor)"
         default_value: 60
@@ -2856,6 +2848,14 @@ groups:
         field: fw.yawControlDeadband
         min: 0
         max: 90
+        # CR47
+      - name: nav_mc_xy_accel_max_limit
+        description: "Fiddle factor to tune bank angle response to specific quad performance"
+        field: mc.xy_accel_max_limit
+        default_value: 980
+        min: 100
+        max: NAV_ACCELERATION_XY_MAX
+        # CR47
 
   - name: PG_TELEMETRY_CONFIG
     type: telemetryConfig_t

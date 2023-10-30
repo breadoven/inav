@@ -3452,16 +3452,6 @@ P gain of altitude PID controller (Multirotor)
 
 ---
 
-### nav_mc_vel_xy_accel_tweak
-
-Fiddle factor to tune bank angle response to specific quad performance
-
-| Default | Min | Max |
-| --- | --- | --- |
-| 100 | 10 | 100 |
-
----
-
 ### nav_mc_vel_xy_d
 
 D gain of Position-Rate (Velocity to Acceleration) PID controller. It can damp P and I. Increasing D might help when drone overshoots target.
@@ -3579,6 +3569,16 @@ When ON, NAV engine will slow down when switching to the next waypoint. This pri
 | Default | Min | Max |
 | --- | --- | --- |
 | ON | OFF | ON |
+
+---
+
+### nav_mc_xy_accel_max_limit
+
+Fiddle factor to tune bank angle response to specific quad performance
+
+| Default | Min | Max |
+| --- | --- | --- |
+| 980 | 100 | NAV_ACCELERATION_XY_MAX |
 
 ---
 

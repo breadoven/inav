@@ -582,15 +582,31 @@ static void updatePositionAccelController_MC(timeDelta_t deltaMicros, float maxA
     float accelLimitX, accelLimitY;
     const float velErrorMagnitude = calc_length_pythagorean_2D(velErrorX, velErrorY);
 
+    // CR47
+    /* Limit max acceleration to user setting when close to target speed */
+// #define USER_ACCEL_CUTOFF_LIMIT 0.3f
+    const float speedError = setpointXY != 0.0f ? fabsf(1.0f - (posControl.actualState.velXY / setpointXY)) : 1.0f;
+    const uint16_t factoredAccelLimit = navConfig()->mc.xy_accel_max_limit;
+
+    if (speedError < 0.3f && factoredAccelLimit != NAV_ACCELERATION_XY_MAX) {
+        if (speedError > 0.15f) {
+            maxAccelLimit = scaleRangef(speedError, 0.15f, 0.3f, factoredAccelLimit, maxAccelLimit);
+        } else {
+            maxAccelLimit = factoredAccelLimit;
+        }
+    }
+    DEBUG_SET(DEBUG_ALWAYS, 1, maxAccelLimit);
+    // CR47
+
     if (velErrorMagnitude > 0.1f) {
-        accelLimitX = maxAccelLimit / velErrorMagnitude * fabsf(velErrorX);
-        accelLimitY = maxAccelLimit / velErrorMagnitude * fabsf(velErrorY);
+        accelLimitX = maxAccelLimit * (fabsf(velErrorX) / velErrorMagnitude);
+        accelLimitY = maxAccelLimit * (fabsf(velErrorY) / velErrorMagnitude);
     } else {
         accelLimitX = maxAccelLimit / 1.414213f;
         accelLimitY = accelLimitX;
     }
     // DEBUG_SET(DEBUG_ALWAYS, 1, velErrorX * 1000);
-    // DEBUG_SET(DEBUG_ALWAYS, 2, accelLimitX * 1000);
+    // DEBUG_SET(DEBUG_ALWAYS, 4, accelLimitX * 10);
 
     // Apply additional jerk limiting of 1700 cm/s^3 (~100 deg/s), almost any copter should be able to achieve this rate
     // This will assure that we wont't saturate out LEVEL and RATE PID controller
@@ -623,6 +639,7 @@ static void updatePositionAccelController_MC(timeDelta_t deltaMicros, float maxA
         multicopterPosXyCoefficients.dTermAttenuationStart,
         multicopterPosXyCoefficients.dTermAttenuationEnd
     );
+
     const float measurementScale = computeVelocityScale(
         posControl.actualState.velXY,
         maxSpeed,
@@ -633,6 +650,15 @@ static void updatePositionAccelController_MC(timeDelta_t deltaMicros, float maxA
 
     //Choose smaller attenuation factor and convert from attenuation to scale
     const float dtermScale = 1.0f - MIN(setpointScale, measurementScale);
+
+    // Apply accel tweak factor     CR47
+    // const float speedError = setpointXY != 0.0f ? fabsf(1.0f - (posControl.actualState.velXY / setpointXY)) : 1.0f;
+    float gainScale = 1.0f;
+    // if (speedError < 0.25f) {
+        // gainScale = (scaleRangef(speedError, 0.0f, 0.25f, pidProfile()->mc_vel_xy_accel_tweak, 100.0f)) / 100.0f;
+    // }
+    // DEBUG_SET(DEBUG_ALWAYS, 1, gainScale * 100);
+    // CR47
 
     // Apply PID with output limiting and I-term anti-windup
     // Pre-calculated accelLimit and the logic of navPidApply2 function guarantee that our newAccel won't exceed maxAccelLimit
@@ -645,7 +671,8 @@ static void updatePositionAccelController_MC(timeDelta_t deltaMicros, float maxA
         accelLimitXMin,
         accelLimitXMax,
         0,      // Flags
-        1.0f,   // Total gain scale
+        gainScale,  // CR47
+        // 1.0f,   // Total gain scale
         dtermScale    // Additional dTerm scale
     );
     float newAccelY = navPidApply3(
@@ -656,7 +683,8 @@ static void updatePositionAccelController_MC(timeDelta_t deltaMicros, float maxA
         accelLimitYMin,
         accelLimitYMax,
         0,      // Flags
-        1.0f,   // Total gain scale
+        gainScale,  // CR47
+        // 1.0f,   // Total gain scale
         dtermScale    // Additional dTerm scale
     );
 // DEBUG_SET(DEBUG_ALWAYS, 3, newAccelX * 1000);
@@ -686,7 +714,24 @@ static void updatePositionAccelController_MC(timeDelta_t deltaMicros, float maxA
         maxBankAngle = DEGREES_TO_DECIDEGREES(navConfig()->mc.braking_bank_angle);
     }
 #endif
+    // // CR47
+    // float maxAccelLimiter = 1.0f;
+    // const float speedError = setpointXY != 0.0f ? fabsf(1.0f - (posControl.actualState.velXY / setpointXY)) : 1.0f;
 
+    // if (speedError < 0.3f && pidProfile()->mc_vel_xy_accel_tweak != 100) {
+        // const float accelMagnitude = calc_length_pythagorean_2D(newAccelX, newAccelY);
+        // float accelLimitFactorMin = accelMagnitude > 0 ? (pidProfile()->mc_vel_xy_accel_tweak * 10) / accelMagnitude : 1.0f;
+
+        // if (speedError <= 0.15f) {
+            // maxAccelLimiter = accelLimitFactorMin;
+        // } else {
+            // maxAccelLimiter = scaleRangef(speedError, 0.15f, 0.3f, accelLimitFactorMin, accelMagnitude);
+        // }
+    // }
+    // newAccelX *= maxAccelLimiter;
+    // newAccelY *= maxAccelLimiter;
+    // DEBUG_SET(DEBUG_ALWAYS, 1, maxAccelLimiter * 100);
+    // // CR47
     // Save last acceleration target
     lastAccelTargetX = newAccelX;
     lastAccelTargetY = newAccelY;
@@ -695,15 +740,6 @@ static void updatePositionAccelController_MC(timeDelta_t deltaMicros, float maxA
     float accelForward = newAccelX * posControl.actualState.cosYaw + newAccelY * posControl.actualState.sinYaw;     // const deleted CR47
     const float accelRight = -newAccelX * posControl.actualState.sinYaw + newAccelY * posControl.actualState.cosYaw;
 
-    // Apply accel tweak factor     CR47
-    const float speedError = fabsf(posControl.actualState.velXY - setpointXY);
-    if (speedError < 300.0f) {
-        uint8_t tweakScaled = scaleRange(speedError, 0, 300, pidProfile()->mc_vel_xy_accel_tweak, 100);
-        // DEBUG_SET(DEBUG_ALWAYS, 6, tweakScaled);
-        accelForward = accelForward * (tweakScaled / 100.0f);
-    }
-    // CR47
-
     // Calculate banking angles
     const float desiredPitch = atan2_approx(accelForward, GRAVITY_CMSS);
     const float desiredRoll = atan2_approx(accelRight * cos_approx(desiredPitch), GRAVITY_CMSS);
@@ -711,9 +747,9 @@ static void updatePositionAccelController_MC(timeDelta_t deltaMicros, float maxA
     posControl.rcAdjustment[ROLL] = constrain(RADIANS_TO_DECIDEGREES(desiredRoll), -maxBankAngle, maxBankAngle);
     posControl.rcAdjustment[PITCH] = constrain(RADIANS_TO_DECIDEGREES(desiredPitch), -maxBankAngle, maxBankAngle);
 
-    // DEBUG_SET(DEBUG_ALWAYS, 0, speedError * 1000);
-    // DEBUG_SET(DEBUG_ALWAYS, 4, accelForward * 1000);
-    // DEBUG_SET(DEBUG_ALWAYS, 5, posControl.rcAdjustment[PITCH]);
+    DEBUG_SET(DEBUG_ALWAYS, 0, speedError * 100);
+    DEBUG_SET(DEBUG_ALWAYS, 2, accelForward);
+    DEBUG_SET(DEBUG_ALWAYS, 3, posControl.rcAdjustment[PITCH]);
 }
 
 static void applyMulticopterPositionController(timeUs_t currentTimeUs)
@@ -812,7 +848,6 @@ static bool isLandingGbumpDetected(timeMs_t currentTimeMs)
             gSpikeDetectTimeMs = 0;
         }
     }
-    // DEBUG_SET(DEBUG_ALWAYS, 2, gSpikeDetectTimeMs);
 
     return false;
 }

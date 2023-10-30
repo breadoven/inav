@@ -175,6 +175,7 @@ PG_RESET_TEMPLATE(navConfig_t, navConfig,
         .posResponseExpo = SETTING_NAV_MC_POS_EXPO_DEFAULT,                         // posResponseExpo * 100
         .slowDownForTurning = SETTING_NAV_MC_WP_SLOWDOWN_DEFAULT,
         .althold_throttle_type = SETTING_NAV_MC_ALTHOLD_THROTTLE_DEFAULT,           // STICK
+        .xy_accel_max_limit = SETTING_NAV_MC_XY_ACCEL_MAX_LIMIT_DEFAULT,            // CR47
     },
 
     // Fixed wing
