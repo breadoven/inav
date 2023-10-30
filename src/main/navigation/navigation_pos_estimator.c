@@ -111,36 +111,6 @@ static bool updateTimer(navigationTimer_t * tim, timeUs_t interval, timeUs_t cur
 
 static bool shouldResetReferenceAltitude(void)
 {
-// DEBUG_SET(DEBUG_ALWAYS, 5, posControl.rthState.homePosition.pos.z);
-// DEBUG_SET(DEBUG_ALWAYS, 4, posControl.gpsOrigin.alt);
-
-    // CR105
-    // static bool resetAltitudeOnArm = false;
-    // if (ARMING_FLAG(ARMED) && resetAltitudeOnArm) {
-        // static uint8_t sourceCheck = 0;
-        // sourceCheck |= updateSource;
-        // bool allAltitudeSources = STATE(GPS_FIX) && sensors(SENSOR_BARO);
-        // if ((allAltitudeSources && sourceCheck > SENSOR_GPS) || (!allAltitudeSources && sourceCheck)) {
-            // resetAltitudeOnArm = false;
-            // sourceCheck = 0;
-        // }
-        // return !STATE(IN_FLIGHT_EMERG_REARM);
-    // }
-
-    // if (!ARMING_FLAG(ARMED)) {
-        // switch ((nav_reset_type_e)positionEstimationConfig()->reset_altitude_type) {
-            // case NAV_RESET_NEVER:
-                // return false;
-            // case NAV_RESET_ON_FIRST_ARM:
-                // break;
-            // case NAV_RESET_ON_EACH_ARM:
-                // resetAltitudeOnArm = true;
-        // }
-        // return !ARMING_FLAG(WAS_EVER_ARMED);
-    // }
-
-    // return false;
-
     // CR105
     static float backupInitialBaroAltitudeOffset = 0.0f;
     static int32_t backupGpsOriginAltitude = 0;
@@ -359,7 +329,7 @@ void updatePositionEstimator_BaroTopic(timeUs_t currentTimeUs)
     if (shouldResetReferenceAltitude()) {    // CR105 SENSOR_BARO
         initialBaroAltitudeOffset = newBaroAlt;
     }
-DEBUG_SET(DEBUG_ALWAYS, 3, initialBaroAltitudeOffset);
+
     if (sensors(SENSOR_BARO) && baroIsCalibrationComplete()) {
         const timeUs_t baroDtUs = currentTimeUs - posEstimator.baro.lastUpdateTime;
 

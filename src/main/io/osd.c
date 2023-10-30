@@ -4999,9 +4999,9 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
                 }
             }
             // CR27
-            if (posControl.flags.compassGpsCogMismatchError) {
-                messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_COMPASS_ERROR);
-            }
+            // if (posControl.flags.compassGpsCogMismatchError) {
+                // messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_COMPASS_ERROR);
+            // }
             // CR27
         } else if (ARMING_FLAG(ARMING_DISABLED_ALL_FLAGS)) {
             unsigned invalidIndex;
