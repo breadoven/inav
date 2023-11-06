@@ -66,12 +66,17 @@ static sqrt_controller_t alt_hold_sqrt_controller;
 // Position to velocity controller for Z axis
 static void updateAltitudeVelocityController_MC(timeDelta_t deltaMicros)
 {
-    float targetVel = sqrtControllerApply(
-        &alt_hold_sqrt_controller,
-        posControl.desiredState.pos.z,
-        navGetCurrentActualPositionAndVelocity()->pos.z,
-        US2S(deltaMicros)
-    );
+    float targetVel = posControl.desiredState.vel.z;    // CR97
+    if (posControl.desiredState.pos.z != NAV_IMPOSSIBLE_ALTITUDE_TARGET) {
+        targetVel = getClimbRate(posControl.desiredState.pos.z);
+    }
+
+    // float targetVel = sqrtControllerApply(
+        // &alt_hold_sqrt_controller,
+        // posControl.desiredState.pos.z,
+        // navGetCurrentActualPositionAndVelocity()->pos.z,
+        // US2S(deltaMicros)
+    // );
 
     // hard limit desired target velocity to max_climb_rate
     float vel_max_z = 0.0f;
@@ -84,7 +89,7 @@ static void updateAltitudeVelocityController_MC(timeDelta_t deltaMicros)
 
     targetVel = constrainf(targetVel, -vel_max_z, vel_max_z);
 
-    posControl.pids.pos[Z].output_constrained = targetVel;
+    posControl.pids.pos[Z].output_constrained = targetVel;  // only used for Blackbox and OSD info  CR97
 
     // Limit max up/down acceleration target
     const float smallVelChange = US2S(deltaMicros) * (GRAVITY_CMSS * 0.1f);
@@ -132,8 +137,9 @@ bool adjustMulticopterAltitudeFromRCInput(void)
         // In terrain follow mode we apply different logic for terrain control
         if (posControl.flags.estAglStatus == EST_TRUSTED && altTarget > 10.0f) {
             // We have solid terrain sensor signal - directly map throttle to altitude
-            updateClimbRateToAltitudeController(0, 0, ROC_TO_ALT_RESET);
-            posControl.desiredState.pos.z = altTarget;
+            // updateClimbRateToAltitudeController(0, 0, ROC_TO_ALT_RESET);   // CR97
+            // posControl.desiredState.pos.z = altTarget;
+            updateClimbRateToAltitudeController(navConfig()->general.max_manual_climb_rate, altTarget, ROC_TO_ALT_TARGET);    // CR97
         }
         else {
             updateClimbRateToAltitudeController(-50.0f, 0, ROC_TO_ALT_CONSTANT);
@@ -165,7 +171,7 @@ bool adjustMulticopterAltitudeFromRCInput(void)
         else {
             // Adjusting finished - reset desired position to stay exactly where pilot released the stick
             if (posControl.flags.isAdjustingAltitude) {
-                updateClimbRateToAltitudeController(0, 0, ROC_TO_ALT_RESET);
+                updateClimbRateToAltitudeController(navConfig()->general.max_auto_climb_rate, 0, ROC_TO_ALT_RESET);   // CR97
             }
 
             return false;
@@ -252,8 +258,8 @@ static void applyMulticopterAltitudeController(timeUs_t currentTimeUs)
             if (prepareForTakeoffOnReset) {
                 const navEstimatedPosVel_t *posToUse = navGetCurrentActualPositionAndVelocity();
 
-                posControl.desiredState.vel.z = -navConfig()->general.max_manual_climb_rate;
-                posControl.desiredState.pos.z = posToUse->pos.z - (navConfig()->general.max_manual_climb_rate / posControl.pids.pos[Z].param.kP);
+                posControl.desiredState.vel.z = -navConfig()->general.max_manual_climb_rate;    // CR97M pointless ?
+                posControl.desiredState.pos.z = posToUse->pos.z - (navConfig()->general.max_manual_climb_rate / posControl.pids.pos[Z].param.kP);  // CR97M
                 posControl.pids.vel[Z].integrator = -500.0f;
                 pt1FilterReset(&altholdThrottleFilterState, -500.0f);
                 prepareForTakeoffOnReset = false;
@@ -585,14 +591,16 @@ static void updatePositionAccelController_MC(timeDelta_t deltaMicros, float maxA
     // CR47
     /* Limit max acceleration to user setting when close to target speed */
 // #define USER_ACCEL_CUTOFF_LIMIT 0.3f
-    const float speedError = setpointXY != 0.0f ? fabsf(1.0f - (posControl.actualState.velXY / setpointXY)) : 1.0f;
-    const uint16_t factoredAccelLimit = navConfig()->mc.xy_accel_max_limit;
-
-    if (speedError < 0.3f && factoredAccelLimit != NAV_ACCELERATION_XY_MAX) {
-        if (speedError > 0.15f) {
-            maxAccelLimit = scaleRangef(speedError, 0.15f, 0.3f, factoredAccelLimit, maxAccelLimit);
-        } else {
-            maxAccelLimit = factoredAccelLimit;
+    if (setpointXY) {
+        const float speedError = fabsf(1.0f - (posControl.actualState.velXY / setpointXY));
+        const uint16_t factoredAccelLimit = navConfig()->mc.xy_accel_max_limit;
+        DEBUG_SET(DEBUG_ALWAYS, 0, speedError * 100);
+        if (speedError < 0.3f && factoredAccelLimit != NAV_ACCELERATION_XY_MAX) {
+            if (speedError > 0.15f) {
+                maxAccelLimit = scaleRangef(speedError, 0.15f, 0.3f, factoredAccelLimit, maxAccelLimit);
+            } else {
+                maxAccelLimit = factoredAccelLimit;
+            }
         }
     }
     DEBUG_SET(DEBUG_ALWAYS, 1, maxAccelLimit);
@@ -650,7 +658,7 @@ static void updatePositionAccelController_MC(timeDelta_t deltaMicros, float maxA
 
     //Choose smaller attenuation factor and convert from attenuation to scale
     const float dtermScale = 1.0f - MIN(setpointScale, measurementScale);
-
+    DEBUG_SET(DEBUG_ALWAYS, 4, dtermScale * 100);
     // Apply accel tweak factor     CR47
     // const float speedError = setpointXY != 0.0f ? fabsf(1.0f - (posControl.actualState.velXY / setpointXY)) : 1.0f;
     float gainScale = 1.0f;
@@ -737,7 +745,7 @@ static void updatePositionAccelController_MC(timeDelta_t deltaMicros, float maxA
     lastAccelTargetY = newAccelY;
 
     // Rotate acceleration target into forward-right frame (aircraft)
-    float accelForward = newAccelX * posControl.actualState.cosYaw + newAccelY * posControl.actualState.sinYaw;     // const deleted CR47
+    const float accelForward = newAccelX * posControl.actualState.cosYaw + newAccelY * posControl.actualState.sinYaw;
     const float accelRight = -newAccelX * posControl.actualState.sinYaw + newAccelY * posControl.actualState.cosYaw;
 
     // Calculate banking angles
@@ -747,7 +755,6 @@ static void updatePositionAccelController_MC(timeDelta_t deltaMicros, float maxA
     posControl.rcAdjustment[ROLL] = constrain(RADIANS_TO_DECIDEGREES(desiredRoll), -maxBankAngle, maxBankAngle);
     posControl.rcAdjustment[PITCH] = constrain(RADIANS_TO_DECIDEGREES(desiredPitch), -maxBankAngle, maxBankAngle);
 
-    DEBUG_SET(DEBUG_ALWAYS, 0, speedError * 100);
     DEBUG_SET(DEBUG_ALWAYS, 2, accelForward);
     DEBUG_SET(DEBUG_ALWAYS, 3, posControl.rcAdjustment[PITCH]);
 }
@@ -986,7 +993,8 @@ static void applyMulticopterEmergencyLandingController(timeUs_t currentTimeUs)
         // Check if last correction was not too long ago
         if (deltaMicrosPositionUpdate < MAX_POSITION_UPDATE_INTERVAL_US) {
             // target min descent rate 5m above takeoff altitude
-            updateClimbRateToAltitudeController(-navConfig()->general.emerg_descent_rate, 500.0f, ROC_TO_ALT_TARGET);
+            // updateClimbRateToAltitudeController(-navConfig()->general.emerg_descent_rate, 500.0f, ROC_TO_ALT_TARGET);
+            updateClimbRateToAltitudeController(navConfig()->general.emerg_descent_rate, 500.0f, ROC_TO_ALT_TARGET);   // CR97
             updateAltitudeVelocityController_MC(deltaMicrosPositionUpdate);
             updateAltitudeThrottleController_MC(deltaMicrosPositionUpdate);
         }
