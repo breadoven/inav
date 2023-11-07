@@ -2003,6 +2003,14 @@ groups:
         field: bank_fw.pid[PID_POS_Z].D
         min: 0
         max: 255
+# CR97
+      # - name: nav_fw_pos_z_ff
+        # description: "Feed forward gain of altitude PID controller (Fixedwing)"
+        # default_value: 10
+        # field: bank_fw.pid[PID_POS_Z].FF
+        # min: 0
+        # max: 255
+# CR97
       - name: nav_fw_pos_xy_p
         description: "P gain of 2D trajectory PID controller. Play with this to get a straight line between waypoints or a straight RTH"
         default_value: 75

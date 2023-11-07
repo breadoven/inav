@@ -62,13 +62,24 @@ static int16_t altHoldThrottleRCZero = 1500;
 static pt1Filter_t altholdThrottleFilterState;
 static bool prepareForTakeoffOnReset = false;
 static sqrt_controller_t alt_hold_sqrt_controller;
-
+//CR97
+float getSqrtControllerVelocity(float targetAltitude, timeDelta_t deltaMicros)
+{
+    return sqrtControllerApply(
+            &alt_hold_sqrt_controller,
+            targetAltitude,
+            navGetCurrentActualPositionAndVelocity()->pos.z,
+            US2S(deltaMicros)
+    );
+}
+// CR97
 // Position to velocity controller for Z axis
 static void updateAltitudeVelocityController_MC(timeDelta_t deltaMicros)
-{
-    float targetVel = posControl.desiredState.vel.z;    // CR97
+{// CR97
+    float targetVel = posControl.desiredState.vel.z;    
+    
     if (posControl.desiredState.pos.z != NAV_IMPOSSIBLE_ALTITUDE_TARGET) {
-        targetVel = getClimbRate(posControl.desiredState.pos.z);
+        targetVel = getDesiredClimbRate(posControl.desiredState.pos.z, deltaMicros);
     }
 
     // float targetVel = sqrtControllerApply(
@@ -78,17 +89,17 @@ static void updateAltitudeVelocityController_MC(timeDelta_t deltaMicros)
         // US2S(deltaMicros)
     // );
 
-    // hard limit desired target velocity to max_climb_rate
-    float vel_max_z = 0.0f;
+    // // hard limit desired target velocity to max_climb_rate
+    // float vel_max_z = 0.0f;
 
-    if (posControl.flags.isAdjustingAltitude) {
-        vel_max_z = navConfig()->general.max_manual_climb_rate;
-    } else {
-        vel_max_z = navConfig()->general.max_auto_climb_rate;
-    }
+    // if (posControl.flags.isAdjustingAltitude) {
+        // vel_max_z = navConfig()->general.max_manual_climb_rate;
+    // } else {
+        // vel_max_z = navConfig()->general.max_auto_climb_rate;
+    // }
 
-    targetVel = constrainf(targetVel, -vel_max_z, vel_max_z);
-
+    // targetVel = constrainf(targetVel, -vel_max_z, vel_max_z);
+    // CR97
     posControl.pids.pos[Z].output_constrained = targetVel;  // only used for Blackbox and OSD info  CR97
 
     // Limit max up/down acceleration target

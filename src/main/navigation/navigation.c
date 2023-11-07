@@ -3049,30 +3049,42 @@ bool isProbablyStillFlying(void)
     // lastUpdateTimeUs = currentTimeUs;
 // }
 // CR97
-bool isAltitudeLimitExceeded(void)
+static bool isMaxAltitudeLimitExceeded(void)
 {
     return navGetCurrentActualPositionAndVelocity()->pos.z >= navConfig()->general.max_altitude;
 }
 
-int32_t getClimbRate(float targetAltitude)
+int32_t getDesiredClimbRate(float targetAltitude, timeDelta_t deltaMicros)
 {
-    if (navConfig()->general.max_altitude && isAltitudeLimitExceeded()) {
+    if (navConfig()->general.max_altitude && isMaxAltitudeLimitExceeded()) {
         targetAltitude = MIN(targetAltitude, navConfig()->general.max_altitude);
     }
 
-    const int32_t targetAltitudeError = navGetCurrentActualPositionAndVelocity()->pos.z - targetAltitude;
-    const float maxClimbRate = posControl.flags.isAdjustingAltitude ? navConfig()->general.max_manual_climb_rate : navConfig()->general.max_auto_climb_rate;
+    float targetVel = 0.0f;
     const bool emergLandingIsActive = navigationIsExecutingAnEmergencyLanding();
-    const float minClimbRate = emergLandingIsActive ? 100.0f : 0.0f;
-    const uint16_t maxRateCutoffAlt = STATE(AIRPLANE) ? maxClimbRate * 5 : maxClimbRate;
-    const int8_t direction = targetAltitudeError < 0 ? 1 : -1;
 
-    const float verticalVelScaled = scaleRangef(targetAltitudeError, 0.0f, -maxRateCutoffAlt * direction, minClimbRate, maxClimbRate);
+    float maxClimbRate = navConfig()->general.max_auto_climb_rate;
+    if (emergLandingIsActive) {
+        maxClimbRate = navConfig()->general.emerg_descent_rate;
+    } else if (posControl.flags.isAdjustingAltitude) {
+        maxClimbRate = navConfig()->general.max_manual_climb_rate;
+    }
+    const float targetAltitudeError = targetAltitude - navGetCurrentActualPositionAndVelocity()->pos.z;
 
-    if (emergLandingIsActive && targetAltitudeError < 50) {
+    if (STATE(MULTIROTOR)) {
+        targetVel = getSqrtControllerVelocity(targetAltitude, deltaMicros);
+    } else {
+        // const uint16_t maxRateCutoffAlt = maxClimbRate * 5;
+        // const int8_t direction = targetAltitudeError < 0 ? 1 : -1;
+
+        // targetVel = direction * scaleRangef(targetAltitudeError, 0.0f, -maxRateCutoffAlt * direction, 0.0f, maxClimbRate);
+        targetVel = scaleRangef(targetAltitudeError, 0.0f, maxClimbRate * 5, 0.0f, maxClimbRate);
+    }
+
+    if (emergLandingIsActive && targetAltitudeError > -50) {
         return -100;
     } else {
-        return direction * constrainf(verticalVelScaled, minClimbRate, maxClimbRate);
+        return constrainf(targetVel, -maxClimbRate, maxClimbRate);
     }
 }
 
@@ -3098,7 +3110,7 @@ void updateClimbRateToAltitudeController(float desiredClimbRate, float targetAlt
      * If max altitude is set, reset climb rate if altitude is reached and climb rate is > 0
      * In other words, when altitude is reached, allow it only to shrink
      */
-    if (navConfig()->general.max_altitude && isAltitudeLimitExceeded()) {
+    if (navConfig()->general.max_altitude && isMaxAltitudeLimitExceeded() && desiredClimbRate >= 0.0f) {
         posControl.desiredState.pos.z = MIN(posControl.desiredState.pos.z, navConfig()->general.max_altitude);
     }
 
@@ -4341,6 +4353,7 @@ void navigationUsePIDs(void)
     navPidInit(&posControl.pids.fw_alt, (float)pidProfile()->bank_fw.pid[PID_POS_Z].P / 100.0f,  // CR97 uses 100, original was 10
                                         (float)pidProfile()->bank_fw.pid[PID_POS_Z].I / 100.0f,  // CR97 uses 100, original was 10
                                         (float)pidProfile()->bank_fw.pid[PID_POS_Z].D / 100.0f,  // CR97 uses 100, original was 10
+                                        // (float)pidProfile()->bank_fw.pid[PID_POS_Z].FF / 100.0f,  // CR97 new FF, original was 0.0f
                                         0.0f,
                                         NAV_DTERM_CUT_HZ,
                                         0.0f
