@@ -90,26 +90,9 @@ armingFlag_e isArmingDisabledReason(void)
     return 0;
 }
 
-// /**
- // * Enables the given flight mode.  A beep is sounded if the flight mode
- // * has changed.  Returns the new 'flightModeFlags' value.
- // */
-// uint32_t enableFlightMode(flightModeFlags_e mask)
-// {
-    // flightModeFlags |= (mask); // CR108
-    // return flightModeFlags;
-// }
-
-// /**
- // * Disables the given flight mode.  A beep is sounded if the flight mode
- // * has changed.  Returns the new 'flightModeFlags' value.
- // */
-// uint32_t disableFlightMode(flightModeFlags_e mask)
-// {
-    // flightModeFlags &= ~(mask); // CR108
-    // return flightModeFlags;
-// }
-// CR108
+/**
+ * Called at Rx update rate. Beeper sounded if flight mode state has changed.
+ */
 void updateFlightModeChangeBeeper(void)
 {
     static uint32_t previousFlightModeFlags = 0;
@@ -119,7 +102,7 @@ void updateFlightModeChangeBeeper(void)
     }
     previousFlightModeFlags = flightModeFlags;
 }
-// CR108
+
 bool sensors(uint32_t mask)
 {
     return enabledSensors & mask;
@@ -176,14 +159,15 @@ flightModeForTelemetry_e getFlightModeForTelemetry(void)
         return FLM_HORIZON;
 
     if (FLIGHT_MODE(ANGLEHOLD_MODE))
-        return FLM_ANGLEHOLD;   // CR108
+        return FLM_ANGLEHOLD;
 
     return STATE(AIRMODE_ACTIVE) ? FLM_ACRO_AIR : FLM_ACRO;
 }
 
 #ifdef USE_SIMULATOR
 simulatorData_t simulatorData = {
-	.flags = 0,
-	.debugIndex = 0
+    .flags = 0,
+    .debugIndex = 0,
+    .vbat = 0
 };
 #endif

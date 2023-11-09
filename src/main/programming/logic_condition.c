@@ -46,6 +46,7 @@
 #include "sensors/rangefinder.h"
 #include "flight/imu.h"
 #include "flight/pid.h"
+#include "flight/mixer_profile.h"
 #include "drivers/io_port_expander.h"
 #include "io/osd_common.h"
 #include "sensors/diagnostics.h"
@@ -55,6 +56,7 @@
 
 #include "io/vtx.h"
 #include "drivers/vtx_common.h"
+#include "drivers/light_ws2811strip.h"
 
 PG_REGISTER_ARRAY_WITH_RESET_FN(logicCondition_t, MAX_LOGIC_CONDITIONS, logicConditions, PG_LOGIC_CONDITIONS, 4);
 
@@ -424,6 +426,7 @@ static int logicConditionCompute(
                     pidInit();
                     pidInitFilters();
                     schedulePidGainsUpdate();
+                    navigationUsePIDs(); //set navigation pid gains
                     profileChanged = true;
                 }
                 return profileChanged;
@@ -473,6 +476,16 @@ static int logicConditionCompute(
             }
             break;
 
+#ifdef LED_PIN
+        case LOGIC_CONDITION_LED_PIN_PWM:
+            if (operandA >=0 && operandA <= 100) {
+                ledPinStartPWM((uint8_t)operandA);
+            } else {
+                ledPinStopPWM();
+            }
+            return operandA;
+            break;
+#endif
         default:
             return false;
             break;
@@ -702,6 +715,10 @@ static int logicConditionGetFlightOperandValue(int operand) {
             return constrain(attitude.values.pitch / 10, -180, 180);
             break;
 
+        case LOGIC_CONDITION_OPERAND_FLIGHT_ATTITUDE_YAW: // deg
+            return constrain(attitude.values.yaw / 10, 0, 360);
+            break;
+
         case LOGIC_CONDITION_OPERAND_FLIGHT_IS_ARMED: // 0/1
             return ARMING_FLAG(ARMED) ? 1 : 0;
             break;
@@ -770,6 +787,14 @@ static int logicConditionGetFlightOperandValue(int operand) {
             return getConfigProfile() + 1;
             break;
 
+        case LOGIC_CONDITION_OPERAND_FLIGHT_ACTIVE_MIXER_PROFILE: // int
+            return currentMixerProfileIndex + 1;
+            break;
+
+        case LOGIC_CONDITION_OPERAND_FLIGHT_MIXER_TRANSITION_ACTIVE: //0,1
+            return isMixerTransitionMixing ? 1 : 0;
+            break;
+
         case LOGIC_CONDITION_OPERAND_FLIGHT_LOITER_RADIUS:
             return getLoiterRadius(navConfig()->fw.loiter_radius);
 
@@ -835,21 +860,20 @@ static int logicConditionGetFlightModeOperandValue(int operand) {
             return (bool) FLIGHT_MODE(HORIZON_MODE);
             break;
 
-        // CR108
         case LOGIC_CONDITION_OPERAND_FLIGHT_MODE_ANGLEHOLD:
             return (bool) FLIGHT_MODE(ANGLEHOLD_MODE);
             break;
-        // CR108
+
         case LOGIC_CONDITION_OPERAND_FLIGHT_MODE_AIR:
             return (bool) FLIGHT_MODE(AIRMODE_ACTIVE);
             break;
-        // CR108
+
         case LOGIC_CONDITION_OPERAND_FLIGHT_MODE_ACRO:
             return (((bool) FLIGHT_MODE(ANGLE_MODE) || (bool) FLIGHT_MODE(HORIZON_MODE) || (bool) FLIGHT_MODE(ANGLEHOLD_MODE) ||
                      (bool) FLIGHT_MODE(MANUAL_MODE) || (bool) FLIGHT_MODE(NAV_RTH_MODE) || (bool) FLIGHT_MODE(NAV_POSHOLD_MODE) ||
                      (bool) FLIGHT_MODE(NAV_COURSE_HOLD_MODE) || (bool) FLIGHT_MODE(NAV_WP_MODE)) == false);
             break;
-        // CR108
+
         case LOGIC_CONDITION_OPERAND_FLIGHT_MODE_USER1:
             return IS_RC_MODE_ACTIVE(BOXUSER1);
             break;

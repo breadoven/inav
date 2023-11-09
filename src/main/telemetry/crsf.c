@@ -356,8 +356,8 @@ static void crsfFrameFlightMode(sbuf_t *dst)
             flightMode = "ANGL";
         } else if (FLIGHT_MODE(HORIZON_MODE)) {
             flightMode = "HOR";
-        } else if (FLIGHT_MODE(ANGLEHOLD_MODE)) {   // CR108
-            flightMode = "AHLD";
+        } else if (FLIGHT_MODE(ANGLEHOLD_MODE)) {
+            flightMode = "ANGH";
         }
 #ifdef USE_GPS
     } else if (feature(FEATURE_GPS) && navConfig()->general.flags.extra_arming_safety && (!STATE(GPS_FIX) || !STATE(GPS_FIX_HOME))) {

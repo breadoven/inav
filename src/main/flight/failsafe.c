@@ -216,14 +216,6 @@ bool failsafeRequiresAngleMode(void)
            failsafeProcedureLogic[failsafeState.activeProcedure].forceAngleMode;
 }
 
-// bool failsafeRequiresMotorStop(void)    // CR107 still required ?
-// {
-    // return failsafeState.active &&
-           // failsafeState.activeProcedure == FAILSAFE_PROCEDURE_AUTO_LANDING &&
-           // posControl.flags.estAltStatus < EST_USABLE &&
-           // currentBatteryProfile->failsafe_throttle < getThrottleIdleValue();
-// }
-
 void failsafeStartMonitoring(void)
 {
     failsafeState.monitoring = true;

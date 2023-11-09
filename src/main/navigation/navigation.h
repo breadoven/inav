@@ -619,8 +619,8 @@ const char * fixedWingLaunchStateMessage(void);
 float calculateAverageSpeed(void);
 
 void updateLandingStatus(timeMs_t currentTimeMs);
-bool isProbablyStillFlying(void); // CR105
-void resetLandingDetectorActiveState(void);   // CR105
+bool isProbablyStillFlying(void);
+void resetLandingDetectorActiveState(void);
 
 const navigationPIDControllers_t* getNavigationPIDControllers(void);
 
@@ -636,7 +636,7 @@ bool isEstimatedAglTrusted(void);
 void checkManualEmergencyLandingControl(bool forcedActivation);
 float updateBaroAltitudeRate(float newBaroAltRate, bool updateValue);
 
-int8_t navCheckActiveAngleHoldAxis(void);// CR108
+int8_t navCheckActiveAngleHoldAxis(void);
 
 /* Returns the heading recorded when home position was acquired.
  * Note that the navigation system uses deg*100 as unit and angles

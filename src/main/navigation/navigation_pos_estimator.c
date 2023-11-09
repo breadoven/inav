@@ -54,7 +54,7 @@
 #include "sensors/opflow.h"
 
 navigationPosEstimator_t posEstimator;
-static float initialBaroAltitudeOffset = 0.0f;   // CR105
+static float initialBaroAltitudeOffset = 0.0f;
 
 PG_REGISTER_WITH_RESET_TEMPLATE(positionEstimationConfig_t, positionEstimationConfig, PG_POSITION_ESTIMATION_CONFIG, 5);
 
@@ -111,7 +111,10 @@ static bool updateTimer(navigationTimer_t * tim, timeUs_t interval, timeUs_t cur
 
 static bool shouldResetReferenceAltitude(void)
 {
-    // CR105
+    /* Reference altitudes reset constantly when disarmed.
+     * On arming ref altitudes saved as backup in case of emerg in flight rearm
+     * If emerg in flight rearm active ref altitudes reset to backup values to avoid unwanted altitude reset */
+
     static float backupInitialBaroAltitudeOffset = 0.0f;
     static int32_t backupGpsOriginAltitude = 0;
     static bool emergRearmResetCheck = false;
@@ -126,7 +129,7 @@ static bool shouldResetReferenceAltitude(void)
         }
     }
     emergRearmResetCheck = !ARMING_FLAG(ARMED);
-// CR105
+
     switch ((nav_reset_type_e)positionEstimationConfig()->reset_altitude_type) {
         case NAV_RESET_NEVER:
             return false;
@@ -322,11 +325,10 @@ void onNewGPSData(void)
  */
 void updatePositionEstimator_BaroTopic(timeUs_t currentTimeUs)
 {
-    // static float initialBaroAltitudeOffset = 0.0f;   // CR105
     float newBaroAlt = baroCalculateAltitude();
 
     /* If we are required - keep altitude at zero */
-    if (shouldResetReferenceAltitude()) {    // CR105 SENSOR_BARO
+    if (shouldResetReferenceAltitude()) {
         initialBaroAltitudeOffset = newBaroAlt;
     }
 

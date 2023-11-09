@@ -207,8 +207,9 @@ float calculateRemainingFlightTimeBeforeRTH(bool takeWindIntoAccount) {
 
 // returns meters
 float calculateRemainingDistanceBeforeRTH(bool takeWindIntoAccount) {
-    // Fixed wing only for now
-    if (!(STATE(FIXED_WING_LEGACY) && ARMING_FLAG(ARMED))) {
+
+    // Fixed wing only for now, and must be armed
+    if (!STATE(AIRPLANE) || !ARMING_FLAG(ARMED)) {
         return -1;
     }
 
