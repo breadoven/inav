@@ -47,8 +47,6 @@
 
 #define NAV_RTH_TRACKBACK_POINTS            50      // max number RTH trackback points
 
-#define NAV_IMPOSSIBLE_ALTITUDE_TARGET      10000000    // 100km used as a flag only CR97
-
 #define MAX_POSITION_UPDATE_INTERVAL_US     HZ2US(MIN_POSITION_UPDATE_RATE_HZ)        // convenience macro
 _Static_assert(MAX_POSITION_UPDATE_INTERVAL_US <= TIMEDELTA_MAX, "deltaMicros can overflow!");
 
@@ -96,6 +94,7 @@ typedef struct navigationFlags_s {
     bool compassGpsCogMismatchError;                // mismatch between compass heading and valid GPS heading   // CR27
     bool gpsCfEstimatedAltitudeMismatch;            // Indicates a mismatch between GPS altitude and estimated altitude
 
+    climbRateToAltitudeControllerMode_e rocToAltMode;  // CR97
 
     bool isAdjustingPosition;
     bool isAdjustingAltitude;
@@ -474,7 +473,7 @@ bool isWaypointNavTrackingActive(void);
 void updateActualHeading(bool headingValid, int32_t newHeading, int32_t newGroundCourse);
 void updateActualHorizontalPositionAndVelocity(bool estPosValid, bool estVelValid, float newX, float newY, float newVelX, float newVelY);
 void updateActualAltitudeAndClimbRate(bool estimateValid, float newAltitude, float newVelocity, float surfaceDistance, float surfaceVelocity, navigationEstimateStatus_e surfaceStatus, float gpsCfEstimatedAltitudeError);
-int32_t getDesiredClimbRate(float targetAltitude, timeDelta_t deltaMicros);  // CR97
+float getDesiredClimbRate(float targetAltitude, timeDelta_t deltaMicros);  // CR97
 
 bool checkForPositionSensorTimeout(void);
 

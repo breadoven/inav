@@ -122,7 +122,7 @@ bool adjustFixedWingAltitudeFromRCInput(void)
     else {
         // Adjusting finished - reset desired position to stay exactly where pilot released the stick
         if (posControl.flags.isAdjustingAltitude) {
-            updateClimbRateToAltitudeController(navConfig()->general.max_auto_climb_rate, 0, ROC_TO_ALT_RESET);   // CR97
+            updateClimbRateToAltitudeController(0, 0, ROC_TO_ALT_RESET);   // CR97
         }
         return false;
     }
@@ -138,7 +138,7 @@ static void updateAltitudeVelocityAndPitchController_FW(timeDelta_t deltaMicros)
     // CR97
     float desiredClimbRate = posControl.desiredState.vel.z;
 
-    if (posControl.desiredState.pos.z != NAV_IMPOSSIBLE_ALTITUDE_TARGET) {
+    if (posControl.flags.rocToAltMode != ROC_TO_ALT_CONSTANT) {
         desiredClimbRate = getDesiredClimbRate(posControl.desiredState.pos.z, deltaMicros);
     }
 
@@ -385,6 +385,8 @@ static void calculateVirtualPositionTarget_FW(float trackingPeriod)
         distanceToActualTarget = calc_length_pythagorean_2D(posErrorX, posErrorY);
     }
 
+
+
     // Calculate virtual waypoint
     // CR72
     virtualDesiredPosition.x = navGetCurrentActualPositionAndVelocity()->pos.x + posErrorX;
@@ -565,8 +567,8 @@ void applyFixedWingPositionController(timeUs_t currentTimeUs)
                 // POSITION_TARGET_UPDATE_RATE_HZ should be chosen keeping in mind that position target shouldn't be reached until next pos update occurs
                 // FIXME: verify the above
                 calculateVirtualPositionTarget_FW(HZ2S(MIN_POSITION_UPDATE_RATE_HZ) * 2);
-
                 updatePositionHeadingController_FW(currentTimeUs, deltaMicrosPositionUpdate);
+                needToCalculateCircularLoiter = false;
             }
             else {
                 // Position update has not occurred in time (first iteration or glitch), reset altitude controller
@@ -821,7 +823,7 @@ void applyFixedWingEmergencyLandingController(timeUs_t currentTimeUs)
     if (posControl.flags.estAltStatus >= EST_USABLE) {
         // target min descent rate 10m above takeoff altitude
         // updateClimbRateToAltitudeController(-navConfig()->general.emerg_descent_rate, 1000.0f, ROC_TO_ALT_TARGET);
-        updateClimbRateToAltitudeController(navConfig()->general.emerg_descent_rate, 1000.0f, ROC_TO_ALT_TARGET);  // CR97
+        updateClimbRateToAltitudeController(0, 1000.0f, ROC_TO_ALT_TARGET);  // CR97
         applyFixedWingAltitudeAndThrottleController(currentTimeUs);
 
         int16_t pitchCorrection = constrain(posControl.rcAdjustment[PITCH], -DEGREES_TO_DECIDEGREES(navConfig()->fw.max_dive_angle), DEGREES_TO_DECIDEGREES(navConfig()->fw.max_climb_angle));

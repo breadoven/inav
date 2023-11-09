@@ -2877,7 +2877,7 @@ void setDesiredPosition(const fpVector3_t * pos, int32_t yaw, navSetWaypointFlag
     if ((useMask & NAV_POS_UPDATE_Z) != 0) {
         // updateClimbRateToAltitudeController(0, 0, ROC_TO_ALT_RESET);   // Reset RoC/RoD -> altitude controller  // CR97
         // posControl.desiredState.pos.z = pos->z;     // CR97 delete
-        updateClimbRateToAltitudeController(navConfig()->general.max_auto_climb_rate, pos->z, ROC_TO_ALT_TARGET);    // CR97
+        updateClimbRateToAltitudeController(0, pos->z, ROC_TO_ALT_TARGET);    // CR97
     }
 
     // Heading
@@ -3054,7 +3054,7 @@ static bool isMaxAltitudeLimitExceeded(void)
     return navGetCurrentActualPositionAndVelocity()->pos.z >= navConfig()->general.max_altitude;
 }
 
-int32_t getDesiredClimbRate(float targetAltitude, timeDelta_t deltaMicros)
+float getDesiredClimbRate(float targetAltitude, timeDelta_t deltaMicros)
 {
     if (navConfig()->general.max_altitude && isMaxAltitudeLimitExceeded()) {
         targetAltitude = MIN(targetAltitude, navConfig()->general.max_altitude);
@@ -3074,11 +3074,8 @@ int32_t getDesiredClimbRate(float targetAltitude, timeDelta_t deltaMicros)
     if (STATE(MULTIROTOR)) {
         targetVel = getSqrtControllerVelocity(targetAltitude, deltaMicros);
     } else {
-        // const uint16_t maxRateCutoffAlt = maxClimbRate * 5;
-        // const int8_t direction = targetAltitudeError < 0 ? 1 : -1;
-
-        // targetVel = direction * scaleRangef(targetAltitudeError, 0.0f, -maxRateCutoffAlt * direction, 0.0f, maxClimbRate);
-        targetVel = scaleRangef(targetAltitudeError, 0.0f, maxClimbRate * 5, 0.0f, maxClimbRate);
+        // 0.2f relates to climb rate starting to reduce from maxClimbRate at a distance of 5 x maxClimbRate from targetAltitude
+        targetVel = 0.2f * targetAltitudeError;
     }
 
     if (emergLandingIsActive && targetAltitudeError > -50) {
@@ -3090,21 +3087,22 @@ int32_t getDesiredClimbRate(float targetAltitude, timeDelta_t deltaMicros)
 
 void updateClimbRateToAltitudeController(float desiredClimbRate, float targetAltitude, climbRateToAltitudeControllerMode_e mode)
 {
-    /* ROC_TO_ALT_CONSTANT - constant climb rate. desiredClimbRate direction (+ or -) is required
-     * ROC_TO_ALT_TARGET - constant climb rate until close to target altitude reducing to min rate when altitude reached
-     * Rate reduction starts at distance from target altitude of 5 x climb rate for FW, 1 x climb rate for MC.
-     * desiredClimbRate direction isn't required, set by target altitude direction instead */
-
-    // Terrain following uses different altitude measurement
-    const float altitudeToUse = navGetCurrentActualPositionAndVelocity()->pos.z;
+    /* ROC_TO_ALT_TARGET - constant climb rate until close to target altitude reducing to 0 when reached.
+     * Rate reduction starts at distance from target altitude of 5 x climb rate for Fixed wing.
+     * No climb rate required, set by target altitude direction instead.
+     *
+     * ROC_TO_ALT_RESET - similar to ROC_TO_ALT_TARGET except target altitude set to current altitude.
+     * No climb rate or altitude target required.
+     *
+     * ROC_TO_ALT_CONSTANT - constant climb rate. Climb rate and direction required. Target alt not required. */
 
     if (mode == ROC_TO_ALT_RESET) {
-        posControl.desiredState.pos.z = altitudeToUse;
+        posControl.desiredState.pos.z = navGetCurrentActualPositionAndVelocity()->pos.z;
     } else if (mode == ROC_TO_ALT_TARGET) {
         posControl.desiredState.pos.z = targetAltitude;
-    } else {    // ROC_TO_ALT_CONSTANT
-        posControl.desiredState.pos.z = NAV_IMPOSSIBLE_ALTITUDE_TARGET;
     }
+
+    posControl.flags.rocToAltMode = mode;
 
     /*
      * If max altitude is set, reset climb rate if altitude is reached and climb rate is > 0
@@ -3112,6 +3110,7 @@ void updateClimbRateToAltitudeController(float desiredClimbRate, float targetAlt
      */
     if (navConfig()->general.max_altitude && isMaxAltitudeLimitExceeded() && desiredClimbRate >= 0.0f) {
         posControl.desiredState.pos.z = MIN(posControl.desiredState.pos.z, navConfig()->general.max_altitude);
+        posControl.flags.rocToAltMode = ROC_TO_ALT_TARGET;
     }
 
     posControl.desiredState.vel.z = desiredClimbRate;
