@@ -2635,19 +2635,19 @@ void checkSafeHomeState(bool shouldBeEnabled)
         shouldBeEnabled = posControl.flags.forcedRTHActivated;
     }
     // no safe homes found when arming or safehome feature in the correct state, then we don't need to do anything
-	if (posControl.safehomeState.distance == 0 || posControl.safehomeState.isApplied == shouldBeEnabled) {
-		return;
-	}
+    if (posControl.safehomeState.distance == 0 || posControl.safehomeState.isApplied == shouldBeEnabled) {
+        return;
+    }
     if (shouldBeEnabled) {
-		// set home to safehome
+        // set home to safehome
         setHomePosition(&posControl.safehomeState.nearestSafeHome, 0, NAV_POS_UPDATE_XY | NAV_POS_UPDATE_Z | NAV_POS_UPDATE_HEADING, navigationActualStateHomeValidity());
-		posControl.safehomeState.isApplied = true;
-	} else {
-		// set home to original arming point
+        posControl.safehomeState.isApplied = true;
+    } else {
+        // set home to original arming point
         setHomePosition(&posControl.rthState.originalHomePosition, 0, NAV_POS_UPDATE_XY | NAV_POS_UPDATE_Z | NAV_POS_UPDATE_HEADING, navigationActualStateHomeValidity());
-		posControl.safehomeState.isApplied = false;
-	}
-	// if we've changed the home position, update the distance and direction
+        posControl.safehomeState.isApplied = false;
+    }
+    // if we've changed the home position, update the distance and direction
     updateHomePosition();
 }
 
@@ -2679,7 +2679,7 @@ bool findNearestSafeHome(void)
         }
     }
     if (posControl.safehomeState.index >= 0) {
-		posControl.safehomeState.distance = nearest_safehome_distance;
+        posControl.safehomeState.distance = nearest_safehome_distance;
     } else {
         posControl.safehomeState.distance = 0;
     }
@@ -4075,7 +4075,7 @@ static navigationFSMEvent_t selectNavEventFromBoxModeInput(bool launchBypass)   
             }
         }
 
-        if (IS_RC_MODE_ACTIVE(BOXNAVALTHOLD)) { // CR105 (NC) add fccore function call checking if needs enabling
+        if (IS_RC_MODE_ACTIVE(BOXNAVALTHOLD)) {
             if ((FLIGHT_MODE(NAV_ALTHOLD_MODE)) || (canActivateAltHold))
                 return NAV_FSM_EVENT_SWITCH_TO_ALTHOLD;
         }

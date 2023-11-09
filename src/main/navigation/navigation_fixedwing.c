@@ -143,15 +143,11 @@ static void updateAltitudeVelocityAndPitchController_FW(timeDelta_t deltaMicros)
         desiredClimbRate = getDesiredClimbRate(posControl.desiredState.pos.z, deltaMicros);
     }
 
-    // CR96
     // Reduce max allowed climb if performing loiter
-    // DEBUG_SET(DEBUG_ALWAYS, 2, 101);
     if (needToCalculateCircularLoiter && desiredClimbRate > 0.0f) {
         desiredClimbRate *= 0.67f;
-        // DEBUG_SET(DEBUG_ALWAYS, 2, 201);
     }
 
-    // CR96
 DEBUG_SET(DEBUG_ALWAYS, 0, desiredClimbRate);
     // Here we use negative values for dive for better clarity
     const float maxClimbDeciDeg = DEGREES_TO_DECIDEGREES(navConfig()->fw.max_climb_angle);

@@ -1337,14 +1337,6 @@ const pidBank_t * pidBank(void) {
 pidBank_t * pidBankMutable(void) {
     return usedPidControllerType == PID_TYPE_PIFF ? &pidProfileMutable()->bank_fw : &pidProfileMutable()->bank_mc;
 }
-// CR111
-bool isFixedWingLevelTrimActive(void)
-{
-    return IS_RC_MODE_ACTIVE(BOXAUTOLEVEL) && !areSticksDeflected() &&
-           (FLIGHT_MODE(ANGLE_MODE) || FLIGHT_MODE(HORIZON_MODE)) &&
-           !FLIGHT_MODE(SOARING_MODE) && !FLIGHT_MODE(MANUAL_MODE) &&
-           !navigationIsControllingAltitude() && !(navCheckActiveAngleHoldAxis() == FD_PITCH && !angleHoldIsLevel);// CR108
-}
 
 bool isFixedWingLevelTrimActive(void)
 {
@@ -1406,7 +1398,7 @@ void updateFixedWingLevelTrim(timeUs_t currentTimeUs)
     DEBUG_SET(DEBUG_AUTOLEVEL, 4, output);
     fixedWingLevelTrim = pidProfile()->fixedWingLevelTrim + (output * FIXED_WING_LEVEL_TRIM_MULTIPLIER);
 }
-// CR111
+
 float getFixedWingLevelTrim(void)
 {
     return STATE(AIRPLANE) ? fixedWingLevelTrim : 0;

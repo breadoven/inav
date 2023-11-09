@@ -246,7 +246,7 @@ void onNewGPSData(void)
         if (!posControl.gpsOrigin.valid) {
             geoSetOrigin(&posControl.gpsOrigin, &newLLH, GEO_ORIGIN_SET);
         }
-        else if (shouldResetReferenceAltitude()) {    // CR105 SENSOR_GPS
+        else if (shouldResetReferenceAltitude()) {
             /* If we were never armed - keep altitude at zero */
             geoSetOrigin(&posControl.gpsOrigin, &newLLH, GEO_ORIGIN_RESET_ALTITUDE);
         }

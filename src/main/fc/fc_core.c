@@ -531,16 +531,6 @@ bool emergInflightRearmEnabled(void)
     return false;   // craft doesn't appear to be flying, don't allow emergency rearm
 }
 
-    bool mcDisarmVertVelCheck = STATE(MULTIROTOR) && (currentTimeMs > US2MS(lastDisarmTimeUs) + 1500) && fabsf(getEstimatedActualVelocity(Z)) > 100.0f;
-    if (isProbablyStillFlying() || mcDisarmVertVelCheck) {
-        emergRearmStabiliseTimeout = currentTimeMs + 5000; // used to activate Angle mode for 5s after rearm to help stabilise craft
-        ENABLE_STATE(IN_FLIGHT_EMERG_REARM);
-        return true;
-    }
-
-    return false;
-}
-
 void tryArm(void)
 {
     updateArmingStatus();
@@ -751,7 +741,7 @@ void processRx(timeUs_t currentTimeUs)
     // Handle passthrough mode
     if (STATE(FIXED_WING_LEGACY)) {
         if ((IS_RC_MODE_ACTIVE(BOXMANUAL) && !navigationRequiresAngleMode() && !failsafeRequiresAngleMode()) ||    // Normal activation of passthrough
-            (!ARMING_FLAG(ARMED) && areSensorsCalibrating())){                                                              // Backup - if we are not armed - enforce passthrough while calibrating
+            (!ARMING_FLAG(ARMED) && areSensorsCalibrating())){     // Backup - if we are not armed - enforce passthrough while calibrating
             ENABLE_FLIGHT_MODE(MANUAL_MODE);
         } else {
             DISABLE_FLIGHT_MODE(MANUAL_MODE);
