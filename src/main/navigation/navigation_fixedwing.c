@@ -137,7 +137,7 @@ static void updateAltitudeVelocityAndPitchController_FW(timeDelta_t deltaMicros)
     // On a fixed wing we might not have a reliable climb rate source (if no BARO available), so we can't apply PID controller to
     // velocity error. We use PID controller on altitude error and calculate desired pitch angle
     // CR97
-    float desiredClimbRate = posControl.desiredState.vel.z;
+    float desiredClimbRate = posControl.desiredState.climbRateDemand;
 
     if (posControl.flags.rocToAltMode != ROC_TO_ALT_CONSTANT) {
         desiredClimbRate = getDesiredClimbRate(posControl.desiredState.pos.z, deltaMicros);

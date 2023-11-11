@@ -141,6 +141,7 @@ typedef struct {
     fpVector3_t pos;
     fpVector3_t vel;
     int32_t     yaw;
+    int16_t     climbRateDemand;     // CR97
 } navigationDesiredState_t;
 
 typedef enum {
