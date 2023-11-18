@@ -161,7 +161,7 @@ DEBUG_SET(DEBUG_ALWAYS, 0, desiredClimbRate);
 // DEBUG_SET(DEBUG_ALWAYS, 2, desiredClimbRate - currentClimbRate);
     // Apply low-pass filter to prevent rapid correction
     targetPitchAngle = pt1FilterApply4(&velzFilterState, targetPitchAngle, getSmoothnessCutoffFreq(NAV_FW_BASE_PITCH_CUTOFF_FREQUENCY_HZ), US2S(deltaMicros));
-DEBUG_SET(DEBUG_ALWAYS, 3, targetPitchAngle);
+// DEBUG_SET(DEBUG_ALWAYS, 3, targetPitchAngle);
 DEBUG_SET(DEBUG_ALWAYS, 4, posControl.desiredState.pos.z);
     // Reconstrain pitch angle ( >0 - climb, <0 - dive)
     targetPitchAngle = constrainf(targetPitchAngle, minDiveDeciDeg, maxClimbDeciDeg);
