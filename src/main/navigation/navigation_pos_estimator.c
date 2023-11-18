@@ -527,8 +527,8 @@ static uint32_t calculateCurrentValidityFlags(timeUs_t currentTimeUs)
             newFlags |= EST_GPS_XY_VALID;
         }
     }
-
-    if (sensors(SENSOR_BARO) && ((currentTimeUs - posEstimator.baro.lastUpdateTime) <= MS2US(INAV_BARO_TIMEOUT_MS))) {
+    // IS_RC_MODE_ACTIVE(BOXBEEPERON) CR97
+    if (!IS_RC_MODE_ACTIVE(BOXBEEPERON) && sensors(SENSOR_BARO) && ((currentTimeUs - posEstimator.baro.lastUpdateTime) <= MS2US(INAV_BARO_TIMEOUT_MS))) {
         newFlags |= EST_BARO_VALID;
     }
 

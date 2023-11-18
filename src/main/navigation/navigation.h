@@ -643,6 +643,7 @@ int8_t navCheckActiveAngleHoldAxis(void);
  * are in the [0, 360 * 100) interval.
  */
 int32_t navigationGetHomeHeading(void);
+uint8_t getActiveWpNumber(void);   // CR112
 
 /* Compatibility data */
 extern navSystemStatus_t    NAV_Status;

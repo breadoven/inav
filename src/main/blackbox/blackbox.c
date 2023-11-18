@@ -436,6 +436,7 @@ static const blackboxSimpleFieldDefinition_t blackboxSlowFields[] = {
     {"escTemperature",        -1, SIGNED,   PREDICT(PREVIOUS),      ENCODING(SIGNED_VB)},
 #endif
     {"rxUpdateRate",          -1, UNSIGNED, PREDICT(PREVIOUS),      ENCODING(UNSIGNED_VB)},
+    {"activeWpNumber",        -1, UNSIGNED, PREDICT(0),      ENCODING(UNSIGNED_VB)},   // CR112
 };
 
 typedef enum BlackboxState {
@@ -554,6 +555,7 @@ typedef struct blackboxSlowState_s {
     int8_t escTemperature;
 #endif
     uint16_t rxUpdateRate;
+    uint8_t activeWpNumber;  // CR112
 } __attribute__((__packed__)) blackboxSlowState_t; // We pack this struct so that padding doesn't interfere with memcmp()
 
 //From rc_controls.c
@@ -1291,6 +1293,7 @@ static void writeSlowFrame(void)
     blackboxWriteSignedVB(slowHistory.escTemperature);
 #endif
     blackboxWriteUnsignedVB(slowHistory.rxUpdateRate);
+    blackboxWriteUnsignedVB(slowHistory.activeWpNumber);   // CR112
 
     blackboxSlowFrameIterationTimer = 0;
 }
@@ -1368,6 +1371,7 @@ static void loadSlowState(blackboxSlowState_t *slow)
 #endif
 
     slow->rxUpdateRate = getRcUpdateFrequency();
+    slow->activeWpNumber = getActiveWpNumber();   // CR112
 }
 
 /**

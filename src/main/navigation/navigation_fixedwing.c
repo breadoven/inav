@@ -157,8 +157,8 @@ DEBUG_SET(DEBUG_ALWAYS, 0, desiredClimbRate);
     float currentClimbRate = navGetCurrentActualPositionAndVelocity()->vel.z;
     float targetPitchAngle = navPidApply2(&posControl.pids.fw_alt, desiredClimbRate, currentClimbRate, US2S(deltaMicros), minDiveDeciDeg, maxClimbDeciDeg, PID_DTERM_FROM_ERROR);
     // CR97
-DEBUG_SET(DEBUG_ALWAYS, 1, targetPitchAngle);
-DEBUG_SET(DEBUG_ALWAYS, 2, desiredClimbRate - currentClimbRate);
+// DEBUG_SET(DEBUG_ALWAYS, 1, targetPitchAngle);
+// DEBUG_SET(DEBUG_ALWAYS, 2, desiredClimbRate - currentClimbRate);
     // Apply low-pass filter to prevent rapid correction
     targetPitchAngle = pt1FilterApply4(&velzFilterState, targetPitchAngle, getSmoothnessCutoffFreq(NAV_FW_BASE_PITCH_CUTOFF_FREQUENCY_HZ), US2S(deltaMicros));
 DEBUG_SET(DEBUG_ALWAYS, 3, targetPitchAngle);

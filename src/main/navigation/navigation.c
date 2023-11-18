@@ -1699,10 +1699,39 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_WAYPOINT_IN_PROGRESS(na
                     fpVector3_t tmpWaypoint;
                     tmpWaypoint.x = posControl.activeWaypoint.pos.x;
                     tmpWaypoint.y = posControl.activeWaypoint.pos.y;
-                    tmpWaypoint.z = scaleRangef(constrainf(posControl.wpDistance, posControl.wpInitialDistance / 10.0f, posControl.wpInitialDistance),
-                        posControl.wpInitialDistance, posControl.wpInitialDistance / 10.0f,
-                        posControl.wpInitialAltitude, posControl.activeWaypoint.pos.z);
-                    setDesiredPosition(&tmpWaypoint, 0, NAV_POS_UPDATE_XY | NAV_POS_UPDATE_Z | NAV_POS_UPDATE_BEARING);
+                    // CR97
+                    setDesiredPosition(&tmpWaypoint, 0, NAV_POS_UPDATE_XY | NAV_POS_UPDATE_BEARING);
+
+                    int16_t climbRate = posControl.actualState.velXY * (posControl.activeWaypoint.pos.z - posControl.wpInitialAltitude) /
+                                        (0.9 * posControl.wpInitialDistance);
+
+                    if (ABS(climbRate) >= navConfig()->general.max_auto_climb_rate) {
+                        climbRate = 0;
+                    }
+                    updateClimbRateToAltitudeController(climbRate, posControl.activeWaypoint.pos.z, ROC_TO_ALT_TARGET);
+
+                    // if (ABS(climbRate) < navConfig()->general.max_auto_climb_rate) {
+                        // climbRate = constrainf(climbRate, -navConfig()->general.max_auto_climb_rate, navConfig()->general.max_auto_climb_rate);
+                        // updateClimbRateToAltitudeController(climbRate, 0, ROC_TO_ALT_CONSTANT);
+                    // } else {
+                        // updateClimbRateToAltitudeController(0, posControl.activeWaypoint.pos.z, ROC_TO_ALT_TARGET);
+                    // }
+
+                    // float linearClimbDistRemaining = posControl.wpDistance - 0.1f * posControl.wpInitialDistance;
+                    // if (linearClimbDistRemaining > 0) {
+                        // int16_t climbRate = constrainf(posControl.actualState.velXY *
+                                            // (posControl.activeWaypoint.pos.z - posControl.actualState.abs.pos.z) / linearClimbDistRemaining,
+                                            // -navConfig()->general.max_auto_climb_rate,
+                                            // navConfig()->general.max_auto_climb_rate);
+                        // updateClimbRateToAltitudeController(climbRate, 0, ROC_TO_ALT_CONSTANT);
+                    // } else {
+                        // updateClimbRateToAltitudeController(0, posControl.activeWaypoint.pos.z, ROC_TO_ALT_TARGET);
+                    // }
+                    // CR97
+                    // tmpWaypoint.z = scaleRangef(constrainf(posControl.wpDistance, posControl.wpInitialDistance / 10.0f, posControl.wpInitialDistance),
+                        // posControl.wpInitialDistance, posControl.wpInitialDistance / 10.0f,
+                        // posControl.wpInitialAltitude, posControl.activeWaypoint.pos.z);
+                    // setDesiredPosition(&tmpWaypoint, 0, NAV_POS_UPDATE_XY | NAV_POS_UPDATE_Z | NAV_POS_UPDATE_BEARING);
                     if(STATE(MULTIROTOR)) {
                         switch (wpHeadingControl.mode) {
                             case NAV_WP_HEAD_MODE_NONE:
@@ -3130,22 +3159,15 @@ bool isProbablyStillFlying(void)
     // lastUpdateTimeUs = currentTimeUs;
 // }
 // CR97
-static bool isMaxAltitudeLimitExceeded(void)
-{
-    return navGetCurrentActualPositionAndVelocity()->pos.z >= navConfig()->general.max_altitude;
-}
-
 float getDesiredClimbRate(float targetAltitude, timeDelta_t deltaMicros)
 {
-    if (navConfig()->general.max_altitude && isMaxAltitudeLimitExceeded()) {
-        targetAltitude = MIN(targetAltitude, navConfig()->general.max_altitude);
-    }
-
     float targetVel = 0.0f;
     const bool emergLandingIsActive = navigationIsExecutingAnEmergencyLanding();
 
     float maxClimbRate = navConfig()->general.max_auto_climb_rate;
-    if (emergLandingIsActive) {
+    if (posControl.desiredState.climbRateDemand) {
+        maxClimbRate = posControl.desiredState.climbRateDemand;
+    } else if (emergLandingIsActive) {
         maxClimbRate = navConfig()->general.emerg_descent_rate;
     } else if (posControl.flags.isAdjustingAltitude) {
         maxClimbRate = navConfig()->general.max_manual_climb_rate;
@@ -3181,19 +3203,23 @@ void updateClimbRateToAltitudeController(float desiredClimbRate, float targetAlt
         posControl.desiredState.pos.z = navGetCurrentActualPositionAndVelocity()->pos.z;
     } else if (mode == ROC_TO_ALT_TARGET) {
         posControl.desiredState.pos.z = targetAltitude;
-    } else {    // ROC_TO_ALT_CONSTANT
+    } // else {    // ROC_TO_ALT_CONSTANT
         posControl.desiredState.climbRateDemand = desiredClimbRate;
-    }
+    // }
 
     posControl.flags.rocToAltMode = mode;
 
     /*
-     * If max altitude is set, reset climb rate if altitude is reached and climb rate is > 0
-     * In other words, when altitude is reached, allow it only to shrink
+     * If max altitude is set and altitude limit reached reset altitude target to max altitude unless desired climb rate is -ve.
+     * Inhibit during RTH mode and also WP mode with altitude enforce active to prevent climbs getting stuck at max alt limit.
      */
-    if (navConfig()->general.max_altitude && isMaxAltitudeLimitExceeded() && desiredClimbRate >= 0.0f) {
+    if (navConfig()->general.max_altitude && !FLIGHT_MODE(NAV_RTH_MODE) && !(FLIGHT_MODE(NAV_WP_MODE) && navConfig()->general.waypoint_enforce_altitude)) {
         posControl.desiredState.pos.z = MIN(posControl.desiredState.pos.z, navConfig()->general.max_altitude);
-        posControl.flags.rocToAltMode = ROC_TO_ALT_TARGET;
+
+        if (navGetCurrentActualPositionAndVelocity()->pos.z >= navConfig()->general.max_altitude && desiredClimbRate >= 0.0f) {
+            posControl.desiredState.pos.z = navConfig()->general.max_altitude;
+            posControl.flags.rocToAltMode = ROC_TO_ALT_TARGET;
+        }
     }
 }
 // CR97
@@ -4701,4 +4727,9 @@ int8_t navCheckActiveAngleHoldAxis(void)
     }
 
     return activeAxis;
+}
+// CR112
+uint8_t getActiveWpNumber(void)
+{
+    return NAV_Status.activeWpNumber;
 }
