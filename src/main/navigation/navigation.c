@@ -1643,7 +1643,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_WAYPOINT_PRE_ACTION(nav
         case NAV_WP_ACTION_LAND:
             calculateAndSetActiveWaypoint(&posControl.waypointList[posControl.activeWaypointIndex]);
             posControl.wpInitialDistance = calculateDistanceToDestination(&posControl.activeWaypoint.pos);
-            posControl.wpInitialAltitude = posControl.actualState.abs.pos.z;
+            // posControl.wpInitialAltitude = posControl.actualState.abs.pos.z;    // CR97
             posControl.wpAltitudeReached = false;
             return NAV_FSM_EVENT_SUCCESS;       // will switch to NAV_STATE_WAYPOINT_IN_PROGRESS
 
@@ -1710,14 +1710,17 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_WAYPOINT_IN_PROGRESS(na
                     // CR97
                     setDesiredPosition(&tmpWaypoint, 0, NAV_POS_UPDATE_XY | NAV_POS_UPDATE_BEARING);
 
-                    float climbRate = posControl.actualState.velXY * (posControl.activeWaypoint.pos.z - posControl.wpInitialAltitude) /
-                                        (0.9f * posControl.wpInitialDistance);
+                    static float climbRate = 0;
+                    if (posControl.wpDistance > 0.25f * posControl.wpInitialDistance) {
+                        climbRate = posControl.actualState.velXY * (posControl.activeWaypoint.pos.z - posControl.actualState.abs.pos.z) /
+                                    (posControl.wpDistance - 0.1f * posControl.wpInitialDistance);
+                    }
 
                     if (fabsf(climbRate) >= navConfig()->general.max_auto_climb_rate) {
                         climbRate = 0;
                     }
                     updateClimbRateToAltitudeController(climbRate, posControl.activeWaypoint.pos.z, ROC_TO_ALT_TARGET);
-                    
+
                     // tmpWaypoint.z = scaleRangef(constrainf(posControl.wpDistance, posControl.wpInitialDistance / 10.0f, posControl.wpInitialDistance),
                         // posControl.wpInitialDistance, posControl.wpInitialDistance / 10.0f,
                         // posControl.wpInitialAltitude, posControl.activeWaypoint.pos.z);
@@ -3206,12 +3209,12 @@ void updateClimbRateToAltitudeController(float desiredClimbRate, float targetAlt
     if (navConfig()->general.max_altitude && !FLIGHT_MODE(NAV_RTH_MODE) && !(FLIGHT_MODE(NAV_WP_MODE) && navConfig()->general.waypoint_enforce_altitude)) {
         posControl.desiredState.pos.z = MIN(posControl.desiredState.pos.z, navConfig()->general.max_altitude);
 
-        if (mode == ROC_TO_ALT_TARGET || (mode == ROC_TO_ALT_CONSTANT && desiredClimbRate < 0.0f)) {
+        if (mode != ROC_TO_ALT_CONSTANT || (mode == ROC_TO_ALT_CONSTANT && desiredClimbRate < 0.0f)) {
             return;
         }
 
-        if (navGetCurrentActualPositionAndVelocity()->pos.z > navConfig()->general.max_altitude) {
-            posControl.desiredState.climbRateDemand = 0;
+        if (posControl.flags.isAdjustingAltitude) {
+            posControl.desiredState.pos.z = navConfig()->general.max_altitude;
             posControl.flags.rocToAltMode = ROC_TO_ALT_TARGET;
         }
     }
@@ -4379,14 +4382,12 @@ void navigationUsePIDs(void)
 
     // Initialize position hold P-controller
     for (int axis = 0; axis < 2; axis++) {
-        navPidInit(
-            &posControl.pids.pos[axis],
-            (float)pidProfile()->bank_mc.pid[PID_POS_XY].P / 100.0f,
-            0.0f,
-            0.0f,
-            0.0f,
-            NAV_DTERM_CUT_HZ,
-            0.0f
+        navPidInit(&posControl.pids.pos[axis], (float)pidProfile()->bank_mc.pid[PID_POS_XY].P / 100.0f,
+                                                0.0f,
+                                                0.0f,
+                                                0.0f,
+                                                NAV_DTERM_CUT_HZ,
+                                                0.0f
         );
 
         navPidInit(&posControl.pids.vel[axis], (float)pidProfile()->bank_mc.pid[PID_VEL_XY].P / 20.0f,
@@ -4410,14 +4411,12 @@ void navigationUsePIDs(void)
 #endif
 
     // Initialize altitude hold PID-controllers (pos_z, vel_z, acc_z
-    navPidInit(
-        &posControl.pids.pos[Z],
-        (float)pidProfile()->bank_mc.pid[PID_POS_Z].P / 100.0f,
-        0.0f,
-        0.0f,
-        0.0f,
-        NAV_DTERM_CUT_HZ,
-        0.0f
+    navPidInit(&posControl.pids.pos[Z], (float)pidProfile()->bank_mc.pid[PID_POS_Z].P / 100.0f,
+                                        0.0f,
+                                        0.0f,
+                                        0.0f,
+                                        NAV_DTERM_CUT_HZ,
+                                        0.0f
     );
 
     navPidInit(&posControl.pids.vel[Z], (float)pidProfile()->bank_mc.pid[PID_VEL_Z].P / 66.7f,
