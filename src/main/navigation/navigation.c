@@ -19,7 +19,10 @@
 #include <stdint.h>
 #include <math.h>
 #include <string.h>
-
+// CR97
+#include <stdio.h>
+#include <stdlib.h>
+// CR97
 #include "platform.h"
 
 #include "build/debug.h"
@@ -176,7 +179,7 @@ PG_RESET_TEMPLATE(navConfig_t, navConfig,
         .posResponseExpo = SETTING_NAV_MC_POS_EXPO_DEFAULT,                         // posResponseExpo * 100
         .slowDownForTurning = SETTING_NAV_MC_WP_SLOWDOWN_DEFAULT,
         .althold_throttle_type = SETTING_NAV_MC_ALTHOLD_THROTTLE_DEFAULT,           // STICK
-        .xy_accel_max_limit = SETTING_NAV_MC_XY_ACCEL_MAX_LIMIT_DEFAULT,            // CR47
+        // .xy_accel_max_limit = SETTING_NAV_MC_XY_ACCEL_MAX_LIMIT_DEFAULT,            // CR47
     },
 
     // Fixed wing
@@ -3172,7 +3175,8 @@ float getDesiredClimbRate(float targetAltitude, timeDelta_t deltaMicros)
         targetVel = getSqrtControllerVelocity(targetAltitude, deltaMicros);
     } else {
         // 0.2f relates to climb rate starting to reduce from maxClimbRate at a distance of 5 x maxClimbRate from targetAltitude
-        targetVel = 0.2f * targetAltitudeError;
+        // targetVel = 0.2f * targetAltitudeError;
+        targetVel = pidProfile()->fwAltControlResponseFactor * targetAltitudeError / 100.0f;
     }
 
     if (emergLandingIsActive && targetAltitudeError > -50) {
@@ -4402,10 +4406,14 @@ void navigationUsePIDs(void)
     /*
      * Set coefficients used in MC VEL_XY
      */
-    multicopterPosXyCoefficients.dTermAttenuation = pidProfile()->navVelXyDtermAttenuation / 100.0f;
-    multicopterPosXyCoefficients.dTermAttenuationStart = pidProfile()->navVelXyDtermAttenuationStart / 100.0f;
-    multicopterPosXyCoefficients.dTermAttenuationEnd = pidProfile()->navVelXyDtermAttenuationEnd / 100.0f;
-
+    // CR47
+    multicopterPosXyCoefficients.dTermAttenuation = pidProfile()->navVelXyDtermAttenuation * 100.0f;
+    multicopterPosXyCoefficients.dTermAttenuationStart = pidProfile()->navVelXyDtermAttenuationStart * 100.0f;
+    multicopterPosXyCoefficients.dTermAttenuationEnd = pidProfile()->navVelXyDtermAttenuationEnd * 100.0f;
+    // multicopterPosXyCoefficients.dTermAttenuation = pidProfile()->navVelXyDtermAttenuation / 100.0f;
+    // multicopterPosXyCoefficients.dTermAttenuationStart = pidProfile()->navVelXyDtermAttenuationStart / 100.0f;
+    // multicopterPosXyCoefficients.dTermAttenuationEnd = pidProfile()->navVelXyDtermAttenuationEnd / 100.0f;
+    // CR47
 #ifdef USE_MR_BRAKING_MODE
     multicopterPosXyCoefficients.breakingBoostFactor = (float) navConfig()->mc.braking_boost_factor / 100.0f;
 #endif
@@ -4518,6 +4526,8 @@ void navigationInit(void)
         loadNonVolatileWaypointList(false);
     }
 #endif
+
+srand(time(NULL));  // CR97
 }
 
 /*-----------------------------------------------------------

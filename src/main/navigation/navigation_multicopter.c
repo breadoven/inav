@@ -570,20 +570,29 @@ static float computeNormalizedVelocity(const float value, const float maxValue)
 }
 
 static float computeVelocityScale(
-    const float value,
-    const float maxValue,
+    float value,        // CR47
+    // const float maxValue,   // CR47
     const float attenuationFactor,
     const float attenuationStart,
     const float attenuationEnd
 )
 {
-    const float normalized = computeNormalizedVelocity(value, maxValue);
+    // CR47
+    value -= attenuationStart;
+    if (value <= 0.0f) {
+        return 0.0f;
+    }
+    const float normalized = computeNormalizedVelocity(value, attenuationEnd);
+    float scale = scaleRangef(normalized, 0.0f, 1.0f, 0.0f, attenuationFactor);
+    return constrainf(scale, 0.0f, attenuationFactor);
 
-    float scale = scaleRangef(normalized, attenuationStart, attenuationEnd, 0, attenuationFactor);
-    return constrainf(scale, 0, attenuationFactor);
+    // const float normalized = computeNormalizedVelocity(value, maxValue);
+    // float scale = scaleRangef(normalized, attenuationStart, attenuationEnd, 0, attenuationFactor);
+    // return constrainf(scale, 0, attenuationFactor);
+    // CR47
 }
 
-static void updatePositionAccelController_MC(timeDelta_t deltaMicros, float maxAccelLimit, const float maxSpeed)
+static void updatePositionAccelController_MC(timeDelta_t deltaMicros, float maxAccelLimit)  // , const float maxSpeed)   CR47
 {
     const float measurementX = navGetCurrentActualPositionAndVelocity()->vel.x;
     const float measurementY = navGetCurrentActualPositionAndVelocity()->vel.y;
@@ -599,24 +608,6 @@ static void updatePositionAccelController_MC(timeDelta_t deltaMicros, float maxA
     // Calculate XY-acceleration limit according to velocity error limit
     float accelLimitX, accelLimitY;
     const float velErrorMagnitude = calc_length_pythagorean_2D(velErrorX, velErrorY);
-
-    // CR47
-    /* Limit max acceleration to user setting when close to target speed */
-// #define USER_ACCEL_CUTOFF_LIMIT 0.3f
-    if (setpointXY) {
-        const float speedError = fabsf(1.0f - (posControl.actualState.velXY / setpointXY));
-        const uint16_t factoredAccelLimit = navConfig()->mc.xy_accel_max_limit;
-        // DEBUG_SET(DEBUG_ALWAYS, 0, speedError * 100);
-        if (speedError < 0.3f && factoredAccelLimit != NAV_ACCELERATION_XY_MAX) {
-            if (speedError > 0.15f) {
-                maxAccelLimit = scaleRangef(speedError, 0.15f, 0.3f, factoredAccelLimit, maxAccelLimit);
-            } else {
-                maxAccelLimit = factoredAccelLimit;
-            }
-        }
-    }
-    // DEBUG_SET(DEBUG_ALWAYS, 1, maxAccelLimit);
-    // CR47
 
     if (velErrorMagnitude > 0.1f) {
         accelLimitX = maxAccelLimit * (fabsf(velErrorX) / velErrorMagnitude);
@@ -654,7 +645,7 @@ static void updatePositionAccelController_MC(timeDelta_t deltaMicros, float maxA
      */
     const float setpointScale = computeVelocityScale(
         setpointXY,
-        maxSpeed,
+        // maxSpeed,    // CR47
         multicopterPosXyCoefficients.dTermAttenuation,
         multicopterPosXyCoefficients.dTermAttenuationStart,
         multicopterPosXyCoefficients.dTermAttenuationEnd
@@ -662,7 +653,7 @@ static void updatePositionAccelController_MC(timeDelta_t deltaMicros, float maxA
 
     const float measurementScale = computeVelocityScale(
         posControl.actualState.velXY,
-        maxSpeed,
+        // maxSpeed,    // CR47
         multicopterPosXyCoefficients.dTermAttenuation,
         multicopterPosXyCoefficients.dTermAttenuationStart,
         multicopterPosXyCoefficients.dTermAttenuationEnd
@@ -734,24 +725,6 @@ static void updatePositionAccelController_MC(timeDelta_t deltaMicros, float maxA
         maxBankAngle = DEGREES_TO_DECIDEGREES(navConfig()->mc.braking_bank_angle);
     }
 #endif
-    // // CR47
-    // float maxAccelLimiter = 1.0f;
-    // const float speedError = setpointXY != 0.0f ? fabsf(1.0f - (posControl.actualState.velXY / setpointXY)) : 1.0f;
-
-    // if (speedError < 0.3f && pidProfile()->mc_vel_xy_accel_tweak != 100) {
-        // const float accelMagnitude = calc_length_pythagorean_2D(newAccelX, newAccelY);
-        // float accelLimitFactorMin = accelMagnitude > 0 ? (pidProfile()->mc_vel_xy_accel_tweak * 10) / accelMagnitude : 1.0f;
-
-        // if (speedError <= 0.15f) {
-            // maxAccelLimiter = accelLimitFactorMin;
-        // } else {
-            // maxAccelLimiter = scaleRangef(speedError, 0.15f, 0.3f, accelLimitFactorMin, accelMagnitude);
-        // }
-    // }
-    // newAccelX *= maxAccelLimiter;
-    // newAccelY *= maxAccelLimiter;
-    // DEBUG_SET(DEBUG_ALWAYS, 1, maxAccelLimiter * 100);
-    // // CR47
     // Save last acceleration target
     lastAccelTargetX = newAccelX;
     lastAccelTargetY = newAccelY;
@@ -805,7 +778,7 @@ static void applyMulticopterPositionController(timeUs_t currentTimeUs)
             // Get max speed for current NAV mode
             float maxSpeed = getActiveSpeed();
             updatePositionVelocityController_MC(maxSpeed);
-            updatePositionAccelController_MC(deltaMicrosPositionUpdate, NAV_ACCELERATION_XY_MAX, maxSpeed);
+            updatePositionAccelController_MC(deltaMicrosPositionUpdate, NAV_ACCELERATION_XY_MAX);   // , maxSpeed);  CR47
 
             navDesiredVelocity[X] = constrain(lrintf(posControl.desiredState.vel.x), -32678, 32767);
             navDesiredVelocity[Y] = constrain(lrintf(posControl.desiredState.vel.y), -32678, 32767);

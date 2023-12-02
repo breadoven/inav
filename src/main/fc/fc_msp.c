@@ -20,6 +20,10 @@
 #include <stdint.h>
 #include <string.h>
 #include <math.h>
+// CR97
+#include <stdio.h>
+#include <stdlib.h>
+// CR97
 
 #include "common/log.h" //for MSP_SIMULATOR
 #include "platform.h"
@@ -3692,6 +3696,29 @@ bool mspFCProcessInOutCommand(uint16_t cmdMSP, sbuf_t *dst, sbuf_t *src, mspResu
                         gpsSol.llh.lat = sbufReadU32(src);
                         gpsSol.llh.lon = sbufReadU32(src);
                         gpsSol.llh.alt = sbufReadU32(src);
+                        // CR97
+                        if (true) {
+                            uint8_t counter = 1 + ((millis() / 5000) % 10);   // cyclic number between 0 and 10 changing every 5s
+                            static uint8_t randNumOld = 1;
+                            static uint8_t randNum = 1;
+                            static int8_t signChanger = 1;
+                            if (counter == 1 && randNumOld == randNum) {
+                                randNum = 1 + (rand() % 6);  // random number between 1 and 6
+                                signChanger = 1;
+                                if (randNum == 2 || randNum == 3 || randNum == 6) {
+                                    signChanger = -1;
+                                }
+                            } else if (counter == 2) {
+                                randNumOld = randNum;
+                            }
+
+                            DEBUG_SET(DEBUG_ALWAYS, 0, counter);
+                            DEBUG_SET(DEBUG_ALWAYS, 1, randNum);
+                            DEBUG_SET(DEBUG_ALWAYS, 5, gpsSol.llh.alt);
+                            gpsSol.llh.alt += (20 * signChanger * randNum * counter);       // in cm
+                            DEBUG_SET(DEBUG_ALWAYS, 6, gpsSol.llh.alt);
+                        }
+                        // CR97
                         gpsSol.groundSpeed = (int16_t)sbufReadU16(src);
                         gpsSol.groundCourse = (int16_t)sbufReadU16(src);
 

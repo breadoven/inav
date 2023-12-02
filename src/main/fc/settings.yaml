@@ -2057,18 +2057,32 @@ groups:
         min: 0
         max: 100
         default_value: 90
+        # CR47
       - name: nav_mc_vel_xy_dterm_attenuation_start
-        description: "A point (in percent of both target and current horizontal velocity) where nav_mc_vel_xy_dterm_attenuation begins"
+        description: "Horizontal velocity where nav_mc_vel_xy_dterm_attenuation begins [m/s]"
         default_value: 10
         field: navVelXyDtermAttenuationStart
         min: 0
         max: 100
       - name: nav_mc_vel_xy_dterm_attenuation_end
-        description: "A point (in percent of both target and current horizontal velocity) where nav_mc_vel_xy_dterm_attenuation reaches maximum"
-        default_value: 60
+        description: "Horizontal velocity where nav_mc_vel_xy_dterm_attenuation reaches maximum [m/s]"
+        default_value: 20
         field: navVelXyDtermAttenuationEnd
         min: 0
         max: 100
+      # - name: nav_mc_vel_xy_dterm_attenuation_start
+        # description: "A point (in percent of both target and current horizontal velocity) where nav_mc_vel_xy_dterm_attenuation begins"
+        # default_value: 10
+        # field: navVelXyDtermAttenuationStart
+        # min: 0
+        # max: 100
+      # - name: nav_mc_vel_xy_dterm_attenuation_end
+        # description: "A point (in percent of both target and current horizontal velocity) where nav_mc_vel_xy_dterm_attenuation reaches maximum"
+        # default_value: 60
+        # field: navVelXyDtermAttenuationEnd
+        # min: 0
+        # max: 100
+        # CR47
       - name: nav_fw_pos_z_p
         description: "P gain of altitude PID controller (Fixedwing)"
         default_value: 40
@@ -2088,6 +2102,12 @@ groups:
         min: 0
         max: 255
 # CR97
+      - name: nav_fw_alt_control_response
+        description: "Adjusts the deceleration response of fixed wing altitude control as the target altitude is approached. Decrease value to help avoid overshooting the target altitude."
+        default_value: 20
+        field: fwAltControlResponseFactor
+        min: 5
+        max: 100
       # - name: nav_fw_pos_z_ff
         # description: "Feed forward gain of altitude PID controller (Fixedwing)"
         # default_value: 10
@@ -2941,12 +2961,12 @@ groups:
         min: 0
         max: 90
         # CR47
-      - name: nav_mc_xy_accel_max_limit
-        description: "Fiddle factor to tune bank angle response to specific quad performance"
-        field: mc.xy_accel_max_limit
-        default_value: 980
-        min: 100
-        max: NAV_ACCELERATION_XY_MAX
+      # - name: nav_mc_xy_accel_max_limit
+        # description: "Fiddle factor to tune bank angle response to specific quad performance"
+        # field: mc.xy_accel_max_limit
+        # default_value: 980
+        # min: 100
+        # max: NAV_ACCELERATION_XY_MAX
         # CR47
 
   - name: PG_TELEMETRY_CONFIG

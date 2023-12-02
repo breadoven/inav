@@ -67,7 +67,6 @@ bool findNearestSafeHome(void);      // Find nearest safehome
 #endif
 
 #define NAV_ACCEL_CUTOFF_FREQUENCY_HZ   2       // low-pass filter on XY-acceleration target
-#define NAV_ACCELERATION_XY_MAX         980     // cm/s/s       // approx 45 deg lean angle  CR47
 
 enum {
     NAV_GPS_ATTI    = 0,                    // Pitch/roll stick controls attitude (pitch/roll lean angles)

@@ -148,7 +148,7 @@ static void updateAltitudeVelocityAndPitchController_FW(timeDelta_t deltaMicros)
         desiredClimbRate *= 0.67f;
     }
 
-DEBUG_SET(DEBUG_ALWAYS, 0, desiredClimbRate);
+// DEBUG_SET(DEBUG_ALWAYS, 0, desiredClimbRate);
     // Here we use negative values for dive for better clarity
     const float maxClimbDeciDeg = DEGREES_TO_DECIDEGREES(navConfig()->fw.max_climb_angle);
     const float minDiveDeciDeg = -DEGREES_TO_DECIDEGREES(navConfig()->fw.max_dive_angle);
@@ -162,7 +162,7 @@ DEBUG_SET(DEBUG_ALWAYS, 0, desiredClimbRate);
     // Apply low-pass filter to prevent rapid correction
     targetPitchAngle = pt1FilterApply4(&velzFilterState, targetPitchAngle, getSmoothnessCutoffFreq(NAV_FW_BASE_PITCH_CUTOFF_FREQUENCY_HZ), US2S(deltaMicros));
 // DEBUG_SET(DEBUG_ALWAYS, 3, targetPitchAngle);
-DEBUG_SET(DEBUG_ALWAYS, 4, posControl.desiredState.pos.z);
+// DEBUG_SET(DEBUG_ALWAYS, 4, posControl.desiredState.pos.z);
     // Reconstrain pitch angle ( >0 - climb, <0 - dive)
     targetPitchAngle = constrainf(targetPitchAngle, minDiveDeciDeg, maxClimbDeciDeg);
     posControl.rcAdjustment[PITCH] = targetPitchAngle;

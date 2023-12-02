@@ -170,7 +170,7 @@ static EXTENDED_FASTRAM bool angleHoldIsLevel = false;
 static EXTENDED_FASTRAM float fixedWingLevelTrim;
 static EXTENDED_FASTRAM pidController_t fixedWingLevelTrimController;
 
-PG_REGISTER_PROFILE_WITH_RESET_TEMPLATE(pidProfile_t, pidProfile, PG_PID_PROFILE, 6);
+PG_REGISTER_PROFILE_WITH_RESET_TEMPLATE(pidProfile_t, pidProfile, PG_PID_PROFILE, 6);  // CR97
 
 PG_RESET_TEMPLATE(pidProfile_t, pidProfile,
         .bank_mc = {
@@ -300,6 +300,8 @@ PG_RESET_TEMPLATE(pidProfile_t, pidProfile,
 
         .fixedWingLevelTrim = SETTING_FW_LEVEL_PITCH_TRIM_DEFAULT,
         .fixedWingLevelTrimGain = SETTING_FW_LEVEL_PITCH_GAIN_DEFAULT,
+
+        .fwAltControlResponseFactor = SETTING_NAV_FW_ALT_CONTROL_RESPONSE_DEFAULT,   // CR97
 
 #ifdef USE_SMITH_PREDICTOR
         .smithPredictorStrength = SETTING_SMITH_PREDICTOR_STRENGTH_DEFAULT,
@@ -1049,7 +1051,7 @@ void checkItermLimitingActive(pidState_t *pidState)
 }
 
 void checkItermFreezingActive(pidState_t *pidState, flight_dynamics_index_t axis)
-{// CR112 ?
+{// CR ?
     pidState->itermFreezeActive = false;
     if (usedPidControllerType == PID_TYPE_PIFF && pidProfile()->fixedWingYawItermBankFreeze != 0 && axis == FD_YAW) {
         // Do not allow yaw I-term to grow when bank angle is too large
@@ -1064,7 +1066,7 @@ void checkItermFreezingActive(pidState_t *pidState, flight_dynamics_index_t axis
     // {
         // pidState->itermFreezeActive = false;
     }
-    // CR112
+    // CR ?
 }
 
 bool isAngleHoldLevel(void)
