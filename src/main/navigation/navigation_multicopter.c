@@ -570,19 +570,21 @@ static float computeNormalizedVelocity(const float value, const float maxValue)
 }
 
 static float computeVelocityScale(
-    float value,        // CR47
-    // const float maxValue,   // CR47
+    // CR47
+    float value,
+    // const float maxValue,
     const float attenuationFactor,
-    const float attenuationStart,
-    const float attenuationEnd
+    const float attenuationStartVel,
+    const float attenuationEndVel
+    // CR47
 )
 {
     // CR47
-    value -= attenuationStart;
+    value -= attenuationStartVel;
     if (value <= 0.0f) {
         return 0.0f;
     }
-    const float normalized = computeNormalizedVelocity(value, attenuationEnd);
+    const float normalized = computeNormalizedVelocity(value, attenuationEndVel);
     float scale = scaleRangef(normalized, 0.0f, 1.0f, 0.0f, attenuationFactor);
     return constrainf(scale, 0.0f, attenuationFactor);
 

@@ -3712,8 +3712,6 @@ bool mspFCProcessInOutCommand(uint16_t cmdMSP, sbuf_t *dst, sbuf_t *src, mspResu
                                 randNumOld = randNum;
                             }
 
-                            DEBUG_SET(DEBUG_ALWAYS, 0, counter);
-                            DEBUG_SET(DEBUG_ALWAYS, 1, randNum);
                             DEBUG_SET(DEBUG_ALWAYS, 5, gpsSol.llh.alt);
                             gpsSol.llh.alt += (20 * signChanger * randNum * counter);       // in cm
                             DEBUG_SET(DEBUG_ALWAYS, 6, gpsSol.llh.alt);

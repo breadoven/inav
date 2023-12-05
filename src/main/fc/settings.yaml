@@ -2060,13 +2060,13 @@ groups:
         # CR47
       - name: nav_mc_vel_xy_dterm_attenuation_start
         description: "Horizontal velocity where nav_mc_vel_xy_dterm_attenuation begins [m/s]"
-        default_value: 10
+        default_value: 5
         field: navVelXyDtermAttenuationStart
         min: 0
         max: 100
       - name: nav_mc_vel_xy_dterm_attenuation_end
         description: "Horizontal velocity where nav_mc_vel_xy_dterm_attenuation reaches maximum [m/s]"
-        default_value: 20
+        default_value: 10
         field: navVelXyDtermAttenuationEnd
         min: 0
         max: 100

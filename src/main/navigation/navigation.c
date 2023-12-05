@@ -4407,7 +4407,7 @@ void navigationUsePIDs(void)
      * Set coefficients used in MC VEL_XY
      */
     // CR47
-    multicopterPosXyCoefficients.dTermAttenuation = pidProfile()->navVelXyDtermAttenuation * 100.0f;
+    multicopterPosXyCoefficients.dTermAttenuation = pidProfile()->navVelXyDtermAttenuation / 100.0f;
     multicopterPosXyCoefficients.dTermAttenuationStart = pidProfile()->navVelXyDtermAttenuationStart * 100.0f;
     multicopterPosXyCoefficients.dTermAttenuationEnd = pidProfile()->navVelXyDtermAttenuationEnd * 100.0f;
     // multicopterPosXyCoefficients.dTermAttenuation = pidProfile()->navVelXyDtermAttenuation / 100.0f;
