@@ -2842,6 +2842,16 @@ Enable the possibility to manually increase the throttle in auto throttle contro
 
 ---
 
+### nav_fw_alt_control_response
+
+Adjusts the deceleration response of fixed wing altitude control as the target altitude is approached. Decrease value to help avoid overshooting the target altitude.
+
+| Default | Min | Max |
+| --- | --- | --- |
+| 20 | 5 | 100 |
+
+---
+
 ### nav_fw_bank_angle
 
 Max roll angle when rolling / turning in GPS assisted modes, is also restrained by global max_angle_inclination_rll
@@ -3674,21 +3684,21 @@ Maximum D-term attenution percentage for horizontal velocity PID controller (Mul
 
 ### nav_mc_vel_xy_dterm_attenuation_end
 
-A point (in percent of both target and current horizontal velocity) where nav_mc_vel_xy_dterm_attenuation reaches maximum
+Horizontal velocity where nav_mc_vel_xy_dterm_attenuation reaches maximum [m/s]
 
 | Default | Min | Max |
 | --- | --- | --- |
-| 60 | 0 | 100 |
+| 10 | 0 | 100 |
 
 ---
 
 ### nav_mc_vel_xy_dterm_attenuation_start
 
-A point (in percent of both target and current horizontal velocity) where nav_mc_vel_xy_dterm_attenuation begins
+Horizontal velocity where nav_mc_vel_xy_dterm_attenuation begins [m/s]
 
 | Default | Min | Max |
 | --- | --- | --- |
-| 10 | 0 | 100 |
+| 5 | 0 | 100 |
 
 ---
 
@@ -3769,16 +3779,6 @@ When ON, NAV engine will slow down when switching to the next waypoint. This pri
 | Default | Min | Max |
 | --- | --- | --- |
 | ON | OFF | ON |
-
----
-
-### nav_mc_xy_accel_max_limit
-
-Fiddle factor to tune bank angle response to specific quad performance
-
-| Default | Min | Max |
-| --- | --- | --- |
-| 980 | 100 | NAV_ACCELERATION_XY_MAX |
 
 ---
 
