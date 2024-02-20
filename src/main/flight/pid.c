@@ -1323,7 +1323,7 @@ void pidInit(void)
     navPidInit(
         &fixedWingLevelTrimController,
         0.0f,
-        (float)pidProfile()->fixedWingLevelTrimGain / 100.0f,
+        (float)pidProfile()->fixedWingLevelTrimGain / 200.0f,   // CR114
         0.0f,
         0.0f,
         2.0f,
@@ -1377,8 +1377,8 @@ void updateFixedWingLevelTrim(timeUs_t currentTimeUs)
     // Prepare flags for the PID controller
     pidControllerFlags_e flags = PID_LIMIT_INTEGRATOR;
 
-    // Iterm should freeze when conditions for setting level trim aren't met
-    if (!isFixedWingLevelTrimActive()) {
+    // Iterm should freeze when conditions for setting level trim aren't met or time since last expected update too long ago
+    if (!isFixedWingLevelTrimActive() || (dT > 5.0f * US2S(TASK_PERIOD_HZ(TASK_AUX_RATE_HZ)))) {    // CR114
         flags |= PID_FREEZE_INTEGRATOR;
     }
     DEBUG_SET(DEBUG_AUTOLEVEL, 3, flags);
@@ -1394,9 +1394,6 @@ void updateFixedWingLevelTrim(timeUs_t currentTimeUs)
         1.0f,
         1.0f
     );
-    // DEBUG_SET(DEBUG_ALWAYS, 4, output);
-    // DEBUG_SET(DEBUG_ALWAYS, 5, fixedWingLevelTrim * 10);
-    // DEBUG_SET(DEBUG_ALWAYS, 6, flags);
     DEBUG_SET(DEBUG_AUTOLEVEL, 4, output);
     fixedWingLevelTrim = pidProfile()->fixedWingLevelTrim + (output * FIXED_WING_LEVEL_TRIM_MULTIPLIER);
 }
