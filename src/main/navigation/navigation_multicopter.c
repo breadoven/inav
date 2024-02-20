@@ -183,7 +183,7 @@ bool adjustMulticopterAltitudeFromRCInput(void)
         else {
             // Adjusting finished - reset desired position to stay exactly where pilot released the stick
             if (posControl.flags.isAdjustingAltitude) {
-                updateClimbRateToAltitudeController(0, 0, ROC_TO_ALT_RESET);   // CR97
+                updateClimbRateToAltitudeController(0, 0, ROC_TO_ALT_CURRENT);   // CR97
             }
 
             return false;
@@ -570,13 +570,11 @@ static float computeNormalizedVelocity(const float value, const float maxValue)
 }
 
 static float computeVelocityScale(
-    // CR47
     float value,
-    // const float maxValue,
+    // const float maxValue,   // CR47
     const float attenuationFactor,
-    const float attenuationStartVel,
-    const float attenuationEndVel
-    // CR47
+    const float attenuationStartVel,    // CR47
+    const float attenuationEndVel   // CR47
 )
 {
     // CR47
@@ -618,8 +616,6 @@ static void updatePositionAccelController_MC(timeDelta_t deltaMicros, float maxA
         accelLimitX = maxAccelLimit / 1.414213f;
         accelLimitY = accelLimitX;
     }
-    // DEBUG_SET(DEBUG_ALWAYS, 1, velErrorX * 1000);
-    // DEBUG_SET(DEBUG_ALWAYS, 4, accelLimitX * 10);
 
     // Apply additional jerk limiting of 1700 cm/s^3 (~100 deg/s), almost any copter should be able to achieve this rate
     // This will assure that we wont't saturate out LEVEL and RATE PID controller
@@ -664,14 +660,6 @@ static void updatePositionAccelController_MC(timeDelta_t deltaMicros, float maxA
     //Choose smaller attenuation factor and convert from attenuation to scale
     const float dtermScale = 1.0f - MIN(setpointScale, measurementScale);
     DEBUG_SET(DEBUG_ALWAYS, 4, dtermScale * 100);
-    // Apply accel tweak factor     CR47
-    // const float speedError = setpointXY != 0.0f ? fabsf(1.0f - (posControl.actualState.velXY / setpointXY)) : 1.0f;
-    float gainScale = 1.0f;
-    // if (speedError < 0.25f) {
-        // gainScale = (scaleRangef(speedError, 0.0f, 0.25f, pidProfile()->mc_vel_xy_accel_tweak, 100.0f)) / 100.0f;
-    // }
-    // DEBUG_SET(DEBUG_ALWAYS, 1, gainScale * 100);
-    // CR47
 
     // Apply PID with output limiting and I-term anti-windup
     // Pre-calculated accelLimit and the logic of navPidApply2 function guarantee that our newAccel won't exceed maxAccelLimit
@@ -684,8 +672,7 @@ static void updatePositionAccelController_MC(timeDelta_t deltaMicros, float maxA
         accelLimitXMin,
         accelLimitXMax,
         0,      // Flags
-        gainScale,  // CR47
-        // 1.0f,   // Total gain scale
+        1.0f,   // Total gain scale
         dtermScale    // Additional dTerm scale
     );
     float newAccelY = navPidApply3(
@@ -696,8 +683,7 @@ static void updatePositionAccelController_MC(timeDelta_t deltaMicros, float maxA
         accelLimitYMin,
         accelLimitYMax,
         0,      // Flags
-        gainScale,  // CR47
-        // 1.0f,   // Total gain scale
+        1.0f,   // Total gain scale
         dtermScale    // Additional dTerm scale
     );
 // DEBUG_SET(DEBUG_ALWAYS, 3, newAccelX * 1000);

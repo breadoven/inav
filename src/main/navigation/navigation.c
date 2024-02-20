@@ -19,9 +19,9 @@
 #include <stdint.h>
 #include <math.h>
 #include <string.h>
-// CR97
-#include <stdio.h>
-#include <stdlib.h>
+// CR97 hitl test
+// #include <stdio.h>
+// #include <stdlib.h>
 // CR97
 #include "platform.h"
 
@@ -179,7 +179,6 @@ PG_RESET_TEMPLATE(navConfig_t, navConfig,
         .posResponseExpo = SETTING_NAV_MC_POS_EXPO_DEFAULT,                         // posResponseExpo * 100
         .slowDownForTurning = SETTING_NAV_MC_WP_SLOWDOWN_DEFAULT,
         .althold_throttle_type = SETTING_NAV_MC_ALTHOLD_THROTTLE_DEFAULT,           // STICK
-        // .xy_accel_max_limit = SETTING_NAV_MC_XY_ACCEL_MAX_LIMIT_DEFAULT,            // CR47
     },
 
     // Fixed wing
@@ -1188,7 +1187,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_COURSE_HOLD_IN_PROGRESS
     } else if (currentTimeMs - posControl.cruise.lastCourseAdjustmentTime > 4000) {
         posControl.cruise.previousCourse = posControl.cruise.course;
     }
-    // DEBUG_SET(DEBUG_ALWAYS, 3, posControl.cruise.course);
+
     setDesiredPosition(NULL, posControl.cruise.course, NAV_POS_UPDATE_HEADING);
 
     return NAV_FSM_EVENT_NONE;
@@ -1493,7 +1492,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_HOVER_PRIOR_TO_LAND
     // Wait until target heading is reached for MR (with 15 deg margin for error), or continue for Fixed Wing
     if ((ABS(wrap_18000(posControl.rthState.homePosition.heading - posControl.actualState.yaw)) < DEGREES_TO_CENTIDEGREES(15)) || STATE(FIXED_WING_LEGACY)) {
         resetLandingDetector();     // force reset landing detector just in case
-        updateClimbRateToAltitudeController(0, 0, ROC_TO_ALT_RESET);
+        updateClimbRateToAltitudeController(0, 0, ROC_TO_ALT_CURRENT);   // CR97
         return navigationRTHAllowsLanding() ? NAV_FSM_EVENT_SUCCESS : NAV_FSM_EVENT_SWITCH_TO_RTH_HOVER_ABOVE_HOME; // success = land
     } else {
         fpVector3_t * tmpHomePos = rthGetHomeTargetPosition(RTH_HOME_ENROUTE_FINAL);
@@ -3174,8 +3173,6 @@ float getDesiredClimbRate(float targetAltitude, timeDelta_t deltaMicros)
     if (STATE(MULTIROTOR)) {
         targetVel = getSqrtControllerVelocity(targetAltitude, deltaMicros);
     } else {
-        // 0.2f relates to climb rate starting to reduce from maxClimbRate at a distance of 5 x maxClimbRate from targetAltitude
-        // targetVel = 0.2f * targetAltitudeError;
         targetVel = pidProfile()->fwAltControlResponseFactor * targetAltitudeError / 100.0f;
     }
 
@@ -3192,12 +3189,12 @@ void updateClimbRateToAltitudeController(float desiredClimbRate, float targetAlt
      * Rate reduction starts at distance from target altitude of 5 x climb rate for Fixed wing.
      * Climb rate = max allowed climb rate unless set to 0 in which case default max limits are used.
      *
-     * ROC_TO_ALT_RESET - similar to ROC_TO_ALT_TARGET except target altitude set to current altitude.
+     * ROC_TO_ALT_CURRENT - similar to ROC_TO_ALT_TARGET except target altitude set to current altitude.
      * No climb rate or altitude target required.
      *
      * ROC_TO_ALT_CONSTANT - constant climb rate. Climb rate and direction required. Target alt not required. */
 
-    if (mode == ROC_TO_ALT_RESET) {
+    if (mode == ROC_TO_ALT_CURRENT) {
         posControl.desiredState.pos.z = navGetCurrentActualPositionAndVelocity()->pos.z;
     } else if (mode == ROC_TO_ALT_TARGET) {
         posControl.desiredState.pos.z = targetAltitude;
@@ -3931,6 +3928,13 @@ void checkManualEmergencyLandingControl(bool forcedActivation)
             navProcessFSMEvents(NAV_FSM_EVENT_SWITCH_TO_IDLE);
         }
     }
+
+    // ***** frig to trigger using beeper mode
+    if (!IS_RC_MODE_ACTIVE(BOXBEEPERON) && posControl.flags.manualEmergLandActive) {
+        navProcessFSMEvents(NAV_FSM_EVENT_SWITCH_TO_IDLE);
+    }
+    posControl.flags.manualEmergLandActive = IS_RC_MODE_ACTIVE(BOXBEEPERON);
+    // *****
 }
 
 static navigationFSMEvent_t selectNavEventFromBoxModeInput(bool launchBypass)   // CR6
@@ -3972,7 +3976,7 @@ static navigationFSMEvent_t selectNavEventFromBoxModeInput(bool launchBypass)   
         checkManualEmergencyLandingControl(false);
 
         /* Emergency landing triggered by failsafe Landing or manually initiated */
-        if (posControl.flags.forcedEmergLandingActivated || posControl.flags.manualEmergLandActive) {
+        if (posControl.flags.forcedEmergLandingActivated || posControl.flags.manualEmergLandActive) {  // || IS_RC_MODE_ACTIVE(BOXBEEPERON)
             return NAV_FSM_EVENT_SWITCH_TO_EMERGENCY_LANDING;
         }
 
@@ -4408,11 +4412,11 @@ void navigationUsePIDs(void)
     /*
      * Set coefficients used in MC VEL_XY
      */
-    // CR47
+
     multicopterPosXyCoefficients.dTermAttenuation = pidProfile()->navVelXyDtermAttenuation / 100.0f;
+    // CR47
     multicopterPosXyCoefficients.dTermAttenuationStart = pidProfile()->navVelXyDtermAttenuationStart * 100.0f;
     multicopterPosXyCoefficients.dTermAttenuationEnd = pidProfile()->navVelXyDtermAttenuationEnd * 100.0f;
-    // multicopterPosXyCoefficients.dTermAttenuation = pidProfile()->navVelXyDtermAttenuation / 100.0f;
     // multicopterPosXyCoefficients.dTermAttenuationStart = pidProfile()->navVelXyDtermAttenuationStart / 100.0f;
     // multicopterPosXyCoefficients.dTermAttenuationEnd = pidProfile()->navVelXyDtermAttenuationEnd / 100.0f;
     // CR47
@@ -4529,7 +4533,7 @@ void navigationInit(void)
     }
 #endif
 
-srand(time(NULL));  // CR97
+// srand(time(NULL));  // CR97  hitl test
 }
 
 /*-----------------------------------------------------------

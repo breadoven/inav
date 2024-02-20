@@ -527,7 +527,7 @@ static uint32_t calculateCurrentValidityFlags(timeUs_t currentTimeUs)
             newFlags |= EST_GPS_XY_VALID;
         }
     }
-    // IS_RC_MODE_ACTIVE(BOXBEEPERON) CR97
+    // !IS_RC_MODE_ACTIVE(BOXBEEPERON) CR97
     if (!IS_RC_MODE_ACTIVE(BOXBEEPERON) && sensors(SENSOR_BARO) && ((currentTimeUs - posEstimator.baro.lastUpdateTime) <= MS2US(INAV_BARO_TIMEOUT_MS))) {
         newFlags |= EST_BARO_VALID;
     }
@@ -580,9 +580,9 @@ static void estimationPredict(estimationContext_t * ctx)
 
 static bool estimationCalculateCorrection_Z(estimationContext_t * ctx)
 {
-    DEBUG_SET(DEBUG_ALWAYS, 2, posEstimator.est.pos.z);       // Position estimate  CR97
-    DEBUG_SET(DEBUG_ALWAYS, 3, posEstimator.baro.alt);        // Baro altitude
-    DEBUG_SET(DEBUG_ALWAYS, 4, posEstimator.gps.pos.z);       // GPS altitude
+    // DEBUG_SET(DEBUG_ALWAYS, 2, posEstimator.est.pos.z);       // Position estimate  CR97
+    // DEBUG_SET(DEBUG_ALWAYS, 3, posEstimator.baro.alt);        // Baro altitude
+    // DEBUG_SET(DEBUG_ALWAYS, 4, posEstimator.gps.pos.z);       // GPS altitude
 
     DEBUG_SET(DEBUG_ALTITUDE, 0, posEstimator.est.pos.z);       // Position estimate
     DEBUG_SET(DEBUG_ALTITUDE, 2, posEstimator.baro.alt);        // Baro altitude

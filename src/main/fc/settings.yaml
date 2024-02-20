@@ -2960,14 +2960,6 @@ groups:
         field: fw.yawControlDeadband
         min: 0
         max: 90
-        # CR47
-      # - name: nav_mc_xy_accel_max_limit
-        # description: "Fiddle factor to tune bank angle response to specific quad performance"
-        # field: mc.xy_accel_max_limit
-        # default_value: 980
-        # min: 100
-        # max: NAV_ACCELERATION_XY_MAX
-        # CR47
 
   - name: PG_TELEMETRY_CONFIG
     type: telemetryConfig_t

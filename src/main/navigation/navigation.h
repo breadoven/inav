@@ -288,7 +288,6 @@ typedef struct navConfig_s {
         uint8_t posResponseExpo;                // Position controller expo (taret vel expo for MC)
         bool slowDownForTurning;                // Slow down during WP missions when changing heading on next waypoint
         uint8_t althold_throttle_type;          // throttle zero datum type for alt hold
-        uint16_t xy_accel_max_limit;            // CR47
     } mc;
 
     struct {
