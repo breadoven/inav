@@ -516,7 +516,7 @@ static fixedWingLaunchEvent_t fwLaunchState_FW_LAUNCH_STATE_FINISH_THR_LOW(timeU
     const timeMs_t elapsedTimeMs = US2MS(currentTimeUs) - throttleRaisedStartTimeMs;
     const timeMs_t endTimeMs = 1000;
 
-    if (isRollPitchStickDeflected(navConfig()->fw.launch_abort_deadband)) {
+    if (isRollPitchStickDeflected(navConfig()->fw.launch_land_abort_deadband)) {
         return FW_LAUNCH_EVENT_SUCCESS;     // end the launch and go to FW_LAUNCH_STATE_FLYING
     }
 
