@@ -287,6 +287,13 @@ static int logicConditionCompute(
             return true;
             break;
 
+#ifdef USE_MAG
+        case LOGIC_CONDITION_RESET_MAG_CALIBRATION:
+
+            ENABLE_STATE(CALIBRATE_MAG);
+            return true;
+            break;
+#endif
         case LOGIC_CONDITION_SET_VTX_POWER_LEVEL:
 #if defined(USE_VTX_CONTROL)
 #if(defined(USE_VTX_SMARTAUDIO) || defined(USE_VTX_TRAMP))
@@ -486,6 +493,17 @@ static int logicConditionCompute(
             return operandA;
             break;
 #endif
+#ifdef USE_GPS_FIX_ESTIMATION
+        case LOGIC_CONDITION_DISABLE_GPS_FIX:
+            if (operandA > 0) {
+                LOGIC_CONDITION_GLOBAL_FLAG_ENABLE(LOGIC_CONDITION_GLOBAL_FLAG_DISABLE_GPS_FIX);
+            } else {
+                LOGIC_CONDITION_GLOBAL_FLAG_DISABLE(LOGIC_CONDITION_GLOBAL_FLAG_DISABLE_GPS_FIX);
+            }
+                return true;
+            break;
+#endif
+
         default:
             return false;
             break;
@@ -667,6 +685,11 @@ static int logicConditionGetFlightOperandValue(int operand) {
             break;
 
         case LOGIC_CONDITION_OPERAND_FLIGHT_GPS_SATS:
+#ifdef USE_GPS_FIX_ESTIMATION
+            if ( STATE(GPS_ESTIMATED_FIX) ){
+                return gpsSol.numSat; //99
+            } else
+#endif
             if (getHwGPSStatus() == HW_SENSOR_UNAVAILABLE || getHwGPSStatus() == HW_SENSOR_UNHEALTHY) {
                 return 0;
             } else {
@@ -749,7 +772,7 @@ static int logicConditionGetFlightOperandValue(int operand) {
 #else
             return ((navGetCurrentStateFlags() & NAV_CTL_LAND)) ? 1 : 0;
 #endif
-            
+
             break;
 
         case LOGIC_CONDITION_OPERAND_FLIGHT_IS_FAILSAFE: // 0/1

@@ -87,6 +87,7 @@
 #include "config/config_eeprom.h"
 #include "config/feature.h"
 
+#include "io/adsb.h"
 #include "io/asyncfatfs/asyncfatfs.h"
 #include "io/flashfs.h"
 #include "io/gps.h"
@@ -954,6 +955,33 @@ static bool mspFcProcessOutCommand(uint16_t cmdMSP, sbuf_t *dst, mspPostProcessF
         sbufWriteU16(dst, gpsSol.epv);
         break;
 #endif
+    case MSP2_ADSB_VEHICLE_LIST:
+#ifdef USE_ADSB
+        sbufWriteU8(dst, MAX_ADSB_VEHICLES);
+        sbufWriteU8(dst, ADSB_CALL_SIGN_MAX_LENGTH);
+
+        for(uint8_t i = 0; i < MAX_ADSB_VEHICLES; i++){
+
+            adsbVehicle_t *adsbVehicle = findVehicle(i);
+
+            for(uint8_t ii = 0; ii < ADSB_CALL_SIGN_MAX_LENGTH; ii++){
+                sbufWriteU8(dst, adsbVehicle->vehicleValues.callsign[ii]);
+            }
+
+            sbufWriteU32(dst, adsbVehicle->vehicleValues.icao);
+            sbufWriteU32(dst, adsbVehicle->vehicleValues.lat);
+            sbufWriteU32(dst, adsbVehicle->vehicleValues.lon);
+            sbufWriteU32(dst, adsbVehicle->vehicleValues.alt);
+            sbufWriteU16(dst, (uint16_t)CENTIDEGREES_TO_DEGREES(adsbVehicle->vehicleValues.heading));
+            sbufWriteU8(dst,  adsbVehicle->vehicleValues.tslc);
+            sbufWriteU8(dst,  adsbVehicle->vehicleValues.emitterType);
+            sbufWriteU8(dst,  adsbVehicle->ttl);
+        }
+#else
+        sbufWriteU8(dst, 0);
+        sbufWriteU8(dst, 0);
+#endif
+            break;
     case MSP_DEBUG:
         // output some useful QA statistics
         // debug[x] = ((hse_value / 1000000) * 1000) + (SystemCoreClock / 1000000);         // XX0YY [crystal clock : core clock]
@@ -1316,9 +1344,9 @@ static bool mspFcProcessOutCommand(uint16_t cmdMSP, sbuf_t *dst, mspPostProcessF
     case MSP_NAV_POSHOLD:
         sbufWriteU8(dst, navConfig()->general.flags.user_control_mode);
         sbufWriteU16(dst, navConfig()->general.max_auto_speed);
-        sbufWriteU16(dst, navConfig()->general.max_auto_climb_rate);
+        sbufWriteU16(dst, navConfig()->mc.max_auto_climb_rate);
         sbufWriteU16(dst, navConfig()->general.max_manual_speed);
-        sbufWriteU16(dst, navConfig()->general.max_manual_climb_rate);
+        sbufWriteU16(dst, mixerConfig()->platformType != PLATFORM_AIRPLANE ? navConfig()->mc.max_manual_climb_rate:navConfig()->fw.max_manual_climb_rate);
         sbufWriteU8(dst, navConfig()->mc.max_bank_angle);
         sbufWriteU8(dst, navConfig()->mc.althold_throttle_type);
         sbufWriteU16(dst, currentBatteryProfile->nav.mc.hover_throttle);
@@ -1521,6 +1549,13 @@ static bool mspFcProcessOutCommand(uint16_t cmdMSP, sbuf_t *dst, mspPostProcessF
 #ifdef USE_BARO
         sbufWriteU16(dst, osdConfig()->baro_temp_alarm_min);
         sbufWriteU16(dst, osdConfig()->baro_temp_alarm_max);
+#else
+        sbufWriteU16(dst, 0);
+        sbufWriteU16(dst, 0);
+#endif
+#ifdef USE_ADSB
+        sbufWriteU16(dst, osdConfig()->adsb_distance_warning);
+        sbufWriteU16(dst, osdConfig()->adsb_distance_alert);
 #else
         sbufWriteU16(dst, 0);
         sbufWriteU16(dst, 0);
@@ -2363,9 +2398,13 @@ static mspResult_e mspFcProcessInCommand(uint16_t cmdMSP, sbuf_t *src)
         if (dataSize == 13) {
             navConfigMutable()->general.flags.user_control_mode = sbufReadU8(src);
             navConfigMutable()->general.max_auto_speed = sbufReadU16(src);
-            navConfigMutable()->general.max_auto_climb_rate = sbufReadU16(src);
+            navConfigMutable()->mc.max_auto_climb_rate = sbufReadU16(src);
             navConfigMutable()->general.max_manual_speed = sbufReadU16(src);
-            navConfigMutable()->general.max_manual_climb_rate = sbufReadU16(src);
+            if (mixerConfig()->platformType != PLATFORM_AIRPLANE) {
+                navConfigMutable()->mc.max_manual_climb_rate = sbufReadU16(src);
+            }else{
+                navConfigMutable()->fw.max_manual_climb_rate = sbufReadU16(src);
+            }
             navConfigMutable()->mc.max_bank_angle = sbufReadU8(src);
             navConfigMutable()->mc.althold_throttle_type = sbufReadU8(src);
             currentBatteryProfileMutable->nav.mc.hover_throttle = sbufReadU16(src);
@@ -2694,7 +2733,7 @@ static mspResult_e mspFcProcessInCommand(uint16_t cmdMSP, sbuf_t *src)
 
     case MSP_SET_WP:
         if (dataSize == 21) {
-            
+
             const uint8_t msp_wp_no = sbufReadU8(src);     // get the waypoint number
             navWaypoint_t msp_wp;
             msp_wp.action = sbufReadU8(src);    // action
@@ -3198,7 +3237,7 @@ static mspResult_e mspFcProcessInCommand(uint16_t cmdMSP, sbuf_t *src)
             fwAutolandApproachConfigMutable(i)->approachAlt = sbufReadU32(src);
             fwAutolandApproachConfigMutable(i)->landAlt = sbufReadU32(src);
             fwAutolandApproachConfigMutable(i)->approachDirection = sbufReadU8(src);
-             
+
             int16_t head1 = 0, head2 = 0;
             if (sbufReadI16Safe(&head1, src)) {
                 fwAutolandApproachConfigMutable(i)->landApproachHeading1 = head1;
@@ -3769,9 +3808,9 @@ bool mspFCProcessInOutCommand(uint16_t cmdMSP, sbuf_t *dst, sbuf_t *src, mspResu
                 DISABLE_ARMING_FLAG(SIMULATOR_MODE_HITL);
 
 #ifdef USE_BARO
-            if ( requestedSensors[SENSOR_INDEX_BARO] != BARO_NONE ) {
-                baroStartCalibration();
-            }
+                if ( requestedSensors[SENSOR_INDEX_BARO] != BARO_NONE ) {
+                    baroStartCalibration();
+                }
 #endif
 #ifdef USE_MAG
                 DISABLE_STATE(COMPASS_CALIBRATED);
@@ -3811,21 +3850,21 @@ bool mspFCProcessInOutCommand(uint16_t cmdMSP, sbuf_t *dst, sbuf_t *src, mspResu
             if (dataSize >= 14) {
 
                 if (feature(FEATURE_GPS) && SIMULATOR_HAS_OPTION(HITL_HAS_NEW_GPS_DATA)) {
-                    gpsSol.fixType = sbufReadU8(src);
-                    gpsSol.hdop = gpsSol.fixType == GPS_NO_FIX ? 9999 : 100;
-                    gpsSol.flags.hasNewData = true;
-                    gpsSol.numSat = sbufReadU8(src);
+                    gpsSolDRV.fixType = sbufReadU8(src);
+                    gpsSolDRV.hdop = gpsSolDRV.fixType == GPS_NO_FIX ? 9999 : 100;
+                    gpsSolDRV.numSat = sbufReadU8(src);
 
-                    if (gpsSol.fixType != GPS_NO_FIX) {
-                        gpsSol.flags.validVelNE = true;
-                        gpsSol.flags.validVelD = true;
-                        gpsSol.flags.validEPE = true;
-                        gpsSol.flags.validTime = false;
+                    if (gpsSolDRV.fixType != GPS_NO_FIX) {
+                        gpsSolDRV.flags.validVelNE = true;
+                        gpsSolDRV.flags.validVelD = true;
+                        gpsSolDRV.flags.validEPE = true;
+                        gpsSolDRV.flags.validTime = false;
 
-                        gpsSol.llh.lat = sbufReadU32(src);
-                        gpsSol.llh.lon = sbufReadU32(src);
-                        gpsSol.llh.alt = sbufReadU32(src);
-                        // CR97 hitl test
+                        gpsSolDRV.llh.lat = sbufReadU32(src);
+                        gpsSolDRV.llh.lon = sbufReadU32(src);
+                        gpsSolDRV.llh.alt = sbufReadU32(src);
+
+                        // CR97 hitl test needs fixing for DRV 22/02/24
                         // if (true) {
                             // uint8_t counter = 1 + ((millis() / 5000) % 10);   // cyclic number between 0 and 10 changing every 5s
                             // static uint8_t randNumOld = 1;
@@ -3846,22 +3885,22 @@ bool mspFCProcessInOutCommand(uint16_t cmdMSP, sbuf_t *dst, sbuf_t *src, mspResu
                             // DEBUG_SET(DEBUG_ALWAYS, 6, gpsSol.llh.alt);
                         // }
                         // CR97
-                        gpsSol.groundSpeed = (int16_t)sbufReadU16(src);
-                        gpsSol.groundCourse = (int16_t)sbufReadU16(src);
 
-                        gpsSol.velNED[X] = (int16_t)sbufReadU16(src);
-                        gpsSol.velNED[Y] = (int16_t)sbufReadU16(src);
-                        gpsSol.velNED[Z] = (int16_t)sbufReadU16(src);
+                        gpsSolDRV.groundSpeed = (int16_t)sbufReadU16(src);
+                        gpsSolDRV.groundCourse = (int16_t)sbufReadU16(src);
 
-                        gpsSol.eph = 100;
-                        gpsSol.epv = 100;
+                        gpsSolDRV.velNED[X] = (int16_t)sbufReadU16(src);
+                        gpsSolDRV.velNED[Y] = (int16_t)sbufReadU16(src);
+                        gpsSolDRV.velNED[Z] = (int16_t)sbufReadU16(src);
 
-                        ENABLE_STATE(GPS_FIX);
+                        gpsSolDRV.eph = 100;
+                        gpsSolDRV.epv = 100;
                     } else {
                         sbufAdvance(src, sizeof(uint32_t) + sizeof(uint32_t) + sizeof(uint32_t) + sizeof(uint16_t) + sizeof(uint16_t) + sizeof(uint16_t) * 3);
                     }
                     // Feed data to navigation
-                    gpsProcessNewSolutionData();
+                    gpsProcessNewDriverData();
+                    gpsProcessNewSolutionData(false);
                 } else {
                     sbufAdvance(src, sizeof(uint8_t) + sizeof(uint8_t) + sizeof(uint32_t) + sizeof(uint32_t) + sizeof(uint32_t) + sizeof(uint16_t) + sizeof(uint16_t) + sizeof(uint16_t) * 3);
                 }
