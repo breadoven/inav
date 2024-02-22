@@ -121,7 +121,7 @@ STATIC_ASSERT(NAV_MAX_WAYPOINTS < 254, NAV_MAX_WAYPOINTS_exceeded_allowable_rang
 PG_REGISTER_ARRAY(navWaypoint_t, NAV_MAX_WAYPOINTS, nonVolatileWaypointList, PG_WAYPOINT_MISSION_STORAGE, 2);
 #endif
 
-PG_REGISTER_WITH_RESET_TEMPLATE(navConfig_t, navConfig, PG_NAV_CONFIG, 6);
+PG_REGISTER_WITH_RESET_TEMPLATE(navConfig_t, navConfig, PG_NAV_CONFIG, 7);
 
 PG_RESET_TEMPLATE(navConfig_t, navConfig,
     .general = {
@@ -183,8 +183,8 @@ PG_RESET_TEMPLATE(navConfig_t, navConfig,
 
     // MC-specific
     .mc = {
-        .max_bank_angle = SETTING_NAV_MC_BANK_ANGLE_DEFAULT,                          // degrees
-        .max_auto_climb_rate = SETTING_NAV_MC_AUTO_CLIMB_RATE_DEFAULT,                             // 5 m/s
+        .max_bank_angle = SETTING_NAV_MC_BANK_ANGLE_DEFAULT,                                    // degrees
+        .max_auto_climb_rate = SETTING_NAV_MC_AUTO_CLIMB_RATE_DEFAULT,                          // 5 m/s
         .max_manual_climb_rate = SETTING_NAV_MC_MANUAL_CLIMB_RATE_DEFAULT,
 
 #ifdef USE_MR_BRAKING_MODE
@@ -195,7 +195,7 @@ PG_RESET_TEMPLATE(navConfig_t, navConfig,
         .braking_boost_timeout = SETTING_NAV_MC_BRAKING_BOOST_TIMEOUT_DEFAULT,                   // Timout boost after 750ms
         .braking_boost_speed_threshold = SETTING_NAV_MC_BRAKING_BOOST_SPEED_THRESHOLD_DEFAULT,   // Boost can happen only above 1.5m/s
         .braking_boost_disengage_speed = SETTING_NAV_MC_BRAKING_BOOST_DISENGAGE_SPEED_DEFAULT,   // Disable boost at 1m/s
-        .braking_bank_angle = SETTING_NAV_MC_BRAKING_BANK_ANGLE_DEFAULT,                        // Max braking angle
+        .braking_bank_angle = SETTING_NAV_MC_BRAKING_BANK_ANGLE_DEFAULT,                         // Max braking angle
 #endif
 
         .posDecelerationTime = SETTING_NAV_MC_POS_DECELERATION_TIME_DEFAULT,        // posDecelerationTime * 100
@@ -207,6 +207,7 @@ PG_RESET_TEMPLATE(navConfig_t, navConfig,
     // Fixed wing
     .fw = {
         .max_bank_angle = SETTING_NAV_FW_BANK_ANGLE_DEFAULT,                    // degrees
+        .max_auto_climb_rate = SETTING_NAV_FW_AUTO_CLIMB_RATE_DEFAULT,          // 5 m/s  CR97A
         .max_manual_climb_rate = SETTING_NAV_FW_MANUAL_CLIMB_RATE_DEFAULT,      // 3 m/s
         .max_climb_angle = SETTING_NAV_FW_CLIMB_ANGLE_DEFAULT,                  // degrees
         .max_dive_angle = SETTING_NAV_FW_DIVE_ANGLE_DEFAULT,                    // degrees
@@ -304,8 +305,6 @@ bool validateRTHSanityChecker(void);
 static navigationFSMEvent_t selectNavEventFromBoxModeInput(bool launchBypass);  //CR6
 void updateHomePosition(void);
 bool abortLaunchAllowed(void);
-
-static bool rthAltControlStickOverrideCheck(unsigned axis);
 
 #ifdef USE_FW_AUTOLAND
 static float getLandAltitude(void);
@@ -1899,7 +1898,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_WAYPOINT_IN_PROGRESS(na
                                     (posControl.wpDistance - 0.1f * posControl.wpInitialDistance);
                     }
 
-                    if (fabsf(climbRate) >= navConfig()->general.max_auto_climb_rate) {
+                    if (fabsf(climbRate) >= (STATE(AIRPLANE) ? navConfig()->fw.max_auto_climb_rate : navConfig()->mc.max_auto_climb_rate)) {  // CR97A
                         climbRate = 0;
                     }
                     updateClimbRateToAltitudeController(climbRate, posControl.activeWaypoint.pos.z, ROC_TO_ALT_TARGET);
@@ -3481,13 +3480,13 @@ float getDesiredClimbRate(float targetAltitude, timeDelta_t deltaMicros)
     float targetVel = 0.0f;
     const bool emergLandingIsActive = navigationIsExecutingAnEmergencyLanding();
 
-    float maxClimbRate = navConfig()->general.max_auto_climb_rate;
+    float maxClimbRate = STATE(MULTIROTOR) ? navConfig()->mc.max_auto_climb_rate : navConfig()->fw.max_auto_climb_rate;  // CR97A
     if (posControl.desiredState.climbRateDemand) {
         maxClimbRate = ABS(posControl.desiredState.climbRateDemand);
     } else if (emergLandingIsActive) {
         maxClimbRate = navConfig()->general.emerg_descent_rate;
     } else if (posControl.flags.isAdjustingAltitude) {
-        maxClimbRate = navConfig()->general.max_manual_climb_rate;
+        maxClimbRate = STATE(MULTIROTOR) ? navConfig()->mc.max_manual_climb_rate : navConfig()->fw.max_manual_climb_rate;  // CR97A
     }
     const float targetAltitudeError = targetAltitude - navGetCurrentActualPositionAndVelocity()->pos.z;
 
