@@ -174,7 +174,7 @@ static bool detectGPSGlitch(timeUs_t currentTimeUs)
 #ifdef USE_GPS_FIX_ESTIMATION
     if (STATE(GPS_ESTIMATED_FIX)) {
         //disable sanity checks in GPS estimation mode
-        //when estimated GPS fix is replaced with real fix, coordinates may jump 
+        //when estimated GPS fix is replaced with real fix, coordinates may jump
         previousTime = 0;
         return true;
     }
@@ -231,12 +231,12 @@ void onNewGPSData(void)
     newLLH.lon = gpsSol.llh.lon;
     newLLH.alt = gpsSol.llh.alt;
 
-    if (sensors(SENSOR_GPS) 
+    if (sensors(SENSOR_GPS)
 #ifdef USE_GPS_FIX_ESTIMATION
             || STATE(GPS_ESTIMATED_FIX)
 #endif
         ) {
-        if (!(STATE(GPS_FIX) 
+        if (!(STATE(GPS_FIX)
 #ifdef USE_GPS_FIX_ESTIMATION
                 || STATE(GPS_ESTIMATED_FIX)
 #endif
@@ -555,8 +555,8 @@ static uint32_t calculateCurrentValidityFlags(timeUs_t currentTimeUs)
             newFlags |= EST_GPS_XY_VALID;
         }
     }
-    // !IS_RC_MODE_ACTIVE(BOXBEEPERON) CR97
-    if (!IS_RC_MODE_ACTIVE(BOXBEEPERON) && sensors(SENSOR_BARO) && ((currentTimeUs - posEstimator.baro.lastUpdateTime) <= MS2US(INAV_BARO_TIMEOUT_MS))) {
+    // !IS_RC_MODE_ACTIVE(BOXBEEPERON) CR97 to disable Baro, only use GPS alt
+    if (sensors(SENSOR_BARO) && ((currentTimeUs - posEstimator.baro.lastUpdateTime) <= MS2US(INAV_BARO_TIMEOUT_MS))) {
         newFlags |= EST_BARO_VALID;
     }
 
@@ -621,7 +621,7 @@ static bool estimationCalculateCorrection_Z(estimationContext_t * ctx)
     DEBUG_SET(DEBUG_ALTITUDE, 7, accGetClipCount());            // Clip count
 
     bool correctOK = false;
-    
+
     //ignore baro if difference is too big, baro is probably wrong
     const float gpsBaroResidual = ctx->newFlags & EST_GPS_Z_VALID ? fabsf(posEstimator.gps.pos.z - posEstimator.baro.alt) : 0.0f;
     //fade out the baro to prevent sudden jump
