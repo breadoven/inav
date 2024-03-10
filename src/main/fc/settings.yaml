@@ -345,7 +345,7 @@ groups:
         max: INT16_MAX
       - name: ins_gravity_cmss
         description: "Calculated 1G of Acc axis Z to use in INS"
-        default_value: 0.0
+        default_value: 0
         field: gravity_cmss_cal
         min: 0
         max: 2000
@@ -758,7 +758,7 @@ groups:
         min: 0
         max: PWM_RANGE_MAX
       - name: motor_pwm_rate
-        description: "Output frequency (in Hz) for motor pins.  Applies only to brushed motors. "
+        description: "Output frequency (in Hz) for motor pins.  Applies only to brushed motors."
         default_value: 16000
         field: motorPwmRate
         min: 50
@@ -2074,18 +2074,32 @@ groups:
         min: 0
         max: 100
         default_value: 90
+        # CR47
       - name: nav_mc_vel_xy_dterm_attenuation_start
-        description: "A point (in percent of both target and current horizontal velocity) where nav_mc_vel_xy_dterm_attenuation begins"
-        default_value: 10
+        description: "Horizontal velocity where nav_mc_vel_xy_dterm_attenuation begins [m/s]"
+        default_value: 5
         field: navVelXyDtermAttenuationStart
         min: 0
         max: 100
       - name: nav_mc_vel_xy_dterm_attenuation_end
-        description: "A point (in percent of both target and current horizontal velocity) where nav_mc_vel_xy_dterm_attenuation reaches maximum"
-        default_value: 60
+        description: "Horizontal velocity where nav_mc_vel_xy_dterm_attenuation reaches maximum [m/s]"
+        default_value: 10
         field: navVelXyDtermAttenuationEnd
         min: 0
         max: 100
+      # - name: nav_mc_vel_xy_dterm_attenuation_start
+        # description: "A point (in percent of both target and current horizontal velocity) where nav_mc_vel_xy_dterm_attenuation begins"
+        # default_value: 10
+        # field: navVelXyDtermAttenuationStart
+        # min: 0
+        # max: 100
+      # - name: nav_mc_vel_xy_dterm_attenuation_end
+        # description: "A point (in percent of both target and current horizontal velocity) where nav_mc_vel_xy_dterm_attenuation reaches maximum"
+        # default_value: 60
+        # field: navVelXyDtermAttenuationEnd
+        # min: 0
+        # max: 100
+        # CR47
       - name: nav_fw_pos_z_p
         description: "P gain of altitude PID controller (Fixedwing)"
         default_value: 40
@@ -2104,6 +2118,20 @@ groups:
         field: bank_fw.pid[PID_POS_Z].D
         min: 0
         max: 255
+# CR97
+      - name: nav_fw_alt_control_response
+        description: "Adjusts the deceleration response of fixed wing altitude control as the target altitude is approached. Decrease value to help avoid overshooting the target altitude."
+        default_value: 20
+        field: fwAltControlResponseFactor
+        min: 5
+        max: 100
+      # - name: nav_fw_pos_z_ff
+        # description: "Feed forward gain of altitude PID controller (Fixedwing)"
+        # default_value: 10
+        # field: bank_fw.pid[PID_POS_Z].FF
+        # min: 0
+        # max: 255
+# CR97
       - name: nav_fw_pos_xy_p
         description: "P gain of 2D trajectory PID controller. Play with this to get a straight line between waypoints or a straight RTH"
         default_value: 75
@@ -2328,7 +2356,7 @@ groups:
         field: w_z_surface_p
         min: 0
         max: 100
-        default_value: 3.5 
+        default_value: 3.5
       - name: inav_w_z_surface_v
         field: w_z_surface_v
         min: 0
@@ -2795,6 +2823,14 @@ groups:
         field: fw.max_bank_angle
         min: 5
         max: 80
+        # CR97A
+      - name: nav_fw_auto_climb_rate
+        description: "Maximum climb/descent rate that UAV is allowed to reach during navigation modes. [cm/s]"
+        default_value: 500
+        field: fw.max_auto_climb_rate
+        min: 10
+        max: 2000
+        # CR97A
       - name: nav_fw_manual_climb_rate
         description: "Maximum climb/descent rate firmware is allowed when processing pilot input for ALTHOLD control mode [cm/s]"
         default_value: 300
@@ -2931,6 +2967,13 @@ groups:
         field: fw.launch_climb_angle
         min: 5
         max: 45
+        # CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+      - name: nav_fw_launch_allow_throttle_low
+        description: "Allow launch sequence with throttle maintained low throughout. When main launch sequence completes control is maintained with Nav cruise throttle until sticks moved/throttle raised or control switches to other Nav mode if preselected"
+        default_value: OFF
+        field: fw.launch_allow_throttle_low
+        type: bool
+        # CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
       - name: nav_fw_launch_manual_throttle
         description: "Allows launch with manually controlled throttle. INAV only levels wings and controls climb pitch during launch. Throttle is controlled directly by throttle stick movement. IF USED WITHOUT A GPS LOCK plane must be launched immediately after throttle is increased to avoid issues with climb out stabilisation and the launch ending sooner than expected (launch end timer starts as soon as the throttle stick is raised)."
         default_value: OFF
@@ -3502,6 +3545,7 @@ groups:
         default_value: 11
         min: 10
         max: 13
+
       - name: osd_plus_code_short
         description: "Number of leading digits removed from plus code. Removing 2, 4 and 6 digits requires a reference location within, respectively, ~800km, ~40 km and ~2km to recover the original coordinates."
         field: plus_code_short
@@ -3571,7 +3615,6 @@ groups:
         max: 5
         default_value: 3
         description: Height of sidebars in rows. 0 leaves only the level indicator arrows (Not for pixel OSD)
-
       - name: osd_ahi_pitch_interval
         field: ahi_pitch_interval
         min: 0
@@ -4137,7 +4180,7 @@ groups:
     type: navFwAutolandConfig_t
     headers: ["navigation/navigation.h"]
     condition: USE_FW_AUTOLAND
-    members: 
+    members:
       - name: nav_fw_land_approach_length
         description: "Length of the final approach"
         default_value: 35000

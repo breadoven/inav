@@ -65,6 +65,10 @@ typedef struct {
 
 typedef struct {
     timeUs_t    lastUpdateTime; // Last update time (us)
+#if defined(NAV_GPS_GLITCH_DETECTION)
+    bool        glitchDetected;
+    bool        glitchRecovery;
+#endif
     fpVector3_t pos;            // GPS position in NEU coordinate system (cm)
     fpVector3_t vel;            // GPS velocity (cms)
     float       eph;
@@ -128,7 +132,7 @@ typedef struct {
 } navPositionEstimatorESTIMATE_t;
 
 typedef struct {
-     timeUs_t               lastUpdateTime;
+    timeUs_t                lastUpdateTime;
     fpVector3_t             accelNEU;
     fpVector3_t             accelBias;
     float                   calibratedGravityCMSS;

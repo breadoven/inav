@@ -42,7 +42,7 @@
 #define USE_SERIALRX_FPORT
 #define USE_SERIALRX_FPORT2
 
-//#define USE_DEV_TOOLS           // tools for dev use only. Undefine for release builds.
+#define USE_DEV_TOOLS           // functions for dev use only. Undefine for release builds.
 
 #define COMMON_DEFAULT_FEATURES (FEATURE_TX_PROF_SEL)
 

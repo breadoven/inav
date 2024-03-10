@@ -58,7 +58,7 @@ typedef enum {
 } navSetWaypointFlags_t;
 
 typedef enum {
-    ROC_TO_ALT_RESET,
+    ROC_TO_ALT_CURRENT,     // CR97
     ROC_TO_ALT_CONSTANT,
     ROC_TO_ALT_TARGET
 } climbRateToAltitudeControllerMode_e;
@@ -89,7 +89,10 @@ typedef struct navigationFlags_s {
     navigationEstimateStatus_e estVelStatus;        // Indicates that GPS is working (or not)
     navigationEstimateStatus_e estAglStatus;
     navigationEstimateStatus_e estHeadingStatus;    // Indicate valid heading - wither mag or GPS at certain speed on airplane
+    bool compassGpsCogMismatchError;                // mismatch between compass heading and valid GPS heading   // CR27
     bool gpsCfEstimatedAltitudeMismatch;            // Indicates a mismatch between GPS altitude and estimated altitude
+
+    climbRateToAltitudeControllerMode_e rocToAltMode;  // CR97
 
     bool isAdjustingPosition;
     bool isAdjustingAltitude;
@@ -136,6 +139,7 @@ typedef struct {
     fpVector3_t pos;
     fpVector3_t vel;
     int32_t     yaw;
+    int16_t     climbRateDemand;     // CR97
 } navigationDesiredState_t;
 
 typedef enum {
@@ -285,7 +289,7 @@ typedef enum {
     NAV_STATE_CRUISE_INITIALIZE,
     NAV_STATE_CRUISE_IN_PROGRESS,
     NAV_STATE_CRUISE_ADJUSTING,
-    
+
     NAV_STATE_FW_LANDING_CLIMB_TO_LOITER,
     NAV_STATE_FW_LANDING_LOITER,
     NAV_STATE_FW_LANDING_APPROACH,
@@ -424,7 +428,7 @@ typedef struct {
     uint32_t                    lastValidPositionTimeMs;
     uint32_t                    lastValidAltitudeTimeMs;
 
-    /* INAV GPS origin (position where GPS fix was first acquired) */
+    /* INAV GPS origin (position where GPS fix first acquired) */
     gpsOrigin_t                 gpsOrigin;
 
     /* Home/RTH parameters - NEU coordinates (geodetic position of home (LLH) is stored in GPS_home variable) */
@@ -459,7 +463,7 @@ typedef struct {
 #endif
     navWaypointPosition_t       activeWaypoint;             // Local position, current bearing and turn angle to next WP, filled on waypoint activation
     int8_t                      activeWaypointIndex;
-    float                       wpInitialAltitude;          // Altitude at start of WP
+    float                       wpInitialAltitude;          // Altitude at start of WP  CR97 check for auto landing changes
     float                       wpInitialDistance;          // Distance when starting flight to WP
     float                       wpDistance;                 // Distance to active WP
     timeMs_t                    wpReachedTime;              // Time the waypoint was reached
@@ -508,7 +512,7 @@ flightModeFlags_e navGetMappedFlightModes(navigationFSMState_t state);
 void setHomePosition(const fpVector3_t * pos, int32_t heading, navSetWaypointFlags_t useMask, navigationHomeFlags_t homeFlags);
 void setDesiredPosition(const fpVector3_t * pos, int32_t yaw, navSetWaypointFlags_t useMask);
 void setDesiredSurfaceOffset(float surfaceOffset);
-void setDesiredPositionToFarAwayTarget(int32_t yaw, int32_t distance, navSetWaypointFlags_t useMask);   // NOT USED
+// void setDesiredPositionToFarAwayTarget(int32_t yaw, int32_t distance, navSetWaypointFlags_t useMask);   // NOT USED
 void updateClimbRateToAltitudeController(float desiredClimbRate, float targetAltitude, climbRateToAltitudeControllerMode_e mode);
 
 bool isNavHoldPositionActive(void);
@@ -519,6 +523,7 @@ bool isWaypointNavTrackingActive(void);
 void updateActualHeading(bool headingValid, int32_t newHeading, int32_t newGroundCourse);
 void updateActualHorizontalPositionAndVelocity(bool estPosValid, bool estVelValid, float newX, float newY, float newVelX, float newVelY);
 void updateActualAltitudeAndClimbRate(bool estimateValid, float newAltitude, float newVelocity, float surfaceDistance, float surfaceVelocity, navigationEstimateStatus_e surfaceStatus, float gpsCfEstimatedAltitudeError);
+float getDesiredClimbRate(float targetAltitude, timeDelta_t deltaMicros);  // CR97
 
 bool checkForPositionSensorTimeout(void);
 
@@ -537,10 +542,9 @@ bool adjustMulticopterHeadingFromRCInput(void);
 bool adjustMulticopterPositionFromRCInput(int16_t rcPitchAdjustment, int16_t rcRollAdjustment);
 
 void applyMulticopterNavigationController(navigationFSMStateFlags_t navStateFlags, timeUs_t currentTimeUs);
-
 bool isMulticopterLandingDetected(void);
-
 void calculateMulticopterInitialHoldPosition(fpVector3_t * pos);
+float getSqrtControllerVelocity(float targetAltitude, timeDelta_t deltaMicros); // CR97
 
 /* Fixed-wing specific functions */
 void setupFixedWingAltitudeController(void);
@@ -563,6 +567,7 @@ void calculateFixedWingInitialHoldPosition(fpVector3_t * pos);
 
 /* Fixed-wing launch controller */
 void resetFixedWingLaunchController(timeUs_t currentTimeUs);
+// bool isFixedWingLaunchFinishedThrottleLow(void);    // CR6
 void enableFixedWingLaunchController(timeUs_t currentTimeUs);
 void abortFixedWingLaunch(void);
 void applyFixedWingLaunchController(timeUs_t currentTimeUs);

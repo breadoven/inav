@@ -214,7 +214,11 @@ static void crsfFrameGps(sbuf_t *dst)
     crsfSerialize32(dst, gpsSol.llh.lon);
     crsfSerialize16(dst, (gpsSol.groundSpeed * 36 + 50) / 100); // gpsSol.groundSpeed is in cm/s
     crsfSerialize16(dst, DECIDEGREES_TO_CENTIDEGREES(gpsSol.groundCourse)); // gpsSol.groundCourse is 0.1 degrees, need 0.01 deg
-    const uint16_t altitude = (getEstimatedActualPosition(Z) / 100) + 1000;
+     // CR63
+    // const uint16_t altitude = (getEstimatedActualPosition(Z) / 100) + 1000;
+    // const uint16_t altitude = 1000 + (STATE(GPS_FIX) ? gpsSol.llh.alt / 100 : 0);
+    const uint16_t altitude = 1000 + gpsSol.llh.alt / 100;
+    // CR63
     crsfSerialize16(dst, altitude);
     crsfSerialize8(dst, gpsSol.numSat);
 }
@@ -370,13 +374,17 @@ static void crsfFrameFlightMode(sbuf_t *dst)
             flightMode = "HOR";
         } else if (FLIGHT_MODE(ANGLEHOLD_MODE)) {
             flightMode = "ANGH";
+#ifdef USE_FW_AUTOLAND
+        } else if (FLIGHT_MODE(NAV_FW_AUTOLAND)) {
+            flightMode = "LAND";
+#endif
         }
 #ifdef USE_GPS
     } else if (feature(FEATURE_GPS) && navConfig()->general.flags.extra_arming_safety && (!STATE(GPS_FIX) || !STATE(GPS_FIX_HOME))) {
         flightMode = "WAIT"; // Waiting for GPS lock
 #endif
     } else if (isArmingDisabled()) {
-        flightMode = "!ERR";
+        flightMode = "DARM";    // CR63
     }
 
     crsfSerializeData(dst, (const uint8_t*)flightMode, strlen(flightMode));
@@ -622,7 +630,7 @@ int getCrsfFrame(uint8_t *frame, crsfFrameType_e frameType)
         crsfFrameBaroVarioSensor(sbuf);
         break;
     }
-    
+
     const int frameSize = crsfFinalizeBuf(sbuf, frame);
     return frameSize;
 }

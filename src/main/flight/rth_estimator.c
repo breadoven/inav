@@ -145,7 +145,6 @@ static float estimateRTHEnergyAfterInitialClimb(float distanceToHome, float spee
 
 // returns Wh
 static float calculateRemainingEnergyBeforeRTH(bool takeWindIntoAccount) {
-
     const float RTH_initial_altitude_change = MAX(0, (getFinalRTHAltitude() - getEstimatedActualPosition(Z)) / 100);
 
     float RTH_heading; // degrees
@@ -219,7 +218,6 @@ float calculateRemainingDistanceBeforeRTH(bool takeWindIntoAccount) {
         return -1;
     }
 #endif
-
     // check requirements
     const bool areBatterySettingsOK = feature(FEATURE_VBAT) && feature(FEATURE_CURRENT_METER) && batteryWasFullWhenPluggedIn();
     const bool areRTHEstimatorSettingsOK = batteryMetersConfig()->cruise_power > 0 && currentBatteryProfile->capacity.unit == BAT_CAPACITY_UNIT_MWH &&currentBatteryProfile->capacity.value > 0 && navConfig()->fw.cruise_speed > 0;

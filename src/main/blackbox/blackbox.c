@@ -474,7 +474,7 @@ typedef struct blackboxMainState_s {
     int32_t mcSurfacePID[3];
     int32_t mcSurfacePIDOutput;
 
-    int32_t fwAltPID[3];
+    int32_t fwAltPID[3];  // CR97
     int32_t fwAltPIDOutput;
     int32_t fwPosPID[3];
     int32_t fwPosPIDOutput;

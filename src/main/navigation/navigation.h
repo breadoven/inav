@@ -120,7 +120,7 @@ void resetFwAutolandApproach(int8_t idx);
 #define NAV_MAX_WAYPOINTS 15
 #endif
 
-#define NAV_ACCEL_CUTOFF_FREQUENCY_HZ 2       // low-pass filter on XY-acceleration target
+#define NAV_ACCEL_CUTOFF_FREQUENCY_HZ   2       // low-pass filter on XY-acceleration target
 
 enum {
     NAV_GPS_ATTI    = 0,                    // Pitch/roll stick controls attitude (pitch/roll lean angles)
@@ -192,18 +192,18 @@ typedef enum {
     RTH_CLIMB_ON_FW_SPIRAL,
 } navRTHClimbFirst_e;
 
-typedef enum {  // keep aligned with fixedWingLaunchState_t
-    FW_LAUNCH_DETECTED = 4,
-    FW_LAUNCH_ABORTED = 9,
-    FW_LAUNCH_FLYING = 10,
-} navFwLaunchStatus_e;
-
 typedef enum {
     WP_PLAN_WAIT,
     WP_PLAN_SAVE,
     WP_PLAN_OK,
     WP_PLAN_FULL,
 } wpMissionPlannerStatus_e;
+
+typedef enum {  // keep aligned with fixedWingLaunchState_t
+    FW_LAUNCH_DETECTED = 4,
+    FW_LAUNCH_ABORTED = 10,
+    FW_LAUNCH_FLYING = 11,
+} navFwLaunchStatus_e;
 
 typedef enum {
     WP_MISSION_START,
@@ -265,7 +265,7 @@ typedef struct positionEstimationConfig_s {
 
 #ifdef USE_GPS_FIX_ESTIMATION
     uint8_t allow_gps_fix_estimation;
-#endif    
+#endif
 } positionEstimationConfig_t;
 
 PG_DECLARE(positionEstimationConfig_t, positionEstimationConfig);
@@ -351,6 +351,7 @@ typedef struct navConfig_s {
 
     struct {
         uint8_t  max_bank_angle;             // Fixed wing max banking angle (deg)
+        uint16_t max_auto_climb_rate;        // max vertical speed limitation cm/sec  // CR97A
         uint16_t max_manual_climb_rate;      // manual velocity control max vertical speed
         uint8_t  max_climb_angle;            // Fixed wing max banking angle (deg)
         uint8_t  max_dive_angle;             // Fixed wing max banking angle (deg)
@@ -369,11 +370,14 @@ typedef struct navConfig_s {
         uint16_t launch_idle_motor_timer;    // Time to wait before motor starts at_idle throttle (ms)
         uint16_t launch_motor_spinup_time;   // Time to speed-up motors from idle to launch_throttle (ESC desync prevention)
         uint16_t launch_end_time;            // Time to make the transition from launch angle to leveled and throttle transition from launch throttle to the stick position
-        uint16_t launch_min_time;	         // Minimum time in launch mode to prevent possible bump of the sticks from leaving launch mode early
+        uint16_t launch_min_time;            // Minimum time in launch mode to prevent possible bump of the sticks from leaving launch mode early
         uint16_t launch_timeout;             // Launch timeout to disable launch mode and swith to normal flight (ms)
         uint16_t launch_max_altitude;        // cm, altitude where to consider launch ended
         uint8_t  launch_climb_angle;         // Target climb angle for launch (deg)
         uint8_t  launch_max_angle;           // Max tilt angle (pitch/roll combined) to consider launch successful. Set to 180 to disable completely [deg]
+        // CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+        bool     launch_allow_throttle_low;  // Allow launch with throttle low
+        // xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
         bool     launch_manual_throttle;     // Allows launch with manual throttle control
         uint8_t  launch_land_abort_deadband;      // roll/pitch stick movement deadband for launch abort
         uint8_t  cruise_yaw_rate;            // Max yaw rate (dps) when CRUISE MODE is enabled
@@ -654,6 +658,9 @@ emergLandState_e getStateOfForcedEmergLanding(void);
 
 /* Getter functions which return data about the state of the navigation system */
 bool navigationInAutomaticThrottleMode(void);
+// CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+bool launchAllowedWithThrottleLow(void);
+// CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 bool navigationIsControllingThrottle(void);
 bool isFixedWingAutoThrottleManuallyIncreased(void);
 bool navigationIsFlyingAutonomousMode(void);
@@ -668,6 +675,7 @@ bool isWaypointMissionRTHActive(void);
 bool rthClimbStageActiveAndComplete(void);
 
 bool isNavLaunchEnabled(void);
+bool isFixedWingLaunchFinishedThrottleLow(void);    // CR6
 uint8_t fixedWingLaunchStatus(void);
 const char * fixedWingLaunchStateMessage(void);
 
@@ -700,9 +708,9 @@ uint8_t getActiveWpNumber(void);
  * are in the [0, 360 * 100) interval.
  */
 int32_t navigationGetHomeHeading(void);
+uint8_t getActiveWpNumber(void);   // CR112
 
 #ifdef USE_FW_AUTOLAND
-bool isFwLandInProgess(void);
 bool canFwLandCanceld(void);
 #endif
 

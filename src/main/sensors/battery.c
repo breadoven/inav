@@ -284,7 +284,7 @@ static void updateBatteryVoltage(timeUs_t timeDelta, bool justConnected)
             }
             break;
 #endif
-        
+
 #if defined(USE_FAKE_BATT_SENSOR)
     case VOLTAGE_SENSOR_FAKE:
         vbat = fakeBattSensorGetVBat();

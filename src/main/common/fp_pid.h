@@ -70,7 +70,7 @@ float navPidApply3(
     const float dt,
     const float outMin,
     const float outMax,
-    const pidControllerFlags_e pidFlags,
+    pidControllerFlags_e pidFlags,  // CR99
     const float gainScaler,
     const float dTermScaler
 );

@@ -162,6 +162,56 @@ static timeUs_t getGPSDeltaTimeFilter(timeUs_t dTus)
     return dTus;                                                 // Filter failed. Set GPS Hz by measurement
 }
 
+#if defined(NAV_GPS_GLITCH_DETECTION)
+static bool detectGPSGlitch(timeUs_t currentTimeUs)
+{
+    static timeUs_t previousTime = 0;
+    static fpVector3_t lastKnownGoodPosition;
+    static fpVector3_t lastKnownGoodVelocity;
+
+    bool isGlitching = false;
+
+#ifdef USE_GPS_FIX_ESTIMATION
+    if (STATE(GPS_ESTIMATED_FIX)) {
+        //disable sanity checks in GPS estimation mode
+        //when estimated GPS fix is replaced with real fix, coordinates may jump
+        previousTime = 0;
+        return true;
+    }
+#endif
+
+    if (previousTime == 0) {
+        isGlitching = false;
+    }
+    else {
+        fpVector3_t predictedGpsPosition;
+        float gpsDistance;
+        float dT = US2S(currentTimeUs - previousTime);
+
+        /* We predict new position based on previous GPS velocity and position */
+        predictedGpsPosition.x = lastKnownGoodPosition.x + lastKnownGoodVelocity.x * dT;
+        predictedGpsPosition.y = lastKnownGoodPosition.y + lastKnownGoodVelocity.y * dT;
+
+        /* New pos is within predefined radius of predicted pos, radius is expanded exponentially */
+        gpsDistance = calc_length_pythagorean_2D(predictedGpsPosition.x - lastKnownGoodPosition.x, predictedGpsPosition.y - lastKnownGoodPosition.y);
+        if (gpsDistance <= (INAV_GPS_GLITCH_RADIUS + 0.5f * INAV_GPS_GLITCH_ACCEL * dT * dT)) {
+            isGlitching = false;
+        }
+        else {
+            isGlitching = true;
+        }
+    }
+
+    if (!isGlitching) {
+        previousTime = currentTimeUs;
+        lastKnownGoodPosition = posEstimator.gps.pos;
+        lastKnownGoodVelocity = posEstimator.gps.vel;
+    }
+
+    return isGlitching;
+}
+#endif
+
 /**
  * Update GPS topic
  *  Function is called on each GPS update
@@ -181,12 +231,12 @@ void onNewGPSData(void)
     newLLH.lon = gpsSol.llh.lon;
     newLLH.alt = gpsSol.llh.alt;
 
-    if (sensors(SENSOR_GPS) 
+    if (sensors(SENSOR_GPS)
 #ifdef USE_GPS_FIX_ESTIMATION
             || STATE(GPS_ESTIMATED_FIX)
 #endif
         ) {
-        if (!(STATE(GPS_FIX) 
+        if (!(STATE(GPS_FIX)
 #ifdef USE_GPS_FIX_ESTIMATION
                 || STATE(GPS_ESTIMATED_FIX)
 #endif
@@ -244,6 +294,19 @@ void onNewGPSData(void)
                 else {
                     posEstimator.gps.vel.z = (posEstimator.gps.vel.z + (gpsSol.llh.alt - previousAlt) / dT) / 2.0f;
                 }
+
+#if defined(NAV_GPS_GLITCH_DETECTION)
+                /* GPS glitch protection. We have local coordinates and local velocity for current GPS update. Check if they are sane */
+                if (detectGPSGlitch(currentTimeUs)) {
+                    posEstimator.gps.glitchRecovery = false;
+                    posEstimator.gps.glitchDetected = true;
+                }
+                else {
+                    /* Store previous glitch flag in glitchRecovery to indicate a valid reading after a glitch */
+                    posEstimator.gps.glitchRecovery = posEstimator.gps.glitchDetected;
+                    posEstimator.gps.glitchDetected = false;
+                }
+#endif
 
                 /* FIXME: use HDOP/VDOP */
                 if (gpsSol.flags.validEPE) {
@@ -492,7 +555,7 @@ static uint32_t calculateCurrentValidityFlags(timeUs_t currentTimeUs)
             newFlags |= EST_GPS_XY_VALID;
         }
     }
-
+    // !IS_RC_MODE_ACTIVE(BOXBEEPERON) CR97 to disable Baro, only use GPS alt
     if (sensors(SENSOR_BARO) && ((currentTimeUs - posEstimator.baro.lastUpdateTime) <= MS2US(INAV_BARO_TIMEOUT_MS))) {
         newFlags |= EST_BARO_VALID;
     }
@@ -544,6 +607,10 @@ static void estimationPredict(estimationContext_t * ctx)
 
 static bool estimationCalculateCorrection_Z(estimationContext_t * ctx)
 {
+    // DEBUG_SET(DEBUG_ALWAYS, 2, posEstimator.est.pos.z);       // Position estimate  CR97
+    // DEBUG_SET(DEBUG_ALWAYS, 3, posEstimator.baro.alt);        // Baro altitude
+    // DEBUG_SET(DEBUG_ALWAYS, 4, posEstimator.gps.pos.z);       // GPS altitude
+
     DEBUG_SET(DEBUG_ALTITUDE, 0, posEstimator.est.pos.z);       // Position estimate
     DEBUG_SET(DEBUG_ALTITUDE, 2, posEstimator.baro.alt);        // Baro altitude
     DEBUG_SET(DEBUG_ALTITUDE, 4, posEstimator.gps.pos.z);       // GPS altitude
@@ -554,7 +621,7 @@ static bool estimationCalculateCorrection_Z(estimationContext_t * ctx)
     DEBUG_SET(DEBUG_ALTITUDE, 7, accGetClipCount());            // Clip count
 
     bool correctOK = false;
-    
+
     //ignore baro if difference is too big, baro is probably wrong
     const float gpsBaroResidual = ctx->newFlags & EST_GPS_Z_VALID ? fabsf(posEstimator.gps.pos.z - posEstimator.baro.alt) : 0.0f;
     //fade out the baro to prevent sudden jump
@@ -723,14 +790,11 @@ static void updateEstimatedTopic(timeUs_t currentTimeUs)
     estimationPredict(&ctx);
 
     /* Correction stage: Z */
-    const bool estZCorrectOk =
-        estimationCalculateCorrection_Z(&ctx);
+    const bool estZCorrectOk = estimationCalculateCorrection_Z(&ctx);
 
     /* Correction stage: XY: GPS, FLOW */
     // FIXME: Handle transition from FLOW to GPS and back - seamlessly fly indoor/outdoor
-    const bool estXYCorrectOk =
-        estimationCalculateCorrection_XY_GPS(&ctx) ||
-        estimationCalculateCorrection_XY_FLOW(&ctx);
+    const bool estXYCorrectOk = estimationCalculateCorrection_XY_GPS(&ctx) || estimationCalculateCorrection_XY_FLOW(&ctx);
 
     // If we can't apply correction or accuracy is off the charts - decay velocity to zero
     if (!estXYCorrectOk || ctx.newEPH > positionEstimationConfig()->max_eph_epv) {
@@ -831,6 +895,13 @@ static void publishEstimatedTopic(timeUs_t currentTimeUs)
                                               (MIN(navEPV, 1000) & 0x3FF));                   // Horizontal and vertical uncertainties (max value = 1000, fit into 20bits)
     }
 }
+
+#if defined(NAV_GPS_GLITCH_DETECTION)
+bool isGPSGlitchDetected(void)
+{
+    return posEstimator.gps.glitchDetected;
+}
+#endif
 
 float getEstimatedAglPosition(void) {
     return posEstimator.est.aglAlt;

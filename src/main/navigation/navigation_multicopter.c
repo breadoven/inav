@@ -62,29 +62,45 @@ static int16_t altHoldThrottleRCZero = 1500;
 static pt1Filter_t altholdThrottleFilterState;
 static bool prepareForTakeoffOnReset = false;
 static sqrt_controller_t alt_hold_sqrt_controller;
-
+//CR97
+float getSqrtControllerVelocity(float targetAltitude, timeDelta_t deltaMicros)
+{
+    return sqrtControllerApply(
+            &alt_hold_sqrt_controller,
+            targetAltitude,
+            navGetCurrentActualPositionAndVelocity()->pos.z,
+            US2S(deltaMicros)
+    );
+}
+// CR97
 // Position to velocity controller for Z axis
 static void updateAltitudeVelocityController_MC(timeDelta_t deltaMicros)
-{
-    float targetVel = sqrtControllerApply(
-        &alt_hold_sqrt_controller,
-        posControl.desiredState.pos.z,
-        navGetCurrentActualPositionAndVelocity()->pos.z,
-        US2S(deltaMicros)
-    );
+{// CR97
+    float targetVel = posControl.desiredState.climbRateDemand;
 
-    // hard limit desired target velocity to max_climb_rate
-    float vel_max_z = 0.0f;
-
-    if (posControl.flags.isAdjustingAltitude) {
-        vel_max_z = navConfig()->mc.max_manual_climb_rate;
-    } else {
-        vel_max_z = navConfig()->mc.max_auto_climb_rate;
+    if (posControl.flags.rocToAltMode != ROC_TO_ALT_CONSTANT) {
+        targetVel = getDesiredClimbRate(posControl.desiredState.pos.z, deltaMicros);
     }
 
-    targetVel = constrainf(targetVel, -vel_max_z, vel_max_z);
+    // float targetVel = sqrtControllerApply(
+        // &alt_hold_sqrt_controller,
+        // posControl.desiredState.pos.z,
+        // navGetCurrentActualPositionAndVelocity()->pos.z,
+        // US2S(deltaMicros)
+    // );
 
-    posControl.pids.pos[Z].output_constrained = targetVel;
+    // // hard limit desired target velocity to max_climb_rate
+    // float vel_max_z = 0.0f;
+
+    // if (posControl.flags.isAdjustingAltitude) {
+        // vel_max_z = navConfig()->general.max_manual_climb_rate;
+    // } else {
+        // vel_max_z = navConfig()->general.max_auto_climb_rate;
+    // }
+
+    // targetVel = constrainf(targetVel, -vel_max_z, vel_max_z);
+    // CR97
+    posControl.pids.pos[Z].output_constrained = targetVel;  // only used for Blackbox and OSD info  CR97
 
     // Limit max up/down acceleration target
     const float smallVelChange = US2S(deltaMicros) * (GRAVITY_CMSS * 0.1f);
@@ -106,7 +122,8 @@ static void updateAltitudeVelocityController_MC(timeDelta_t deltaMicros)
         // Small - desired acceleration is less than 0.1G. We should be safe setting velocity target directly - any platform should be able to satisfy this
         posControl.desiredState.vel.z = targetVel;
     }
-
+DEBUG_SET(DEBUG_ALWAYS, 0, posControl.desiredState.vel.z);
+DEBUG_SET(DEBUG_ALWAYS, 1, posControl.desiredState.pos.z);
     navDesiredVelocity[Z] = constrain(lrintf(posControl.desiredState.vel.z), -32678, 32767);
 }
 
@@ -132,8 +149,9 @@ bool adjustMulticopterAltitudeFromRCInput(void)
         // In terrain follow mode we apply different logic for terrain control
         if (posControl.flags.estAglStatus == EST_TRUSTED && altTarget > 10.0f) {
             // We have solid terrain sensor signal - directly map throttle to altitude
-            updateClimbRateToAltitudeController(0, 0, ROC_TO_ALT_RESET);
-            posControl.desiredState.pos.z = altTarget;
+            // updateClimbRateToAltitudeController(0, 0, ROC_TO_ALT_RESET);   // CR97
+            // posControl.desiredState.pos.z = altTarget;
+            updateClimbRateToAltitudeController(0, altTarget, ROC_TO_ALT_TARGET);    // CR97
         }
         else {
             updateClimbRateToAltitudeController(-50.0f, 0, ROC_TO_ALT_CONSTANT);
@@ -165,7 +183,7 @@ bool adjustMulticopterAltitudeFromRCInput(void)
         else {
             // Adjusting finished - reset desired position to stay exactly where pilot released the stick
             if (posControl.flags.isAdjustingAltitude) {
-                updateClimbRateToAltitudeController(0, 0, ROC_TO_ALT_RESET);
+                updateClimbRateToAltitudeController(0, 0, ROC_TO_ALT_CURRENT);   // CR97
             }
 
             return false;
@@ -218,12 +236,13 @@ void resetMulticopterAltitudeController(void)
     pt1FilterReset(&posControl.pids.vel[Z].dterm_filter_state, 0.0f);
 
     if (FLIGHT_MODE(FAILSAFE_MODE) || FLIGHT_MODE(NAV_RTH_MODE) || FLIGHT_MODE(NAV_WP_MODE) || navigationIsExecutingAnEmergencyLanding()) {
-        nav_speed_up = navConfig()->mc.max_auto_climb_rate;
-        nav_accel_z = navConfig()->mc.max_auto_climb_rate;
+        const float maxSpeed = getActiveSpeed();
+        nav_speed_up = maxSpeed;
+        nav_accel_z = maxSpeed;
         nav_speed_down = navConfig()->mc.max_auto_climb_rate;
     } else {
-        nav_speed_up = navConfig()->mc.max_manual_climb_rate;
-        nav_accel_z = navConfig()->mc.max_manual_climb_rate;
+        nav_speed_up = navConfig()->general.max_manual_speed;
+        nav_accel_z = navConfig()->general.max_manual_speed;
         nav_speed_down = navConfig()->mc.max_manual_climb_rate;
     }
 
@@ -251,7 +270,7 @@ static void applyMulticopterAltitudeController(timeUs_t currentTimeUs)
             if (prepareForTakeoffOnReset) {
                 const navEstimatedPosVel_t *posToUse = navGetCurrentActualPositionAndVelocity();
 
-                posControl.desiredState.vel.z = -navConfig()->mc.max_manual_climb_rate;
+                posControl.desiredState.vel.z = -navConfig()->mc.max_manual_climb_rate;     // CR97
                 posControl.desiredState.pos.z = posToUse->pos.z - (navConfig()->mc.max_manual_climb_rate / posControl.pids.pos[Z].param.kP);
                 posControl.pids.vel[Z].integrator = -500.0f;
                 pt1FilterReset(&altholdThrottleFilterState, -500.0f);
@@ -551,20 +570,29 @@ static float computeNormalizedVelocity(const float value, const float maxValue)
 }
 
 static float computeVelocityScale(
-    const float value,
-    const float maxValue,
+    float value,
+    // const float maxValue,   // CR47
     const float attenuationFactor,
-    const float attenuationStart,
-    const float attenuationEnd
+    const float attenuationStartVel,    // CR47
+    const float attenuationEndVel   // CR47
 )
 {
-    const float normalized = computeNormalizedVelocity(value, maxValue);
+    // CR47
+    value -= attenuationStartVel;
+    if (value <= 0.0f) {
+        return 0.0f;
+    }
+    const float normalized = computeNormalizedVelocity(value, attenuationEndVel);
+    float scale = scaleRangef(normalized, 0.0f, 1.0f, 0.0f, attenuationFactor);
+    return constrainf(scale, 0.0f, attenuationFactor);
 
-    float scale = scaleRangef(normalized, attenuationStart, attenuationEnd, 0, attenuationFactor);
-    return constrainf(scale, 0, attenuationFactor);
+    // const float normalized = computeNormalizedVelocity(value, maxValue);
+    // float scale = scaleRangef(normalized, attenuationStart, attenuationEnd, 0, attenuationFactor);
+    // return constrainf(scale, 0, attenuationFactor);
+    // CR47
 }
 
-static void updatePositionAccelController_MC(timeDelta_t deltaMicros, float maxAccelLimit, const float maxSpeed)
+static void updatePositionAccelController_MC(timeDelta_t deltaMicros, float maxAccelLimit)  // , const float maxSpeed)   CR47
 {
     const float measurementX = navGetCurrentActualPositionAndVelocity()->vel.x;
     const float measurementY = navGetCurrentActualPositionAndVelocity()->vel.y;
@@ -582,8 +610,8 @@ static void updatePositionAccelController_MC(timeDelta_t deltaMicros, float maxA
     const float velErrorMagnitude = calc_length_pythagorean_2D(velErrorX, velErrorY);
 
     if (velErrorMagnitude > 0.1f) {
-        accelLimitX = maxAccelLimit / velErrorMagnitude * fabsf(velErrorX);
-        accelLimitY = maxAccelLimit / velErrorMagnitude * fabsf(velErrorY);
+        accelLimitX = maxAccelLimit * (fabsf(velErrorX) / velErrorMagnitude);
+        accelLimitY = maxAccelLimit * (fabsf(velErrorY) / velErrorMagnitude);
     } else {
         accelLimitX = maxAccelLimit / 1.414213f;
         accelLimitY = accelLimitX;
@@ -615,14 +643,15 @@ static void updatePositionAccelController_MC(timeDelta_t deltaMicros, float maxA
      */
     const float setpointScale = computeVelocityScale(
         setpointXY,
-        maxSpeed,
+        // maxSpeed,    // CR47
         multicopterPosXyCoefficients.dTermAttenuation,
         multicopterPosXyCoefficients.dTermAttenuationStart,
         multicopterPosXyCoefficients.dTermAttenuationEnd
     );
+
     const float measurementScale = computeVelocityScale(
         posControl.actualState.velXY,
-        maxSpeed,
+        // maxSpeed,    // CR47
         multicopterPosXyCoefficients.dTermAttenuation,
         multicopterPosXyCoefficients.dTermAttenuationStart,
         multicopterPosXyCoefficients.dTermAttenuationEnd
@@ -630,6 +659,7 @@ static void updatePositionAccelController_MC(timeDelta_t deltaMicros, float maxA
 
     //Choose smaller attenuation factor and convert from attenuation to scale
     const float dtermScale = 1.0f - MIN(setpointScale, measurementScale);
+    DEBUG_SET(DEBUG_ALWAYS, 4, dtermScale * 100);
 
     // Apply PID with output limiting and I-term anti-windup
     // Pre-calculated accelLimit and the logic of navPidApply2 function guarantee that our newAccel won't exceed maxAccelLimit
@@ -656,7 +686,7 @@ static void updatePositionAccelController_MC(timeDelta_t deltaMicros, float maxA
         1.0f,   // Total gain scale
         dtermScale    // Additional dTerm scale
     );
-
+// DEBUG_SET(DEBUG_ALWAYS, 3, newAccelX * 1000);
     int32_t maxBankAngle = DEGREES_TO_DECIDEGREES(navConfig()->mc.max_bank_angle);
 
 #ifdef USE_MR_BRAKING_MODE
@@ -683,7 +713,6 @@ static void updatePositionAccelController_MC(timeDelta_t deltaMicros, float maxA
         maxBankAngle = DEGREES_TO_DECIDEGREES(navConfig()->mc.braking_bank_angle);
     }
 #endif
-
     // Save last acceleration target
     lastAccelTargetX = newAccelX;
     lastAccelTargetY = newAccelY;
@@ -698,6 +727,9 @@ static void updatePositionAccelController_MC(timeDelta_t deltaMicros, float maxA
 
     posControl.rcAdjustment[ROLL] = constrain(RADIANS_TO_DECIDEGREES(desiredRoll), -maxBankAngle, maxBankAngle);
     posControl.rcAdjustment[PITCH] = constrain(RADIANS_TO_DECIDEGREES(desiredPitch), -maxBankAngle, maxBankAngle);
+
+    DEBUG_SET(DEBUG_ALWAYS, 2, accelForward);
+    DEBUG_SET(DEBUG_ALWAYS, 3, posControl.rcAdjustment[PITCH]);
 }
 
 static void applyMulticopterPositionController(timeUs_t currentTimeUs)
@@ -734,7 +766,7 @@ static void applyMulticopterPositionController(timeUs_t currentTimeUs)
             // Get max speed for current NAV mode
             float maxSpeed = getActiveSpeed();
             updatePositionVelocityController_MC(maxSpeed);
-            updatePositionAccelController_MC(deltaMicrosPositionUpdate, NAV_ACCELERATION_XY_MAX, maxSpeed);
+            updatePositionAccelController_MC(deltaMicrosPositionUpdate, NAV_ACCELERATION_XY_MAX);   // , maxSpeed);  CR47
 
             navDesiredVelocity[X] = constrain(lrintf(posControl.desiredState.vel.x), -32678, 32767);
             navDesiredVelocity[Y] = constrain(lrintf(posControl.desiredState.vel.y), -32678, 32767);
@@ -760,9 +792,9 @@ bool isMulticopterFlying(void)
 }
 
 /*-----------------------------------------------------------
- * Multicopter land detector
+ * Multicopter landing detector
  *-----------------------------------------------------------*/
-  #if defined(USE_BARO)
+#if defined(USE_BARO)
 float updateBaroAltitudeRate(float newBaroAltRate, bool updateValue)
 {
     static float baroAltRate;
@@ -812,7 +844,6 @@ bool isMulticopterLandingDetected(void)
         return true;    // Landing flagged immediately if landing bump detected
     }
 #endif
-
     bool throttleIsBelowMidHover = rcCommand[THROTTLE] < (0.5 * (currentBatteryProfile->nav.mc.hover_throttle + getThrottleIdleValue()));
 
     /* Basic condition to start looking for landing
@@ -827,7 +858,7 @@ bool isMulticopterLandingDetected(void)
 
     if (!startCondition || posControl.flags.resetLandingDetector) {
         landingDetectorStartedAt = 0;
-        return posControl.flags.resetLandingDetector = false;
+        return  posControl.flags.resetLandingDetector = false;
     }
 
     const float sensitivity = navConfig()->general.land_detect_sensitivity / 5.0f;
@@ -837,8 +868,8 @@ bool isMulticopterLandingDetected(void)
                         posControl.actualState.velXY < (MC_LAND_CHECK_VEL_XY_MOVING * sensitivity);
     // check gyro rates are low (degs/s)
     bool gyroCondition = averageAbsGyroRates() < (4.0f * sensitivity);
-    DEBUG_SET(DEBUG_LANDING, 2, velCondition);
-    DEBUG_SET(DEBUG_LANDING, 3, gyroCondition);
+    // DEBUG_SET(DEBUG_LANDING, 2, velCondition);
+    // DEBUG_SET(DEBUG_LANDING, 3, gyroCondition);
 
     bool possibleLandingDetected = false;
 
@@ -869,6 +900,7 @@ bool isMulticopterLandingDetected(void)
 
         possibleLandingDetected = isAtMinimalThrust && velCondition;
 
+        DEBUG_SET(DEBUG_LANDING, 4, 3);
         DEBUG_SET(DEBUG_LANDING, 6, rcCommandAdjustedThrottle);
         DEBUG_SET(DEBUG_LANDING, 7, landingThrSum / landingThrSamples - MC_LAND_DESCEND_THROTTLE);
     } else {    // non autonomous and emergency landing
@@ -920,6 +952,7 @@ static void applyMulticopterEmergencyLandingController(timeUs_t currentTimeUs)
             rcCommand[THROTTLE] = getThrottleIdleValue();
             return;
         }
+
         rcCommand[THROTTLE] = setDesiredThrottle(currentBatteryProfile->failsafe_throttle, true);
         return;
     }
@@ -932,7 +965,8 @@ static void applyMulticopterEmergencyLandingController(timeUs_t currentTimeUs)
         // Check if last correction was not too long ago
         if (deltaMicrosPositionUpdate < MAX_POSITION_UPDATE_INTERVAL_US) {
             // target min descent rate 5m above takeoff altitude
-            updateClimbRateToAltitudeController(-navConfig()->general.emerg_descent_rate, 500.0f, ROC_TO_ALT_TARGET);
+            // updateClimbRateToAltitudeController(-navConfig()->general.emerg_descent_rate, 500.0f, ROC_TO_ALT_TARGET);
+            updateClimbRateToAltitudeController(0, 500.0f, ROC_TO_ALT_TARGET);   // CR97
             updateAltitudeVelocityController_MC(deltaMicrosPositionUpdate);
             updateAltitudeThrottleController_MC(deltaMicrosPositionUpdate);
         }

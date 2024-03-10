@@ -198,6 +198,8 @@ static const OSD_Entry cmsx_menuPidAltMagEntries[] =
 {
     OSD_LABEL_DATA_ENTRY("-- ALT&MAG --", profileIndexString),
 
+    OSD_SETTING_ENTRY("FW ALT RESPONSE", SETTING_NAV_FW_ALT_CONTROL_RESPONSE), // CR97A
+
     OTHER_PIDFF_ENTRY("ALT P", &cmsx_pidPosZ.P),
     OTHER_PIDFF_ENTRY("ALT I", &cmsx_pidPosZ.I),
     OTHER_PIDFF_ENTRY("ALT D", &cmsx_pidPosZ.D),
@@ -256,7 +258,6 @@ static const OSD_Entry cmsx_menuPidGpsnavEntries[] =
     OTHER_PIDFF_ENTRY("VEL I", &cmsx_pidVelXY.I),
     OTHER_PIDFF_ENTRY("VEL D", &cmsx_pidVelXY.D),
     OTHER_PIDFF_ENTRY("VEL FF", &cmsx_pidVelXY.FF),
-
     OSD_BACK_AND_END_ENTRY,
 };
 

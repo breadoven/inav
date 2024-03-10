@@ -170,7 +170,7 @@ static EXTENDED_FASTRAM bool angleHoldIsLevel = false;
 static EXTENDED_FASTRAM float fixedWingLevelTrim;
 static EXTENDED_FASTRAM pidController_t fixedWingLevelTrimController;
 
-PG_REGISTER_PROFILE_WITH_RESET_TEMPLATE(pidProfile_t, pidProfile, PG_PID_PROFILE, 6);
+PG_REGISTER_PROFILE_WITH_RESET_TEMPLATE(pidProfile_t, pidProfile, PG_PID_PROFILE, 6);  // CR97
 
 PG_RESET_TEMPLATE(pidProfile_t, pidProfile,
         .bank_mc = {
@@ -231,9 +231,9 @@ PG_RESET_TEMPLATE(pidProfile_t, pidProfile,
                 },
                 [PID_HEADING] = { SETTING_NAV_FW_HEADING_P_DEFAULT, 0, 0, 0 },
                 [PID_POS_Z] = {
-                    .P = SETTING_NAV_FW_POS_Z_P_DEFAULT,      // FW_POS_Z_P * 10
-                    .I = SETTING_NAV_FW_POS_Z_I_DEFAULT,      // FW_POS_Z_I * 10
-                    .D = SETTING_NAV_FW_POS_Z_D_DEFAULT,      // FW_POS_Z_D * 10
+                    .P = SETTING_NAV_FW_POS_Z_P_DEFAULT,      // FW_POS_Z_P * 100  // CR97 all changed from 10 to 100
+                    .I = SETTING_NAV_FW_POS_Z_I_DEFAULT,      // FW_POS_Z_I * 100
+                    .D = SETTING_NAV_FW_POS_Z_D_DEFAULT,      // FW_POS_Z_D * 100
                     .FF = 0,
                 },
                 [PID_POS_XY] = {
@@ -300,6 +300,8 @@ PG_RESET_TEMPLATE(pidProfile_t, pidProfile,
 
         .fixedWingLevelTrim = SETTING_FW_LEVEL_PITCH_TRIM_DEFAULT,
         .fixedWingLevelTrimGain = SETTING_FW_LEVEL_PITCH_GAIN_DEFAULT,
+
+        .fwAltControlResponseFactor = SETTING_NAV_FW_ALT_CONTROL_RESPONSE_DEFAULT,   // CR97
 
 #ifdef USE_SMITH_PREDICTOR
         .smithPredictorStrength = SETTING_SMITH_PREDICTOR_STRENGTH_DEFAULT,
@@ -594,7 +596,7 @@ static float computePidLevelTarget(flight_dynamics_index_t axis) {
 
     // Automatically pitch down if the throttle is manually controlled and reduced bellow cruise throttle
 #ifdef USE_FW_AUTOLAND
-    if ((axis == FD_PITCH) && STATE(AIRPLANE) && FLIGHT_MODE(ANGLE_MODE) && !navigationIsControllingThrottle() && !isFwLandInProgess()) {
+    if ((axis == FD_PITCH) && STATE(AIRPLANE) && FLIGHT_MODE(ANGLE_MODE) && !navigationIsControllingThrottle() && ! FLIGHT_MODE(NAV_FW_AUTOLAND)) {
 #else
     if ((axis == FD_PITCH) && STATE(AIRPLANE) && FLIGHT_MODE(ANGLE_MODE) && !navigationIsControllingThrottle()) {
 #endif
@@ -1057,21 +1059,22 @@ void checkItermLimitingActive(pidState_t *pidState)
 }
 
 void checkItermFreezingActive(pidState_t *pidState, flight_dynamics_index_t axis)
-{
+{// CR ?
+    pidState->itermFreezeActive = false;
     if (usedPidControllerType == PID_TYPE_PIFF && pidProfile()->fixedWingYawItermBankFreeze != 0 && axis == FD_YAW) {
         // Do not allow yaw I-term to grow when bank angle is too large
-        float bankAngle = DECIDEGREES_TO_DEGREES(attitude.values.roll);
-        if (fabsf(bankAngle) > pidProfile()->fixedWingYawItermBankFreeze && !(FLIGHT_MODE(AUTO_TUNE) || FLIGHT_MODE(TURN_ASSISTANT) || navigationRequiresTurnAssistance())){
+        uint8_t bankAngle = ABS(DECIDEGREES_TO_DEGREES(attitude.values.roll));
+        if (bankAngle > pidProfile()->fixedWingYawItermBankFreeze && !(FLIGHT_MODE(AUTO_TUNE) || FLIGHT_MODE(TURN_ASSISTANT) || navigationRequiresTurnAssistance())){
             pidState->itermFreezeActive = true;
-        } else
-        {
-            pidState->itermFreezeActive = false;
-        }
-    } else
-    {
-        pidState->itermFreezeActive = false;
+        } // else
+        // {
+            // pidState->itermFreezeActive = false;
+        // }
+    // } else
+    // {
+        // pidState->itermFreezeActive = false;
     }
-
+    // CR ?
 }
 
 bool isAngleHoldLevel(void)
@@ -1094,6 +1097,11 @@ void updateAngleHold(float *angleTarget, uint8_t axis)
          * angleTarget pitch is corrected back to fixedWingLevelTrim datum on return from function */
 
         static int16_t angleHoldTarget[2];
+
+        DEBUG_SET(DEBUG_ALWAYS, 0, angleHoldTarget[FD_ROLL]);
+        DEBUG_SET(DEBUG_ALWAYS, 2, attitude.raw[FD_ROLL]);
+        DEBUG_SET(DEBUG_ALWAYS, 1, angleHoldTarget[FD_PITCH]);
+        DEBUG_SET(DEBUG_ALWAYS, 3, attitude.raw[FD_PITCH]);
 
         if (restartAngleHoldMode) {      // set target attitude to current attitude on activation
             angleHoldTarget[FD_ROLL] = attitude.raw[FD_ROLL];
@@ -1378,15 +1386,14 @@ void updateFixedWingLevelTrim(timeUs_t currentTimeUs)
     const float dT = US2S(currentTimeUs - previousUpdateTimeUs);
     previousUpdateTimeUs = currentTimeUs;
 
-    /*
-     * Prepare flags for the PID controller
-     */
+    // Prepare flags for the PID controller
     pidControllerFlags_e flags = PID_LIMIT_INTEGRATOR;
 
     // Iterm should freeze when conditions for setting level trim aren't met or time since last expected update too long ago
     if (!isFixedWingLevelTrimActive() || (dT > 5.0f * US2S(TASK_PERIOD_HZ(TASK_AUX_RATE_HZ)))) {
         flags |= PID_FREEZE_INTEGRATOR;
     }
+    DEBUG_SET(DEBUG_AUTOLEVEL, 3, flags);
 
     const float output = navPidApply3(
         &fixedWingLevelTrimController,
@@ -1399,7 +1406,6 @@ void updateFixedWingLevelTrim(timeUs_t currentTimeUs)
         1.0f,
         1.0f
     );
-
     DEBUG_SET(DEBUG_AUTOLEVEL, 4, output);
     fixedWingLevelTrim = pidProfile()->fixedWingLevelTrim + (output * FIXED_WING_LEVEL_TRIM_MULTIPLIER);
 }
