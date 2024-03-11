@@ -56,6 +56,7 @@
 #define USE_GPS_PROTO_MSP
 #define USE_TELEMETRY
 #define USE_TELEMETRY_LTM
+#define USE_GPS_FIX_ESTIMATION
 
 // This is the shortest period in microseconds that the scheduler will allow
 #define SCHEDULER_DELAY_LIMIT           10
@@ -140,8 +141,8 @@
 
 #define USE_POWER_LIMITS
 
-#define NAV_FIXED_WING_LANDING
 #define USE_SAFE_HOME
+#define USE_FW_AUTOLAND
 #define USE_AUTOTUNE_FIXED_WING
 #define USE_LOG
 #define USE_STATS
@@ -182,6 +183,14 @@
 
 #define USE_CMS_FONT_PREVIEW
 
+//ADSB RECEIVER
+#ifdef USE_GPS
+#define USE_ADSB
+#define MAX_ADSB_VEHICLES               5
+#define ADSB_LIMIT_CM                   6400000
+#endif
+
+
 //Designed to free space of F722 and F411 MCUs
 #if (MCU_FLASH_SIZE > 512)
 #define USE_VTX_FFPV
@@ -189,8 +198,8 @@
 #define USE_TELEMETRY_HOTT
 #define USE_HOTT_TEXTMODE
 #define USE_24CHANNELS
-#else
+#define MAX_MIXER_PROFILE_COUNT 2
+#elif !defined(STM32F7)
 #define MAX_MIXER_PROFILE_COUNT 1
 #endif
-
 #define USE_EZ_TUNE

@@ -93,6 +93,7 @@
 #define OSD_MSG_RTH_CLIMB           "ADJUSTING RTH ALTITUDE"
 #define OSD_MSG_RTH_TRACKBACK       "RTH BACK TRACKING"
 #define OSD_MSG_HEADING_HOME        "EN ROUTE TO HOME"
+#define OSD_MSG_RTH_LINEAR_DESCENT  "BEGIN LINEAR DESCENT"
 #define OSD_MSG_WP_FINISHED         "WP END>HOLDING POSITION"
 #define OSD_MSG_WP_LANDED           "WP END>LANDED"
 #define OSD_MSG_PREPARE_NEXT_WP     "PREPARING FOR NEXT WAYPOINT"
@@ -118,6 +119,10 @@
 #define OSD_MSG_UNABLE_ARM          "UNABLE TO ARM"
 #define OSD_MSG_SAVING_SETTNGS      "** SAVING SETTINGS **"
 #define OSD_MSG_SETTINGS_SAVED      "** SETTINGS SAVED **"
+#define OSD_MSG_ANGLEHOLD_ROLL      "(ANGLEHOLD ROLL)"
+#define OSD_MSG_ANGLEHOLD_PITCH     "(ANGLEHOLD PITCH)"
+#define OSD_MSG_ANGLEHOLD_LEVEL     "(ANGLEHOLD LEVEL)"
+#define OSD_MSG_MOVE_STICKS         "MOVE STICKS TO ABORT"
 
 #ifdef USE_DEV_TOOLS
 #define OSD_MSG_GRD_TEST_MODE       "GRD TEST > MOTORS DISABLED"
@@ -276,6 +281,11 @@ typedef enum {
     OSD_MULTI_FUNCTION,
     OSD_ODOMETER,
     OSD_PILOT_LOGO,
+    OSD_CUSTOM_ELEMENT_1,
+    OSD_CUSTOM_ELEMENT_2,
+    OSD_CUSTOM_ELEMENT_3,
+    OSD_ADSB_WARNING,
+    OSD_ADSB_INFO,
     OSD_ITEM_COUNT // MUST BE LAST
 } osd_items_e;
 
@@ -413,7 +423,7 @@ typedef struct osdConfig_s {
 
 #ifdef USE_WIND_ESTIMATOR
     bool            estimations_wind_compensation;      // use wind compensation for estimated remaining flight/distance
-#endif	
+#endif
     uint8_t         coordinate_digits;
     bool            osd_failsafe_switch_layout;
     uint8_t         plus_code_digits;                   // Number of digits to use in OSD_PLUS_CODE
@@ -437,7 +447,7 @@ typedef struct osdConfig_s {
     uint8_t         telemetry;                          // use telemetry on displayed pixel line 0
     uint8_t         esc_rpm_precision;                  // Number of characters used for the RPM numbers.
     uint16_t        system_msg_display_time;            // system message display time for multiple messages (ms)
-    uint8_t         mAh_used_precision;                 // Number of numbers used for mAh drawn. Plently of packs now are > 9999 mAh
+    uint8_t         mAh_precision;                 // Number of numbers used for mAh drawn. Plently of packs now are > 9999 mAh
     uint8_t         ahi_pitch_interval;                 // redraws AHI at set pitch interval (Not pixel OSD)
     char            osd_switch_indicator0_name[OSD_SWITCH_INDICATOR_NAME_LENGTH + 1]; // Name to use for switch indicator 0.
     uint8_t         osd_switch_indicator0_channel;      // RC Channel to use for switch indicator 0.
@@ -451,6 +461,11 @@ typedef struct osdConfig_s {
     bool            use_pilot_logo;                     // If enabled, the pilot logo (last 40 characters of page 2 font) will be used with the INAV logo.
     uint8_t         inav_to_pilot_logo_spacing;         // The space between the INAV and pilot logos, if pilot logo is used. This number may be adjusted so that it fits the odd/even col width.
     uint16_t        arm_screen_display_time;            // Length of time the arm screen is displayed
+    #ifdef USE_ADSB
+    uint16_t adsb_distance_warning;                     // in metres
+    uint16_t adsb_distance_alert;                       // in metres
+    uint16_t adsb_ignore_plane_above_me_limit;          // in metres
+#endif
 } osdConfig_t;
 
 PG_DECLARE(osdConfig_t, osdConfig);

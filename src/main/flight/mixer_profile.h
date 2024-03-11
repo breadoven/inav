@@ -18,6 +18,7 @@ typedef struct mixerConfig_s {
     bool PIDProfileLinking;
     bool automated_switch;
     int16_t switchTransitionTimer;
+    bool tailsitterOrientationOffset;
 } mixerConfig_t;
 typedef struct mixerProfile_s {
     mixerConfig_t mixer_config;
@@ -54,6 +55,7 @@ bool mixerATUpdateState(mixerProfileATRequest_e required_action);
 
 extern mixerConfig_t currentMixerConfig;
 extern int currentMixerProfileIndex;
+extern int nextMixerProfileIndex;
 extern bool isMixerTransitionMixing;
 #define mixerConfig() (&(mixerProfiles(systemConfig()->current_mixer_profile_index)->mixer_config))
 #define mixerConfigMutable() ((mixerConfig_t *) mixerConfig())
