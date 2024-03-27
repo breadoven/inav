@@ -71,6 +71,7 @@
 #include "sensors/gyro.h"
 #include "sensors/sensors.h"
 #include "sensors/pitotmeter.h"
+#include "sensors/diagnostics.h"
 
 #include "telemetry/ltm.h"
 #include "telemetry/telemetry.h"

@@ -68,6 +68,7 @@
 #include "sensors/boardalignment.h"
 #include "sensors/battery.h"
 #include "sensors/gyro.h"
+#include "sensors/diagnostics.h"
 
 #include "programming/global_variables.h"
 #include "sensors/rangefinder.h"
@@ -1696,7 +1697,6 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_LANDING(navigationF
 #ifdef USE_FW_AUTOLAND
     if (STATE(AIRPLANE)) {
         int8_t missionIdx = -1, shIdx = -1, missionFwLandConfigStartIdx = 8, approachSettingIdx = -1;
-
 #ifdef USE_MULTI_MISSION
         missionIdx = posControl.loadedMultiMissionIndex - 1;
 #endif
@@ -2391,7 +2391,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_FW_LANDING_APPROACH(nav
 
     if (isLandingDetected()) {
         posControl.fwLandState.landState = FW_AUTOLAND_STATE_IDLE;
-        disarm(DISARM_LANDING);
+        //disarm(DISARM_LANDING);
         return NAV_FSM_EVENT_SWITCH_TO_IDLE;
     }
 
@@ -2435,14 +2435,14 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_FW_LANDING_GLIDE(naviga
         return NAV_FSM_EVENT_SWITCH_TO_NAV_STATE_FW_LANDING_ABORT;
     }
 
-    if (posControl.flags.estAglStatus >= EST_USABLE && getLandAltitude() <= posControl.fwLandState.landAltAgl + navFwAutolandConfig()->flareAltitude) { // CR116
+    if (getHwRangefinderStatus() == HW_SENSOR_OK && getLandAltitude() <= posControl.fwLandState.landAltAgl + navFwAutolandConfig()->flareAltitude) {
         posControl.fwLandState.landState = FW_AUTOLAND_STATE_FLARE;
         return NAV_FSM_EVENT_SUCCESS;
     }
 
     if (isLandingDetected()) {
         posControl.fwLandState.landState = FW_AUTOLAND_STATE_IDLE;
-        disarm(DISARM_LANDING);
+        //disarm(DISARM_LANDING);
         return NAV_FSM_EVENT_SWITCH_TO_IDLE;
     }
 
@@ -2456,7 +2456,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_FW_LANDING_FLARE(naviga
 
     if (isLandingDetected()) {
         posControl.fwLandState.landState = FW_AUTOLAND_STATE_IDLE;
-        disarm(DISARM_LANDING);
+        //disarm(DISARM_LANDING);
         return NAV_FSM_EVENT_SUCCESS;
     }
     setDesiredPosition(NULL, posControl.cruise.course, NAV_POS_UPDATE_HEADING);
@@ -3074,7 +3074,7 @@ void setHomePosition(const fpVector3_t * pos, int32_t heading, navSetWaypointFla
     updateDesiredRTHAltitude();
 
     //  Reset RTH sanity checker for new home position if RTH active
-    if (FLIGHT_MODE(NAV_RTH_MODE) || FLIGHT_MODE(NAV_FW_AUTOLAND)) {
+    if (FLIGHT_MODE(NAV_RTH_MODE) || FLIGHT_MODE(NAV_FW_AUTOLAND) ) {
         initializeRTHSanityChecker();
     }
 
@@ -4122,8 +4122,9 @@ bool isWaypointNavTrackingActive(void)
     // is set from current position not previous WP. Works for WP Restart intermediate WP as well as first mission WP.
     // (NAV_WP_MODE flag isn't set until WP initialisation is finished, i.e. after calculateAndSetActiveWaypoint called)
 
-    return FLIGHT_MODE(NAV_WP_MODE) || posControl.navState == NAV_STATE_FW_LANDING_APPROACH ||
-           (posControl.flags.rthTrackbackActive && rth_trackback.activePointIndex != rth_trackback.lastSavedIndex);   // CR116
+    return FLIGHT_MODE(NAV_WP_MODE) ||
+           posControl.navState == NAV_STATE_FW_LANDING_APPROACH ||
+           (posControl.flags.rthTrackbackActive && posControl.activeRthTBPointIndex != posControl.rthTBLastSavedIndex);
 }
 
 /*-----------------------------------------------------------

@@ -311,7 +311,7 @@ static int8_t loiterDirection(void) {
 
 static void calculateVirtualPositionTarget_FW(float trackingPeriod)
 {
-    if (FLIGHT_MODE(NAV_COURSE_HOLD_MODE) || posControl.fwLandState.landState >= FW_AUTOLAND_STATE_GLIDE) { // CR116
+    if (FLIGHT_MODE(NAV_COURSE_HOLD_MODE) || posControl.fwLandState.landState >= FW_AUTOLAND_STATE_GLIDE) {
         return;
     }
 
@@ -452,7 +452,7 @@ static void updatePositionHeadingController_FW(timeUs_t currentTimeUs, timeDelta
     static bool forceTurnDirection = false;
     int32_t virtualTargetBearing;
 
-    if (FLIGHT_MODE(NAV_COURSE_HOLD_MODE) || posControl.fwLandState.landState >= FW_AUTOLAND_STATE_GLIDE) { // CR116
+    if (FLIGHT_MODE(NAV_COURSE_HOLD_MODE) || posControl.fwLandState.landState >= FW_AUTOLAND_STATE_GLIDE) {
         virtualTargetBearing = posControl.desiredState.yaw;
     } else {
         // We have virtual position target, calculate heading error
@@ -693,11 +693,7 @@ void applyFixedWingPitchRollThrottleController(navigationFSMStateFlags_t navStat
         uint16_t correctedThrottleValue = constrain(currentBatteryProfile->nav.fw.cruise_throttle + throttleCorrection, currentBatteryProfile->nav.fw.min_throttle, currentBatteryProfile->nav.fw.max_throttle);
 
         // Manual throttle increase
-#ifdef USE_FW_AUTOLAND
         if (navConfig()->fw.allow_manual_thr_increase && !FLIGHT_MODE(FAILSAFE_MODE) && !FLIGHT_MODE(NAV_FW_AUTOLAND)) {
-#else
-        if (navConfig()->fw.allow_manual_thr_increase && !FLIGHT_MODE(FAILSAFE_MODE)) {
-#endif
             if (rcCommand[THROTTLE] < PWM_RANGE_MIN + (PWM_RANGE_MAX - PWM_RANGE_MIN) * 0.95){
                 correctedThrottleValue += MAX(0, rcCommand[THROTTLE] - currentBatteryProfile->nav.fw.cruise_throttle);
             } else {
@@ -713,9 +709,8 @@ void applyFixedWingPitchRollThrottleController(navigationFSMStateFlags_t navStat
 
 #ifdef USE_FW_AUTOLAND
     // Advanced autoland
-    if (posControl.fwLandState.landState >= FW_AUTOLAND_STATE_GLIDE || STATE(LANDING_DETECTED)) {   // CR116
+    if (posControl.fwLandState.landState >= FW_AUTOLAND_STATE_GLIDE || STATE(LANDING_DETECTED)) {
         // Set motor to min. throttle and stop it when MOTOR_STOP feature is enabled
-        // rcCommand[THROTTLE] = getThrottleIdleValue();   // CR116
         ENABLE_STATE(NAV_MOTOR_STOP_OR_IDLE);
 
         if (posControl.navState == NAV_STATE_FW_LANDING_GLIDE) {
@@ -775,7 +770,8 @@ bool isFixedWingLandingDetected(void)
 
     // Basic condition to start looking for landing
     bool startCondition = (navGetCurrentStateFlags() & (NAV_CTL_LAND | NAV_CTL_EMERG))
-                          || FLIGHT_MODE(FAILSAFE_MODE) || posControl.fwLandState.landState >= FW_AUTOLAND_STATE_GLIDE // CR116
+                          || FLIGHT_MODE(FAILSAFE_MODE)
+                          || FLIGHT_MODE(NAV_FW_AUTOLAND)
                           || (!navigationIsControllingThrottle() && throttleStickIsLow());
 
     if (!startCondition || posControl.flags.resetLandingDetector) {
