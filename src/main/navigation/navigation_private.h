@@ -329,9 +329,12 @@ typedef enum {
 
     /* Additional flags */
     NAV_CTL_LAND            = (1 << 14),
-    NAV_AUTO_WP_DONE        = (1 << 15),    //Waypoint mission reached the last waypoint and is idling
+    NAV_AUTO_WP_DONE        = (1 << 15),    // Waypoint mission reached the last waypoint and is idling
 
-    NAV_MIXERAT             = (1 << 16),    //MIXERAT in progress
+    NAV_MIXERAT             = (1 << 16),    // MIXERAT in progress
+
+    NAV_CTL_HOLD            = (1 << 17),    // position hold active  // CR117
+    NAV_CTL_COURSE          = (1 << 18),    // course hold active  // CR117
 } navigationFSMStateFlags_t;
 
 typedef struct {

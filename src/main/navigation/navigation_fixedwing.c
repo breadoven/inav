@@ -311,7 +311,7 @@ static int8_t loiterDirection(void) {
 
 static void calculateVirtualPositionTarget_FW(float trackingPeriod)
 {
-    if (FLIGHT_MODE(NAV_COURSE_HOLD_MODE) || posControl.fwLandState.landState >= FW_AUTOLAND_STATE_GLIDE) {
+    if (navGetCurrentStateFlags() & NAV_CTL_COURSE) { // CR117
         return;
     }
 
@@ -452,7 +452,7 @@ static void updatePositionHeadingController_FW(timeUs_t currentTimeUs, timeDelta
     static bool forceTurnDirection = false;
     int32_t virtualTargetBearing;
 
-    if (FLIGHT_MODE(NAV_COURSE_HOLD_MODE) || posControl.fwLandState.landState >= FW_AUTOLAND_STATE_GLIDE) {
+    if (navGetCurrentStateFlags() & NAV_CTL_COURSE) { // CR117
         virtualTargetBearing = posControl.desiredState.yaw;
     } else {
         // We have virtual position target, calculate heading error
@@ -904,7 +904,8 @@ void applyFixedWingNavigationController(navigationFSMStateFlags_t navStateFlags,
             posControl.rcAdjustment[ROLL] = 0;
         }
 
-        if (FLIGHT_MODE(NAV_COURSE_HOLD_MODE) && posControl.flags.isAdjustingPosition) {
+        // if (FLIGHT_MODE(NAV_COURSE_HOLD_MODE) && posControl.flags.isAdjustingPosition) {
+        if (navGetCurrentStateFlags() & NAV_CTL_COURSE && posControl.flags.isAdjustingPosition) {  // CR117
             rcCommand[ROLL] = applyDeadbandRescaled(rcCommand[ROLL], rcControlsConfig()->pos_hold_deadband, -500, 500);
         }
 
