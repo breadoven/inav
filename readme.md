@@ -37,6 +37,9 @@ Fly safe, fly smart with INAV 7.1 and a compass by your side!
 
 ## Features
 
+* Runs on the most popular F4, AT32, F7 and H7 flight controllers
+* On Screen Display (OSD) - both character and pixel style
+* DJI OSD integration: all elements, system messages and warnings
 * Outstanding performance out of the box
 * Position Hold, Altitude Hold, Return To Home and Waypoint Missions
 * Excellent support for fixed wing UAVs: airplanes, flying wings
