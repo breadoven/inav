@@ -5002,7 +5002,8 @@ uint8_t drawStat_DisarmMethod(uint8_t col, uint8_t row, uint8_t statValX)
 
 static void osdShowStats(bool isSinglePageStatsCompatible, uint8_t page)
 {
-    const char * statsHeader[2] = {"*** STATS   1/2 -> ***", "*** STATS   <- 2/2 ***"};
+    char * statsHeader[2] = {"*** STATS   1/2 -> ***", "*** STATS   <- 2/2 ***"};
+
     uint8_t row = 1;  // Start one line down leaving space at the top of the screen.
 
     const uint8_t statNameX = (osdDisplayPort->cols - (osdDisplayIsHD() ? 41 : 28)) / 2;
@@ -5015,60 +5016,6 @@ static void osdShowStats(bool isSinglePageStatsCompatible, uint8_t page)
     displayClearScreen(osdDisplayPort);
 
     if (isSinglePageStatsCompatible) {
-// <<<<<<< HEAD
-        // displayWrite(osdDisplayPort, statNameX, top++, "--- STATS ---");
-    // } else if (page == 0) {
-        // //CR4 xxxxxxxxxxxxxxxxxxxxxxx
-        // dateTime_t dt;
-        // char buf[MAX(32, FORMATTED_DATE_TIME_BUFSIZE)];
-        // char *date;
-        // char *time;
-        // if (rtcGetDateTime(&dt)) {
-            // dateTimeFormatLocal(buf, &dt);
-            // dateTimeSplitFormatted(buf, &date, &time);
-            // tfp_sprintf(buff, "-STATS-(%s) 1/2 ->", date);
-            // displayWrite(osdDisplayPort, statNameX, top++, buff);
-        // } else {
-            // displayWrite(osdDisplayPort, statNameX, top++, "--- STATS ---      1/2 ->");
-        // }
-        // //CR4 xxxxxxxxxxxxxxxxxxxxxxx
-        // // displayWrite(osdDisplayPort, statNameX, top++, "--- STATS ---      1/2 ->");
-    // } else if (page == 1) {
-        // displayWrite(osdDisplayPort, statNameX, top++, "--- STATS ---   <- 2/2");
-    // }
-
-    // if (isSinglePageStatsCompatible || page == 0) {
-        // if (feature(FEATURE_GPS)) {
-            // if (isSinglePageStatsCompatible) {
-                // displayWrite(osdDisplayPort, statNameX, top, "MAX/AVG SPEED    :");
-                // osdFormatVelocityStr(buff, stats.max_3D_speed, true, false);
-                // osdLeftAlignString(buff);
-                // strcat(osdFormatTrimWhiteSpace(buff),"/");
-                // multiValueLengthOffset = strlen(buff);
-                // displayWrite(osdDisplayPort, statValuesX, top, buff);
-                // osdGenerateAverageVelocityStr(buff);
-                // osdLeftAlignString(buff);
-                // displayWrite(osdDisplayPort, statValuesX + multiValueLengthOffset, top++, buff);
-            // } else {
-                // displayWrite(osdDisplayPort, statNameX, top, "MAX SPEED        :");
-                // osdFormatVelocityStr(buff, stats.max_3D_speed, true, false);
-                // osdLeftAlignString(buff);
-                // displayWrite(osdDisplayPort, statValuesX, top++, buff);
-
-                // displayWrite(osdDisplayPort, statNameX, top, "AVG SPEED        :");
-                // osdGenerateAverageVelocityStr(buff);
-                // osdLeftAlignString(buff);
-                // displayWrite(osdDisplayPort, statValuesX, top++, buff);
-            // }
-
-            // displayWrite(osdDisplayPort, statNameX, top, "MAX DISTANCE     :");
-            // osdFormatDistanceStr(buff, stats.max_distance*100);
-            // displayWrite(osdDisplayPort, statValuesX, top++, buff);
-
-            // displayWrite(osdDisplayPort, statNameX, top, "TRAVELED DISTANCE:");
-            // osdFormatDistanceStr(buff, getTotalTravelDistance());
-            // displayWrite(osdDisplayPort, statValuesX, top++, buff);
-// =======
         char buff[25];
         tfp_sprintf(buff, "*** STATS ");
 #ifdef USE_BLACKBOX
@@ -5085,8 +5032,16 @@ static void osdShowStats(bool isSinglePageStatsCompatible, uint8_t page)
         strcat(buff, "***");
 
         displayWrite(osdDisplayPort, (osdDisplayPort->cols - strlen(buff)) / 2, row++, buff);
-    } else
-        displayWrite(osdDisplayPort, (osdDisplayPort->cols - strlen(statsHeader[page + 1])) / 2, row++, statsHeader[page]);
+    } else {
+        dateTime_t dt;
+        if (rtcGetDateTimeLocal(&dt)) {
+            char buffTemp[25];
+            tfp_sprintf(buffTemp, "*STATS (%02u%02u%04u) 1/2 ->*", dt.day, dt.month, dt.year);
+            statsHeader[0] = buffTemp;
+        }
+        // displayWrite(osdDisplayPort, (osdDisplayPort->cols - strlen(statsHeader[page + 1])) / 2, row++, statsHeader[page]);
+        displayWrite(osdDisplayPort, (osdDisplayPort->cols - strlen(statsHeader[page])) / 2, row++, statsHeader[page]);
+    }
 
     if (isSinglePageStatsCompatible) {
         // Top 15 rows for most important stats. Max 19 rows (WTF)
@@ -5183,16 +5138,6 @@ static void osdShowStats(bool isSinglePageStatsCompatible, uint8_t page)
 // HD arming screen. based on the minimum HD OSD grid size of 50 x 18
 static void osdShowHDArmScreen(void)
 {
-// <<<<<<< HEAD
-    // dateTime_t dt;
-    // char buf[MAX(32, FORMATTED_DATE_TIME_BUFSIZE)];
-    // char craftNameBuf[MAX_NAME_LENGTH];
-    // char versionBuf[30];
-    // char *date;
-    // char *time;
-    // // We need 12 visible rows
-    // uint8_t y = osdDisplayPort->rows > 13 ? (osdDisplayPort->rows - 12) / 2 : 1;    // rows = 13 NTSC, 16 PAL MAX7456
-// =======
     dateTime_t dt;
 
     char        buf[MAX(osdDisplayPort->cols, FORMATTED_DATE_TIME_BUFSIZE)];
@@ -5201,7 +5146,6 @@ static void osdShowHDArmScreen(void)
     char        versionBuf[osdDisplayPort->cols];
     uint8_t     safehomeRow     = 0;
     uint8_t     armScreenRow    = 2; // Start at row 2
-// >>>>>>> upstream/master
 
     armScreenRow = drawLogos(false, armScreenRow);
     armScreenRow++;
@@ -5801,7 +5745,7 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
 
                 else {
 #ifdef USE_FW_AUTOLAND
-                    if (canFwLandCanceld()) {
+                    if (canFwLandingBeCancelled()) {  // CR116
                          messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_MOVE_STICKS);
                     } else if (!FLIGHT_MODE(NAV_FW_AUTOLAND)) {
 #endif
