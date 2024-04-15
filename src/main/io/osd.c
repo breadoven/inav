@@ -5427,6 +5427,7 @@ static void osdRefresh(timeUs_t currentTimeUs)
     static uint8_t statsCurrentPage = 0;
     static bool statsDisplayed = false;
     static bool statsAutoPagingEnabled = true;
+    static bool throttleHigh = false;   // CR119
 
     // Detect arm/disarm
     if (armState != ARMING_FLAG(ARMED)) {
@@ -5447,6 +5448,8 @@ static void osdRefresh(timeUs_t currentTimeUs)
             osdSetNextRefreshIn(delay);
         } else {
             // Display the "Stats" screen
+
+            throttleHigh = checkStickPosition(THR_HI);  // CR119
             statsDisplayed = true;
             statsCurrentPage = 0;
             statsAutoPagingEnabled = osdConfig()->stats_page_auto_swap_time > 0 ? true : false;
@@ -5517,7 +5520,7 @@ static void osdRefresh(timeUs_t currentTimeUs)
         }
 
         // Handle events when either "Splash", "Armed" or "Stats" screens are displayed.
-        if ((currentTimeUs > resumeRefreshAt) || OSD_RESUME_UPDATES_STICK_COMMAND) {
+        if (currentTimeUs > resumeRefreshAt || (OSD_RESUME_UPDATES_STICK_COMMAND && !throttleHigh)) {  // CR119
             // Time elapsed or canceled by stick commands.
             // Exit to normal OSD operation.
             displayClearScreen(osdDisplayPort);
@@ -5526,6 +5529,7 @@ static void osdRefresh(timeUs_t currentTimeUs)
         } else {
             // Continue "Splash", "Armed" or "Stats" screens.
             displayHeartbeat(osdDisplayPort);
+            throttleHigh = checkStickPosition(THR_HI);  // CR119
         }
 
         return;

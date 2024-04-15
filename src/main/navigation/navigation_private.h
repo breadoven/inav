@@ -177,7 +177,7 @@ typedef enum {
     NAV_FSM_EVENT_SWITCH_TO_NAV_STATE_RTH_INITIALIZE = NAV_FSM_EVENT_STATE_SPECIFIC_1,
     NAV_FSM_EVENT_SWITCH_TO_NAV_STATE_RTH_TRACKBACK = NAV_FSM_EVENT_STATE_SPECIFIC_2,
     NAV_FSM_EVENT_SWITCH_TO_RTH_HEAD_HOME = NAV_FSM_EVENT_STATE_SPECIFIC_3,
-    NAV_FSM_EVENT_SWITCH_TO_RTH_HOVER_ABOVE_HOME = NAV_FSM_EVENT_STATE_SPECIFIC_4,
+    NAV_FSM_EVENT_SWITCH_TO_RTH_LOITER_ABOVE_HOME = NAV_FSM_EVENT_STATE_SPECIFIC_4,   // CR121
     NAV_FSM_EVENT_SWITCH_TO_RTH_LANDING = NAV_FSM_EVENT_STATE_SPECIFIC_5,
 
     NAV_FSM_EVENT_COUNT = NAV_FSM_EVENT_STATE_SPECIFIC_5 + 1,
@@ -202,7 +202,7 @@ typedef enum {
     NAV_PERSISTENT_ID_RTH_INITIALIZE                            = 8,
     NAV_PERSISTENT_ID_RTH_CLIMB_TO_SAFE_ALT                     = 9,
     NAV_PERSISTENT_ID_RTH_HEAD_HOME                             = 10,
-    NAV_PERSISTENT_ID_RTH_HOVER_PRIOR_TO_LANDING                = 11,
+    NAV_PERSISTENT_ID_RTH_LOITER_PRIOR_TO_LANDING               = 11,  // CR121
     NAV_PERSISTENT_ID_RTH_LANDING                               = 12,
     NAV_PERSISTENT_ID_RTH_FINISHING                             = 13,
     NAV_PERSISTENT_ID_RTH_FINISHED                              = 14,
@@ -233,7 +233,7 @@ typedef enum {
     NAV_PERSISTENT_ID_CRUISE_ADJUSTING                          = 34,
 
     NAV_PERSISTENT_ID_WAYPOINT_HOLD_TIME                        = 35,
-    NAV_PERSISTENT_ID_RTH_HOVER_ABOVE_HOME                      = 36,
+    NAV_PERSISTENT_ID_RTH_LOITER_ABOVE_HOME                     = 36,  // CR121
     NAV_PERSISTENT_ID_UNUSED_4                                  = 37, // was NAV_STATE_WAYPOINT_HOVER_ABOVE_HOME
     NAV_PERSISTENT_ID_RTH_TRACKBACK                             = 38,
 
@@ -264,8 +264,8 @@ typedef enum {
     NAV_STATE_RTH_CLIMB_TO_SAFE_ALT,
     NAV_STATE_RTH_TRACKBACK,
     NAV_STATE_RTH_HEAD_HOME,
-    NAV_STATE_RTH_HOVER_PRIOR_TO_LANDING,
-    NAV_STATE_RTH_HOVER_ABOVE_HOME,
+    NAV_STATE_RTH_LOITER_PRIOR_TO_LANDING,  // CR121
+    NAV_STATE_RTH_LOITER_ABOVE_HOME,        // CR121
     NAV_STATE_RTH_LANDING,
     NAV_STATE_RTH_FINISHING,
     NAV_STATE_RTH_FINISHED,
@@ -406,7 +406,7 @@ typedef enum {
     RTH_HOME_ENROUTE_INITIAL,       // Initial position for RTH approach
     RTH_HOME_ENROUTE_PROPORTIONAL,  // Prorpotional position for RTH approach
     RTH_HOME_ENROUTE_FINAL,         // Final position for RTH approach
-    RTH_HOME_FINAL_HOVER,           // Final hover altitude (if rth_home_altitude is set)
+    RTH_HOME_FINAL_LOITER,          // Final loiter altitude (if rth_home_altitude is set)  // CR121
     RTH_HOME_FINAL_LAND,            // Home position and altitude
 } rthTargetMode_e;
 
