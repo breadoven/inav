@@ -2903,9 +2903,9 @@ bool isWaypointReached(const fpVector3_t *waypointPos, const int32_t *waypointBe
 {
     posControl.wpDistance = calculateDistanceToDestination(waypointPos);
     // CR120
-    // Check if waypoint was missed based on bearing to WP exceeding given angular limit relative to initial waypoint bearing.
+    // Check if waypoint was missed based on bearing to waypoint exceeding given angular limit relative to initial waypoint bearing.
     // Default angular limit = 100 degs with a reduced limit of 60 degs used if fixed wing waypoint turn smoothing option active
-    uint16_t relativeBearingErrorLimit = 10000;
+    uint16_t relativeBearingTargetAngle = 10000;
 
     if (STATE(AIRPLANE) && posControl.flags.wpTurnSmoothingActive) {
         // If WP turn smoothing CUT option used WP is reached when start of turn is initiated
@@ -2913,11 +2913,11 @@ bool isWaypointReached(const fpVector3_t *waypointPos, const int32_t *waypointBe
             posControl.flags.wpTurnSmoothingActive = false;
             return true;
         }
-        relativeBearingErrorLimit = 6000;
+        relativeBearingTargetAngle = 6000;
     }
 
 
-    if (ABS(wrap_18000(calculateBearingToDestination(waypointPos) - *waypointBearing)) > relativeBearingErrorLimit) {
+    if (ABS(wrap_18000(calculateBearingToDestination(waypointPos) - *waypointBearing)) > relativeBearingTargetAngle) {
         return true;
     }
     // CR120
@@ -4316,10 +4316,10 @@ void checkManualEmergencyLandingControl(bool forcedActivation)
     }
 
     // ***** frig to trigger using beeper mode  CR97
-    if (!IS_RC_MODE_ACTIVE(BOXBEEPERON) && posControl.flags.manualEmergLandActive) {
-        navProcessFSMEvents(NAV_FSM_EVENT_SWITCH_TO_IDLE);
-    }
-    posControl.flags.manualEmergLandActive = IS_RC_MODE_ACTIVE(BOXBEEPERON);
+    // if (!IS_RC_MODE_ACTIVE(BOXBEEPERON) && posControl.flags.manualEmergLandActive) {
+        // navProcessFSMEvents(NAV_FSM_EVENT_SWITCH_TO_IDLE);
+    // }
+    // posControl.flags.manualEmergLandActive = IS_RC_MODE_ACTIVE(BOXBEEPERON);
     // *****
 }
 
@@ -4362,7 +4362,7 @@ static navigationFSMEvent_t selectNavEventFromBoxModeInput(bool launchBypass)   
         checkManualEmergencyLandingControl(false);
 
         /* Emergency landing triggered by failsafe Landing or manually initiated */
-        if (posControl.flags.forcedEmergLandingActivated || posControl.flags.manualEmergLandActive) {  // || IS_RC_MODE_ACTIVE(BOXBEEPERON)
+        if (posControl.flags.forcedEmergLandingActivated || posControl.flags.manualEmergLandActive || IS_RC_MODE_ACTIVE(BOXBEEPERON)) {
             return NAV_FSM_EVENT_SWITCH_TO_EMERGENCY_LANDING;
         }
 
