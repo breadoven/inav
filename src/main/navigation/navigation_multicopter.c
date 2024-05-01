@@ -176,6 +176,7 @@ bool adjustMulticopterAltitudeFromRCInput(void)
                 rcClimbRate = rcThrottleAdjustment * navConfig()->mc.max_manual_climb_rate / (float)(altHoldThrottleRCZero - getThrottleIdleValue() - rcControlsConfig()->alt_hold_deadband);
             }
 
+            constrainf(rcClimbRate, -navConfig()->mc.max_manual_climb_rate, navConfig()->mc.max_manual_climb_rate);  // CR97
             updateClimbRateToAltitudeController(rcClimbRate, 0, ROC_TO_ALT_CONSTANT);
 
             return true;
@@ -582,7 +583,7 @@ static float computeVelocityScale(
     if (value <= 0.0f) {
         return 0.0f;
     }
-    const float normalized = computeNormalizedVelocity(value, attenuationEndVel);
+    const float normalized = computeNormalizedVelocity(value, attenuationEndVel - attenuationStartVel);
     float scale = scaleRangef(normalized, 0.0f, 1.0f, 0.0f, attenuationFactor);
     return constrainf(scale, 0.0f, attenuationFactor);
 
@@ -966,7 +967,7 @@ static void applyMulticopterEmergencyLandingController(timeUs_t currentTimeUs)
         if (deltaMicrosPositionUpdate < MAX_POSITION_UPDATE_INTERVAL_US) {
             // target min descent rate 5m above takeoff altitude
             // updateClimbRateToAltitudeController(-navConfig()->general.emerg_descent_rate, 500.0f, ROC_TO_ALT_TARGET);
-            updateClimbRateToAltitudeController(0, 500.0f, ROC_TO_ALT_TARGET);   // CR97
+            updateClimbRateToAltitudeController(0, 2.0f * navConfig()->general.emerg_descent_rate, ROC_TO_ALT_TARGET);   // CR97
             updateAltitudeVelocityController_MC(deltaMicrosPositionUpdate);
             updateAltitudeThrottleController_MC(deltaMicrosPositionUpdate);
         }

@@ -1931,14 +1931,10 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_WAYPOINT_IN_PROGRESS(na
                     // CR97
                     setDesiredPosition(&tmpWaypoint, 0, NAV_POS_UPDATE_XY | NAV_POS_UPDATE_BEARING);
 
-                    static float climbRate = 0;
-                    if (posControl.wpDistance > 0.25f * posControl.wpInitialDistance) {
+                    static float climbRate = 0.0f;
+                    if (posControl.wpDistance - 0.1f * posControl.wpInitialDistance > 100.0f) {
                         climbRate = posControl.actualState.velXY * (posControl.activeWaypoint.pos.z - posControl.actualState.abs.pos.z) /
                                     (posControl.wpDistance - 0.1f * posControl.wpInitialDistance);
-                    }
-
-                    if (fabsf(climbRate) >= (STATE(AIRPLANE) ? navConfig()->fw.max_auto_climb_rate : navConfig()->mc.max_auto_climb_rate)) {  // CR97A
-                        climbRate = 0;
                     }
                     updateClimbRateToAltitudeController(climbRate, posControl.activeWaypoint.pos.z, ROC_TO_ALT_TARGET);
 
@@ -3467,83 +3463,20 @@ bool isProbablyStillFlying(void)
 /*-----------------------------------------------------------
  * Z-position controller
  *-----------------------------------------------------------*/
-// void updateClimbRateToAltitudeController(float desiredClimbRate, float targetAltitude, climbRateToAltitudeControllerMode_e mode)
-// {
-// #define MIN_TARGET_CLIMB_RATE   100.0f  // cm/s
-
-    // static timeUs_t lastUpdateTimeUs;
-    // timeUs_t currentTimeUs = micros();
-
-    // // Terrain following uses different altitude measurement
-    // const float altitudeToUse = navGetCurrentActualPositionAndVelocity()->pos.z;
-
-    // if (mode != ROC_TO_ALT_RESET && desiredClimbRate) {
-        // /* ROC_TO_ALT_CONSTANT - constant climb rate
-         // * ROC_TO_ALT_TARGET - constant climb rate until close to target altitude reducing to min rate when altitude reached
-         // * Rate reduction starts at distance from target altitude of 5 x climb rate for FW, 1 x climb rate for MC */
-
-        // if (mode == ROC_TO_ALT_TARGET && fabsf(desiredClimbRate) > MIN_TARGET_CLIMB_RATE) {
-            // const int8_t direction = desiredClimbRate > 0 ? 1 : -1;
-            // const float absClimbRate = fabsf(desiredClimbRate);
-            // const uint16_t maxRateCutoffAlt = STATE(AIRPLANE) ? absClimbRate * 5 : absClimbRate;
-            // const float verticalVelScaled = scaleRangef(navGetCurrentActualPositionAndVelocity()->pos.z - targetAltitude,
-                                            // 0.0f, -maxRateCutoffAlt * direction, MIN_TARGET_CLIMB_RATE, absClimbRate);
-
-            // desiredClimbRate = direction * constrainf(verticalVelScaled, MIN_TARGET_CLIMB_RATE, absClimbRate);
-        // }
-
-        // /*
-         // * If max altitude is set, reset climb rate if altitude is reached and climb rate is > 0
-         // * In other words, when altitude is reached, allow it only to shrink
-         // */
-        // if (navConfig()->general.max_altitude > 0 && altitudeToUse >= navConfig()->general.max_altitude && desiredClimbRate > 0) {
-            // desiredClimbRate = 0;
-        // }
-        // // CR97M
-        // if (STATE(FIXED_WING_LEGACY)) {
-            // // Fixed wing climb rate controller is open-loop. We simply move the known altitude target
-            // float timeDelta = US2S(currentTimeUs - lastUpdateTimeUs);
-            // static bool targetHoldActive = false;
-
-            // if (timeDelta <= HZ2S(MIN_POSITION_UPDATE_RATE_HZ) && desiredClimbRate) {
-                // // Update target altitude only if actual altitude moving in same direction and lagging by < 5 m, otherwise hold target
-                // if (navGetCurrentActualPositionAndVelocity()->vel.z * desiredClimbRate >= 0 && fabsf(posControl.desiredState.pos.z - altitudeToUse) < 500) {
-                    // posControl.desiredState.pos.z += desiredClimbRate * timeDelta;
-                    // targetHoldActive = false;
-                // } else if (!targetHoldActive) {     // Reset and hold target to actual + climb rate boost until actual catches up
-                    // posControl.desiredState.pos.z = altitudeToUse + desiredClimbRate;
-                    // targetHoldActive = true;
-                // }
-            // } else {
-                // targetHoldActive = false;
-            // }
-        // }
-        // else {
-            // // Multicopter climb-rate control is closed-loop, it's possible to directly calculate desired altitude setpoint to yield the required RoC/RoD
-            // posControl.desiredState.pos.z = altitudeToUse + (desiredClimbRate / posControl.pids.pos[Z].param.kP);
-        // }
-    // } else {    // ROC_TO_ALT_RESET or zero desired climbrate
-        // posControl.desiredState.pos.z = altitudeToUse;
-    // }
-
-    // lastUpdateTimeUs = currentTimeUs;
-// }
-
 // CR97
 float getDesiredClimbRate(float targetAltitude, timeDelta_t deltaMicros)
 {
-    float targetVel = 0.0f;
     const bool emergLandingIsActive = navigationIsExecutingAnEmergencyLanding();
-
     float maxClimbRate = STATE(MULTIROTOR) ? navConfig()->mc.max_auto_climb_rate : navConfig()->fw.max_auto_climb_rate;  // CR97A
+
     if (posControl.desiredState.climbRateDemand) {
-        maxClimbRate = ABS(posControl.desiredState.climbRateDemand);
+        maxClimbRate = constrainf(ABS(posControl.desiredState.climbRateDemand), 0.0f, maxClimbRate);
     } else if (emergLandingIsActive) {
         maxClimbRate = navConfig()->general.emerg_descent_rate;
-    } else if (posControl.flags.isAdjustingAltitude) {
-        maxClimbRate = STATE(MULTIROTOR) ? navConfig()->mc.max_manual_climb_rate : navConfig()->fw.max_manual_climb_rate;  // CR97A
     }
+
     const float targetAltitudeError = targetAltitude - navGetCurrentActualPositionAndVelocity()->pos.z;
+    float targetVel = 0.0f;
 
     if (STATE(MULTIROTOR)) {
         targetVel = getSqrtControllerVelocity(targetAltitude, deltaMicros);
@@ -3551,8 +3484,8 @@ float getDesiredClimbRate(float targetAltitude, timeDelta_t deltaMicros)
         targetVel = pidProfile()->fwAltControlResponseFactor * targetAltitudeError / 100.0f;
     }
 
-    if (emergLandingIsActive && targetAltitudeError > -50) {
-        return -100;
+    if (emergLandingIsActive && targetAltitudeError > -50.0f) {
+        return -100.0f;
     } else {
         return constrainf(targetVel, -maxClimbRate, maxClimbRate);
     }
@@ -4092,18 +4025,18 @@ bool isLastMissionWaypoint(void)
 /* Checks if Nav hold position is active */
 bool isNavHoldPositionActive(void)
 {  // CR117
-    return navGetCurrentStateFlags() & NAV_CTL_HOLD;
+    // return navGetCurrentStateFlags() & NAV_CTL_HOLD;
 
-    // // WP mode last WP hold and Timed hold positions
-    // if (FLIGHT_MODE(NAV_WP_MODE)) {
-        // return isLastMissionWaypoint() || NAV_Status.state == MW_NAV_STATE_HOLD_TIMED;
-    // }
-    // // RTH mode (spiral climb and Home positions but excluding RTH Trackback point positions) and POSHOLD mode
-    // // Also hold position during emergency landing if position valid
-    // return (FLIGHT_MODE(NAV_RTH_MODE) && !posControl.flags.rthTrackbackActive) ||
-            // FLIGHT_MODE(NAV_POSHOLD_MODE) ||
-            // (posControl.navState == NAV_STATE_FW_LANDING_CLIMB_TO_LOITER || posControl.navState == NAV_STATE_FW_LANDING_LOITER) ||
-            // navigationIsExecutingAnEmergencyLanding();
+    // WP mode last WP hold and Timed hold positions
+    if (FLIGHT_MODE(NAV_WP_MODE)) {
+        return isLastMissionWaypoint() || posControl.waypointList[posControl.activeWaypointIndex].action == NAV_WP_ACTION_HOLD_TIME;
+    }
+    // RTH mode (spiral climb and Home positions but excluding RTH Trackback point positions) and POSHOLD mode
+    // Also hold position during emergency landing if position valid
+    return (FLIGHT_MODE(NAV_RTH_MODE) && !posControl.flags.rthTrackbackActive) ||
+            FLIGHT_MODE(NAV_POSHOLD_MODE) ||
+            (posControl.navState == NAV_STATE_FW_LANDING_CLIMB_TO_LOITER || posControl.navState == NAV_STATE_FW_LANDING_LOITER) ||
+            navigationIsExecutingAnEmergencyLanding();
     // CR117
 }
 

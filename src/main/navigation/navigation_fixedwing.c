@@ -116,6 +116,7 @@ bool adjustFixedWingAltitudeFromRCInput(void)
     if (rcAdjustment) {
         // set velocity proportional to stick movement
         float rcClimbRate = -rcAdjustment * navConfig()->fw.max_manual_climb_rate / (500.0f - rcControlsConfig()->alt_hold_deadband);
+        constrainf(rcClimbRate, -navConfig()->fw.max_manual_climb_rate, navConfig()->fw.max_manual_climb_rate);  // CR97
         updateClimbRateToAltitudeController(rcClimbRate, 0, ROC_TO_ALT_CONSTANT);
         return true;
     }
@@ -333,7 +334,8 @@ static void calculateVirtualPositionTarget_FW(float trackingPeriod)
     needToCalculateCircularLoiter = isNavHoldPositionActive() &&
                                      (distanceToActualTarget <= (navLoiterRadius / TAN_15DEG)) &&
                                      (distanceToActualTarget > 50.0f);
-
+    DEBUG_SET(DEBUG_ALWAYS, 4, distanceToActualTarget);
+    DEBUG_SET(DEBUG_ALWAYS, 5, needToCalculateCircularLoiter);
     //if vtol landing is required, fly straight to homepoint
     if ((posControl.navState == NAV_STATE_RTH_HEAD_HOME) && navigationRTHAllowsLanding() && checkMixerATRequired(MIXERAT_REQUEST_LAND)){
         needToCalculateCircularLoiter = false;
@@ -835,7 +837,7 @@ void applyFixedWingEmergencyLandingController(timeUs_t currentTimeUs)
     if (posControl.flags.estAltStatus >= EST_USABLE) {
         // target min descent rate 10m above takeoff altitude
         // updateClimbRateToAltitudeController(-navConfig()->general.emerg_descent_rate, 1000.0f, ROC_TO_ALT_TARGET);
-        updateClimbRateToAltitudeController(0, 1000.0f, ROC_TO_ALT_TARGET);  // CR97
+        updateClimbRateToAltitudeController(0, 2.0f * navConfig()->general.emerg_descent_rate, ROC_TO_ALT_TARGET);  // CR97
         applyFixedWingAltitudeAndThrottleController(currentTimeUs);
 
         int16_t pitchCorrection = constrain(posControl.rcAdjustment[PITCH], -DEGREES_TO_DECIDEGREES(navConfig()->fw.max_dive_angle), DEGREES_TO_DECIDEGREES(navConfig()->fw.max_climb_angle));
