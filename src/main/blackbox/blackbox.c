@@ -1308,8 +1308,7 @@ static void writeSlowFrame(void)
 static void loadSlowState(blackboxSlowState_t *slow)
 {
     memcpy(&slow->flightModeFlags, &rcModeActivationMask, sizeof(slow->flightModeFlags)); //was flightModeFlags;
-    // Also log Nav auto selected flight modes rather than just those selected by boxmode
-    // CR118
+    // Also log Nav auto enabled flight modes rather than just those selected by boxmode
     if (FLIGHT_MODE(ANGLE_MODE)) {
         slow->flightModeFlags |= (1 << BOXANGLE);
     }
@@ -1319,7 +1318,7 @@ static void loadSlowState(blackboxSlowState_t *slow)
     if (FLIGHT_MODE(NAV_RTH_MODE)) {
         slow->flightModeFlags |= (1 << BOXNAVRTH);
     }
-    // CR118
+
     if (navigationGetHeadingControlState() == NAV_HEADING_CONTROL_AUTO) {
         slow->flightModeFlags |= (1 << BOXHEADINGHOLD);
     }

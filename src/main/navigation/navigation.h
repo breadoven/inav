@@ -711,7 +711,7 @@ int32_t navigationGetHomeHeading(void);
 uint8_t getActiveWpNumber(void);   // CR112
 
 #ifdef USE_FW_AUTOLAND
-bool canFwLandingBeCancelled(void);  // CR116
+bool canFwLandingBeCancelled(void);
 #endif
 
 /* Compatibility data */

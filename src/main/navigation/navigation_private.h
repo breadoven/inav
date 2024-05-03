@@ -167,20 +167,19 @@ typedef enum {
     NAV_FSM_EVENT_STATE_SPECIFIC_3,             // State-specific event
     NAV_FSM_EVENT_STATE_SPECIFIC_4,             // State-specific event
     NAV_FSM_EVENT_STATE_SPECIFIC_5,             // State-specific event
-    // NAV_FSM_EVENT_STATE_SPECIFIC_6,             // State-specific event   // CR116
 
-    NAV_FSM_EVENT_SWITCH_TO_NAV_STATE_FW_LANDING_ABORT = NAV_FSM_EVENT_STATE_SPECIFIC_1,  // CR116
-    NAV_FSM_EVENT_SWITCH_TO_NAV_STATE_FW_LANDING_FINISHED = NAV_FSM_EVENT_STATE_SPECIFIC_2,  // CR116
+    NAV_FSM_EVENT_SWITCH_TO_NAV_STATE_FW_LANDING_ABORT = NAV_FSM_EVENT_STATE_SPECIFIC_1,
+    NAV_FSM_EVENT_SWITCH_TO_NAV_STATE_FW_LANDING_FINISHED = NAV_FSM_EVENT_STATE_SPECIFIC_2,
     NAV_FSM_EVENT_SWITCH_TO_WAYPOINT_HOLD_TIME = NAV_FSM_EVENT_STATE_SPECIFIC_1,
     NAV_FSM_EVENT_SWITCH_TO_WAYPOINT_RTH_LAND = NAV_FSM_EVENT_STATE_SPECIFIC_2,
     NAV_FSM_EVENT_SWITCH_TO_WAYPOINT_FINISHED = NAV_FSM_EVENT_STATE_SPECIFIC_3,
     NAV_FSM_EVENT_SWITCH_TO_NAV_STATE_RTH_INITIALIZE = NAV_FSM_EVENT_STATE_SPECIFIC_1,
     NAV_FSM_EVENT_SWITCH_TO_NAV_STATE_RTH_TRACKBACK = NAV_FSM_EVENT_STATE_SPECIFIC_2,
     NAV_FSM_EVENT_SWITCH_TO_RTH_HEAD_HOME = NAV_FSM_EVENT_STATE_SPECIFIC_3,
-    NAV_FSM_EVENT_SWITCH_TO_RTH_LOITER_ABOVE_HOME = NAV_FSM_EVENT_STATE_SPECIFIC_4,   // CR121
+    NAV_FSM_EVENT_SWITCH_TO_RTH_LOITER_ABOVE_HOME = NAV_FSM_EVENT_STATE_SPECIFIC_4,
     NAV_FSM_EVENT_SWITCH_TO_RTH_LANDING = NAV_FSM_EVENT_STATE_SPECIFIC_5,
 
-    NAV_FSM_EVENT_COUNT = NAV_FSM_EVENT_STATE_SPECIFIC_5 + 1,
+    NAV_FSM_EVENT_COUNT,
 } navigationFSMEvent_t;
 
 // This enum is used to keep values in blackbox logs stable, so we can
@@ -202,7 +201,7 @@ typedef enum {
     NAV_PERSISTENT_ID_RTH_INITIALIZE                            = 8,
     NAV_PERSISTENT_ID_RTH_CLIMB_TO_SAFE_ALT                     = 9,
     NAV_PERSISTENT_ID_RTH_HEAD_HOME                             = 10,
-    NAV_PERSISTENT_ID_RTH_LOITER_PRIOR_TO_LANDING               = 11,  // CR121
+    NAV_PERSISTENT_ID_RTH_LOITER_PRIOR_TO_LANDING               = 11,
     NAV_PERSISTENT_ID_RTH_LANDING                               = 12,
     NAV_PERSISTENT_ID_RTH_FINISHING                             = 13,
     NAV_PERSISTENT_ID_RTH_FINISHED                              = 14,
@@ -233,7 +232,7 @@ typedef enum {
     NAV_PERSISTENT_ID_CRUISE_ADJUSTING                          = 34,
 
     NAV_PERSISTENT_ID_WAYPOINT_HOLD_TIME                        = 35,
-    NAV_PERSISTENT_ID_RTH_LOITER_ABOVE_HOME                     = 36,  // CR121
+    NAV_PERSISTENT_ID_RTH_LOITER_ABOVE_HOME                     = 36,
     NAV_PERSISTENT_ID_UNUSED_4                                  = 37, // was NAV_STATE_WAYPOINT_HOVER_ABOVE_HOME
     NAV_PERSISTENT_ID_RTH_TRACKBACK                             = 38,
 
@@ -246,7 +245,7 @@ typedef enum {
     NAV_PERSISTENT_ID_FW_LANDING_GLIDE                          = 45,
     NAV_PERSISTENT_ID_FW_LANDING_FLARE                          = 46,
     NAV_PERSISTENT_ID_FW_LANDING_ABORT                          = 47,
-    NAV_PERSISTENT_ID_FW_LANDING_FINISHED                       = 48,  // CR116
+    NAV_PERSISTENT_ID_FW_LANDING_FINISHED                       = 48,
 } navigationPersistentId_e;
 
 typedef enum {
@@ -264,8 +263,8 @@ typedef enum {
     NAV_STATE_RTH_CLIMB_TO_SAFE_ALT,
     NAV_STATE_RTH_TRACKBACK,
     NAV_STATE_RTH_HEAD_HOME,
-    NAV_STATE_RTH_LOITER_PRIOR_TO_LANDING,  // CR121
-    NAV_STATE_RTH_LOITER_ABOVE_HOME,        // CR121
+    NAV_STATE_RTH_LOITER_PRIOR_TO_LANDING,
+    NAV_STATE_RTH_LOITER_ABOVE_HOME,
     NAV_STATE_RTH_LANDING,
     NAV_STATE_RTH_FINISHING,
     NAV_STATE_RTH_FINISHED,
@@ -299,7 +298,7 @@ typedef enum {
     NAV_STATE_FW_LANDING_APPROACH,
     NAV_STATE_FW_LANDING_GLIDE,
     NAV_STATE_FW_LANDING_FLARE,
-    NAV_STATE_FW_LANDING_FINISHED,  // CR116
+    NAV_STATE_FW_LANDING_FINISHED,
     NAV_STATE_FW_LANDING_ABORT,
 
     NAV_STATE_MIXERAT_INITIALIZE,
@@ -338,7 +337,7 @@ typedef enum {
 
     NAV_MIXERAT             = (1 << 16),    // MIXERAT in progress
 
-    NAV_CTL_HOLD            = (1 << 17),    // position hold active  // CR117
+    NAV_CTL_HOLD            = (1 << 17),    // position hold active  // CR122
     NAV_CTL_COURSE          = (1 << 18),    // course hold active  // CR117
 } navigationFSMStateFlags_t;
 
@@ -406,7 +405,7 @@ typedef enum {
     RTH_HOME_ENROUTE_INITIAL,       // Initial position for RTH approach
     RTH_HOME_ENROUTE_PROPORTIONAL,  // Prorpotional position for RTH approach
     RTH_HOME_ENROUTE_FINAL,         // Final position for RTH approach
-    RTH_HOME_FINAL_LOITER,          // Final loiter altitude (if rth_home_altitude is set)  // CR121
+    RTH_HOME_FINAL_LOITER,          // Final loiter altitude (if rth_home_altitude is set)
     RTH_HOME_FINAL_LAND,            // Home position and altitude
 } rthTargetMode_e;
 

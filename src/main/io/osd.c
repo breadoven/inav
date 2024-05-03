@@ -5427,7 +5427,7 @@ static void osdRefresh(timeUs_t currentTimeUs)
     static uint8_t statsCurrentPage = 0;
     static bool statsDisplayed = false;
     static bool statsAutoPagingEnabled = true;
-    static bool throttleHigh = false;   // CR119
+    static bool isThrottleHigh = false;
 
     // Detect arm/disarm
     if (armState != ARMING_FLAG(ARMED)) {
@@ -5455,6 +5455,7 @@ static void osdRefresh(timeUs_t currentTimeUs)
             statsAutoPagingEnabled = osdConfig()->stats_page_auto_swap_time > 0 ? true : false;
             osdShowStats(statsSinglePageCompatible, statsCurrentPage);
             osdSetNextRefreshIn(STATS_SCREEN_DISPLAY_TIME);
+            isThrottleHigh = checkStickPosition(THR_HI);
         }
 
         armState = ARMING_FLAG(ARMED);
@@ -5520,7 +5521,7 @@ static void osdRefresh(timeUs_t currentTimeUs)
         }
 
         // Handle events when either "Splash", "Armed" or "Stats" screens are displayed.
-        if (currentTimeUs > resumeRefreshAt || (OSD_RESUME_UPDATES_STICK_COMMAND && !throttleHigh)) {  // CR119
+        if (currentTimeUs > resumeRefreshAt || (OSD_RESUME_UPDATES_STICK_COMMAND && !isThrottleHigh)) {
             // Time elapsed or canceled by stick commands.
             // Exit to normal OSD operation.
             displayClearScreen(osdDisplayPort);
@@ -5529,7 +5530,7 @@ static void osdRefresh(timeUs_t currentTimeUs)
         } else {
             // Continue "Splash", "Armed" or "Stats" screens.
             displayHeartbeat(osdDisplayPort);
-            throttleHigh = checkStickPosition(THR_HI);  // CR119
+            isThrottleHigh = checkStickPosition(THR_HI);
         }
 
         return;
@@ -5749,7 +5750,7 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
 
                 else {
 #ifdef USE_FW_AUTOLAND
-                    if (canFwLandingBeCancelled()) {  // CR116
+                    if (canFwLandingBeCancelled()) {
                          messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_MOVE_STICKS);
                     } else if (!FLIGHT_MODE(NAV_FW_AUTOLAND)) {
 #endif
