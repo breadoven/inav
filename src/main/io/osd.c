@@ -5449,7 +5449,6 @@ static void osdRefresh(timeUs_t currentTimeUs)
         } else {
             // Display the "Stats" screen
 
-            throttleHigh = checkStickPosition(THR_HI);  // CR119
             statsDisplayed = true;
             statsCurrentPage = 0;
             statsAutoPagingEnabled = osdConfig()->stats_page_auto_swap_time > 0 ? true : false;
