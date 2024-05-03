@@ -76,11 +76,11 @@ float getSqrtControllerVelocity(float targetAltitude, timeDelta_t deltaMicros)
 // Position to velocity controller for Z axis
 static void updateAltitudeVelocityController_MC(timeDelta_t deltaMicros)
 {// CR97
-    float targetVel = posControl.desiredState.climbRateDemand;
+    // float targetVel = posControl.desiredState.climbRateDemand;
 
-    if (posControl.flags.rocToAltMode != ROC_TO_ALT_CONSTANT) {
-        targetVel = getDesiredClimbRate(posControl.desiredState.pos.z, deltaMicros);
-    }
+    // if (posControl.flags.rocToAltMode != ROC_TO_ALT_CONSTANT) {
+        float targetVel = getDesiredClimbRate(posControl.desiredState.pos.z, deltaMicros);
+    // }
 
     // float targetVel = sqrtControllerApply(
         // &alt_hold_sqrt_controller,
@@ -176,7 +176,6 @@ bool adjustMulticopterAltitudeFromRCInput(void)
                 rcClimbRate = rcThrottleAdjustment * navConfig()->mc.max_manual_climb_rate / (float)(altHoldThrottleRCZero - getThrottleIdleValue() - rcControlsConfig()->alt_hold_deadband);
             }
 
-            constrainf(rcClimbRate, -navConfig()->mc.max_manual_climb_rate, navConfig()->mc.max_manual_climb_rate);  // CR97
             updateClimbRateToAltitudeController(rcClimbRate, 0, ROC_TO_ALT_CONSTANT);
 
             return true;

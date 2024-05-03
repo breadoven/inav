@@ -208,7 +208,7 @@ PG_RESET_TEMPLATE(navConfig_t, navConfig,
     // Fixed wing
     .fw = {
         .max_bank_angle = SETTING_NAV_FW_BANK_ANGLE_DEFAULT,                                // degrees
-        .max_auto_climb_rate = SETTING_NAV_FW_AUTO_CLIMB_RATE_DEFAULT,                      // 5 m/s  CR97A
+        .max_auto_climb_rate = SETTING_NAV_FW_AUTO_CLIMB_RATE_DEFAULT,                      // 5 m/s  CR97
         .max_manual_climb_rate = SETTING_NAV_FW_MANUAL_CLIMB_RATE_DEFAULT,                  // 3 m/s
         .max_climb_angle = SETTING_NAV_FW_CLIMB_ANGLE_DEFAULT,                              // degrees
         .max_dive_angle = SETTING_NAV_FW_DIVE_ANGLE_DEFAULT,                                // degrees
@@ -637,7 +637,7 @@ static const navigationFSMStateDescriptor_t navFSM[NAV_STATE_COUNT] = {
         .persistentId = NAV_PERSISTENT_ID_RTH_HEAD_HOME,
         .onEntry = navOnEnteringState_NAV_STATE_RTH_HEAD_HOME,
         .timeoutMs = 10,
-        .stateFlags = NAV_CTL_ALT | NAV_CTL_POS | NAV_CTL_YAW | NAV_CTL_HOLD | NAV_REQUIRE_ANGLE | NAV_REQUIRE_MAGHOLD | NAV_REQUIRE_THRTILT | NAV_AUTO_RTH | NAV_RC_POS | NAV_RC_YAW,  // CR117
+        .stateFlags = NAV_CTL_ALT | NAV_CTL_POS | NAV_CTL_YAW | NAV_REQUIRE_ANGLE | NAV_REQUIRE_MAGHOLD | NAV_REQUIRE_THRTILT | NAV_AUTO_RTH | NAV_RC_POS | NAV_RC_YAW,  // CR117
         .mapToFlightModes = NAV_RTH_MODE | NAV_ALTHOLD_MODE,
         .mwState = MW_NAV_STATE_RTH_ENROUTE,
         .mwError = MW_NAV_ERROR_NONE,
@@ -1931,7 +1931,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_WAYPOINT_IN_PROGRESS(na
                     // CR97
                     setDesiredPosition(&tmpWaypoint, 0, NAV_POS_UPDATE_XY | NAV_POS_UPDATE_BEARING);
 
-                    static float climbRate = 0.0f;
+                    float climbRate = 0.0f;
                     if (posControl.wpDistance - 0.1f * posControl.wpInitialDistance > 100.0f) {
                         climbRate = posControl.actualState.velXY * (posControl.activeWaypoint.pos.z - posControl.actualState.abs.pos.z) /
                                     (posControl.wpDistance - 0.1f * posControl.wpInitialDistance);
@@ -2059,22 +2059,6 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_WAYPOINT_RTH_LAND(navig
     }
 
     return landEvent;
-
-// #ifdef USE_FW_AUTOLAND
-    // if (landEvent == NAV_FSM_EVENT_SWITCH_TO_NAV_STATE_FW_LANDING) {
-        // return NAV_FSM_EVENT_SWITCH_TO_NAV_STATE_FW_LANDING;
-    // } else
-// #endif
-    // if (landEvent == NAV_FSM_EVENT_SWITCH_TO_RTH_HOVER_ABOVE_HOME) {
-        // return NAV_FSM_EVENT_SWITCH_TO_WAYPOINT_FINISHED;
-    // } else if (landEvent == NAV_FSM_EVENT_SUCCESS) {
-        // // Landing controller returned success - invoke RTH finishing state and finish the waypoint
-        // navOnEnteringState_NAV_STATE_RTH_FINISHING(previousState);
-        // return NAV_FSM_EVENT_SUCCESS;
-    // }
-    // else {
-        // return NAV_FSM_EVENT_NONE;
-    // }
 }
 
 static navigationFSMEvent_t navOnEnteringState_NAV_STATE_WAYPOINT_NEXT(navigationFSMState_t previousState)
@@ -3467,8 +3451,16 @@ bool isProbablyStillFlying(void)
 float getDesiredClimbRate(float targetAltitude, timeDelta_t deltaMicros)
 {
     const bool emergLandingIsActive = navigationIsExecutingAnEmergencyLanding();
-    float maxClimbRate = STATE(MULTIROTOR) ? navConfig()->mc.max_auto_climb_rate : navConfig()->fw.max_auto_climb_rate;  // CR97A
+    float maxClimbRate = STATE(MULTIROTOR) ? navConfig()->mc.max_auto_climb_rate : navConfig()->fw.max_auto_climb_rate;  // CR97
+    // CR97A
+    if (posControl.flags.rocToAltMode == ROC_TO_ALT_CONSTANT) {
+        if (posControl.flags.isAdjustingAltitude) {
+            maxClimbRate = STATE(MULTIROTOR) ? navConfig()->mc.max_manual_climb_rate : navConfig()->fw.max_manual_climb_rate;
+        }
 
+        return constrainf(posControl.desiredState.climbRateDemand, -maxClimbRate, maxClimbRate);
+    }
+    // CR97A
     if (posControl.desiredState.climbRateDemand) {
         maxClimbRate = constrainf(ABS(posControl.desiredState.climbRateDemand), 0.0f, maxClimbRate);
     } else if (emergLandingIsActive) {
@@ -3504,6 +3496,7 @@ void updateClimbRateToAltitudeController(float desiredClimbRate, float targetAlt
 
     if (mode == ROC_TO_ALT_CURRENT) {
         posControl.desiredState.pos.z = navGetCurrentActualPositionAndVelocity()->pos.z;
+        desiredClimbRate = 0.0f;
     } else if (mode == ROC_TO_ALT_TARGET) {
         posControl.desiredState.pos.z = targetAltitude;
     }
@@ -4023,23 +4016,37 @@ bool isLastMissionWaypoint(void)
 }
 
 /* Checks if Nav hold position is active */
+// bool isNavHoldPositionActive(void)
+// {  // CR117
+    // // WP mode last WP hold and Timed hold positions
+    // if (FLIGHT_MODE(NAV_WP_MODE)) {
+        // return isLastMissionWaypoint() ||
+               // NAV_Status.state == MW_NAV_STATE_HOLD_TIMED ||
+               // posControl.waypointList[posControl.activeWaypointIndex].action == NAV_WP_ACTION_HOLD_TIME;
+    // }
+    // // RTH mode (spiral climb and Home positions but excluding RTH Trackback point positions) and POSHOLD mode
+    // // Also hold position during emergency landing if position valid
+    // return (FLIGHT_MODE(NAV_RTH_MODE) && !posControl.flags.rthTrackbackActive) ||
+            // FLIGHT_MODE(NAV_POSHOLD_MODE) ||
+            // (posControl.navState == NAV_STATE_FW_LANDING_CLIMB_TO_LOITER || posControl.navState == NAV_STATE_FW_LANDING_LOITER) ||
+            // navigationIsExecutingAnEmergencyLanding();
+    // // CR117
+// }
+// CR122
 bool isNavHoldPositionActive(void)
-{  // CR117
-    // return navGetCurrentStateFlags() & NAV_CTL_HOLD;
-
-    // WP mode last WP hold and Timed hold positions
+{
     if (FLIGHT_MODE(NAV_WP_MODE)) {
-        return isLastMissionWaypoint() || posControl.waypointList[posControl.activeWaypointIndex].action == NAV_WP_ACTION_HOLD_TIME;
+        return posControl.waypointList[posControl.activeWaypointIndex].action != NAV_WP_ACTION_WAYPOINT ||
+               (navGetCurrentStateFlags() & NAV_CTL_HOLD) ||
+               isLastMissionWaypoint();
     }
-    // RTH mode (spiral climb and Home positions but excluding RTH Trackback point positions) and POSHOLD mode
-    // Also hold position during emergency landing if position valid
-    return (FLIGHT_MODE(NAV_RTH_MODE) && !posControl.flags.rthTrackbackActive) ||
-            FLIGHT_MODE(NAV_POSHOLD_MODE) ||
-            (posControl.navState == NAV_STATE_FW_LANDING_CLIMB_TO_LOITER || posControl.navState == NAV_STATE_FW_LANDING_LOITER) ||
-            navigationIsExecutingAnEmergencyLanding();
-    // CR117
-}
 
+    return posControl.navState != NAV_STATE_FW_LANDING_APPROACH &&
+           posControl.navState != NAV_STATE_FW_LANDING_GLIDE &&
+           posControl.navState != NAV_STATE_FW_LANDING_FLARE &&
+           !posControl.flags.rthTrackbackActive;
+}
+// CR122
 float getActiveSpeed(void)
 {
     /* Currently only applicable for multicopter */

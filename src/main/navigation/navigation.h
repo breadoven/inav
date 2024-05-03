@@ -350,7 +350,7 @@ typedef struct navConfig_s {
 
     struct {
         uint8_t  max_bank_angle;             // Fixed wing max banking angle (deg)
-        uint16_t max_auto_climb_rate;        // max vertical speed limitation cm/sec  // CR97A
+        uint16_t max_auto_climb_rate;        // max vertical speed limitation cm/sec  // CR97
         uint16_t max_manual_climb_rate;      // manual velocity control max vertical speed
         uint8_t  max_climb_angle;            // Fixed wing max banking angle (deg)
         uint8_t  max_dive_angle;             // Fixed wing max banking angle (deg)

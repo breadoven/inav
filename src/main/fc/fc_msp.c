@@ -1272,7 +1272,7 @@ static bool mspFcProcessOutCommand(uint16_t cmdMSP, sbuf_t *dst, mspPostProcessF
         sbufWriteU16(dst, accelerometerConfig()->acc_notch_cutoff);
 
         sbufWriteU16(dst, 0);    //Was gyroConfig()->gyro_stage2_lowpass_hz
-        break; 
+        break;
 
     case MSP_PID_ADVANCED:
         sbufWriteU16(dst, 0); // pidProfile()->rollPitchItermIgnoreRate
@@ -1340,7 +1340,7 @@ static bool mspFcProcessOutCommand(uint16_t cmdMSP, sbuf_t *dst, mspPostProcessF
     case MSP_NAV_POSHOLD:
         sbufWriteU8(dst, navConfig()->general.flags.user_control_mode);
         sbufWriteU16(dst, navConfig()->general.max_auto_speed);
-        // sbufWriteU16(dst, navConfig()->mc.max_auto_climb_rate); // CR97A
+        // sbufWriteU16(dst, navConfig()->mc.max_auto_climb_rate); // CR97
         sbufWriteU16(dst, mixerConfig()->platformType == PLATFORM_AIRPLANE ? navConfig()->fw.max_auto_climb_rate : navConfig()->mc.max_auto_climb_rate);
         sbufWriteU16(dst, navConfig()->general.max_manual_speed);
         sbufWriteU16(dst, mixerConfig()->platformType == PLATFORM_AIRPLANE ? navConfig()->fw.max_manual_climb_rate : navConfig()->mc.max_manual_climb_rate);
@@ -2405,13 +2405,13 @@ static mspResult_e mspFcProcessInCommand(uint16_t cmdMSP, sbuf_t *src)
             navConfigMutable()->general.flags.user_control_mode = sbufReadU8(src);
             navConfigMutable()->general.max_auto_speed = sbufReadU16(src);
             // navConfigMutable()->mc.max_auto_climb_rate = sbufReadU16(src);
-            // CR97A
+            // CR97
             if (mixerConfig()->platformType == PLATFORM_AIRPLANE) {
                 navConfigMutable()->fw.max_auto_climb_rate = sbufReadU16(src);
             } else {
                 navConfigMutable()->mc.max_auto_climb_rate = sbufReadU16(src);
             }
-            // CR97A
+            // CR97
             navConfigMutable()->general.max_manual_speed = sbufReadU16(src);
             if (mixerConfig()->platformType == PLATFORM_AIRPLANE) {
                 navConfigMutable()->fw.max_manual_climb_rate = sbufReadU16(src);

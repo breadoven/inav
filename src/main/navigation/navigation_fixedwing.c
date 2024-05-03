@@ -116,7 +116,6 @@ bool adjustFixedWingAltitudeFromRCInput(void)
     if (rcAdjustment) {
         // set velocity proportional to stick movement
         float rcClimbRate = -rcAdjustment * navConfig()->fw.max_manual_climb_rate / (500.0f - rcControlsConfig()->alt_hold_deadband);
-        constrainf(rcClimbRate, -navConfig()->fw.max_manual_climb_rate, navConfig()->fw.max_manual_climb_rate);  // CR97
         updateClimbRateToAltitudeController(rcClimbRate, 0, ROC_TO_ALT_CONSTANT);
         return true;
     }
@@ -137,11 +136,11 @@ static void updateAltitudeVelocityAndPitchController_FW(timeDelta_t deltaMicros)
     // On a fixed wing we might not have a reliable climb rate source (if no BARO available), so we can't apply PID controller to
     // velocity error. We use PID controller on altitude error and calculate desired pitch angle
     // CR97
-    float desiredClimbRate = posControl.desiredState.climbRateDemand;
+    // float desiredClimbRate = posControl.desiredState.climbRateDemand;
 
-    if (posControl.flags.rocToAltMode != ROC_TO_ALT_CONSTANT) {
-        desiredClimbRate = getDesiredClimbRate(posControl.desiredState.pos.z, deltaMicros);
-    }
+    // if (posControl.flags.rocToAltMode != ROC_TO_ALT_CONSTANT) {
+        float desiredClimbRate = getDesiredClimbRate(posControl.desiredState.pos.z, deltaMicros);
+    // }
 
     // Reduce max allowed climb if performing loiter
     if (needToCalculateCircularLoiter && desiredClimbRate > 0.0f) {
@@ -331,11 +330,15 @@ static void calculateVirtualPositionTarget_FW(float trackingPeriod)
     // Detemine if a circular loiter is required.
     // For waypoints only use circular loiter when angular visibility is > 30 degs, otherwise head straight toward target
     #define TAN_15DEG    0.26795f
-    needToCalculateCircularLoiter = isNavHoldPositionActive() &&
-                                     (distanceToActualTarget <= (navLoiterRadius / TAN_15DEG)) &&
-                                     (distanceToActualTarget > 50.0f);
-    DEBUG_SET(DEBUG_ALWAYS, 4, distanceToActualTarget);
-    DEBUG_SET(DEBUG_ALWAYS, 5, needToCalculateCircularLoiter);
+    // CR122
+    bool loiterApproachActive = isNavHoldPositionActive() && distanceToActualTarget <= (navLoiterRadius / TAN_15DEG) && distanceToActualTarget > 50.0f;
+    needToCalculateCircularLoiter = loiterApproachActive || (navGetCurrentStateFlags() & NAV_CTL_HOLD);
+    // CR122
+    DEBUG_SET(DEBUG_ALWAYS, 0, distanceToActualTarget);
+    DEBUG_SET(DEBUG_ALWAYS, 1, isNavHoldPositionActive());
+    DEBUG_SET(DEBUG_ALWAYS, 2, needToCalculateCircularLoiter);
+    DEBUG_SET(DEBUG_ALWAYS, 3, (bool)(navGetCurrentStateFlags() & NAV_CTL_HOLD));
+    DEBUG_SET(DEBUG_ALWAYS, 4, loiterApproachActive);
     //if vtol landing is required, fly straight to homepoint
     if ((posControl.navState == NAV_STATE_RTH_HEAD_HOME) && navigationRTHAllowsLanding() && checkMixerATRequired(MIXERAT_REQUEST_LAND)){
         needToCalculateCircularLoiter = false;

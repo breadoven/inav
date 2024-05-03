@@ -2799,14 +2799,14 @@ groups:
         field: fw.max_bank_angle
         min: 5
         max: 80
-        # CR97A
+        # CR97
       - name: nav_fw_auto_climb_rate
         description: "Maximum climb/descent rate that UAV is allowed to reach during navigation modes. [cm/s]"
         default_value: 500
         field: fw.max_auto_climb_rate
         min: 10
         max: 2000
-        # CR97A
+        # CR97
       - name: nav_fw_manual_climb_rate
         description: "Maximum climb/descent rate firmware is allowed when processing pilot input for ALTHOLD control mode [cm/s]"
         default_value: 300
