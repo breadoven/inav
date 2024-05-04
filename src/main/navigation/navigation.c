@@ -4024,16 +4024,15 @@ bool isLastMissionWaypoint(void)
 // CR122
 bool isNavHoldPositionActive(void)
 {
-    if (FLIGHT_MODE(NAV_WP_MODE)) {
-        return posControl.waypointList[posControl.activeWaypointIndex].action != NAV_WP_ACTION_WAYPOINT ||
-               (navGetCurrentStateFlags() & NAV_CTL_HOLD) ||
-               isLastMissionWaypoint();
+    if (navGetCurrentStateFlags() & NAV_CTL_HOLD) {
+        return true;
     }
 
-    return posControl.navState != NAV_STATE_FW_LANDING_APPROACH &&
-           posControl.navState != NAV_STATE_FW_LANDING_GLIDE &&
-           posControl.navState != NAV_STATE_FW_LANDING_FLARE &&
-           !posControl.flags.rthTrackbackActive;
+    if (FLIGHT_MODE(NAV_WP_MODE)) {
+        return posControl.waypointList[posControl.activeWaypointIndex].action != NAV_WP_ACTION_WAYPOINT || isLastMissionWaypoint();
+    }
+
+    return !FLIGHT_MODE(NAV_FW_AUTOLAND) && !posControl.flags.rthTrackbackActive;
 }
 // CR122
 float getActiveSpeed(void)
