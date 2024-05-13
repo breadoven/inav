@@ -19,10 +19,6 @@
 #include <stdint.h>
 #include <math.h>
 #include <string.h>
-// CR97 hitl test
-// #include <stdio.h>
-// #include <stdlib.h>
-// CR97
 #include "platform.h"
 
 #include "build/debug.h"
@@ -637,7 +633,7 @@ static const navigationFSMStateDescriptor_t navFSM[NAV_STATE_COUNT] = {
         .persistentId = NAV_PERSISTENT_ID_RTH_HEAD_HOME,
         .onEntry = navOnEnteringState_NAV_STATE_RTH_HEAD_HOME,
         .timeoutMs = 10,
-        .stateFlags = NAV_CTL_ALT | NAV_CTL_POS | NAV_CTL_YAW | NAV_REQUIRE_ANGLE | NAV_REQUIRE_MAGHOLD | NAV_REQUIRE_THRTILT | NAV_AUTO_RTH | NAV_RC_POS | NAV_RC_YAW,  // CR117
+        .stateFlags = NAV_CTL_ALT | NAV_CTL_POS | NAV_CTL_YAW | NAV_REQUIRE_ANGLE | NAV_REQUIRE_MAGHOLD | NAV_REQUIRE_THRTILT | NAV_AUTO_RTH | NAV_RC_POS | NAV_RC_YAW,
         .mapToFlightModes = NAV_RTH_MODE | NAV_ALTHOLD_MODE,
         .mwState = MW_NAV_STATE_RTH_ENROUTE,
         .mwError = MW_NAV_ERROR_NONE,
@@ -1729,6 +1725,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_LANDING(navigationF
         }
 
         if (!posControl.fwLandState.landAborted && approachSettingIdx >= 0 && (fwAutolandApproachConfig(approachSettingIdx)->landApproachHeading1 != 0 || fwAutolandApproachConfig(approachSettingIdx)->landApproachHeading2 != 0)) {
+
             if (FLIGHT_MODE(NAV_WP_MODE)) {
                 posControl.fwLandState.landPos = posControl.activeWaypoint.pos;
                 posControl.fwLandState.landWp = true;
@@ -1736,7 +1733,6 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_LANDING(navigationF
                 posControl.fwLandState.landPos = posControl.safehomeState.nearestSafeHome;
                 posControl.fwLandState.landWp = false;
             }
-            posControl.fwLandState.approachSettingIdx = approachSettingIdx;
 
             posControl.fwLandState.approachSettingIdx = approachSettingIdx;
             posControl.fwLandState.landAltAgl = fwAutolandApproachConfig(posControl.fwLandState.approachSettingIdx)->isSeaLevelRef ? fwAutolandApproachConfig(posControl.fwLandState.approachSettingIdx)->landAlt - GPS_home.alt : fwAutolandApproachConfig(posControl.fwLandState.approachSettingIdx)->landAlt;
@@ -3315,7 +3311,7 @@ void setDesiredPosition(const fpVector3_t * pos, int32_t yaw, navSetWaypointFlag
     if ((useMask & NAV_POS_UPDATE_XY) != 0 && !STATE(NAV_CRUISE_BRAKING)) {
         posControl.desiredState.pos.x = pos->x;
         posControl.desiredState.pos.y = pos->y;
-    }  // CR99 - add check if target changed significantly -> reset PIDS if so. Same for Altitude
+    }
 
     // Z-position
     if ((useMask & NAV_POS_UPDATE_Z) != 0) {
@@ -3995,6 +3991,7 @@ bool isLastMissionWaypoint(void)
             (posControl.waypointList[posControl.activeWaypointIndex].flag == NAV_WP_FLAG_LAST));
 }
 
+/* Checks if Nav hold position is active */
 bool isNavHoldPositionActive(void)
 {
     /* If the current Nav state isn't flagged as a hold point (NAV_CTL_HOLD) then
@@ -4091,9 +4088,7 @@ void applyWaypointNavigationAndAltitudeHold(void)
     if (posControl.flags.estAglStatus == EST_TRUSTED)       navFlags |= (1 << 1);
     if (posControl.flags.estPosStatus == EST_TRUSTED)       navFlags |= (1 << 2);
     if (posControl.flags.isTerrainFollowEnabled)            navFlags |= (1 << 3);
-#if defined(NAV_GPS_GLITCH_DETECTION)
-    if (isGPSGlitchDetected())                              navFlags |= (1 << 4);
-#endif
+    // naFlags |= (1 << 4); // Old NAV GPS Glitch Detection flag
     if (posControl.flags.estHeadingStatus == EST_TRUSTED)   navFlags |= (1 << 5);
 
     // Reset all navigation requests - NAV controllers will set them if necessary
@@ -4220,13 +4215,6 @@ void checkManualEmergencyLandingControl(bool forcedActivation)
             navProcessFSMEvents(NAV_FSM_EVENT_SWITCH_TO_IDLE);
         }
     }
-
-    // ***** frig to trigger using beeper mode  CR97
-    // if (!IS_RC_MODE_ACTIVE(BOXBEEPERON) && posControl.flags.manualEmergLandActive) {
-        // navProcessFSMEvents(NAV_FSM_EVENT_SWITCH_TO_IDLE);
-    // }
-    // posControl.flags.manualEmergLandActive = IS_RC_MODE_ACTIVE(BOXBEEPERON);
-    // *****
 }
 
 static navigationFSMEvent_t selectNavEventFromBoxModeInput(bool launchBypass)   // CR6
@@ -4834,8 +4822,6 @@ void navigationInit(void)
         loadNonVolatileWaypointList(false);
     }
 #endif
-
-// srand(time(NULL));  // CR97  hitl test
 }
 
 /*-----------------------------------------------------------

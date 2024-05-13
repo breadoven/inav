@@ -708,7 +708,6 @@ uint8_t getActiveWpNumber(void);
  * are in the [0, 360 * 100) interval.
  */
 int32_t navigationGetHomeHeading(void);
-uint8_t getActiveWpNumber(void);   // CR112
 
 #ifdef USE_FW_AUTOLAND
 bool canFwLandingBeCancelled(void);

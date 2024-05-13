@@ -212,16 +212,11 @@ void resetMulticopterAltitudeController(void)
     pt1FilterReset(&posControl.pids.vel[Z].error_filter_state, 0.0f);
     pt1FilterReset(&posControl.pids.vel[Z].dterm_filter_state, 0.0f);
 
+    float climbRateToUse = navConfig()->mc.max_manual_climb_rate;
     if (FLIGHT_MODE(FAILSAFE_MODE) || FLIGHT_MODE(NAV_RTH_MODE) || FLIGHT_MODE(NAV_WP_MODE) || navigationIsExecutingAnEmergencyLanding()) {
-        const float maxSpeed = getActiveSpeed();
-        nav_speed_up = maxSpeed;
-        nav_accel_z = maxSpeed;
-        nav_speed_down = navConfig()->mc.max_auto_climb_rate;
-    } else {
-        nav_speed_up = navConfig()->general.max_manual_speed;
-        nav_accel_z = navConfig()->general.max_manual_speed;
-        nav_speed_down = navConfig()->mc.max_manual_climb_rate;
+        climbRateToUse = navConfig()->mc.max_auto_climb_rate;
     }
+    nav_speed_up = nav_accel_z = nav_speed_down = climbRateToUse;
 
     sqrtControllerInit(
         &alt_hold_sqrt_controller,
@@ -247,7 +242,7 @@ static void applyMulticopterAltitudeController(timeUs_t currentTimeUs)
             if (prepareForTakeoffOnReset) {
                 const navEstimatedPosVel_t *posToUse = navGetCurrentActualPositionAndVelocity();
 
-                posControl.desiredState.vel.z = -navConfig()->mc.max_manual_climb_rate;     // CR97
+                posControl.desiredState.vel.z = -navConfig()->mc.max_manual_climb_rate;
                 posControl.desiredState.pos.z = posToUse->pos.z - (navConfig()->mc.max_manual_climb_rate / posControl.pids.pos[Z].param.kP);
                 posControl.pids.vel[Z].integrator = -500.0f;
                 pt1FilterReset(&altholdThrottleFilterState, -500.0f);
@@ -835,7 +830,7 @@ bool isMulticopterLandingDetected(void)
 
     if (!startCondition || posControl.flags.resetLandingDetector) {
         landingDetectorStartedAt = 0;
-        return  posControl.flags.resetLandingDetector = false;
+        return posControl.flags.resetLandingDetector = false;
     }
 
     const float sensitivity = navConfig()->general.land_detect_sensitivity / 5.0f;
@@ -845,8 +840,8 @@ bool isMulticopterLandingDetected(void)
                         posControl.actualState.velXY < (MC_LAND_CHECK_VEL_XY_MOVING * sensitivity);
     // check gyro rates are low (degs/s)
     bool gyroCondition = averageAbsGyroRates() < (4.0f * sensitivity);
-    // DEBUG_SET(DEBUG_LANDING, 2, velCondition);
-    // DEBUG_SET(DEBUG_LANDING, 3, gyroCondition);
+    DEBUG_SET(DEBUG_LANDING, 2, velCondition);
+    DEBUG_SET(DEBUG_LANDING, 3, gyroCondition);
 
     bool possibleLandingDetected = false;
 
@@ -877,7 +872,6 @@ bool isMulticopterLandingDetected(void)
 
         possibleLandingDetected = isAtMinimalThrust && velCondition;
 
-        DEBUG_SET(DEBUG_LANDING, 4, 3);
         DEBUG_SET(DEBUG_LANDING, 6, rcCommandAdjustedThrottle);
         DEBUG_SET(DEBUG_LANDING, 7, landingThrSum / landingThrSamples - MC_LAND_DESCEND_THROTTLE);
     } else {    // non autonomous and emergency landing

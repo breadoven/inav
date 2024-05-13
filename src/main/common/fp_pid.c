@@ -40,7 +40,7 @@ float navPidApply3(
     const float dt,
     const float outMin,
     const float outMax,
-    pidControllerFlags_e pidFlags,  // CR99
+    pidControllerFlags_e pidFlags,
     const float gainScaler,
     const float dTermScaler
 ) {
@@ -79,12 +79,7 @@ float navPidApply3(
     }
 
     newDerivative = newDerivative * gainScaler * dTermScaler;
-    // CR99
-    // zero integral if proportional saturated
-    // if (newProportional > outMax || newProportional < outMin) {
-        // pidFlags |= PID_ZERO_INTEGRATOR;
-    // }
-    // CR99
+
     if (pidFlags & PID_ZERO_INTEGRATOR) {
         pid->integrator = 0.0f;
     }
