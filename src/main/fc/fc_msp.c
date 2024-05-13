@@ -1340,7 +1340,6 @@ static bool mspFcProcessOutCommand(uint16_t cmdMSP, sbuf_t *dst, mspPostProcessF
     case MSP_NAV_POSHOLD:
         sbufWriteU8(dst, navConfig()->general.flags.user_control_mode);
         sbufWriteU16(dst, navConfig()->general.max_auto_speed);
-        // sbufWriteU16(dst, navConfig()->mc.max_auto_climb_rate); // CR97
         sbufWriteU16(dst, mixerConfig()->platformType == PLATFORM_AIRPLANE ? navConfig()->fw.max_auto_climb_rate : navConfig()->mc.max_auto_climb_rate);
         sbufWriteU16(dst, navConfig()->general.max_manual_speed);
         sbufWriteU16(dst, mixerConfig()->platformType == PLATFORM_AIRPLANE ? navConfig()->fw.max_manual_climb_rate : navConfig()->mc.max_manual_climb_rate);
@@ -2404,14 +2403,11 @@ static mspResult_e mspFcProcessInCommand(uint16_t cmdMSP, sbuf_t *src)
         if (dataSize == 13) {
             navConfigMutable()->general.flags.user_control_mode = sbufReadU8(src);
             navConfigMutable()->general.max_auto_speed = sbufReadU16(src);
-            // navConfigMutable()->mc.max_auto_climb_rate = sbufReadU16(src);
-            // CR97
             if (mixerConfig()->platformType == PLATFORM_AIRPLANE) {
                 navConfigMutable()->fw.max_auto_climb_rate = sbufReadU16(src);
             } else {
                 navConfigMutable()->mc.max_auto_climb_rate = sbufReadU16(src);
             }
-            // CR97
             navConfigMutable()->general.max_manual_speed = sbufReadU16(src);
             if (mixerConfig()->platformType == PLATFORM_AIRPLANE) {
                 navConfigMutable()->fw.max_manual_climb_rate = sbufReadU16(src);
@@ -3603,7 +3599,7 @@ void mspWriteSimulatorOSD(sbuf_t *dst)
     static uint8_t osdPos_x = 0;
 
     //indicate new format hitl 1.4.0
-    sbufWriteU8(dst, 255);
+	sbufWriteU8(dst, 255);
 
     if (isOSDTypeSupportedBySimulator())
     {
