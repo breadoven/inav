@@ -4013,13 +4013,6 @@ bool isNavHoldPositionActive(void)
     return !FLIGHT_MODE(NAV_FW_AUTOLAND) && !posControl.flags.rthTrackbackActive;
 }
 
-    if (FLIGHT_MODE(NAV_WP_MODE)) {
-        return posControl.waypointList[posControl.activeWaypointIndex].action != NAV_WP_ACTION_WAYPOINT || isLastMissionWaypoint();
-    }
-
-    return !FLIGHT_MODE(NAV_FW_AUTOLAND) && !posControl.flags.rthTrackbackActive;
-}
-
 float getActiveSpeed(void)
 {
     /* Currently only applicable for multicopter */
