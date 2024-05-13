@@ -143,8 +143,8 @@ static void updateAltitudeVelocityAndPitchController_FW(timeDelta_t deltaMicros)
     // }
 
     // Reduce max allowed climb if performing loiter
-    if (needToCalculateCircularLoiter && desiredClimbRate > 0.0f) {
-        desiredClimbRate *= 0.67f;
+    if (needToCalculateCircularLoiter && desiredClimbRate > 0.67f * navConfig()->fw.max_auto_climb_rate) {
+        desiredClimbRate = 0.67f * navConfig()->fw.max_auto_climb_rate;
     }
 
 // DEBUG_SET(DEBUG_ALWAYS, 0, desiredClimbRate);

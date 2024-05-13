@@ -4003,24 +4003,6 @@ bool isLastMissionWaypoint(void)
     return FLIGHT_MODE(NAV_WP_MODE) && (posControl.activeWaypointIndex >= (posControl.startWpIndex + posControl.waypointCount - 1) ||
             (posControl.waypointList[posControl.activeWaypointIndex].flag == NAV_WP_FLAG_LAST));
 }
-
-/* Checks if Nav hold position is active */
-// bool isNavHoldPositionActive(void)
-// {  // CR117
-    // // WP mode last WP hold and Timed hold positions
-    // if (FLIGHT_MODE(NAV_WP_MODE)) {
-        // return isLastMissionWaypoint() ||
-               // NAV_Status.state == MW_NAV_STATE_HOLD_TIMED ||
-               // posControl.waypointList[posControl.activeWaypointIndex].action == NAV_WP_ACTION_HOLD_TIME;
-    // }
-    // // RTH mode (spiral climb and Home positions but excluding RTH Trackback point positions) and POSHOLD mode
-    // // Also hold position during emergency landing if position valid
-    // return (FLIGHT_MODE(NAV_RTH_MODE) && !posControl.flags.rthTrackbackActive) ||
-            // FLIGHT_MODE(NAV_POSHOLD_MODE) ||
-            // (posControl.navState == NAV_STATE_FW_LANDING_CLIMB_TO_LOITER || posControl.navState == NAV_STATE_FW_LANDING_LOITER) ||
-            // navigationIsExecutingAnEmergencyLanding();
-    // // CR117
-// }
 // CR122
 bool isNavHoldPositionActive(void)
 {
@@ -4290,7 +4272,8 @@ static navigationFSMEvent_t selectNavEventFromBoxModeInput(bool launchBypass)   
         checkManualEmergencyLandingControl(false);
 
         /* Emergency landing triggered by failsafe Landing or manually initiated */
-        if (posControl.flags.forcedEmergLandingActivated || posControl.flags.manualEmergLandActive || IS_RC_MODE_ACTIVE(BOXBEEPERON)) {
+        // if (posControl.flags.forcedEmergLandingActivated || posControl.flags.manualEmergLandActive || IS_RC_MODE_ACTIVE(BOXBEEPERON)) {
+        if (posControl.flags.forcedEmergLandingActivated || posControl.flags.manualEmergLandActive) {
             return NAV_FSM_EVENT_SWITCH_TO_EMERGENCY_LANDING;
         }
 
