@@ -1171,7 +1171,7 @@ static void cliRxRange(char *cmdline)
         ptr = cmdline;
         i = fastA2I(ptr);
         if (i >= 0 && i < NON_AUX_CHANNEL_COUNT) {
-            int rangeMin, rangeMax;
+            int rangeMin = 0, rangeMax = 0;
 
             ptr = nextArg(ptr);
             if (ptr) {
@@ -3359,6 +3359,7 @@ static void cliDumpProfile(uint8_t profileIndex, uint8_t dumpMask)
     cliPrintLinef("profile %d\r\n", getConfigProfile() + 1);
     dumpAllValues(PROFILE_VALUE, dumpMask);
     dumpAllValues(CONTROL_RATE_VALUE, dumpMask);
+    dumpAllValues(EZ_TUNE_VALUE, dumpMask);
 }
 
 static void cliBatteryProfile(char *cmdline)
