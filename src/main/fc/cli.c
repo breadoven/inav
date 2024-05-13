@@ -143,8 +143,9 @@ static void cliAssert(char *cmdline);
 #endif
 
 #ifdef USE_CLI_BATCH
-static bool commandBatchActive = false;
-static bool commandBatchError = false;
+static bool     commandBatchActive = false;
+static bool     commandBatchError = false;
+static uint8_t  commandBatchErrorCount = 0;
 #endif
 
 // sync this with features_e
@@ -257,6 +258,7 @@ static void cliPrintError(const char *str)
 #ifdef USE_CLI_BATCH
     if (commandBatchActive) {
         commandBatchError = true;
+        commandBatchErrorCount++;
     }
 #endif
 }
@@ -268,6 +270,7 @@ static void cliPrintErrorLine(const char *str)
 #ifdef USE_CLI_BATCH
     if (commandBatchActive) {
         commandBatchError = true;
+        commandBatchErrorCount++;
     }
 #endif
 }
@@ -370,6 +373,7 @@ static void cliPrintErrorVa(const char *format, va_list va)
 #ifdef USE_CLI_BATCH
     if (commandBatchActive) {
         commandBatchError = true;
+        commandBatchErrorCount++;
     }
 #endif
 }
@@ -661,6 +665,7 @@ static void cliAssert(char *cmdline)
 #ifdef USE_CLI_BATCH
         if (commandBatchActive) {
             commandBatchError = true;
+            commandBatchErrorCount++;
         }
 #endif
     }
@@ -1047,7 +1052,7 @@ static void cliAdjustmentRange(char *cmdline)
 }
 
 static void printMotorMix(uint8_t dumpMask, const motorMixer_t *primaryMotorMixer, const motorMixer_t *defaultprimaryMotorMixer)
-{   
+{
     const char *format = "mmix %d %s %s %s %s";
     char buf0[FTOA_BUFFER_SIZE];
     char buf1[FTOA_BUFFER_SIZE];
@@ -1311,7 +1316,7 @@ static void cliTempSensor(char *cmdline)
 #endif
 
 #ifdef USE_FW_AUTOLAND
-static void printFwAutolandApproach(uint8_t dumpMask, const navFwAutolandApproach_t *navFwAutolandApproach, const navFwAutolandApproach_t *defaultFwAutolandApproach) 
+static void printFwAutolandApproach(uint8_t dumpMask, const navFwAutolandApproach_t *navFwAutolandApproach, const navFwAutolandApproach_t *defaultFwAutolandApproach)
 {
     const char *format = "fwapproach %u %d %d %u %d %d %u";
     for (uint8_t i = 0; i < MAX_FW_LAND_APPOACH_SETTINGS; i++) {
@@ -1358,7 +1363,7 @@ static void cliFwAutolandApproach(char * cmdline)
 
             if ((ptr = nextArg(ptr))) {
                 landDirection = fastA2I(ptr);
-                
+
                 if (landDirection != 0 && landDirection != 1) {
                     cliShowParseError();
                     return;
@@ -1388,7 +1393,7 @@ static void cliFwAutolandApproach(char * cmdline)
 
                 validArgumentCount++;
             }
-            
+
             if ((ptr = nextArg(ptr))) {
                 isSeaLevelRef = fastA2I(ptr);
                 validArgumentCount++;
@@ -1802,7 +1807,7 @@ static void cliLedPinPWM(char *cmdline)
     if (isEmpty(cmdline)) {
         ledPinStopPWM();
         cliPrintLine("PWM stopped");
-    } else {       
+    } else {
         i = fastA2I(cmdline);
         ledPinStartPWM(i);
         cliPrintLinef("PWM started: %d%%",i);
@@ -3420,7 +3425,10 @@ static void cliDumpMixerProfile(uint8_t profileIndex, uint8_t dumpMask)
 #ifdef USE_CLI_BATCH
 static void cliPrintCommandBatchWarning(const char *warning)
 {
-    cliPrintErrorLinef("ERRORS WERE DETECTED - PLEASE REVIEW BEFORE CONTINUING");
+    char errorBuf[59];
+    tfp_sprintf(errorBuf, "%d ERRORS WERE DETECTED - Please review and fix before continuing!", commandBatchErrorCount);
+
+    cliPrintErrorLinef(errorBuf);
     if (warning) {
         cliPrintErrorLinef(warning);
     }
@@ -3430,6 +3438,7 @@ static void resetCommandBatch(void)
 {
     commandBatchActive = false;
     commandBatchError = false;
+    commandBatchErrorCount = 0;
 }
 
 static void cliBatch(char *cmdline)
@@ -3438,6 +3447,7 @@ static void cliBatch(char *cmdline)
         if (!commandBatchActive) {
             commandBatchActive = true;
             commandBatchError = false;
+            commandBatchErrorCount = 0;
         }
         cliPrintLine("Command batch started");
     } else if (strncasecmp(cmdline, "end", 3) == 0) {
@@ -4149,7 +4159,7 @@ static void printConfig(const char *cmdline, bool doDiff)
     if (dumpMask & DUMP_MIXER_PROFILE) {
         cliDumpMixerProfile(getConfigMixerProfile(), dumpMask);
     }
-    
+
     if (dumpMask & DUMP_PROFILE) {
         cliDumpProfile(getConfigProfile(), dumpMask);
     }

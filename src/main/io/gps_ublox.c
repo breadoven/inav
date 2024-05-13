@@ -956,7 +956,12 @@ STATIC_PROTOTHREAD(gpsConfigure)
     // Configure GNSS for M8N and later
     if (gpsState.hwVersion >= UBX_HW_VERSION_UBLOX8) {
         gpsSetProtocolTimeout(GPS_SHORT_TIMEOUT);
-        if (gpsState.hwVersion >= UBX_HW_VERSION_UBLOX10 || (gpsState.swVersionMajor >= 23 && gpsState.swVersionMinor >= 1)) {
+        bool use_VALSET = 0;
+        if ( (gpsState.swVersionMajor > 23) || (gpsState.swVersionMajor == 23 && gpsState.swVersionMinor > 1) ) {
+            use_VALSET = 1;
+        }
+
+        if ( use_VALSET && (gpsState.hwVersion >= UBX_HW_VERSION_UBLOX10) ) {
             configureGNSS10();
         } else {
             configureGNSS();
