@@ -1452,7 +1452,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_INITIALIZE(navigati
         }
         else {
             // Switch to RTH trackback
-            if (rthTrackBackIsActive() && rth_trackback.activePointIndex >= 0 && !isWaypointMissionRTHActive()) {
+            if (rthTrackBackCanBeActivated() && rth_trackback.activePointIndex >= 0 && !isWaypointMissionRTHActive()) {  // CR124
                 rthTrackBackUpdate(true);  // save final trackpoint for altitude and max trackback distance reference
                 posControl.flags.rthTrackbackActive = true;
                 calculateAndSetActiveWaypointToLocalPosition(getRthTrackBackPosition());
@@ -1571,7 +1571,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_TRACKBACK(navigatio
         return NAV_FSM_EVENT_SWITCH_TO_EMERGENCY_LANDING;
     }
 
-    if (rthTrackBackSetNewPosition()) {
+    if (!rthTrackBackSetNewPosition()) {        // CR124
         return NAV_FSM_EVENT_SWITCH_TO_NAV_STATE_RTH_INITIALIZE;
     }
 
