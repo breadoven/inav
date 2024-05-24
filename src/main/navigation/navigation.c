@@ -2608,14 +2608,16 @@ bool checkForPositionSensorTimeout(void)
         if ((posControl.flags.estPosStatus == EST_NONE) && ((millis() - posControl.lastValidPositionTimeMs) > (1000 * navConfig()->general.pos_failure_timeout))) {
             return true;
         }
-        else {
-            return false;
-        }
+        // else {
+            // return false;
+        // }
+    // }
+    // else {
+        // // Timeout not defined, never fail
+
     }
-    else {
-        // Timeout not defined, never fail
-        return false;
-    }
+
+    return false;
 }
 
 /*-----------------------------------------------------------

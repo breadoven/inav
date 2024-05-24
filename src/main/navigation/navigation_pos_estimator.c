@@ -543,10 +543,6 @@ static void estimationPredict(estimationContext_t * ctx)
 
 static bool estimationCalculateCorrection_Z(estimationContext_t * ctx)
 {
-    // DEBUG_SET(DEBUG_ALWAYS, 2, posEstimator.est.pos.z);       // Position estimate
-    // DEBUG_SET(DEBUG_ALWAYS, 3, posEstimator.baro.alt);        // Baro altitude
-    // DEBUG_SET(DEBUG_ALWAYS, 4, posEstimator.gps.pos.z);       // GPS altitude
-
     DEBUG_SET(DEBUG_ALTITUDE, 0, posEstimator.est.pos.z);       // Position estimate
     DEBUG_SET(DEBUG_ALTITUDE, 2, posEstimator.baro.alt);        // Baro altitude
     DEBUG_SET(DEBUG_ALTITUDE, 4, posEstimator.gps.pos.z);       // GPS altitude
@@ -558,14 +554,18 @@ static bool estimationCalculateCorrection_Z(estimationContext_t * ctx)
 
     bool correctOK = false;
 
-    //ignore baro if difference is too big, baro is probably wrong
-    const float gpsBaroResidual = ctx->newFlags & EST_GPS_Z_VALID ? fabsf(posEstimator.gps.pos.z - posEstimator.baro.alt) : 0.0f;
-    //fade out the baro to prevent sudden jump
-    const float start_epv = positionEstimationConfig()->max_eph_epv;
-    const float end_epv = positionEstimationConfig()->max_eph_epv * 2.0f;
-    const float wBaro = scaleRangef(constrainf(gpsBaroResidual, start_epv, end_epv), start_epv, end_epv, 1.0f, 0.0f);
-    //use both baro and gps
-    if ((ctx->newFlags & EST_BARO_VALID) && (!positionEstimationConfig()->use_gps_no_baro) && (wBaro > 0.01f)) {
+    float wBaro = 0.0f;
+    if (ctx->newFlags & EST_BARO_VALID) {
+        // Ignore baro if difference is too big, baro is probably wrong
+        const float gpsBaroResidual = ctx->newFlags & EST_GPS_Z_VALID ? fabsf(posEstimator.gps.pos.z - posEstimator.baro.alt) : 0.0f;
+        // Fade out the baro to prevent sudden jump
+        const float start_epv = positionEstimationConfig()->max_eph_epv;
+        const float end_epv = positionEstimationConfig()->max_eph_epv * 2.0f;
+        wBaro = scaleRangef(constrainf(gpsBaroResidual, start_epv, end_epv), start_epv, end_epv, 1.0f, 0.0f);
+    }
+
+    if (wBaro > 0.01f) {
+        DEBUG_SET(DEBUG_ALWAYS, 0, 200);
         timeUs_t currentTimeUs = micros();
 
         if (!ARMING_FLAG(ARMED)) {
@@ -601,6 +601,7 @@ static bool estimationCalculateCorrection_Z(estimationContext_t * ctx)
 
         correctOK = true;
     }
+
     if (ctx->newFlags & EST_GPS_Z_VALID) {
         // Reset current estimate to GPS altitude if estimate not valid
         if (!(ctx->newFlags & EST_Z_VALID)) {
