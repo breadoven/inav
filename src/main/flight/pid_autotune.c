@@ -40,6 +40,7 @@
 #include "fc/config.h"
 #include "fc/controlrate_profile.h"
 #include "fc/rc_controls.h"
+#include "fc/rc_modes.h"    // CR126
 #include "fc/rc_adjustments.h"
 #include "fc/runtime_config.h"
 #include "fc/settings.h"
@@ -128,9 +129,10 @@ void autotuneStart(void)
     lastGainsUpdateTime = millis();
 }
 
-void autotuneUpdateState(void)
+void autotuneUpdateState(void)  // called fc_core rxupdate
 {
-    if (IS_RC_MODE_ACTIVE(BOXAUTOTUNE) && STATE(AIRPLANE) && ARMING_FLAG(ARMED)) {
+    // if (IS_RC_MODE_ACTIVE(BOXAUTOTUNE) && STATE(AIRPLANE) && ARMING_FLAG(ARMED)) {
+    if (isFwAutoModeActive(BOXAUTOTUNE) && STATE(AIRPLANE) && ARMING_FLAG(ARMED)) {  // CR126
         if (!FLIGHT_MODE(AUTO_TUNE)) {
             autotuneStart();
             ENABLE_FLIGHT_MODE(AUTO_TUNE);
@@ -202,7 +204,7 @@ void autotuneFixedWingUpdate(const flight_dynamics_index_t axis, float desiredRa
 
         if ((tuneCurrent[axis].updateCount & 25) == 0 && tuneCurrent[axis].updateCount >= AUTOTUNE_FIXED_WING_MIN_SAMPLES) {
             if (pidAutotuneConfig()->fw_rate_adjustment != FIXED  && !FLIGHT_MODE(ANGLE_MODE)) { // Rate discovery is not possible in ANGLE mode
-                
+
                 // Target 80% control surface deflection to leave some room for P and I to work
                 float pidSumTarget = (pidAutotuneConfig()->fw_max_rate_deflection / 100.0f) * pidSumLimit;
 

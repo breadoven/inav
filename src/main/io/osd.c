@@ -2258,8 +2258,8 @@ static bool osdDrawSingleElement(uint8_t item)
                 int8_t blankPos;
                 for (blankPos = 2; blankPos >= 0; blankPos--) {
                     if (buff[blankPos] == SYM_BLANK) {
-            break;
-        }
+                        break;
+                    }
                 }
                 if (blankPos >= 0 || OSD_ALTERNATING_CHOICES(600, 2) == 0) {
                     blankPos = blankPos < 0 ? 0 : blankPos;
@@ -5695,30 +5695,249 @@ timeMs_t systemMessageCycleTime(unsigned messageCount, const char **messages)
     return osdConfig()->system_msg_display_time * factor;
 }
 
+// textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenteredText)
+// {
+    // textAttributes_t elemAttr = TEXT_ATTRIBUTES_NONE;
+
+    // if (buff != NULL) {
+        // const char *message = NULL;
+        // char messageBuf[MAX(SETTING_MAX_NAME_LENGTH, OSD_MESSAGE_LENGTH+1)]; //warning: shared buffer. Make sure it is used by single message in code below!
+        // // We might have up to 5 messages to show.
+        // const char *messages[5];
+        // unsigned messageCount = 0;
+        // const char *failsafeInfoMessage = NULL;
+        // const char *invertedInfoMessage = NULL;
+
+        // if (ARMING_FLAG(ARMED)) {
+// #ifdef USE_FW_AUTOLAND
+            // if (FLIGHT_MODE(FAILSAFE_MODE) || FLIGHT_MODE(NAV_RTH_MODE) || FLIGHT_MODE(NAV_WP_MODE) || navigationIsExecutingAnEmergencyLanding() || FLIGHT_MODE(NAV_FW_AUTOLAND)) {
+                // if (isWaypointMissionRTHActive() && !posControl.fwLandState.landWp) {
+// #else
+            // if (FLIGHT_MODE(FAILSAFE_MODE) || FLIGHT_MODE(NAV_RTH_MODE) || FLIGHT_MODE(NAV_WP_MODE) || navigationIsExecutingAnEmergencyLanding()) {
+                // if (isWaypointMissionRTHActive()) {
+// #endif
+                    // // if RTH activated whilst WP mode selected, remind pilot to cancel WP mode to exit RTH
+                    // messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_WP_RTH_CANCEL);
+                // }
+                // if (navGetCurrentStateFlags() & NAV_AUTO_WP_DONE) {
+                    // messages[messageCount++] = STATE(LANDING_DETECTED) ? OSD_MESSAGE_STR(OSD_MSG_WP_LANDED) : OSD_MESSAGE_STR(OSD_MSG_WP_FINISHED);
+                // } else if (NAV_Status.state == MW_NAV_STATE_WP_ENROUTE) {
+                    // // Countdown display for remaining Waypoints
+                    // char buf[6];
+                    // osdFormatDistanceSymbol(buf, posControl.wpDistance, 0);
+                    // tfp_sprintf(messageBuf, "TO WP %u/%u (%s)", getGeoWaypointNumber(posControl.activeWaypointIndex), posControl.geoWaypointCount, buf);
+                    // messages[messageCount++] = messageBuf;
+                // } else if (NAV_Status.state == MW_NAV_STATE_HOLD_TIMED) {
+                    // if (navConfig()->general.waypoint_enforce_altitude && !posControl.wpAltitudeReached) {
+                        // messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_ADJUSTING_WP_ALT);
+                    // } else {
+                        // // WP hold time countdown in seconds
+                        // timeMs_t currentTime = millis();
+                        // int holdTimeRemaining = posControl.waypointList[posControl.activeWaypointIndex].p1 - (int)(MS2S(currentTime - posControl.wpReachedTime));
+                        // holdTimeRemaining = holdTimeRemaining >= 0 ? holdTimeRemaining : 0;
+
+                        // tfp_sprintf(messageBuf, "HOLDING WP FOR %2u S", holdTimeRemaining);
+
+                        // messages[messageCount++] = messageBuf;
+                    // }
+                // } else if (NAV_Status.state == MW_NAV_STATE_LAND_SETTLE && posControl.landingDelay > 0) {
+                    // uint16_t remainingHoldSec = MS2S(posControl.landingDelay - millis());
+                    // tfp_sprintf(messageBuf, "LANDING DELAY: %3u SECONDS", remainingHoldSec);
+
+                    // messages[messageCount++] = messageBuf;
+                // }
+
+                // else {
+// #ifdef USE_FW_AUTOLAND
+                    // if (canFwLandingBeCancelled()) {
+                         // messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_MOVE_STICKS);
+                    // } else if (!FLIGHT_MODE(NAV_FW_AUTOLAND)) {
+// #endif
+                        // const char *navStateMessage = navigationStateMessage();
+                        // if (navStateMessage) {
+                            // messages[messageCount++] = navStateMessage;
+                        // }
+// #ifdef USE_FW_AUTOLAND
+                    // }
+// #endif
+                // }
+
+// #if defined(USE_SAFE_HOME)
+                // const char *safehomeMessage = divertingToSafehomeMessage();
+                // if (safehomeMessage) {
+                    // messages[messageCount++] = safehomeMessage;
+                // }
+// #endif
+                // if (FLIGHT_MODE(FAILSAFE_MODE)) {
+                    // // In FS mode while being armed too
+                    // const char *failsafePhaseMessage = osdFailsafePhaseMessage();
+                    // failsafeInfoMessage = osdFailsafeInfoMessage();
+
+                    // if (failsafePhaseMessage) {
+                        // messages[messageCount++] = failsafePhaseMessage;
+                    // }
+                    // if (failsafeInfoMessage) {
+                        // messages[messageCount++] = failsafeInfoMessage;
+                    // }
+                // }
+            // } else {    /* messages shown only when Failsafe, WP, RTH or Emergency Landing not active */
+                // if (STATE(FIXED_WING_LEGACY) && (navGetCurrentStateFlags() & NAV_CTL_LAUNCH)) {
+                    // messages[messageCount++] = navConfig()->fw.launch_manual_throttle ? OSD_MESSAGE_STR(OSD_MSG_AUTOLAUNCH_MANUAL) :
+                                                                                        // OSD_MESSAGE_STR(OSD_MSG_AUTOLAUNCH);
+                    // const char *launchStateMessage = fixedWingLaunchStateMessage();
+                    // if (launchStateMessage) {
+                        // messages[messageCount++] = launchStateMessage;
+                    // }
+                // } else {
+                    // if (FLIGHT_MODE(NAV_ALTHOLD_MODE) && !navigationRequiresAngleMode()) {
+                        // // ALTHOLD might be enabled alongside ANGLE/HORIZON/ANGLEHOLD/ACRO
+                        // // when it doesn't require ANGLE mode (required only in FW
+                        // // right now). If it requires ANGLE, its display is handled by OSD_FLYMODE.
+                        // messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_ALTITUDE_HOLD);
+                    // }
+                    // if (STATE(MULTIROTOR) && FLIGHT_MODE(NAV_COURSE_HOLD_MODE)) {
+                        // if (posControl.cruise.multicopterSpeed >= 50.0f) {
+                            // char buf[6];
+                            // osdFormatVelocityStr(buf, posControl.cruise.multicopterSpeed, false, false);
+                            // tfp_sprintf(messageBuf, "(SPD %s)", buf);
+                        // } else {
+                            // strcpy(messageBuf, "(HOLD)");
+                        // }
+                        // messages[messageCount++] = messageBuf;
+                    // }
+                    // if (IS_RC_MODE_ACTIVE(BOXAUTOTRIM) && !feature(FEATURE_FW_AUTOTRIM)) {
+                        // messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_AUTOTRIM);
+                    // }
+                    // if (IS_RC_MODE_ACTIVE(BOXAUTOTUNE)) {
+                        // messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_AUTOTUNE);
+                        // if (FLIGHT_MODE(MANUAL_MODE)) {
+                            // messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_AUTOTUNE_ACRO);
+                        // }
+                    // }
+                    // if (isFixedWingLevelTrimActive()) {
+                            // messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_AUTOLEVEL);
+                    // }
+                    // if (FLIGHT_MODE(HEADFREE_MODE)) {
+                        // messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_HEADFREE);
+                    // }
+                    // if (FLIGHT_MODE(SOARING_MODE)) {
+                        // messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_NAV_SOARING);
+                    // }
+                    // if (posControl.flags.wpMissionPlannerActive) {
+                        // messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_MISSION_PLANNER);
+                    // }
+                    // if (STATE(LANDING_DETECTED)) {
+                        // messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_LANDED);
+                    // }
+
+                    // if (IS_RC_MODE_ACTIVE(BOXANGLEHOLD)) {
+                        // int8_t navAngleHoldAxis = navCheckActiveAngleHoldAxis();
+                        // if (isAngleHoldLevel()) {
+                            // messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_ANGLEHOLD_LEVEL);
+                        // } else if (navAngleHoldAxis == FD_ROLL) {
+                            // messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_ANGLEHOLD_ROLL);
+                        // } else if (navAngleHoldAxis == FD_PITCH) {
+                            // messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_ANGLEHOLD_PITCH);
+                        // }
+                    // }
+                    // // CR44
+                    // // if (posControl.navState == NAV_STATE_IDLE && (IS_RC_MODE_ACTIVE(BOXNAVRTH) || IS_RC_MODE_ACTIVE(BOXNAVWP))) {
+                        // // messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_NAV_SENSOR_LOSS);
+                    // // }
+                    // // CR44
+                // }
+            // }
+            // // CR27
+            // // if (posControl.flags.compassGpsCogMismatchError) {
+                // // messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_COMPASS_ERROR);
+            // // }
+            // // CR27
+        // } else if (ARMING_FLAG(ARMING_DISABLED_ALL_FLAGS)) {
+            // unsigned invalidIndex;
+
+            // // Check if we're unable to arm for some reason
+            // if (ARMING_FLAG(ARMING_DISABLED_INVALID_SETTING) && !settingsValidate(&invalidIndex)) {
+                // const setting_t *setting = settingGet(invalidIndex);
+                // settingGetName(setting, messageBuf);
+                // for (int ii = 0; messageBuf[ii]; ii++) {
+                    // messageBuf[ii] = sl_toupper(messageBuf[ii]);
+                // }
+                // invertedInfoMessage = messageBuf;
+                // messages[messageCount++] = invertedInfoMessage;
+
+                // invertedInfoMessage = OSD_MESSAGE_STR(OSD_MSG_INVALID_SETTING);
+                // messages[messageCount++] = invertedInfoMessage;
+            // } else {
+                // invertedInfoMessage = OSD_MESSAGE_STR(OSD_MSG_UNABLE_ARM);
+                // messages[messageCount++] = invertedInfoMessage;
+                // // Show the reason for not arming
+                // messages[messageCount++] = osdArmingDisabledReasonMessage();
+            // }
+        // } else if (!ARMING_FLAG(ARMED)) {
+            // if (isWaypointListValid()) {
+                // messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_WP_MISSION_LOADED);
+            // }
+        // }
+        // /* Messages that are shown regardless of Arming state */
+
+        // // The following has been commented out as it will be added in #9688
+        // // uint16_t rearmMs = (emergInflightRearmEnabled()) ? emergencyInFlightRearmTimeMS() : 0;
+
+        // if (savingSettings == true) {
+           // messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_SAVING_SETTNGS);
+        // /*} else if (rearmMs > 0) { // Show rearming time if settings not actively being saved. Ignore the settings saved message if rearm available.
+            // char emReArmMsg[23];
+            // tfp_sprintf(emReArmMsg, "** REARM PERIOD: ");
+            // tfp_sprintf(emReArmMsg + strlen(emReArmMsg), "%02d", (uint8_t)MS2S(rearmMs));
+            // strcat(emReArmMsg, " **\0");
+            // messages[messageCount++] = OSD_MESSAGE_STR(emReArmMsg);*/
+        // } else if (notify_settings_saved > 0) {
+            // if (millis() > notify_settings_saved) {
+                // notify_settings_saved = 0;
+            // } else {
+                // messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_SETTINGS_SAVED);
+            // }
+        // }
+
+        // if (messageCount > 0) {
+            // message = messages[OSD_ALTERNATING_CHOICES(systemMessageCycleTime(messageCount, messages), messageCount)];
+            // if (message == failsafeInfoMessage) {
+                // // failsafeInfoMessage is not useful for recovering
+                // // a lost model, but might help avoiding a crash.
+                // // Blink to grab user attention.
+                // TEXT_ATTRIBUTES_ADD_BLINK(elemAttr);
+            // } else if (message == invertedInfoMessage) {
+                // TEXT_ATTRIBUTES_ADD_INVERTED(elemAttr);
+            // }
+            // // We're showing either failsafePhaseMessage or
+            // // navStateMessage. Don't BLINK here since
+            // // having this text available might be crucial
+            // // during a lost aircraft recovery and blinking
+            // // will cause it to be missing from some frames.
+        // }
+
+        // osdFormatMessage(buff, buff_size, message, isCenteredText);
+    // }
+    // return elemAttr;
+// }
+// CR126
 textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenteredText)
 {
     textAttributes_t elemAttr = TEXT_ATTRIBUTES_NONE;
 
     if (buff != NULL) {
         const char *message = NULL;
-        char messageBuf[MAX(SETTING_MAX_NAME_LENGTH, OSD_MESSAGE_LENGTH+1)]; //warning: shared buffer. Make sure it is used by single message in code below!
-        // We might have up to 5 messages to show.
-        const char *messages[5];
+        char messageBuf[MAX(SETTING_MAX_NAME_LENGTH, OSD_MESSAGE_LENGTH + 1)]; //warning: shared buffer. Make sure it is used by single message in code below!
+        // We might have up to 6 messages to show.
+        const char *messages[6];
         unsigned messageCount = 0;
         const char *failsafeInfoMessage = NULL;
         const char *invertedInfoMessage = NULL;
 
         if (ARMING_FLAG(ARMED)) {
-#ifdef USE_FW_AUTOLAND
-            if (FLIGHT_MODE(FAILSAFE_MODE) || FLIGHT_MODE(NAV_RTH_MODE) || FLIGHT_MODE(NAV_WP_MODE) || navigationIsExecutingAnEmergencyLanding() || FLIGHT_MODE(NAV_FW_AUTOLAND)) {
-                if (isWaypointMissionRTHActive() && !posControl.fwLandState.landWp) {
-#else
-            if (FLIGHT_MODE(FAILSAFE_MODE) || FLIGHT_MODE(NAV_RTH_MODE) || FLIGHT_MODE(NAV_WP_MODE) || navigationIsExecutingAnEmergencyLanding()) {
-                if (isWaypointMissionRTHActive()) {
-#endif
-                    // if RTH activated whilst WP mode selected, remind pilot to cancel WP mode to exit RTH
-                    messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_WP_RTH_CANCEL);
-                }
+            if (STATE(LANDING_DETECTED)) {
+                messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_LANDED);
+            } else if (FLIGHT_MODE(FAILSAFE_MODE) || FLIGHT_MODE(NAV_RTH_MODE) || FLIGHT_MODE(NAV_WP_MODE) || navigationIsExecutingAnEmergencyLanding()) {
                 if (navGetCurrentStateFlags() & NAV_AUTO_WP_DONE) {
                     messages[messageCount++] = STATE(LANDING_DETECTED) ? OSD_MESSAGE_STR(OSD_MSG_WP_LANDED) : OSD_MESSAGE_STR(OSD_MSG_WP_FINISHED);
                 } else if (NAV_Status.state == MW_NAV_STATE_WP_ENROUTE) {
@@ -5740,28 +5959,12 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
 
                         messages[messageCount++] = messageBuf;
                     }
-                } else if (NAV_Status.state == MW_NAV_STATE_LAND_SETTLE && posControl.landingDelay > 0) {
-                    uint16_t remainingHoldSec = MS2S(posControl.landingDelay - millis());
-                    tfp_sprintf(messageBuf, "LANDING DELAY: %3u SECONDS", remainingHoldSec);
-
-                    messages[messageCount++] = messageBuf;
-                }
-
-                else {
-#ifdef USE_FW_AUTOLAND
-                    if (canFwLandingBeCancelled()) {
-                         messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_MOVE_STICKS);
-                    } else if (!FLIGHT_MODE(NAV_FW_AUTOLAND)) {
-#endif
-                        const char *navStateMessage = navigationStateMessage();
-                        if (navStateMessage) {
-                            messages[messageCount++] = navStateMessage;
-                        }
-#ifdef USE_FW_AUTOLAND
+                } else {
+                    const char *navStateMessage = navigationStateMessage();
+                    if (navStateMessage) {
+                        messages[messageCount++] = navStateMessage;
                     }
-#endif
                 }
-
 #if defined(USE_SAFE_HOME)
                 const char *safehomeMessage = divertingToSafehomeMessage();
                 if (safehomeMessage) {
@@ -5770,6 +5973,13 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
 #endif
                 if (FLIGHT_MODE(FAILSAFE_MODE)) {
                     // In FS mode while being armed too
+                    if (NAV_Status.state == MW_NAV_STATE_LAND_SETTLE && posControl.landingDelay > 0) {
+                        uint16_t remainingHoldSec = MS2S(posControl.landingDelay - millis());
+                        tfp_sprintf(messageBuf, "LANDING DELAY: %3u SECONDS", remainingHoldSec);
+
+                        messages[messageCount++] = messageBuf;
+                    }
+
                     const char *failsafePhaseMessage = osdFailsafePhaseMessage();
                     failsafeInfoMessage = osdFailsafeInfoMessage();
 
@@ -5779,55 +5989,35 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
                     if (failsafeInfoMessage) {
                         messages[messageCount++] = failsafeInfoMessage;
                     }
+                } else if (isWaypointMissionRTHActive()) {
+                    // if RTH activated whilst WP mode selected, remind pilot to cancel WP mode to exit RTH
+                    messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_WP_RTH_CANCEL);
                 }
             } else {    /* messages shown only when Failsafe, WP, RTH or Emergency Landing not active */
-                if (STATE(FIXED_WING_LEGACY) && (navGetCurrentStateFlags() & NAV_CTL_LAUNCH)) {
-                    messages[messageCount++] = navConfig()->fw.launch_manual_throttle ? OSD_MESSAGE_STR(OSD_MSG_AUTOLAUNCH_MANUAL) :
-                                                                                        OSD_MESSAGE_STR(OSD_MSG_AUTOLAUNCH);
-                    const char *launchStateMessage = fixedWingLaunchStateMessage();
-                    if (launchStateMessage) {
-                        messages[messageCount++] = launchStateMessage;
-                    }
-                } else {
-                    if (FLIGHT_MODE(NAV_ALTHOLD_MODE) && !navigationRequiresAngleMode()) {
-                        // ALTHOLD might be enabled alongside ANGLE/HORIZON/ANGLEHOLD/ACRO
-                        // when it doesn't require ANGLE mode (required only in FW
-                        // right now). If it requires ANGLE, its display is handled by OSD_FLYMODE.
-                        messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_ALTITUDE_HOLD);
-                    }
-                    if (STATE(MULTIROTOR) && FLIGHT_MODE(NAV_COURSE_HOLD_MODE)) {
-                        if (posControl.cruise.multicopterSpeed >= 50.0f) {
-                            char buf[6];
-                            osdFormatVelocityStr(buf, posControl.cruise.multicopterSpeed, false, false);
-                            tfp_sprintf(messageBuf, "(SPD %s)", buf);
-                        } else {
-                            strcpy(messageBuf, "(HOLD)");
+                if (STATE(AIRPLANE)) {
+#ifdef USE_FW_AUTOLAND
+                    if (canFwLandingBeCancelled()) {
+                         messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_MOVE_STICKS);
+                    } else
+#endif
+                    if (navGetCurrentStateFlags() & NAV_CTL_LAUNCH) {
+                        messages[messageCount++] = navConfig()->fw.launch_manual_throttle ? OSD_MESSAGE_STR(OSD_MSG_AUTOLAUNCH_MANUAL) :
+                                                                                            OSD_MESSAGE_STR(OSD_MSG_AUTOLAUNCH);
+                        const char *launchStateMessage = fixedWingLaunchStateMessage();
+                        if (launchStateMessage) {
+                            messages[messageCount++] = launchStateMessage;
                         }
-                        messages[messageCount++] = messageBuf;
-                    }
-                    if (IS_RC_MODE_ACTIVE(BOXAUTOTRIM) && !feature(FEATURE_FW_AUTOTRIM)) {
-                        messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_AUTOTRIM);
-                    }
-                    if (IS_RC_MODE_ACTIVE(BOXAUTOTUNE)) {
+                    } else if (FLIGHT_MODE(SOARING_MODE)) {
+                        messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_NAV_SOARING);
+                    } else if (isFwAutoModeActive(BOXAUTOTUNE)) {
                         messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_AUTOTUNE);
                         if (FLIGHT_MODE(MANUAL_MODE)) {
                             messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_AUTOTUNE_ACRO);
                         }
-                    }
-                    if (isFixedWingLevelTrimActive()) {
-                            messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_AUTOLEVEL);
-                    }
-                    if (FLIGHT_MODE(HEADFREE_MODE)) {
-                        messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_HEADFREE);
-                    }
-                    if (FLIGHT_MODE(SOARING_MODE)) {
-                        messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_NAV_SOARING);
-                    }
-                    if (posControl.flags.wpMissionPlannerActive) {
-                        messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_MISSION_PLANNER);
-                    }
-                    if (STATE(LANDING_DETECTED)) {
-                        messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_LANDED);
+                    } else if (isFwAutoModeActive(BOXAUTOTRIM) && !feature(FEATURE_FW_AUTOTRIM)) {
+                        messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_AUTOTRIM);
+                    } else if (isFixedWingLevelTrimActive()) {
+                        messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_AUTOLEVEL);
                     }
 
                     if (IS_RC_MODE_ACTIVE(BOXANGLEHOLD)) {
@@ -5840,18 +6030,31 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
                             messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_ANGLEHOLD_PITCH);
                         }
                     }
-                    // CR44
-                    // if (posControl.navState == NAV_STATE_IDLE && (IS_RC_MODE_ACTIVE(BOXNAVRTH) || IS_RC_MODE_ACTIVE(BOXNAVWP))) {
-                        // messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_NAV_SENSOR_LOSS);
-                    // }
-                    // CR44
+                } else if (STATE(MULTIROTOR)) {
+                    if (FLIGHT_MODE(NAV_COURSE_HOLD_MODE)) {
+                        if (posControl.cruise.multicopterSpeed >= 50.0f) {
+                            char buf[6];
+                            osdFormatVelocityStr(buf, posControl.cruise.multicopterSpeed, false, false);
+                            tfp_sprintf(messageBuf, "(SPD %s)", buf);
+                        } else {
+                            strcpy(messageBuf, "(HOLD)");
+                        }
+                        messages[messageCount++] = messageBuf;
+                    } else if (FLIGHT_MODE(HEADFREE_MODE)) {
+                        messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_HEADFREE);
+                    }
+                    if (FLIGHT_MODE(NAV_ALTHOLD_MODE) && !navigationRequiresAngleMode()) {
+                        // ALTHOLD might be enabled alongside ANGLE/HORIZON/ANGLEHOLD/ACRO
+                        // when it doesn't require ANGLE mode (required only in FW
+                        // right now). If it requires ANGLE, its display is handled by OSD_FLYMODE.
+                        messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_ALTITUDE_HOLD);
+                    }
+                }
+
+                if (posControl.flags.wpMissionPlannerActive) {
+                    messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_MISSION_PLANNER);
                 }
             }
-            // CR27
-            // if (posControl.flags.compassGpsCogMismatchError) {
-                // messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_COMPASS_ERROR);
-            // }
-            // CR27
         } else if (ARMING_FLAG(ARMING_DISABLED_ALL_FLAGS)) {
             unsigned invalidIndex;
 
@@ -5920,7 +6123,7 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
     }
     return elemAttr;
 }
-
+// CR126
 void osdResetWarningFlags(void)
 {
     osdWarningsFlags = 0;

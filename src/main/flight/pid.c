@@ -1097,10 +1097,10 @@ void updateAngleHold(float *angleTarget, uint8_t axis)
 
         static int16_t angleHoldTarget[2];
 
-        DEBUG_SET(DEBUG_ALWAYS, 0, angleHoldTarget[FD_ROLL]);
-        DEBUG_SET(DEBUG_ALWAYS, 2, attitude.raw[FD_ROLL]);
-        DEBUG_SET(DEBUG_ALWAYS, 1, angleHoldTarget[FD_PITCH]);
-        DEBUG_SET(DEBUG_ALWAYS, 3, attitude.raw[FD_PITCH]);
+        // DEBUG_SET(DEBUG_ALWAYS, 0, angleHoldTarget[FD_ROLL]);
+        // DEBUG_SET(DEBUG_ALWAYS, 2, attitude.raw[FD_ROLL]);
+        // DEBUG_SET(DEBUG_ALWAYS, 1, angleHoldTarget[FD_PITCH]);
+        // DEBUG_SET(DEBUG_ALWAYS, 3, attitude.raw[FD_PITCH]);
 
         if (restartAngleHoldMode) {      // set target attitude to current attitude on activation
             angleHoldTarget[FD_ROLL] = attitude.raw[FD_ROLL];
@@ -1351,13 +1351,13 @@ pidBank_t * pidBankMutable(void) {
 
 bool isFixedWingLevelTrimActive(void)
 {
-    return IS_RC_MODE_ACTIVE(BOXAUTOLEVEL) && !areSticksDeflected() &&
+    return isFwAutoModeActive(BOXAUTOLEVEL) && !areSticksDeflected() &&  // CR126
            (FLIGHT_MODE(ANGLE_MODE) || FLIGHT_MODE(HORIZON_MODE)) &&
            !FLIGHT_MODE(SOARING_MODE) && !FLIGHT_MODE(MANUAL_MODE) &&
            !navigationIsControllingAltitude() && !(navCheckActiveAngleHoldAxis() == FD_PITCH && !angleHoldIsLevel);
 }
 
-void updateFixedWingLevelTrim(timeUs_t currentTimeUs)
+void updateFixedWingLevelTrim(timeUs_t currentTimeUs)  // called by task scheduler
 {
     if (!STATE(AIRPLANE)) {
         return;
@@ -1375,7 +1375,8 @@ void updateFixedWingLevelTrim(timeUs_t currentTimeUs)
     previousArmingState = ARMING_FLAG(ARMED);
 
     // return if not active or disarmed
-    if (!IS_RC_MODE_ACTIVE(BOXAUTOLEVEL) || !ARMING_FLAG(ARMED)) {
+    // if (!IS_RC_MODE_ACTIVE(BOXAUTOLEVEL) || !ARMING_FLAG(ARMED)) {  // CR126
+    if (!isFwAutoModeActive(BOXAUTOLEVEL) || !ARMING_FLAG(ARMED)) {  // CR126
         return;
     }
 

@@ -117,7 +117,20 @@ bool isUsingNavigationModes(void)
 {
     return isUsingNAVModes;
 }
+// CR126
+bool isFwAutoModeActive(boxId_e mode)
+{
+    if (mode == BOXAUTOTUNE) {
+        return IS_RC_MODE_ACTIVE(BOXAUTOTUNE);
+    } else if (mode == BOXAUTOTRIM) {
+        return IS_RC_MODE_ACTIVE(BOXAUTOTRIM) && !IS_RC_MODE_ACTIVE(BOXAUTOTUNE);
+    } else if (mode == BOXAUTOLEVEL) {
+        return IS_RC_MODE_ACTIVE(BOXAUTOLEVEL) && !IS_RC_MODE_ACTIVE(BOXAUTOTUNE) && !IS_RC_MODE_ACTIVE(BOXAUTOTRIM);
+    }
 
+    return false;
+}
+// CR126
 bool IS_RC_MODE_ACTIVE(boxId_e boxId)
 {
     return bitArrayGet(rcModeActivationMask.bits, boxId);

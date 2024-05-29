@@ -479,17 +479,16 @@ static uint32_t calculateCurrentValidityFlags(timeUs_t currentTimeUs)
 
     if ((sensors(SENSOR_GPS)
 #ifdef USE_GPS_FIX_ESTIMATION
-            || STATE(GPS_ESTIMATED_FIX)
+        || STATE(GPS_ESTIMATED_FIX)
 #endif
-        ) && posControl.gpsOrigin.valid &&
-        ((currentTimeUs - posEstimator.gps.lastUpdateTime) <= MS2US(INAV_GPS_TIMEOUT_MS)) &&
+        ) && posControl.gpsOrigin.valid && ((currentTimeUs - posEstimator.gps.lastUpdateTime) <= MS2US(INAV_GPS_TIMEOUT_MS)) &&
         (posEstimator.gps.eph < positionEstimationConfig()->max_eph_epv)) {
-        if (posEstimator.gps.epv < positionEstimationConfig()->max_eph_epv) {
-            newFlags |= EST_GPS_XY_VALID | EST_GPS_Z_VALID;
-        }
-        else {
-            newFlags |= EST_GPS_XY_VALID;
-        }
+            if (posEstimator.gps.epv < positionEstimationConfig()->max_eph_epv) {
+                newFlags |= EST_GPS_XY_VALID | EST_GPS_Z_VALID;
+            }
+            else {
+                newFlags |= EST_GPS_XY_VALID;
+            }
     }
 
     if (sensors(SENSOR_BARO) && ((currentTimeUs - posEstimator.baro.lastUpdateTime) <= MS2US(INAV_BARO_TIMEOUT_MS))) {
@@ -565,7 +564,6 @@ static bool estimationCalculateCorrection_Z(estimationContext_t * ctx)
     }
 
     if (wBaro > 0.01f) {
-        DEBUG_SET(DEBUG_ALWAYS, 0, 200);
         timeUs_t currentTimeUs = micros();
 
         if (!ARMING_FLAG(ARMED)) {
