@@ -404,13 +404,15 @@ static const blackboxSimpleFieldDefinition_t blackboxGpsHFields[] = {
 static const blackboxSimpleFieldDefinition_t blackboxSlowFields[] = {
     {"activeWpNumber",        -1, UNSIGNED, PREDICT(0),      ENCODING(UNSIGNED_VB)},
     {"flightModeFlags",       -1, UNSIGNED, PREDICT(0),      ENCODING(UNSIGNED_VB)},
+    {"flightModeFlags2",      -1, UNSIGNED, PREDICT(0),      ENCODING(UNSIGNED_VB)},    // CR127
+    {"activeFlightModeFlags", -1, UNSIGNED, PREDICT(0),      ENCODING(UNSIGNED_VB)},    // CR127
     {"stateFlags",            -1, UNSIGNED, PREDICT(0),      ENCODING(UNSIGNED_VB)},
 
     {"failsafePhase",         -1, UNSIGNED, PREDICT(0),      ENCODING(TAG2_3S32)},
     {"rxSignalReceived",      -1, UNSIGNED, PREDICT(0),      ENCODING(TAG2_3S32)},
     {"rxFlightChannelsValid", -1, UNSIGNED, PREDICT(0),      ENCODING(TAG2_3S32)},
     {"rxUpdateRate",          -1, UNSIGNED, PREDICT(PREVIOUS),      ENCODING(UNSIGNED_VB)},
-    
+
     {"hwHealthStatus",        -1, UNSIGNED, PREDICT(0),      ENCODING(UNSIGNED_VB)},
     {"powerSupplyImpedance",  -1, UNSIGNED, PREDICT(0),      ENCODING(UNSIGNED_VB)},
     {"sagCompensatedVBat",    -1, UNSIGNED, PREDICT(0),      ENCODING(UNSIGNED_VB)},
@@ -533,7 +535,9 @@ typedef struct blackboxGpsState_s {
 
 // This data is updated really infrequently:
 typedef struct blackboxSlowState_s {
-    uint32_t flightModeFlags; // extend this data size (from uint16_t)
+    uint32_t rcModeFlags; // extend this data size (from uint16_t)
+    uint32_t rcModeFlags2; // 127
+    uint32_t activeFlightModeFlags; // CR127
     uint32_t stateFlags;
     uint8_t failsafePhase;
     bool rxSignalReceived;
@@ -566,7 +570,7 @@ extern boxBitmask_t rcModeActivationMask;
 static BlackboxState blackboxState = BLACKBOX_STATE_DISABLED;
 
 static uint32_t blackboxLastArmingBeep = 0;
-static uint32_t blackboxLastFlightModeFlags = 0;
+static uint32_t blackboxLastRcModeFlags = 0;
 
 static struct {
     uint32_t headerIndex;
@@ -1261,7 +1265,9 @@ static void writeSlowFrame(void)
     blackboxWrite('S');
 
     blackboxWriteUnsignedVB(slowHistory.activeWpNumber);
-    blackboxWriteUnsignedVB(slowHistory.flightModeFlags);
+    blackboxWriteUnsignedVB(slowHistory.rcModeFlags);
+    blackboxWriteUnsignedVB(slowHistory.rcModeFlags2);  // CR127
+    blackboxWriteUnsignedVB(slowHistory.activeFlightModeFlags);   // CR127
     blackboxWriteUnsignedVB(slowHistory.stateFlags);
 
     /*
@@ -1273,7 +1279,7 @@ static void writeSlowFrame(void)
     blackboxWriteTag2_3S32(values);
 
     blackboxWriteUnsignedVB(slowHistory.rxUpdateRate);
-    
+
     blackboxWriteUnsignedVB(slowHistory.hwHealthStatus);
     blackboxWriteUnsignedVB(slowHistory.powerSupplyImpedance);
     blackboxWriteUnsignedVB(slowHistory.sagCompensatedVBat);
@@ -1308,29 +1314,21 @@ static void writeSlowFrame(void)
 static void loadSlowState(blackboxSlowState_t *slow)
 {
     slow->activeWpNumber = getActiveWpNumber();
-    memcpy(&slow->flightModeFlags, &rcModeActivationMask, sizeof(slow->flightModeFlags)); //was flightModeFlags;
-    // Also log Nav auto enabled flight modes rather than just those selected by boxmode
-    if (FLIGHT_MODE(ANGLE_MODE)) {
-        slow->flightModeFlags |= (1 << BOXANGLE);
-    }
-    if (FLIGHT_MODE(NAV_ALTHOLD_MODE)) {
-        slow->flightModeFlags |= (1 << BOXNAVALTHOLD);
-    }
-    if (FLIGHT_MODE(NAV_RTH_MODE)) {
-        slow->flightModeFlags |= (1 << BOXNAVRTH);
-    }
+    // CR127
+    slow->rcModeFlags = rcModeActivationMask.bits[0];
+    slow->rcModeFlags2 = rcModeActivationMask.bits[1];
 
+    // Also log Nav auto enabled flight modes rather than just those selected by boxmode
     if (navigationGetHeadingControlState() == NAV_HEADING_CONTROL_AUTO) {
-        slow->flightModeFlags |= (1 << BOXHEADINGHOLD);
+        slow->rcModeFlags |= (1 << BOXHEADINGHOLD);
     }
-    if (navigationRequiresTurnAssistance()) {
-        slow->flightModeFlags |= (1 << BOXTURNASSIST);
-    }
+    slow->activeFlightModeFlags = flightModeFlags;
+    // CR127
     slow->stateFlags = stateFlags;
     slow->failsafePhase = failsafePhase();
     slow->rxSignalReceived = rxIsReceivingSignal();
     slow->rxFlightChannelsValid = rxAreFlightChannelsValid();
-    slow->rxUpdateRate = getRcUpdateFrequency();    
+    slow->rxUpdateRate = getRcUpdateFrequency();
     slow->hwHealthStatus = (getHwGyroStatus()           << 2 * 0) |     // Pack hardware health status into a bit field.
                            (getHwAccelerometerStatus()  << 2 * 1) |     // Use raw hardwareSensorStatus_e values and pack them using 2 bits per value
                            (getHwCompassStatus()        << 2 * 2) |     // Report GYRO in 2 lowest bits, then ACC, COMPASS, BARO, GPS, RANGEFINDER and PITOT
@@ -1498,7 +1496,7 @@ void blackboxStart(void)
      * it finally plays the beep for this arming event.
      */
     blackboxLastArmingBeep = getArmingBeepTimeMicros();
-    memcpy(&blackboxLastFlightModeFlags, &rcModeActivationMask, sizeof(blackboxLastFlightModeFlags)); // record startup status
+    memcpy(&blackboxLastRcModeFlags, &rcModeActivationMask, sizeof(blackboxLastRcModeFlags)); // record startup status
 
     blackboxSetState(BLACKBOX_STATE_PREPARE_LOG_FILE);
 }
@@ -2023,10 +2021,10 @@ static void blackboxCheckAndLogArmingBeep(void)
 static void blackboxCheckAndLogFlightMode(void)
 {
     // Use != so that we can still detect a change if the counter wraps
-    if (memcmp(&rcModeActivationMask, &blackboxLastFlightModeFlags, sizeof(blackboxLastFlightModeFlags))) {
+    if (memcmp(&rcModeActivationMask, &blackboxLastRcModeFlags, sizeof(blackboxLastRcModeFlags))) {
         flightLogEvent_flightMode_t eventData; // Add new data for current flight mode flags
-        eventData.lastFlags = blackboxLastFlightModeFlags;
-        memcpy(&blackboxLastFlightModeFlags, &rcModeActivationMask, sizeof(blackboxLastFlightModeFlags));
+        eventData.lastFlags = blackboxLastRcModeFlags;
+        memcpy(&blackboxLastRcModeFlags, &rcModeActivationMask, sizeof(blackboxLastRcModeFlags));
         memcpy(&eventData.flags, &rcModeActivationMask, sizeof(eventData.flags));
         blackboxLogEvent(FLIGHT_LOG_EVENT_FLIGHTMODE, (flightLogEventData_t *)&eventData);
     }
