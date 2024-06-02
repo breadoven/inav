@@ -36,6 +36,7 @@
 #include "sensors/boardalignment.h"
 #include "sensors/gyro.h"
 
+#include "fc/fc_core.h"
 #include "fc/config.h"
 #include "fc/rc_controls.h"
 #include "fc/rc_curves.h"
@@ -804,13 +805,39 @@ static bool isLandingGbumpDetected(timeMs_t currentTimeMs)
     return false;
 }
 #endif
+// CR128
+bool isMulticopterCrashedInverted(void)
+{
+    static timeMs_t startTime = 0;
+
+    if ((ABS(attitude.values.roll) > 1000 || ABS(attitude.values.roll) > 700) && fabsf(navGetCurrentActualPositionAndVelocity()->vel.z) < MC_LAND_CHECK_VEL_Z_MOVING) {
+        if (startTime == 0) {
+            startTime = millis();
+        } else {
+            uint16_t disarmTimeDelay = S2MS(navConfig()->general.inverted_crash_detection);
+            disarmTimeDelay = disarmTimeDelay < 3000 ? 3000 : disarmTimeDelay;
+
+            return millis() - startTime > disarmTimeDelay;
+        }
+    } else {
+        startTime = 0;
+    }
+
+    return false;
+}
+// CR128
 bool isMulticopterLandingDetected(void)
 {
     DEBUG_SET(DEBUG_LANDING, 4, 0);
     DEBUG_SET(DEBUG_LANDING, 3, averageAbsGyroRates() * 100);
 
     const timeMs_t currentTimeMs = millis();
-
+// CR128
+    if (navConfig()->general.inverted_crash_detection && isMulticopterCrashedInverted()) {
+        ENABLE_ARMING_FLAG(ARMING_DISABLED_LANDING_DETECTED);
+        disarm(DISARM_LANDING);
+    }
+// CR128
 #if defined(USE_BARO)
     if (sensors(SENSOR_BARO) && navConfig()->general.flags.landing_bump_detection && isLandingGbumpDetected(currentTimeMs)) {
         return true;    // Landing flagged immediately if landing bump detected
