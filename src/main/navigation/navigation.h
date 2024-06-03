@@ -324,7 +324,6 @@ typedef struct navConfig_s {
         uint16_t rth_linear_descent_start_distance; // Distance from home to start the linear descent (0 = immediately)
         uint8_t  cruise_yaw_rate;                   // Max yaw rate (dps) when CRUISE MODE is enabled
         uint16_t rth_fs_landing_delay;              // Delay upon reaching home before starting landing if in FS (0 = immediate)
-        uint8_t inverted_crash_detection;           //  // CR128
     } general;
 
     struct {
@@ -347,6 +346,7 @@ typedef struct navConfig_s {
         uint8_t posResponseExpo;                // Position controller expo (taret vel expo for MC)
         bool slowDownForTurning;                // Slow down during WP missions when changing heading on next waypoint
         uint8_t althold_throttle_type;          // throttle zero datum type for alt hold
+        uint8_t inverted_crash_detection;       //  // CR128
     } mc;
 
     struct {

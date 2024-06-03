@@ -810,12 +810,11 @@ bool isMulticopterCrashedInverted(void)
 {
     static timeMs_t startTime = 0;
 
-    if ((ABS(attitude.values.roll) > 1000 || ABS(attitude.values.roll) > 700) && fabsf(navGetCurrentActualPositionAndVelocity()->vel.z) < MC_LAND_CHECK_VEL_Z_MOVING) {
+    if ((ABS(attitude.values.roll) > 1000 || ABS(attitude.values.pitch) > 700) && fabsf(navGetCurrentActualPositionAndVelocity()->vel.z) < MC_LAND_CHECK_VEL_Z_MOVING) {
         if (startTime == 0) {
             startTime = millis();
         } else {
-            uint16_t disarmTimeDelay = S2MS(navConfig()->general.inverted_crash_detection);
-            disarmTimeDelay = disarmTimeDelay < 3000 ? 3000 : disarmTimeDelay;
+            uint16_t disarmTimeDelay = 2000 + S2MS(navConfig()->mc.inverted_crash_detection);
 
             return millis() - startTime > disarmTimeDelay;
         }
@@ -833,7 +832,7 @@ bool isMulticopterLandingDetected(void)
 
     const timeMs_t currentTimeMs = millis();
 // CR128
-    if (navConfig()->general.inverted_crash_detection && isMulticopterCrashedInverted()) {
+    if (navConfig()->mc.inverted_crash_detection && isMulticopterCrashedInverted()) {
         ENABLE_ARMING_FLAG(ARMING_DISABLED_LANDING_DETECTED);
         disarm(DISARM_LANDING);
     }

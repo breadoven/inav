@@ -176,7 +176,6 @@ PG_RESET_TEMPLATE(navConfig_t, navConfig,
         .rth_linear_descent_start_distance = SETTING_NAV_RTH_LINEAR_DESCENT_START_DISTANCE_DEFAULT,
         .cruise_yaw_rate = SETTING_NAV_CRUISE_YAW_RATE_DEFAULT,                                 // 20dps
         .rth_fs_landing_delay = SETTING_NAV_RTH_FS_LANDING_DELAY_DEFAULT,                       // Delay before landing in FS. 0 = immedate landing
-        .inverted_crash_detection = SETTING_NAV_INVERTED_CRASH_DETECTION_DEFAULT,  // CR128     // 0 - sets disarm time delay for inverted crash detection
     },
 
     // MC-specific
@@ -196,10 +195,11 @@ PG_RESET_TEMPLATE(navConfig_t, navConfig,
         .braking_bank_angle = SETTING_NAV_MC_BRAKING_BANK_ANGLE_DEFAULT,                         // Max braking angle
 #endif
 
-        .posDecelerationTime = SETTING_NAV_MC_POS_DECELERATION_TIME_DEFAULT,        // posDecelerationTime * 100
-        .posResponseExpo = SETTING_NAV_MC_POS_EXPO_DEFAULT,                         // posResponseExpo * 100
+        .posDecelerationTime = SETTING_NAV_MC_POS_DECELERATION_TIME_DEFAULT,                     // posDecelerationTime * 100
+        .posResponseExpo = SETTING_NAV_MC_POS_EXPO_DEFAULT,                                      // posResponseExpo * 100
         .slowDownForTurning = SETTING_NAV_MC_WP_SLOWDOWN_DEFAULT,
-        .althold_throttle_type = SETTING_NAV_MC_ALTHOLD_THROTTLE_DEFAULT,           // STICK
+        .althold_throttle_type = SETTING_NAV_MC_ALTHOLD_THROTTLE_DEFAULT,                        // STICK
+        .inverted_crash_detection = SETTING_NAV_MC_INVERTED_CRASH_DETECTION_DEFAULT,  // CR128   // 0 - disarm time delay for inverted crash detection
     },
 
     // Fixed wing
