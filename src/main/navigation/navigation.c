@@ -3353,7 +3353,7 @@ void calculateFarAwayTarget(fpVector3_t * farAwayPos, int32_t bearing, int32_t d
  *-----------------------------------------------------------*/
 void updateLandingStatus(timeMs_t currentTimeMs)
 {
-    // if (STATE(AIRPLANE) && !navConfig()->general.flags.disarm_on_landing) {
+    // if (STATE(AIRPLANE) && !navConfig()->general.flags.disarm_on_landing) {      // CR123
         // return;     // no point using this with a fixed wing if not set to disarm
     // }
 
@@ -3386,8 +3386,14 @@ void updateLandingStatus(timeMs_t currentTimeMs)
             ENABLE_ARMING_FLAG(ARMING_DISABLED_LANDING_DETECTED);
             disarm(DISARM_LANDING);
         } else if (!navigationInAutomaticThrottleMode()) {
-            // for multirotor only - reactivate landing detector without disarm when throttle raised toward hover throttle
-            landingDetectorIsActive = rxGetChannelValue(THROTTLE) < (0.5 * (currentBatteryProfile->nav.mc.hover_throttle + getThrottleIdleValue()));
+            // CR123
+            if (STATE(AIRPLANE) && isFlightDetected()) { // cancel landing detection flag if plane redetected in flight
+                resetLandingDetector();
+            } else {
+                // for multirotor - reactivate landing detector without disarm when throttle raised toward hover throttle
+                landingDetectorIsActive = rxGetChannelValue(THROTTLE) < (0.5 * (currentBatteryProfile->nav.mc.hover_throttle + getThrottleIdleValue()));
+            }
+            // CR123
         }
     } else if (isLandingDetected()) {
         ENABLE_STATE(LANDING_DETECTED);

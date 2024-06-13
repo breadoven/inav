@@ -810,18 +810,21 @@ bool isMulticopterCrashedInverted(void)
 {
     static timeMs_t startTime = 0;
 
-    if ((ABS(attitude.values.roll) > 1000 || ABS(attitude.values.pitch) > 700) && fabsf(navGetCurrentActualPositionAndVelocity()->vel.z) < MC_LAND_CHECK_VEL_Z_MOVING) {
+    if (ABS(attitude.values.roll) > 1000 || ABS(attitude.values.pitch) > 700) {
+        static uint32_t initialAltitude;
+
         if (startTime == 0) {
             startTime = millis();
-        } else {
-            uint16_t disarmTimeDelay = 2000 + S2MS(navConfig()->mc.inverted_crash_detection);
+            initialAltitude = navGetCurrentActualPositionAndVelocity()->pos.z;
+            return false;
+        } else if (ABS(initialAltitude - navGetCurrentActualPositionAndVelocity()->pos.z) < 200) {
+            uint16_t disarmTimeDelay = 3000 + S2MS(navConfig()->mc.inverted_crash_detection);
 
             return millis() - startTime > disarmTimeDelay;
         }
-    } else {
-        startTime = 0;
     }
 
+    startTime = 0;
     return false;
 }
 // CR128
@@ -838,9 +841,15 @@ bool isMulticopterLandingDetected(void)
     }
 // CR128
 #if defined(USE_BARO)
-    if (sensors(SENSOR_BARO) && navConfig()->general.flags.landing_bump_detection && isLandingGbumpDetected(currentTimeMs)) {
+    // CR129
+    bool gBumpDetectionUsable = navConfig()->general.flags.landing_bump_detection && sensors(SENSOR_BARO) &&
+                                ((posControl.flags.estPosStatus >= EST_USABLE && posControl.actualState.velXY < MC_LAND_CHECK_VEL_XY_MOVING) ||
+                                FLIGHT_MODE(FAILSAFE_MODE));
+
+    if (gBumpDetectionUsable && isLandingGbumpDetected(currentTimeMs)) {
         return true;    // Landing flagged immediately if landing bump detected
     }
+    // CR129
 #endif
     bool throttleIsBelowMidHover = rcCommand[THROTTLE] < (0.5 * (currentBatteryProfile->nav.mc.hover_throttle + getThrottleIdleValue()));
 
