@@ -402,10 +402,15 @@ static const blackboxSimpleFieldDefinition_t blackboxGpsHFields[] = {
 
 // Rarely-updated fields
 static const blackboxSimpleFieldDefinition_t blackboxSlowFields[] = {
+    /* "flightModeFlags" renamed internally to more correct ref of rcModeFlags, since it logs rc boxmode selections,
+     * but name kept for external compatibility reasons.
+     * "activeFlightModeFlags" logs actual active flight modes rather than rc boxmodes.
+     * 'active' should at least distinguish it from the existing "flightModeFlags" */
+
     {"activeWpNumber",        -1, UNSIGNED, PREDICT(0),      ENCODING(UNSIGNED_VB)},
     {"flightModeFlags",       -1, UNSIGNED, PREDICT(0),      ENCODING(UNSIGNED_VB)},
-    {"flightModeFlags2",      -1, UNSIGNED, PREDICT(0),      ENCODING(UNSIGNED_VB)},    // CR127
-    {"activeFlightModeFlags", -1, UNSIGNED, PREDICT(0),      ENCODING(UNSIGNED_VB)},    // CR127
+    {"flightModeFlags2",      -1, UNSIGNED, PREDICT(0),      ENCODING(UNSIGNED_VB)},
+    {"activeFlightModeFlags", -1, UNSIGNED, PREDICT(0),      ENCODING(UNSIGNED_VB)},
     {"stateFlags",            -1, UNSIGNED, PREDICT(0),      ENCODING(UNSIGNED_VB)},
 
     {"failsafePhase",         -1, UNSIGNED, PREDICT(0),      ENCODING(TAG2_3S32)},
@@ -535,9 +540,9 @@ typedef struct blackboxGpsState_s {
 
 // This data is updated really infrequently:
 typedef struct blackboxSlowState_s {
-    uint32_t rcModeFlags; // extend this data size (from uint16_t)
-    uint32_t rcModeFlags2; // 127
-    uint32_t activeFlightModeFlags; // CR127
+    uint32_t rcModeFlags;
+    uint32_t rcModeFlags2;
+    uint32_t activeFlightModeFlags;
     uint32_t stateFlags;
     uint8_t failsafePhase;
     bool rxSignalReceived;
@@ -1266,8 +1271,8 @@ static void writeSlowFrame(void)
 
     blackboxWriteUnsignedVB(slowHistory.activeWpNumber);
     blackboxWriteUnsignedVB(slowHistory.rcModeFlags);
-    blackboxWriteUnsignedVB(slowHistory.rcModeFlags2);  // CR127
-    blackboxWriteUnsignedVB(slowHistory.activeFlightModeFlags);   // CR127
+    blackboxWriteUnsignedVB(slowHistory.rcModeFlags2);
+    blackboxWriteUnsignedVB(slowHistory.activeFlightModeFlags);
     blackboxWriteUnsignedVB(slowHistory.stateFlags);
 
     /*
@@ -1314,16 +1319,15 @@ static void writeSlowFrame(void)
 static void loadSlowState(blackboxSlowState_t *slow)
 {
     slow->activeWpNumber = getActiveWpNumber();
-    // CR127
-    slow->rcModeFlags = rcModeActivationMask.bits[0];
-    slow->rcModeFlags2 = rcModeActivationMask.bits[1];
+
+    slow->rcModeFlags = rcModeActivationMask.bits[0];   // first 32 bits of boxId_e
+    slow->rcModeFlags2 = rcModeActivationMask.bits[1];  // remaining bits of boxId_e
 
     // Also log Nav auto enabled flight modes rather than just those selected by boxmode
     if (navigationGetHeadingControlState() == NAV_HEADING_CONTROL_AUTO) {
         slow->rcModeFlags |= (1 << BOXHEADINGHOLD);
     }
     slow->activeFlightModeFlags = flightModeFlags;
-    // CR127
     slow->stateFlags = stateFlags;
     slow->failsafePhase = failsafePhase();
     slow->rxSignalReceived = rxIsReceivingSignal();

@@ -37,10 +37,10 @@
 
 rth_trackback_t rth_trackback;
 
-bool rthTrackBackCanBeActivated(void)  // CR124
+bool rthTrackBackCanBeActivated(void)
 {
     return posControl.flags.estPosStatus >= EST_USABLE &&
-           (navConfig()->general.flags.rth_trackback_mode == RTH_TRACKBACK_ON || (navConfig()->general.flags.rth_trackback_mode == RTH_TRACKBACK_FS && posControl.flags.forcedRTHActivated));  // CR124
+           (navConfig()->general.flags.rth_trackback_mode == RTH_TRACKBACK_ON || (navConfig()->general.flags.rth_trackback_mode == RTH_TRACKBACK_FS && posControl.flags.forcedRTHActivated));
 }
 
 void rthTrackBackUpdate(bool forceSaveTrackPoint)
@@ -128,7 +128,7 @@ void rthTrackBackUpdate(bool forceSaveTrackPoint)
 bool rthTrackBackSetNewPosition(void)
 {
     if (posControl.flags.estPosStatus == EST_NONE) {
-        return false;   // will fall back to RTH initialize allowing RTH to handle position loss correctly  // CR124
+        return false;   // will fall back to RTH initialize allowing full RTH to handle position loss correctly
     }
 
     const int32_t distFromStartTrackback = CENTIMETERS_TO_METERS(calculateDistanceToDestination(&rth_trackback.pointsList[rth_trackback.lastSavedIndex]));
@@ -143,7 +143,7 @@ bool rthTrackBackSetNewPosition(void)
     if (rth_trackback.activePointIndex < 0 || cancelTrackback) {
         rth_trackback.WrapAroundCounter = rth_trackback.activePointIndex = -1;
         posControl.flags.rthTrackbackActive = false;
-        return false;    // No more trackback points to set, procede to home  // CR124
+        return false;    // No more trackback points to set, procede to home
     }
 
     if (isWaypointReached(&posControl.activeWaypoint.pos, &posControl.activeWaypoint.bearing)) {
@@ -162,7 +162,7 @@ bool rthTrackBackSetNewPosition(void)
         setDesiredPosition(getRthTrackBackPosition(), 0, NAV_POS_UPDATE_XY | NAV_POS_UPDATE_Z | NAV_POS_UPDATE_BEARING);
     }
 
-    return true;   // CR124
+    return true;
 }
 
 fpVector3_t *getRthTrackBackPosition(void)
