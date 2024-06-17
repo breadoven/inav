@@ -845,7 +845,8 @@ bool isMulticopterLandingDetected(void)
             ENABLE_ARMING_FLAG(ARMING_DISABLED_LANDING_DETECTED);
             disarm(DISARM_LANDING);
         }
-        // CR129
+
+        /* G bump landing detection only used when xy velocity is usable and low or failsafe is active */
         bool gBumpDetectionUsable = navConfig()->general.flags.landing_bump_detection &&
                                     ((posControl.flags.estPosStatus >= EST_USABLE && posControl.actualState.velXY < MC_LAND_CHECK_VEL_XY_MOVING) ||
                                     FLIGHT_MODE(FAILSAFE_MODE));
@@ -855,7 +856,6 @@ bool isMulticopterLandingDetected(void)
         }
     }
     // CR128
-    // CR129
 #endif
     bool throttleIsBelowMidHover = rcCommand[THROTTLE] < (0.5 * (currentBatteryProfile->nav.mc.hover_throttle + getThrottleIdleValue()));
 
