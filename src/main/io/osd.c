@@ -5894,7 +5894,7 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
         const char *message = NULL;
         char messageBuf[MAX(SETTING_MAX_NAME_LENGTH, OSD_MESSAGE_LENGTH + 1)]; //warning: shared buffer. Make sure it is used by single message in code below!
         // We might have up to 6 messages to show.
-        const char *messages[6];
+        const char *messages[7];
         unsigned messageCount = 0;
         const char *failsafeInfoMessage = NULL;
         const char *invertedInfoMessage = NULL;

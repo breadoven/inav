@@ -696,7 +696,7 @@ float getEstimatedAglPosition(void);
 bool isEstimatedAglTrusted(void);
 
 void checkManualEmergencyLandingControl(bool forcedActivation);
-float updateBaroAltitudeRate(float newBaroAltRate, bool updateValue);
+void updateBaroAltitudeRate(float newBaroAltRate);   // CR128
 bool rthAltControlStickOverrideCheck(uint8_t axis);
 
 int8_t navCheckActiveAngleHoldAxis(void);

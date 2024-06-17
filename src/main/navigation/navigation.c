@@ -3387,9 +3387,10 @@ void updateLandingStatus(timeMs_t currentTimeMs)
             disarm(DISARM_LANDING);
         } else if (!navigationInAutomaticThrottleMode()) {
             // CR123
-            if (STATE(AIRPLANE) && isFlightDetected()) { // cancel landing detection flag if plane redetected in flight
+            if (STATE(AIRPLANE) && isFlightDetected()) {
+                // cancel landing detection flag if plane redetected in flight
                 resetLandingDetector();
-            } else {
+            } else if (STATE(MULTIROTOR)) {
                 // for multirotor - reactivate landing detector without disarm when throttle raised toward hover throttle
                 landingDetectorIsActive = rxGetChannelValue(THROTTLE) < (0.5 * (currentBatteryProfile->nav.mc.hover_throttle + getThrottleIdleValue()));
             }

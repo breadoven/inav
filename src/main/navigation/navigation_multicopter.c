@@ -101,8 +101,7 @@ static void updateAltitudeVelocityController_MC(timeDelta_t deltaMicros)
         // Small - desired acceleration is less than 0.1G. We should be safe setting velocity target directly - any platform should be able to satisfy this
         posControl.desiredState.vel.z = targetVel;
     }
-DEBUG_SET(DEBUG_ALWAYS, 0, posControl.desiredState.vel.z);
-DEBUG_SET(DEBUG_ALWAYS, 1, posControl.desiredState.pos.z);
+
     navDesiredVelocity[Z] = constrain(lrintf(posControl.desiredState.vel.z), -32678, 32767);
 }
 
@@ -768,16 +767,21 @@ bool isMulticopterFlying(void)
  * Multicopter landing detector
  *-----------------------------------------------------------*/
 #if defined(USE_BARO)
-float updateBaroAltitudeRate(float newBaroAltRate, bool updateValue)
+// CR128
+static float baroAltRate;
+
+void updateBaroAltitudeRate(float newBaroAltRate)
 {
-    static float baroAltRate;
-    if (updateValue) {
+    // static float baroAltRate;
+    // if (updateValue) {
         baroAltRate = newBaroAltRate;
-    }
+        DEBUG_SET(DEBUG_ALWAYS, 0, baroAltRate);
+        DEBUG_SET(DEBUG_ALWAYS, 1, millis());
+    // }
 
-    return baroAltRate;
+    // return baroAltRate;
 }
-
+// CR128
 static bool isLandingGbumpDetected(timeMs_t currentTimeMs)
 {
     /* Detection based on G bump at touchdown, falling Baro altitude and throttle below hover.
@@ -786,7 +790,7 @@ static bool isLandingGbumpDetected(timeMs_t currentTimeMs)
      * Throttle trigger: must be below hover throttle with lower threshold for manual throttle control */
 
     static timeMs_t gSpikeDetectTimeMs = 0;
-    float baroAltRate = updateBaroAltitudeRate(0, false);
+    // float baroAltRate = updateBaroAltitudeRate(0, false);  // CR128
 
     if (!gSpikeDetectTimeMs && acc.accADCf[Z] > 2.0f && baroAltRate < 0.0f) {
         gSpikeDetectTimeMs = currentTimeMs;
@@ -804,20 +808,19 @@ static bool isLandingGbumpDetected(timeMs_t currentTimeMs)
 
     return false;
 }
-#endif
 // CR128
 bool isMulticopterCrashedInverted(void)
 {
     static timeMs_t startTime = 0;
 
-    if (ABS(attitude.values.roll) > 1000 || ABS(attitude.values.pitch) > 700) {
-        static uint32_t initialAltitude;
+    if ((ABS(attitude.values.roll) > 1000 || ABS(attitude.values.pitch) > 700) && fabsf(baroAltRate) < 200) {
+        // static uint32_t initialBaroAltitude;
 
         if (startTime == 0) {
             startTime = millis();
-            initialAltitude = navGetCurrentActualPositionAndVelocity()->pos.z;
+            // initialBaroAltitude = baroAlt;
             return false;
-        } else if (ABS(initialAltitude - navGetCurrentActualPositionAndVelocity()->pos.z) < 200) {
+        } else {
             uint16_t disarmTimeDelay = 3000 + S2MS(navConfig()->mc.inverted_crash_detection);
 
             return millis() - startTime > disarmTimeDelay;
@@ -827,6 +830,7 @@ bool isMulticopterCrashedInverted(void)
     startTime = 0;
     return false;
 }
+#endif
 // CR128
 bool isMulticopterLandingDetected(void)
 {
@@ -835,20 +839,22 @@ bool isMulticopterLandingDetected(void)
 
     const timeMs_t currentTimeMs = millis();
 // CR128
-    if (navConfig()->mc.inverted_crash_detection && isMulticopterCrashedInverted()) {
-        ENABLE_ARMING_FLAG(ARMING_DISABLED_LANDING_DETECTED);
-        disarm(DISARM_LANDING);
-    }
-// CR128
 #if defined(USE_BARO)
-    // CR129
-    bool gBumpDetectionUsable = navConfig()->general.flags.landing_bump_detection && sensors(SENSOR_BARO) &&
-                                ((posControl.flags.estPosStatus >= EST_USABLE && posControl.actualState.velXY < MC_LAND_CHECK_VEL_XY_MOVING) ||
-                                FLIGHT_MODE(FAILSAFE_MODE));
+    if (sensors(SENSOR_BARO)) {
+        if (navConfig()->mc.inverted_crash_detection && isMulticopterCrashedInverted()) {
+            ENABLE_ARMING_FLAG(ARMING_DISABLED_LANDING_DETECTED);
+            disarm(DISARM_LANDING);
+        }
+        // CR129
+        bool gBumpDetectionUsable = navConfig()->general.flags.landing_bump_detection &&
+                                    ((posControl.flags.estPosStatus >= EST_USABLE && posControl.actualState.velXY < MC_LAND_CHECK_VEL_XY_MOVING) ||
+                                    FLIGHT_MODE(FAILSAFE_MODE));
 
-    if (gBumpDetectionUsable && isLandingGbumpDetected(currentTimeMs)) {
-        return true;    // Landing flagged immediately if landing bump detected
+        if (gBumpDetectionUsable && isLandingGbumpDetected(currentTimeMs)) {
+            return true;    // Landing flagged immediately if landing bump detected
+        }
     }
+    // CR128
     // CR129
 #endif
     bool throttleIsBelowMidHover = rcCommand[THROTTLE] < (0.5 * (currentBatteryProfile->nav.mc.hover_throttle + getThrottleIdleValue()));

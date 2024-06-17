@@ -781,11 +781,11 @@ static void fwRateAttenuation(pidState_t *pidState, const float rateTarget, cons
     pidState->attenuation.aP = dampingFactor;
     pidState->attenuation.aD = dampingFactor;
 
-    if (pidState->axis == FD_ROLL) {
-        DEBUG_SET(DEBUG_ALWAYS, 0, pidState->attenuation.aP * 1000);
-        DEBUG_SET(DEBUG_ALWAYS, 1, pidState->attenuation.aI * 1000);
-        DEBUG_SET(DEBUG_ALWAYS, 2, pidState->attenuation.aD * 1000);
-    }
+    // if (pidState->axis == FD_ROLL) {
+        // DEBUG_SET(DEBUG_ALWAYS, 0, pidState->attenuation.aP * 1000);
+        // DEBUG_SET(DEBUG_ALWAYS, 1, pidState->attenuation.aI * 1000);
+        // DEBUG_SET(DEBUG_ALWAYS, 2, pidState->attenuation.aD * 1000);
+    // }
 }
 
 static void NOINLINE pidApplyFixedWingRateController(pidState_t *pidState, float dT, float dT_inv)
