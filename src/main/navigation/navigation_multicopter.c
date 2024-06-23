@@ -809,22 +809,17 @@ static bool isLandingGbumpDetected(timeMs_t currentTimeMs)
     return false;
 }
 // CR128
-bool isMulticopterCrashedInverted(void)
+bool isMulticopterCrashedInverted(timeMs_t currentTimeMs)
 {
     static timeMs_t startTime = 0;
 
     if ((ABS(attitude.values.roll) > 1000 || ABS(attitude.values.pitch) > 700) && fabsf(baroAltRate) < 200) {
-        // static uint32_t initialBaroAltitude;
-
         if (startTime == 0) {
-            startTime = millis();
-            // initialBaroAltitude = baroAlt;
-            return false;
-        } else {
-            uint16_t disarmTimeDelay = 3000 + S2MS(navConfig()->mc.inverted_crash_detection);
-
-            return millis() - startTime > disarmTimeDelay;
+            startTime = currentTimeMs;
         }
+
+        uint16_t disarmTimeDelay = 3000 + S2MS(navConfig()->mc.inverted_crash_detection);
+        return currentTimeMs - startTime > disarmTimeDelay;
     }
 
     startTime = 0;
@@ -841,12 +836,12 @@ bool isMulticopterLandingDetected(void)
 // CR128
 #if defined(USE_BARO)
     if (sensors(SENSOR_BARO)) {
-        if (navConfig()->mc.inverted_crash_detection && isMulticopterCrashedInverted()) {
+        if (navConfig()->mc.inverted_crash_detection && !FLIGHT_MODE(TURTLE_MODE) && isMulticopterCrashedInverted(currentTimeMs)) {
             ENABLE_ARMING_FLAG(ARMING_DISABLED_LANDING_DETECTED);
             disarm(DISARM_LANDING);
         }
 
-        /* G bump landing detection only used when xy velocity is usable and low or failsafe is active */
+        /* G bump landing detection only used when xy velocity is low or failsafe is active */
         bool gBumpDetectionUsable = navConfig()->general.flags.landing_bump_detection &&
                                     ((posControl.flags.estPosStatus >= EST_USABLE && posControl.actualState.velXY < MC_LAND_CHECK_VEL_XY_MOVING) ||
                                     FLIGHT_MODE(FAILSAFE_MODE));
