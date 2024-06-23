@@ -40,7 +40,7 @@
 #include "fc/config.h"
 #include "fc/controlrate_profile.h"
 #include "fc/rc_controls.h"
-#include "fc/rc_modes.h"    // CR126
+#include "fc/rc_modes.h"
 #include "fc/rc_adjustments.h"
 #include "fc/runtime_config.h"
 #include "fc/settings.h"
@@ -131,8 +131,7 @@ void autotuneStart(void)
 
 void autotuneUpdateState(void)  // called fc_core rxupdate
 {
-    // if (IS_RC_MODE_ACTIVE(BOXAUTOTUNE) && STATE(AIRPLANE) && ARMING_FLAG(ARMED)) {
-    if (isFwAutoModeActive(BOXAUTOTUNE) && STATE(AIRPLANE) && ARMING_FLAG(ARMED)) {  // CR126
+    if (isFwAutoModeActive(BOXAUTOTUNE) && STATE(AIRPLANE) && ARMING_FLAG(ARMED)) {
         if (!FLIGHT_MODE(AUTO_TUNE)) {
             autotuneStart();
             ENABLE_FLIGHT_MODE(AUTO_TUNE);

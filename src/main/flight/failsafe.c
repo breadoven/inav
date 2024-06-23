@@ -350,8 +350,8 @@ static failsafeProcedure_e failsafeChooseFailsafeProcedure(void)
         }
     }
 
-    // Inhibit Failsafe if emergency landing triggered manually or if landing has been detected
-    if (posControl.flags.manualEmergLandActive || STATE(LANDING_DETECTED)) {  // CR123
+    // Inhibit Failsafe if emergency landing triggered manually or if landing is detected
+    if (posControl.flags.manualEmergLandActive || STATE(LANDING_DETECTED)) {
         return FAILSAFE_PROCEDURE_NONE;
     }
 

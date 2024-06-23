@@ -62,6 +62,7 @@
 #include "drivers/osd_symbols.h"
 #include "drivers/time.h"
 #include "drivers/vtx_common.h"
+#include "drivers/gimbal_common.h"
 
 #include "io/adsb.h"
 #include "io/flashfs.h"
@@ -224,7 +225,7 @@ static bool osdDisplayHasCanvas;
 
 #define AH_MAX_PITCH_DEFAULT 20 // Specify default maximum AHI pitch value displayed (degrees)
 
-PG_REGISTER_WITH_RESET_TEMPLATE(osdConfig_t, osdConfig, PG_OSD_CONFIG, 11);
+PG_REGISTER_WITH_RESET_TEMPLATE(osdConfig_t, osdConfig, PG_OSD_CONFIG, 12);
 PG_REGISTER_WITH_RESET_FN(osdLayoutsConfig_t, osdLayoutsConfig, PG_OSD_LAYOUTS_CONFIG, 1);
 
 void osdStartedSaveProcess(void) {
@@ -477,37 +478,6 @@ static void osdFormatWindSpeedStr(char *buff, int32_t ws, bool isValid)
     buff[4] = '\0';
 }
 #endif
-
-/*
- * This is a simplified altitude conversion code that does not use any scaling
- * but is fully compatible with the DJI G2 MSP Displayport OSD implementation.
- */
-/* void osdSimpleAltitudeSymbol(char *buff, int32_t alt) {
-
-    int32_t convertedAltutude = 0;
-    char suffix = '\0';
-
-    switch ((osd_unit_e)osdConfig()->units) {
-        case OSD_UNIT_UK:
-            FALLTHROUGH;
-        case OSD_UNIT_GA:
-            FALLTHROUGH;
-        case OSD_UNIT_IMPERIAL:
-            convertedAltutude = CENTIMETERS_TO_FEET(alt);
-            suffix = SYM_ALT_FT;
-            break;
-        case OSD_UNIT_METRIC_MPH:
-            FALLTHROUGH;
-        case OSD_UNIT_METRIC:
-            convertedAltutude = CENTIMETERS_TO_METERS(alt);
-            suffix = SYM_ALT_M;
-            break;
-    }
-
-    tfp_sprintf(buff, "%4d", (int) convertedAltutude);
-    buff[4] = suffix;
-    buff[5] = '\0';
-} */
 
 /**
 * Converts altitude into a string based on the current unit system
@@ -1235,8 +1205,15 @@ int16_t osdGetHeading(void)
 int16_t osdGetPanServoOffset(void)
 {
     int8_t servoIndex = osdConfig()->pan_servo_index;
-    int16_t servoPosition = servo[servoIndex];
     int16_t servoMiddle = servoParams(servoIndex)->middle;
+    int16_t servoPosition = servo[servoIndex];
+
+    gimbalDevice_t *dev = gimbalCommonDevice();
+    if (dev && gimbalCommonIsReady(dev)) {
+        servoPosition = gimbalCommonGetPanPwm(dev);
+        servoMiddle = PWM_RANGE_MIDDLE + gimbalConfig()->panTrim;
+    }
+
     return (int16_t)CENTIDEGREES_TO_DEGREES((servoPosition - servoMiddle) * osdConfig()->pan_servo_pwm2centideg);
 }
 
@@ -2382,8 +2359,9 @@ static bool osdDrawSingleElement(uint8_t item)
                 // p = " WP ";
             else if (FLIGHT_MODE(NAV_ALTHOLD_MODE) && navigationRequiresAngleMode()) {
                 // If navigationRequiresAngleMode() returns false when ALTHOLD is active,
-                // it means it can be combined with ANGLE, HORIZON, ANGLEHOLD, ACRO, etc...
+                // it means it can be combined with ANGLE, HORIZON, ACRO, etc...
                 // and its display is handled by OSD_MESSAGES rather than OSD_FLYMODE.
+                // (Currently only applies to multirotor).
                 p = " AH ";
             }
             else if (FLIGHT_MODE(ANGLE_MODE))
@@ -2535,6 +2513,121 @@ static bool osdDrawSingleElement(uint8_t item)
             break;
         }
 #endif
+
+    case OSD_FORMATION_FLIGHT:
+    {
+        static uint8_t currentPeerIndex = 0;
+        static timeMs_t lastPeerSwitch;
+
+        if ((STATE(GPS_FIX) && isImuHeadingValid())) {
+            if ((radar_pois[currentPeerIndex].gps.lat == 0 || radar_pois[currentPeerIndex].gps.lon == 0 || radar_pois[currentPeerIndex].state >= 2) || (millis() > (osdConfig()->radar_peers_display_time * 1000) + lastPeerSwitch)) {
+                lastPeerSwitch = millis();
+
+                for(uint8_t i = 1; i < RADAR_MAX_POIS - 1; i++) {
+                    uint8_t nextPeerIndex = (currentPeerIndex + i) % (RADAR_MAX_POIS - 1);
+                    if (radar_pois[nextPeerIndex].gps.lat != 0 && radar_pois[nextPeerIndex].gps.lon != 0 && radar_pois[nextPeerIndex].state < 2) {
+                        currentPeerIndex = nextPeerIndex;
+                        break;
+                    }
+                }
+            }
+
+            radar_pois_t *currentPeer = &(radar_pois[currentPeerIndex]);
+            if (currentPeer->gps.lat != 0 && currentPeer->gps.lon != 0 && currentPeer->state < 2) {
+                fpVector3_t poi;
+                geoConvertGeodeticToLocal(&poi, &posControl.gpsOrigin, &currentPeer->gps, GEO_ALT_RELATIVE);
+
+                currentPeer->distance = calculateDistanceToDestination(&poi) / 100; // In m
+                currentPeer->altitude = (int16_t )((currentPeer->gps.alt - osdGetAltitudeMsl()) / 100);
+                currentPeer->direction = (int16_t )(calculateBearingToDestination(&poi) / 100); // In °
+
+                int16_t panServoDirOffset = 0;
+                if (osdConfig()->pan_servo_pwm2centideg != 0){
+                    panServoDirOffset = osdGetPanServoOffset();
+                }
+
+                //line 1
+                //[peer heading][peer ID][LQ][direction to peer]
+
+                //[peer heading]
+                int relativePeerHeading = osdGetHeadingAngle(currentPeer->heading - (int)DECIDEGREES_TO_DEGREES(osdGetHeading()));
+                displayWriteChar(osdDisplayPort, elemPosX, elemPosY, SYM_DECORATION + ((relativePeerHeading + 22) / 45) % 8);
+
+                //[peer ID]
+                displayWriteChar(osdDisplayPort, elemPosX + 1, elemPosY, 65 + currentPeerIndex);
+
+                //[LQ]
+                displayWriteChar(osdDisplayPort, elemPosX + 2, elemPosY, SYM_HUD_SIGNAL_0 + currentPeer->lq);
+
+                //[direction to peer]
+                int directionToPeerError = wrap_180(osdGetHeadingAngle(currentPeer->direction) + panServoDirOffset - (int)DECIDEGREES_TO_DEGREES(osdGetHeading()));
+                uint16_t iconIndexOffset = constrain(((directionToPeerError + 180) / 30), 0, 12);
+                if (iconIndexOffset == 12) {
+                    iconIndexOffset = 0; // Directly behind
+                }
+                displayWriteChar(osdDisplayPort, elemPosX + 3, elemPosY, SYM_HUD_CARDINAL + iconIndexOffset);
+
+
+                //line 2
+                switch ((osd_unit_e)osdConfig()->units) {
+                    case OSD_UNIT_UK:
+                                FALLTHROUGH;
+                    case OSD_UNIT_IMPERIAL:
+                        osdFormatCentiNumber(buff, CENTIMETERS_TO_CENTIFEET(currentPeer->distance * 100), FEET_PER_MILE, 0, 4, 4, false);
+                        break;
+                    case OSD_UNIT_GA:
+                        osdFormatCentiNumber(buff, CENTIMETERS_TO_CENTIFEET(currentPeer->distance * 100), (uint32_t)FEET_PER_NAUTICALMILE, 0, 4, 4, false);
+                        break;
+                    default:
+                                FALLTHROUGH;
+                    case OSD_UNIT_METRIC_MPH:
+                                FALLTHROUGH;
+                    case OSD_UNIT_METRIC:
+                        osdFormatCentiNumber(buff, currentPeer->distance * 100, METERS_PER_KILOMETER, 0, 4, 4, false);
+                        break;
+                }
+                displayWrite(osdDisplayPort, elemPosX, elemPosY + 1, buff);
+
+
+                //line 3
+                displayWriteChar(osdDisplayPort, elemPosX, elemPosY + 2, (currentPeer->altitude >= 0) ? SYM_AH_DECORATION_UP : SYM_AH_DECORATION_DOWN);
+
+                int altc = currentPeer->altitude;
+                switch ((osd_unit_e)osdConfig()->units) {
+                    case OSD_UNIT_UK:
+                                FALLTHROUGH;
+                    case OSD_UNIT_GA:
+                                FALLTHROUGH;
+                    case OSD_UNIT_IMPERIAL:
+                        // Convert to feet
+                        altc = CENTIMETERS_TO_FEET(altc * 100);
+                        break;
+                    default:
+                                FALLTHROUGH;
+                    case OSD_UNIT_METRIC_MPH:
+                                FALLTHROUGH;
+                    case OSD_UNIT_METRIC:
+                        // Already in metres
+                        break;
+                }
+
+                altc = ABS(constrain(altc, -999, 999));
+                tfp_sprintf(buff, "%3d", altc);
+                displayWrite(osdDisplayPort, elemPosX + 1, elemPosY + 2, buff);
+
+                return true;
+            }
+        }
+
+        //clear screen
+        for(uint8_t i = 0; i < 4; i++){
+            displayWriteChar(osdDisplayPort, elemPosX + i, elemPosY, SYM_BLANK);
+            displayWriteChar(osdDisplayPort, elemPosX + i, elemPosY + 1, SYM_BLANK);
+            displayWriteChar(osdDisplayPort, elemPosX + i, elemPosY + 2, SYM_BLANK);
+        }
+
+        return true;
+    }
 
     case OSD_CROSSHAIRS: // Hud is a sub-element of the crosshair
 
@@ -3965,7 +4058,9 @@ PG_RESET_TEMPLATE(osdConfig_t, osdConfig,
 
     .stats_energy_unit = SETTING_OSD_STATS_ENERGY_UNIT_DEFAULT,
     .stats_page_auto_swap_time = SETTING_OSD_STATS_PAGE_AUTO_SWAP_TIME_DEFAULT,
-    .stats_show_metric_efficiency = SETTING_OSD_STATS_SHOW_METRIC_EFFICIENCY_DEFAULT
+    .stats_show_metric_efficiency = SETTING_OSD_STATS_SHOW_METRIC_EFFICIENCY_DEFAULT,
+
+    .radar_peers_display_time = SETTING_OSD_RADAR_PEERS_DISPLAY_TIME_DEFAULT
 );
 
 void pgResetFn_osdLayoutsConfig(osdLayoutsConfig_t *osdLayoutsConfig)
@@ -5666,15 +5761,20 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
 
     if (buff != NULL) {
         const char *message = NULL;
-        char messageBuf[MAX(SETTING_MAX_NAME_LENGTH, OSD_MESSAGE_LENGTH + 1)]; //warning: shared buffer. Make sure it is used by single message in code below!
-        // We might have up to 6 messages to show.
+        /* WARNING: messageBuf is shared, use accordingly */
+        char messageBuf[MAX(SETTING_MAX_NAME_LENGTH, OSD_MESSAGE_LENGTH + 1)];
+
+        /* WARNING: ensure number of messages returned does not exceed messages array size
+         * Messages array set 1 larger than maximum expected message count of 6 */
         const char *messages[7];
         unsigned messageCount = 0;
+
         const char *failsafeInfoMessage = NULL;
         const char *invertedInfoMessage = NULL;
 
         if (ARMING_FLAG(ARMED)) {
             if (FLIGHT_MODE(FAILSAFE_MODE) || FLIGHT_MODE(NAV_RTH_MODE) || FLIGHT_MODE(NAV_WP_MODE) || navigationIsExecutingAnEmergencyLanding()) {
+                /* ADDS MAXIMUM OF 3 MESSAGES TO TOTAL NORMALLY, 5 MESSAGES DURING FAILSAFE */
                 if (navGetCurrentStateFlags() & NAV_AUTO_WP_DONE) {
                     messages[messageCount++] = STATE(LANDING_DETECTED) ? OSD_MESSAGE_STR(OSD_MSG_WP_LANDED) : OSD_MESSAGE_STR(OSD_MSG_WP_FINISHED);
                 } else if (NAV_Status.state == MW_NAV_STATE_WP_ENROUTE) {
@@ -5696,7 +5796,8 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
 
                         messages[messageCount++] = messageBuf;
                     }
-                } else {
+                }
+                else {
                     const char *navStateMessage = navigationStateMessage();
                     if (navStateMessage) {
                         messages[messageCount++] = navStateMessage;
@@ -5708,8 +5809,7 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
                     messages[messageCount++] = safehomeMessage;
                 }
 #endif
-                if (FLIGHT_MODE(FAILSAFE_MODE)) {
-                    // In FS mode while being armed too
+                if (FLIGHT_MODE(FAILSAFE_MODE)) {   // In FS mode while armed
                     if (NAV_Status.state == MW_NAV_STATE_LAND_SETTLE && posControl.landingDelay > 0) {
                         uint16_t remainingHoldSec = MS2S(posControl.landingDelay - millis());
                         tfp_sprintf(messageBuf, "LANDING DELAY: %3u SECONDS", remainingHoldSec);
@@ -5733,8 +5833,9 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
             } else if (STATE(LANDING_DETECTED)) {
                 messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_LANDED);
             } else {
-                /* messages shown only when Failsafe, WP, RTH or Emergency Landing not active and craft not already landed*/
-                if (STATE(AIRPLANE)) {
+                /* Messages shown only when Failsafe, WP, RTH or Emergency Landing not active and landed state inactive */
+                /* ADDS MAXIMUM OF 3 MESSAGES TO TOTAL */
+                if (STATE(AIRPLANE)) {      /* ADDS MAXIMUM OF 3 MESSAGES TO TOTAL */
 #ifdef USE_FW_AUTOLAND
                     if (canFwLandingBeCancelled()) {
                          messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_MOVE_STICKS);
@@ -5770,7 +5871,7 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
                             messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_ANGLEHOLD_PITCH);
                         }
                     }
-                } else if (STATE(MULTIROTOR)) {
+                } else if (STATE(MULTIROTOR)) {     /* ADDS MAXIMUM OF 2 MESSAGES TO TOTAL */
                     if (FLIGHT_MODE(NAV_COURSE_HOLD_MODE)) {
                         if (posControl.cruise.multicopterSpeed >= 50.0f) {
                             char buf[6];
@@ -5784,14 +5885,15 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
                         messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_HEADFREE);
                     }
                     if (FLIGHT_MODE(NAV_ALTHOLD_MODE) && !navigationRequiresAngleMode()) {
-                        // ALTHOLD might be enabled alongside ANGLE/HORIZON/ANGLEHOLD/ACRO
-                        // when it doesn't require ANGLE mode (required only in FW
-                        // right now). If it requires ANGLE, its display is handled by OSD_FLYMODE.
+                        /* If ALTHOLD is separately enabled for multirotor together with ANGL/HORIZON/ACRO modes
+                         * then ANGL/HORIZON/ACRO are indicated by the OSD_FLYMODE field.
+                         * In this case indicate ALTHOLD is active via a system message */
+
                         messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_ALTITUDE_HOLD);
                     }
                 }
             }
-        } else if (ARMING_FLAG(ARMING_DISABLED_ALL_FLAGS)) {
+        } else if (ARMING_FLAG(ARMING_DISABLED_ALL_FLAGS)) {    /* ADDS MAXIMUM OF 2 MESSAGES TO TOTAL */
             unsigned invalidIndex;
 
             // Check if we're unable to arm for some reason
@@ -5818,6 +5920,7 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
             }
         }
         /* Messages that are shown regardless of Arming state */
+        /* ADDS MAXIMUM OF 2 MESSAGES TO TOTAL NORMALLY, 1 MESSAGE DURING FAILSAFE */
         if (posControl.flags.wpMissionPlannerActive && !FLIGHT_MODE(FAILSAFE_MODE)) {
             messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_MISSION_PLANNER);
         }

@@ -199,7 +199,7 @@ PG_RESET_TEMPLATE(navConfig_t, navConfig,
         .posResponseExpo = SETTING_NAV_MC_POS_EXPO_DEFAULT,                                      // posResponseExpo * 100
         .slowDownForTurning = SETTING_NAV_MC_WP_SLOWDOWN_DEFAULT,
         .althold_throttle_type = SETTING_NAV_MC_ALTHOLD_THROTTLE_DEFAULT,                        // STICK
-        .inverted_crash_detection = SETTING_NAV_MC_INVERTED_CRASH_DETECTION_DEFAULT,  // CR128   // 0 - disarm time delay for inverted crash detection
+        .inverted_crash_detection = SETTING_NAV_MC_INVERTED_CRASH_DETECTION_DEFAULT,             // 0 - disarm time delay for inverted crash detection
     },
 
     // Fixed wing
@@ -3353,10 +3353,6 @@ void calculateFarAwayTarget(fpVector3_t * farAwayPos, int32_t bearing, int32_t d
  *-----------------------------------------------------------*/
 void updateLandingStatus(timeMs_t currentTimeMs)
 {
-    // if (STATE(AIRPLANE) && !navConfig()->general.flags.disarm_on_landing) {      // CR123
-        // return;     // no point using this with a fixed wing if not set to disarm
-    // }
-
     static timeMs_t lastUpdateTimeMs = 0;
     if ((currentTimeMs - lastUpdateTimeMs) <= HZ2MS(100)) {  // limit update to 100Hz
         return;
@@ -3386,15 +3382,13 @@ void updateLandingStatus(timeMs_t currentTimeMs)
             ENABLE_ARMING_FLAG(ARMING_DISABLED_LANDING_DETECTED);
             disarm(DISARM_LANDING);
         } else if (!navigationInAutomaticThrottleMode()) {
-            // CR123
             if (STATE(AIRPLANE) && isFlightDetected()) {
-                // cancel landing detection flag if plane redetected in flight
+                // Cancel landing detection flag if fixed wing redetected in flight
                 resetLandingDetector();
             } else if (STATE(MULTIROTOR)) {
-                // for multirotor - reactivate landing detector without disarm when throttle raised toward hover throttle
+                // For multirotor - reactivate landing detector without disarm when throttle raised toward hover throttle
                 landingDetectorIsActive = rxGetChannelValue(THROTTLE) < (0.5 * (currentBatteryProfile->nav.mc.hover_throttle + getThrottleIdleValue()));
             }
-            // CR123
         }
     } else if (isLandingDetected()) {
         ENABLE_STATE(LANDING_DETECTED);

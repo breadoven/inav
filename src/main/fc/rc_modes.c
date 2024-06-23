@@ -110,16 +110,17 @@ void processAirmode(void) {
     } else if (STATE(MULTIROTOR)) {
         processAirmodeMultirotor();
     }
-
 }
 
 bool isUsingNavigationModes(void)
 {
     return isUsingNAVModes;
 }
-// CR126
+
 bool isFwAutoModeActive(boxId_e mode)
 {
+    /* Sets activation priority of fixed wing auto tune/trim modes: Autotune -> Autotrim -> Autolevel */
+
     if (mode == BOXAUTOTUNE) {
         return IS_RC_MODE_ACTIVE(BOXAUTOTUNE);
     } else if (mode == BOXAUTOTRIM) {
@@ -130,7 +131,7 @@ bool isFwAutoModeActive(boxId_e mode)
 
     return false;
 }
-// CR126
+
 bool IS_RC_MODE_ACTIVE(boxId_e boxId)
 {
     return bitArrayGet(rcModeActivationMask.bits, boxId);
