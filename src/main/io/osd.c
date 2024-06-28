@@ -5754,7 +5754,7 @@ timeMs_t systemMessageCycleTime(unsigned messageCount, const char **messages)
     }
     return osdConfig()->system_msg_display_time * factor;
 }
-// CR126
+
 textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenteredText)
 {
     textAttributes_t elemAttr = TEXT_ATTRIBUTES_NONE;
@@ -5965,7 +5965,7 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
     }
     return elemAttr;
 }
-// CR126
+
 void osdResetWarningFlags(void)
 {
     osdWarningsFlags = 0;

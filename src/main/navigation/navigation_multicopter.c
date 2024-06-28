@@ -773,7 +773,7 @@ void updateBaroAltitudeRate(float newBaroAltRate)
 {
     baroAltRate = newBaroAltRate;
 }
-// CR128
+
 static bool isLandingGbumpDetected(timeMs_t currentTimeMs)
 {
     /* Detection based on G bump at touchdown, falling Baro altitude and throttle below hover.
@@ -827,7 +827,7 @@ bool isMulticopterLandingDetected(void)
     DEBUG_SET(DEBUG_LANDING, 3, averageAbsGyroRates() * 100);
 
     const timeMs_t currentTimeMs = millis();
-// CR128
+
 #if defined(USE_BARO)
     if (sensors(SENSOR_BARO)) {
         /* Inverted crash landing detection - immediate disarm */
@@ -846,7 +846,6 @@ bool isMulticopterLandingDetected(void)
             return true;    // Landing flagged immediately if landing bump detected
         }
     }
-    // CR128
 #endif
     bool throttleIsBelowMidHover = rcCommand[THROTTLE] < (0.5 * (currentBatteryProfile->nav.mc.hover_throttle + getThrottleIdleValue()));
 

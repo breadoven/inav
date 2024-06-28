@@ -40,7 +40,7 @@ float navPidApply3(
     const float dt,
     const float outMin,
     const float outMax,
-    pidControllerFlags_e pidFlags,
+    const pidControllerFlags_e pidFlags,
     const float gainScaler,
     const float dTermScaler
 ) {

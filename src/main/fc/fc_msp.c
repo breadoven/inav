@@ -1034,7 +1034,7 @@ static bool mspFcProcessOutCommand(uint16_t cmdMSP, sbuf_t *dst, mspPostProcessF
     case MSP_MIXER:
         sbufWriteU8(dst, 3); // mixerMode no longer supported, send 3 (QuadX) as fallback
         break;
-    
+
 
     case MSP_RX_CONFIG:
         sbufWriteU8(dst, rxConfig()->serialrx_provider);
@@ -1618,7 +1618,7 @@ static bool mspFcProcessOutCommand(uint16_t cmdMSP, sbuf_t *dst, mspPostProcessF
             }
         }
         break;
-    
+
 
     case MSP2_INAV_MC_BRAKING:
 #ifdef USE_MR_BRAKING_MODE
@@ -2741,9 +2741,9 @@ static mspResult_e mspFcProcessInCommand(uint16_t cmdMSP, sbuf_t *src)
 #ifdef USE_GPS
     case MSP_SET_RAW_GPS:
         if (dataSize == 14) {
-        gpsSol.fixType = sbufReadU8(src);
-        if (gpsSol.fixType) {
-        ENABLE_STATE(GPS_FIX);
+            gpsSol.fixType = sbufReadU8(src);
+            if (gpsSol.fixType) {
+                ENABLE_STATE(GPS_FIX);
             } else {
                 DISABLE_STATE(GPS_FIX);
             }
@@ -2892,7 +2892,7 @@ static mspResult_e mspFcProcessInCommand(uint16_t cmdMSP, sbuf_t *src)
         } else
             return MSP_RESULT_ERROR;
         break;
-    
+
     case MSP_SET_FAILSAFE_CONFIG:
         if (dataSize == 20) {
             failsafeConfigMutable()->failsafe_delay = sbufReadU8(src);
@@ -3081,16 +3081,16 @@ static mspResult_e mspFcProcessInCommand(uint16_t cmdMSP, sbuf_t *src)
 
     case MSP2_INAV_SET_MIXER:
         if (dataSize == 9) {
-        mixerConfigMutable()->motorDirectionInverted = sbufReadU8(src);
-        sbufReadU8(src); // Was yaw_jump_prevention_limit
-        mixerConfigMutable()->motorstopOnLow = sbufReadU8(src);
-        mixerConfigMutable()->platformType = sbufReadU8(src);
-        mixerConfigMutable()->hasFlaps = sbufReadU8(src);
-        mixerConfigMutable()->appliedMixerPreset = sbufReadU16(src);
-        sbufReadU8(src); //Read and ignore MAX_SUPPORTED_MOTORS
-        sbufReadU8(src); //Read and ignore MAX_SUPPORTED_SERVOS
-        mixerUpdateStateFlags();
-    } else
+            mixerConfigMutable()->motorDirectionInverted = sbufReadU8(src);
+            sbufReadU8(src); // Was yaw_jump_prevention_limit
+            mixerConfigMutable()->motorstopOnLow = sbufReadU8(src);
+            mixerConfigMutable()->platformType = sbufReadU8(src);
+            mixerConfigMutable()->hasFlaps = sbufReadU8(src);
+            mixerConfigMutable()->appliedMixerPreset = sbufReadU16(src);
+            sbufReadU8(src); //Read and ignore MAX_SUPPORTED_MOTORS
+            sbufReadU8(src); //Read and ignore MAX_SUPPORTED_SERVOS
+            mixerUpdateStateFlags();
+        } else
             return MSP_RESULT_ERROR;
         break;
 
