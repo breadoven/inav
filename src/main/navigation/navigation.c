@@ -1349,6 +1349,8 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_COURSE_HOLD_IN_PROGRESS
 
     const bool mcRollStickHeadingAdjustmentActive = STATE(MULTIROTOR) && ABS(rcCommand[ROLL]) > rcControlsConfig()->pos_hold_deadband;
 
+    static bool isAdjusting = false;  // CR130
+
     // User demanding yaw -> yaw stick on FW, yaw or roll sticks on MR
     // We record the desired course and change the desired target in the meanwhile
     if (posControl.flags.isAdjustingHeading || mcRollStickHeadingAdjustmentActive) {
@@ -1362,8 +1364,16 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_COURSE_HOLD_IN_PROGRESS
         if (timeDifference > 100) timeDifference = 0;   // if adjustment was called long time ago, reset the time difference.
         float rateTarget = scaleRangef((float)headingAdjustCommand, -500.0f, 500.0f, -cruiseYawRate, cruiseYawRate);
         float centidegsPerIteration = rateTarget * MS2S(timeDifference);
-        posControl.cruise.course = wrap_36000(posControl.cruise.course - centidegsPerIteration);
+        // CR130
+        if (ABS(wrap_18000(posControl.cruise.course - posControl.actualState.cog)) < fabsf(rateTarget)) {
+            posControl.cruise.course = wrap_36000(posControl.cruise.course - centidegsPerIteration);
+        }
         posControl.cruise.lastCourseAdjustmentTime = currentTimeMs;
+        isAdjusting = true;
+    } else if (STATE(AIRPLANE) && isAdjusting) {  // CR130
+        posControl.cruise.course = posControl.actualState.cog - DEGREES_TO_CENTIDEGREES(gyroRateDps(YAW));
+        resetPositionController();
+        isAdjusting = false;
     } else if (currentTimeMs - posControl.cruise.lastCourseAdjustmentTime > 4000) {
         posControl.cruise.previousCourse = posControl.cruise.course;
     }
@@ -5042,9 +5052,7 @@ uint8_t getActiveWpNumber(void)
 {
     return NAV_Status.activeWpNumber;
 }
-
 #ifdef USE_FW_AUTOLAND
-
 static void resetFwAutoland(void)
 {
     posControl.fwLandState.landAltAgl = 0;
@@ -5126,5 +5134,13 @@ bool canFwLandingBeCancelled(void)
 {
     return FLIGHT_MODE(NAV_FW_AUTOLAND) && posControl.navState != NAV_STATE_FW_LANDING_FLARE;
 }
-
 #endif
+// CR129
+uint16_t getFlownLoiterRadius(void)
+{
+    if (STATE(AIRPLANE) && navGetCurrentStateFlags() & NAV_CTL_HOLD) {
+        return CENTIMETERS_TO_METERS(calculateDistanceToDestination(&posControl.desiredState.pos));
+    }
+
+    return 0;
+}

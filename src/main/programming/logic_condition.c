@@ -847,6 +847,11 @@ static int logicConditionGetFlightOperandValue(int operand) {
             return posControl.fwLandState.landState;
             break;
 #endif
+        // CR129
+        case LOGIC_CONDITION_OPERAND_FLIGHT_FLOWN_LOITER_RADIUS:
+            return getFlownLoiterRadius();
+            break;
+        // CR129
         default:
             return 0;
             break;

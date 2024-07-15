@@ -2714,7 +2714,7 @@ static bool osdDrawSingleElement(uint8_t item)
         break;
 
     case OSD_ATTITUDE_PITCH:
-        ;// CR42
+        // CR42
         int16_t levelDatumPitch = attitude.values.pitch + DEGREES_TO_DECIDEGREES(getFixedWingLevelTrim());
         // if (ABS(attitude.values.pitch) < 1)
             // buff[0] = 'P';
