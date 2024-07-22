@@ -631,7 +631,7 @@ static void updatePositionAccelController_MC(timeDelta_t deltaMicros, float maxA
 
     //Choose smaller attenuation factor and convert from attenuation to scale
     const float dtermScale = 1.0f - MIN(setpointScale, measurementScale);
-    DEBUG_SET(DEBUG_ALWAYS, 4, dtermScale * 100);
+    // DEBUG_SET(DEBUG_ALWAYS, 4, dtermScale * 100);
 
     // Apply PID with output limiting and I-term anti-windup
     // Pre-calculated accelLimit and the logic of navPidApply2 function guarantee that our newAccel won't exceed maxAccelLimit
@@ -700,8 +700,8 @@ static void updatePositionAccelController_MC(timeDelta_t deltaMicros, float maxA
     posControl.rcAdjustment[ROLL] = constrain(RADIANS_TO_DECIDEGREES(desiredRoll), -maxBankAngle, maxBankAngle);
     posControl.rcAdjustment[PITCH] = constrain(RADIANS_TO_DECIDEGREES(desiredPitch), -maxBankAngle, maxBankAngle);
 
-    DEBUG_SET(DEBUG_ALWAYS, 2, accelForward);
-    DEBUG_SET(DEBUG_ALWAYS, 3, posControl.rcAdjustment[PITCH]);
+    // DEBUG_SET(DEBUG_ALWAYS, 2, accelForward);
+    // DEBUG_SET(DEBUG_ALWAYS, 3, posControl.rcAdjustment[PITCH]);
 }
 
 static void applyMulticopterPositionController(timeUs_t currentTimeUs)
