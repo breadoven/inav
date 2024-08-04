@@ -197,6 +197,9 @@ tables:
   - name: headtracker_dev_type
     values: ["NONE", "SERIAL", "MSP"]
     enum: headTrackerDevType_e
+  - name: default_altitude_source  # CR131
+    values: ["GPS", "BARO"]
+    enum: navDefaultAltitudeSensor_e
 
 constants:
   RPYL_PID_MIN: 0
@@ -2463,7 +2466,13 @@ groups:
         field: baro_epv
         min: 0
         max: 9999
-
+        # CR131
+      - name: inav_default_alt_sensor
+        description: "Sets the default altitude sensor to use, GPS or BARO, when the altitude error between the sensors exceeds a set limit. Only the default sensor will be used in this case. GPS error limit = 2 * inav_max_eph_epv. BARO error limit = 4 * inav_baro_epv."
+        default_value: "GPS"
+        field: default_alt_sensor
+        table: default_altitude_source
+        # CR131
   - name: PG_NAV_CONFIG
     type: navConfig_t
     headers: ["navigation/navigation.h"]
