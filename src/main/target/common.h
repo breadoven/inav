@@ -177,7 +177,7 @@
 // Wind estimator
 #define USE_WIND_ESTIMATOR
 
-// #define USE_SIMULATOR
+#define USE_SIMULATOR
 #define USE_PITOT_VIRTUAL
 #define USE_FAKE_BATT_SENSOR
 
