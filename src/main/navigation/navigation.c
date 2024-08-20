@@ -4766,9 +4766,9 @@ void navigationUsePIDs(void)
                                         0.0f
     );
 
-    navPidInit(&posControl.pids.fw_alt, (float)pidProfile()->bank_fw.pid[PID_POS_Z].P / 100.0f,
-                                        (float)pidProfile()->bank_fw.pid[PID_POS_Z].I / 100.0f,
-                                        (float)pidProfile()->bank_fw.pid[PID_POS_Z].D / 100.0f,
+    navPidInit(&posControl.pids.fw_alt, (float)pidProfile()->bank_fw.pid[PID_POS_Z].P / 50.0f,
+                                        (float)pidProfile()->bank_fw.pid[PID_POS_Z].I / 50.0f,
+                                        (float)pidProfile()->bank_fw.pid[PID_POS_Z].D / 50.0f,
                                         // (float)pidProfile()->bank_fw.pid[PID_POS_Z].FF / 100.0f,  // poss new FF, original was 0.0f
                                         0.0f,
                                         NAV_DTERM_CUT_HZ,
