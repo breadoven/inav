@@ -146,8 +146,36 @@ static void updateAltitudeVelocityAndPitchController_FW(timeDelta_t deltaMicros)
 
     // PID controller to translate desired climb rate error into pitch angle [decideg]
     float currentClimbRate = navGetCurrentActualPositionAndVelocity()->vel.z;
-    float targetPitchAngle = navPidApply2(&posControl.pids.fw_alt, desiredClimbRate, currentClimbRate, US2S(deltaMicros), minDiveDeciDeg, maxClimbDeciDeg, PID_DTERM_FROM_ERROR);
 
+    // CR133
+    // DEBUG_SET(DEBUG_ALWAYS, 0, currentClimbRate);
+    // static pt1Filter_t velz2FilterState;
+    // currentClimbRate = pt1FilterApply4(&velz2FilterState, currentClimbRate, navConfig()->fw.wp_tracking_accuracy, US2S(deltaMicros));
+    // DEBUG_SET(DEBUG_ALWAYS, 1, currentClimbRate);
+
+    // const float climbRateError = currentClimbRate - desiredClimbRate;
+
+    // static timeUs_t previousTimeMonitoringUpdate;
+    // static int32_t previousClimbRateError;
+    // static bool errorIsDecreasing;
+
+    // // Slow error monitoring (2Hz rate)
+    // if ((micros() - previousTimeMonitoringUpdate) >= HZ2US(NAV_FW_CONTROL_MONITORING_RATE)) {
+        // // Check if error is decreasing over time
+        // errorIsDecreasing = (ABS(previousClimbRateError) > ABS(climbRateError));
+
+        // // Save values for next iteration
+        // previousClimbRateError = climbRateError;
+        // previousTimeMonitoringUpdate = micros();
+    // }
+
+    // // Only allow PID integrator to shrink if error is decreasing over time
+    // const pidControllerFlags_e pidFlags = PID_DTERM_FROM_ERROR | (errorIsDecreasing ? PID_SHRINK_INTEGRATOR : 0);
+
+
+    float targetPitchAngle = navPidApply2(&posControl.pids.fw_alt, desiredClimbRate, currentClimbRate, US2S(deltaMicros), minDiveDeciDeg, maxClimbDeciDeg, PID_DTERM_FROM_ERROR);
+    // float targetPitchAngle = navPidApply2(&posControl.pids.fw_alt, 0, climbRateError, US2S(deltaMicros), minDiveDeciDeg, maxClimbDeciDeg, pidFlags);
+    // DEBUG_SET(DEBUG_ALWAYS, 6, targetPitchAngle);  // CR133
     // Apply low-pass filter to prevent rapid correction
     targetPitchAngle = pt1FilterApply4(&velzFilterState, targetPitchAngle, getSmoothnessCutoffFreq(NAV_FW_BASE_PITCH_CUTOFF_FREQUENCY_HZ), US2S(deltaMicros));
 
@@ -404,57 +432,61 @@ static void updatePositionHeadingController_FW(timeUs_t currentTimeUs, timeDelta
         virtualTargetBearing = calculateBearingToDestination(&virtualDesiredPosition);
     }
     // CR132
-    // Calculate cross track error
-    fpVector3_t virtualCoursePoint;
-    virtualCoursePoint.x = posControl.activeWaypoint.pos.x -
-                           posControl.wpDistance * cos_approx(CENTIDEGREES_TO_RADIANS(posControl.activeWaypoint.bearing));
-    virtualCoursePoint.y = posControl.activeWaypoint.pos.y -
-                           posControl.wpDistance * sin_approx(CENTIDEGREES_TO_RADIANS(posControl.activeWaypoint.bearing));
-    navCrossTrackError = calculateDistanceToDestination(&virtualCoursePoint);
+    if (isWaypointNavTrackingActive()) {
+        // Calculate cross track error
+        posControl.wpDistance = calculateDistanceToDestination(&posControl.activeWaypoint.pos);
 
-    /* If waypoint tracking enabled force craft toward waypoint course line and hold on course line */
-    if (navConfig()->fw.wp_tracking_accuracy && isWaypointNavTrackingActive() && !needToCalculateCircularLoiter) {
-        static float crossTrackErrorRate;
-        static timeUs_t previousCrossTrackErrorUpdateTime;
-        static float previousCrossTrackError = 0.0f;
-        static pt1Filter_t fwCrossTrackErrorRateFilterState;
+        fpVector3_t virtualCoursePoint;
+        virtualCoursePoint.x = posControl.activeWaypoint.pos.x -
+                               posControl.wpDistance * cos_approx(CENTIDEGREES_TO_RADIANS(posControl.activeWaypoint.bearing));
+        virtualCoursePoint.y = posControl.activeWaypoint.pos.y -
+                               posControl.wpDistance * sin_approx(CENTIDEGREES_TO_RADIANS(posControl.activeWaypoint.bearing));
+        navCrossTrackError = calculateDistanceToDestination(&virtualCoursePoint);
 
-        if ((currentTimeUs - previousCrossTrackErrorUpdateTime) >= HZ2US(20) && fabsf(previousCrossTrackError - navCrossTrackError) > 10.0f) {
-            const float crossTrackErrorDtSec =  US2S(currentTimeUs - previousCrossTrackErrorUpdateTime);
-            if (fabsf(previousCrossTrackError - navCrossTrackError) < 500.0f) {
-                crossTrackErrorRate = (previousCrossTrackError - navCrossTrackError) / crossTrackErrorDtSec;
+        /* If waypoint tracking enabled force craft toward waypoint course line and hold on course line */
+        if (navConfig()->fw.wp_tracking_accuracy && !needToCalculateCircularLoiter) {
+            static float crossTrackErrorRate;
+            static timeUs_t previousCrossTrackErrorUpdateTime;
+            static float previousCrossTrackError = 0.0f;
+            static pt1Filter_t fwCrossTrackErrorRateFilterState;
+
+            if ((currentTimeUs - previousCrossTrackErrorUpdateTime) >= HZ2US(20) && fabsf(previousCrossTrackError - navCrossTrackError) > 10.0f) {
+                const float crossTrackErrorDtSec =  US2S(currentTimeUs - previousCrossTrackErrorUpdateTime);
+                if (fabsf(previousCrossTrackError - navCrossTrackError) < 500.0f) {
+                    crossTrackErrorRate = (previousCrossTrackError - navCrossTrackError) / crossTrackErrorDtSec;
+                }
+                crossTrackErrorRate = pt1FilterApply4(&fwCrossTrackErrorRateFilterState, crossTrackErrorRate, 3.0f, crossTrackErrorDtSec);
+                previousCrossTrackErrorUpdateTime = currentTimeUs;
+                previousCrossTrackError = navCrossTrackError;
             }
-            crossTrackErrorRate = pt1FilterApply4(&fwCrossTrackErrorRateFilterState, crossTrackErrorRate, 3.0f, crossTrackErrorDtSec);
-            previousCrossTrackErrorUpdateTime = currentTimeUs;
-            previousCrossTrackError = navCrossTrackError;
+
+            DEBUG_SET(DEBUG_ALWAYS, 0, navCrossTrackError);
+            DEBUG_SET(DEBUG_ALWAYS, 3, virtualTargetBearing);
+            DEBUG_SET(DEBUG_ALWAYS, 2, crossTrackErrorRate);
+
+            uint16_t trackingDeadband = METERS_TO_CENTIMETERS(navConfig()->fw.wp_tracking_accuracy);
+
+            if ((ABS(wrap_18000(virtualTargetBearing - posControl.actualState.cog)) < 9000 || posControl.wpDistance < 1000.0f) && navCrossTrackError > trackingDeadband) {
+                float adjustmentFactor = wrap_18000(posControl.activeWaypoint.bearing - virtualTargetBearing);
+                uint16_t angleLimit = DEGREES_TO_CENTIDEGREES(navConfig()->fw.wp_tracking_max_angle);
+
+                /* Apply heading adjustment to match crossTrackErrorRate with fixed convergence speed profile */
+                float maxApproachSpeed = posControl.actualState.velXY * sin_approx(CENTIDEGREES_TO_RADIANS(angleLimit));
+                float desiredApproachSpeed = constrainf(navCrossTrackError / 3.0f, 50.0f, maxApproachSpeed);
+                adjustmentFactor = SIGN(adjustmentFactor) * navCrossTrackError * ((desiredApproachSpeed - crossTrackErrorRate) / desiredApproachSpeed);
+                DEBUG_SET(DEBUG_ALWAYS, 1, desiredApproachSpeed);
+                DEBUG_SET(DEBUG_ALWAYS, 5, adjustmentFactor);
+
+                /* Calculate final adjusted virtualTargetBearing */
+                uint16_t limit = constrainf(navCrossTrackError, 1000.0f, angleLimit);
+                adjustmentFactor = constrainf(adjustmentFactor, -limit, limit);
+                virtualTargetBearing = wrap_36000(posControl.activeWaypoint.bearing - adjustmentFactor);
+
+                DEBUG_SET(DEBUG_ALWAYS, 7, limit);
+                DEBUG_SET(DEBUG_ALWAYS, 6, adjustmentFactor);
+            }
+            DEBUG_SET(DEBUG_ALWAYS, 4, virtualTargetBearing);
         }
-
-        DEBUG_SET(DEBUG_ALWAYS, 0, navCrossTrackError);
-        DEBUG_SET(DEBUG_ALWAYS, 3, virtualTargetBearing);
-        DEBUG_SET(DEBUG_ALWAYS, 2, crossTrackErrorRate);
-
-        uint16_t trackingDeadband = METERS_TO_CENTIMETERS(navConfig()->fw.wp_tracking_accuracy);
-
-        if ((ABS(wrap_18000(virtualTargetBearing - posControl.actualState.cog)) < 9000 || posControl.wpDistance < 1000.0f) && navCrossTrackError > trackingDeadband) {
-            float adjustmentFactor = wrap_18000(posControl.activeWaypoint.bearing - virtualTargetBearing);
-            uint16_t angleLimit = DEGREES_TO_CENTIDEGREES(navConfig()->fw.wp_tracking_max_angle);
-
-            /* Apply heading adjustment to match crossTrackErrorRate with fixed convergence speed profile */
-            float maxApproachSpeed = posControl.actualState.velXY * sin_approx(CENTIDEGREES_TO_RADIANS(angleLimit));
-            float desiredApproachSpeed = constrainf(navCrossTrackError, 50.0f, maxApproachSpeed);
-            adjustmentFactor = SIGN(adjustmentFactor) * navCrossTrackError * ((desiredApproachSpeed - crossTrackErrorRate) / desiredApproachSpeed);
-            DEBUG_SET(DEBUG_ALWAYS, 1, desiredApproachSpeed);
-            DEBUG_SET(DEBUG_ALWAYS, 5, adjustmentFactor);
-
-            /* Calculate final adjusted virtualTargetBearing */
-            uint16_t limit = constrainf(navCrossTrackError, 1000.0f, angleLimit);
-            adjustmentFactor = constrainf(adjustmentFactor, -limit, limit);
-            virtualTargetBearing = wrap_36000(posControl.activeWaypoint.bearing - adjustmentFactor);
-
-            DEBUG_SET(DEBUG_ALWAYS, 7, limit);
-            DEBUG_SET(DEBUG_ALWAYS, 6, adjustmentFactor);
-        }
-        DEBUG_SET(DEBUG_ALWAYS, 4, virtualTargetBearing);
     }
     // CR132
     /*
@@ -490,10 +522,9 @@ static void updatePositionHeadingController_FW(timeUs_t currentTimeUs, timeDelta
     // Only allow PID integrator to shrink if error is decreasing over time
     const pidControllerFlags_e pidFlags = PID_DTERM_FROM_ERROR | (errorIsDecreasing ? PID_SHRINK_INTEGRATOR : 0);
 
-    // DEBUG_SET(DEBUG_ALWAYS, 5, navHeadingError);
-
     // Input error in (deg*100), output roll angle (deg*100)
-    float rollAdjustment = navPidApply2(&posControl.pids.fw_nav, posControl.actualState.cog + navHeadingError, posControl.actualState.cog, US2S(deltaMicros),
+    float rollAdjustment = navPidApply2(&posControl.pids.fw_nav, posControl.actualState.cog + navHeadingError, posControl.actualState.cog,
+                                        US2S(deltaMicros),
                                        -DEGREES_TO_CENTIDEGREES(navConfig()->fw.max_bank_angle),
                                         DEGREES_TO_CENTIDEGREES(navConfig()->fw.max_bank_angle),
                                         pidFlags);

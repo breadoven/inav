@@ -1866,6 +1866,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_WAYPOINT_PRE_ACTION(nav
         case NAV_WP_ACTION_LAND:
             calculateAndSetActiveWaypoint(&posControl.waypointList[posControl.activeWaypointIndex]);
             posControl.wpInitialDistance = calculateDistanceToDestination(&posControl.activeWaypoint.pos);
+            posControl.wpInitialAltitude = posControl.actualState.abs.pos.z;   // CR133
             posControl.wpAltitudeReached = false;
             return NAV_FSM_EVENT_SUCCESS;       // will switch to NAV_STATE_WAYPOINT_IN_PROGRESS
 
@@ -1926,20 +1927,16 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_WAYPOINT_IN_PROGRESS(na
                     return NAV_FSM_EVENT_SUCCESS;   // will switch to NAV_STATE_WAYPOINT_REACHED
                 }
                 else {
+                    // CR133
                     fpVector3_t tmpWaypoint;
                     tmpWaypoint.x = posControl.activeWaypoint.pos.x;
                     tmpWaypoint.y = posControl.activeWaypoint.pos.y;
-                    setDesiredPosition(&tmpWaypoint, 0, NAV_POS_UPDATE_XY | NAV_POS_UPDATE_BEARING);
+                    tmpWaypoint.z = scaleRangef(constrainf(posControl.wpDistance, 0.1f * posControl.wpInitialDistance, posControl.wpInitialDistance),
+                                                posControl.wpInitialDistance, 0.1f * posControl.wpInitialDistance,
+                                                posControl.wpInitialAltitude, posControl.activeWaypoint.pos.z);
 
-                    // Use linear climb between WPs arriving at WP altitude when within 10% of total distance to WP
-                    // Update climb rate until within 100cm of total climb xy distance to WP
-                    float climbRate = 0.0f;
-                    if (posControl.wpDistance - 0.1f * posControl.wpInitialDistance > 100.0f) {
-                        climbRate = posControl.actualState.velXY * (posControl.activeWaypoint.pos.z - posControl.actualState.abs.pos.z) /
-                                    (posControl.wpDistance - 0.1f * posControl.wpInitialDistance);
-                    }
-                    updateClimbRateToAltitudeController(climbRate, posControl.activeWaypoint.pos.z, ROC_TO_ALT_TARGET);
-
+                    setDesiredPosition(&tmpWaypoint, 0, NAV_POS_UPDATE_XY | NAV_POS_UPDATE_Z | NAV_POS_UPDATE_BEARING);
+                    // CR133
                     if(STATE(MULTIROTOR)) {
                         switch (wpHeadingControl.mode) {
                             case NAV_WP_HEAD_MODE_NONE:
@@ -4765,12 +4762,11 @@ void navigationUsePIDs(void)
                                         NAV_DTERM_CUT_HZ,
                                         0.0f
     );
-
-    navPidInit(&posControl.pids.fw_alt, (float)pidProfile()->bank_fw.pid[PID_POS_Z].P / 50.0f,
-                                        (float)pidProfile()->bank_fw.pid[PID_POS_Z].I / 50.0f,
-                                        (float)pidProfile()->bank_fw.pid[PID_POS_Z].D / 50.0f,
-                                        // (float)pidProfile()->bank_fw.pid[PID_POS_Z].FF / 100.0f,  // poss new FF, original was 0.0f
-                                        0.0f,
+                                                                                                // CR133
+    navPidInit(&posControl.pids.fw_alt, (float)pidProfile()->bank_fw.pid[PID_POS_Z].P / 50.0f,  // 20 @ 30 so 35 @ 50 All for response factor of 50
+                                        (float)pidProfile()->bank_fw.pid[PID_POS_Z].I / 30.0f,  // 10 @ 30
+                                        (float)pidProfile()->bank_fw.pid[PID_POS_Z].D / 66.7f,  // 20 @ 100 so 10 @ 67
+                                        0.0f,   //(float)pidProfile()->bank_fw.pid[PID_POS_Z].FF / 100.0f,  // poss new FF, original was 0.0f
                                         NAV_DTERM_CUT_HZ,
                                         0.0f
     );

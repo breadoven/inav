@@ -2988,7 +2988,7 @@ Adjusts the deceleration response of fixed wing altitude control as the target a
 
 | Default | Min | Max |
 | --- | --- | --- |
-| 20 | 5 | 100 |
+| 30 | 5 | 100 |
 
 ---
 
