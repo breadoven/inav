@@ -52,6 +52,7 @@
 #include "sensors/gyro.h"
 #include "sensors/pitotmeter.h"
 #include "sensors/opflow.h"
+#include "sensors/temperature.h"
 
 navigationPosEstimator_t posEstimator;
 static float initialBaroAltitudeOffset = 0.0f;
@@ -413,19 +414,23 @@ static void updateIMUTopic(timeUs_t currentTimeUs)
         posEstimator.imu.accelNEU.x = accelBF.x;
         posEstimator.imu.accelNEU.y = accelBF.y;
         posEstimator.imu.accelNEU.z = accelBF.z;
-        // DEBUG_SET(DEBUG_ALWAYS, 6, posEstimator.imu.accelNEU.z * 1000);
 
+        // int16_t temperature;
+        // const bool valid = getIMUTemperature(&temperature);
+        // DEBUG_SET(DEBUG_ALWAYS, 2, temperature);
+        // DEBUG_SET(DEBUG_ALWAYS, 3, posEstimator.imu.accelNEU.z * 1000);
+        // DEBUG_SET(DEBUG_ALWAYS, 4, posEstimator.imu.calibratedGravityCMSS * 1000);
         /* When unarmed, assume that accelerometer should measure 1G. Use that to correct accelerometer gain */
         if (gyroConfig()->init_gyro_cal_enabled) {
-            // if (!ARMING_FLAG(ARMED) && !gravityCalibrationComplete()) {
-            if (!ARMING_FLAG(WAS_EVER_ARMED)) {  // CR131
+            if (!ARMING_FLAG(ARMED) && !gravityCalibrationComplete()) {
+            // if (!ARMING_FLAG(WAS_EVER_ARMED)) {  // CR131
                 zeroCalibrationAddValueS(&posEstimator.imu.gravityCalibration, posEstimator.imu.accelNEU.z);
-                // DEBUG_SET(DEBUG_ALWAYS, 7, posEstimator.imu.calibratedGravityCMSS * 1000);
+
                 if (gravityCalibrationComplete()) {
                     zeroCalibrationGetZeroS(&posEstimator.imu.gravityCalibration, &posEstimator.imu.calibratedGravityCMSS);
                     setGravityCalibration(posEstimator.imu.calibratedGravityCMSS);
                     LOG_DEBUG(POS_ESTIMATOR, "Gravity calibration complete (%d)", (int)lrintf(posEstimator.imu.calibratedGravityCMSS));
-                    restartGravityCalibration();  // CR131
+                    // restartGravityCalibration();  // CR131
                 }
             }
         } else {
@@ -531,9 +536,9 @@ static void estimationPredict(estimationContext_t * ctx)
         posEstimator.est.pos.z += posEstimator.est.vel.z * ctx->dt;
         posEstimator.est.pos.z += posEstimator.imu.accelNEU.z * sq(ctx->dt) / 2.0f;
         // CR131
-        if (ARMING_FLAG(WAS_EVER_ARMED)) {   // Hold at zero until first armed
+        // if (ARMING_FLAG(WAS_EVER_ARMED)) {   // Hold at zero until first armed
             posEstimator.est.vel.z += posEstimator.imu.accelNEU.z * ctx->dt;
-        }
+        // }
         // CR131
         // DEBUG_SET(DEBUG_ALWAYS, 0, posEstimator.est.vel.z * 1000);
         // DEBUG_SET(DEBUG_ALWAYS, 1, posEstimator.imu.accelNEU.z);
@@ -581,7 +586,7 @@ static bool estimationCalculateCorrection_Z(estimationContext_t * ctx)
         const float start_epv = residualErrorEpvLimit;
         const float end_epv = residualErrorEpvLimit * 2.0f;
         wBaro = scaleRangef(constrainf(gpsBaroResidual, start_epv, end_epv), start_epv, end_epv, 1.0f, 0.0f);
-        // DEBUG_SET(DEBUG_ALWAYS, 7, wBaro * 100);
+
         if (defaultAltitudeSource == ALTITUDE_SOURCE_BARO) {
             wGps = wBaro;
             wBaro = 1.0f;
@@ -618,7 +623,7 @@ static bool estimationCalculateCorrection_Z(estimationContext_t * ctx)
         ctx->estPosCorr.z += baroAltResidual * positionEstimationConfig()->w_z_baro_p * ctx->dt;
         ctx->estVelCorr.z += baroAltResidual * sq(positionEstimationConfig()->w_z_baro_p) * ctx->dt;
         ctx->estVelCorr.z += baroVelZResidual * positionEstimationConfig()->w_z_baro_p * ctx->dt;
-        // DEBUG_SET(DEBUG_ALWAYS, 3, ctx->estVelCorr.z * 1000);
+
         ctx->newEPV = updateEPE(posEstimator.est.epv, ctx->dt, posEstimator.baro.epv, positionEstimationConfig()->w_z_baro_p);
 
         // Accelerometer bias
@@ -646,7 +651,7 @@ static bool estimationCalculateCorrection_Z(estimationContext_t * ctx)
             ctx->estPosCorr.z += gpsAltResidual * positionEstimationConfig()->w_z_gps_p * ctx->dt;
             ctx->estVelCorr.z += gpsAltResidual * sq(positionEstimationConfig()->w_z_gps_p) * ctx->dt;
             ctx->estVelCorr.z += gpsVelZResidual * positionEstimationConfig()->w_z_gps_v * ctx->dt;
-            // DEBUG_SET(DEBUG_ALWAYS, 4, ctx->estVelCorr.z * 1000);
+
             ctx->newEPV = updateEPE(posEstimator.est.epv, ctx->dt, MAX(posEstimator.gps.epv, gpsAltResidual), positionEstimationConfig()->w_z_gps_p);
 
             // Accelerometer bias
@@ -782,7 +787,7 @@ static void updateEstimatedTopic(timeUs_t currentTimeUs)
     // Apply corrections
     vectorAdd(&posEstimator.est.pos, &posEstimator.est.pos, &ctx.estPosCorr);
     vectorAdd(&posEstimator.est.vel, &posEstimator.est.vel, &ctx.estVelCorr);
-// DEBUG_SET(DEBUG_ALWAYS, 5, posEstimator.est.vel.z * 1000);
+
     /* Correct accelerometer bias */
     if (positionEstimationConfig()->w_acc_bias > 0.0f) {
         const float accelBiasCorrMagnitudeSq = sq(ctx.accBiasCorr.x) + sq(ctx.accBiasCorr.y) + sq(ctx.accBiasCorr.z);

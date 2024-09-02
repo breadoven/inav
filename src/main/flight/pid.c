@@ -780,12 +780,6 @@ static void fwRateAttenuation(pidState_t *pidState, const float rateTarget, cons
     //P & D damping factors are always the same and based on current damping factor
     pidState->attenuation.aP = dampingFactor;
     pidState->attenuation.aD = dampingFactor;
-
-    // if (pidState->axis == FD_ROLL) {
-        // DEBUG_SET(DEBUG_ALWAYS, 0, pidState->attenuation.aP * 1000);
-        // DEBUG_SET(DEBUG_ALWAYS, 1, pidState->attenuation.aI * 1000);
-        // DEBUG_SET(DEBUG_ALWAYS, 2, pidState->attenuation.aD * 1000);
-    // }
 }
 
 static void NOINLINE pidApplyFixedWingRateController(pidState_t *pidState, float dT, float dT_inv)
@@ -1134,11 +1128,6 @@ void updateAngleHold(float *angleTarget, uint8_t axis)
          * angleTarget pitch is corrected back to fixedWingLevelTrim datum on return from function */
 
         static int16_t angleHoldTarget[2];
-
-        // DEBUG_SET(DEBUG_ALWAYS, 0, angleHoldTarget[FD_ROLL]);
-        // DEBUG_SET(DEBUG_ALWAYS, 2, attitude.raw[FD_ROLL]);
-        // DEBUG_SET(DEBUG_ALWAYS, 1, angleHoldTarget[FD_PITCH]);
-        // DEBUG_SET(DEBUG_ALWAYS, 3, attitude.raw[FD_PITCH]);
 
         if (restartAngleHoldMode) {      // set target attitude to current attitude on activation
             angleHoldTarget[FD_ROLL] = attitude.raw[FD_ROLL];
