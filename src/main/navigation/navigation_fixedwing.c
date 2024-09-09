@@ -148,11 +148,14 @@ static void updateAltitudeVelocityAndPitchController_FW(timeDelta_t deltaMicros)
     float currentClimbRate = navGetCurrentActualPositionAndVelocity()->vel.z;
 
     // CR133
-    // DEBUG_SET(DEBUG_ALWAYS, 0, currentClimbRate);
-    // static pt1Filter_t velz2FilterState;
-    // currentClimbRate = pt1FilterApply4(&velz2FilterState, currentClimbRate, navConfig()->fw.wp_tracking_accuracy, US2S(deltaMicros));
+    // ****************** TEST FILTER VERT VEL
+    DEBUG_SET(DEBUG_ALWAYS, 0, currentClimbRate);
+    static pt1Filter_t velz2FilterState;
+    currentClimbRate = pt1FilterApply4(&velz2FilterState, currentClimbRate, 0.1 * navConfig()->fw.wp_tracking_accuracy, US2S(deltaMicros));
     // DEBUG_SET(DEBUG_ALWAYS, 1, currentClimbRate);
+    // ******************
 
+    // ****************** TEST PID INTEGRATOR
     // const float climbRateError = currentClimbRate - desiredClimbRate;
 
     // static timeUs_t previousTimeMonitoringUpdate;
@@ -171,11 +174,34 @@ static void updateAltitudeVelocityAndPitchController_FW(timeDelta_t deltaMicros)
 
     // // Only allow PID integrator to shrink if error is decreasing over time
     // const pidControllerFlags_e pidFlags = PID_DTERM_FROM_ERROR | (errorIsDecreasing ? PID_SHRINK_INTEGRATOR : 0);
+    // float targetPitchAngle = navPidApply2(&posControl.pids.fw_alt, 0, climbRateError, US2S(deltaMicros), minDiveDeciDeg, maxClimbDeciDeg, pidFlags);
+    // ******************
 
+    // ****************** TEST USING POSITION AGAIN
+    // PIDS = P 10 @ 100 PID factor, I 1 @ 30, D 10 @ 50
+    // float desiredAltitude = 0; //posControl.desiredState.pos.z;
+    // static float desiredRateLimitedAltitude = 0;
+    // float currentAltitude = navGetCurrentActualPositionAndVelocity()->pos.z;
+
+    // if (posControl.flags.rocToAltMode == ROC_TO_ALT_CONSTANT) {
+        // posControl.desiredState.pos.z += desiredClimbRate * US2S(deltaMicros);
+        // desiredAltitude = 2 * posControl.desiredState.pos.z - currentAltitude;
+    // } else {
+        // static float lastPosZ = -10000000;
+        // if (posControl.desiredState.pos.z != lastPosZ) {
+            // lastPosZ = posControl.desiredState.pos.z;
+            // desiredRateLimitedAltitude = currentAltitude;
+        // }
+        // desiredRateLimitedAltitude += desiredClimbRate * US2S(deltaMicros);
+        // desiredAltitude = 2 * desiredRateLimitedAltitude - currentAltitude;
+    // }
+    // float targetPitchAngle = navPidApply2(&posControl.pids.fw_alt, desiredAltitude, currentAltitude, US2S(deltaMicros), minDiveDeciDeg, maxClimbDeciDeg, 0);
+    // DEBUG_SET(DEBUG_ALWAYS, 1, desiredAltitude);
+    // **********************8
 
     float targetPitchAngle = navPidApply2(&posControl.pids.fw_alt, desiredClimbRate, currentClimbRate, US2S(deltaMicros), minDiveDeciDeg, maxClimbDeciDeg, PID_DTERM_FROM_ERROR);
-    // float targetPitchAngle = navPidApply2(&posControl.pids.fw_alt, 0, climbRateError, US2S(deltaMicros), minDiveDeciDeg, maxClimbDeciDeg, pidFlags);
     // DEBUG_SET(DEBUG_ALWAYS, 6, targetPitchAngle);  // CR133
+
     // Apply low-pass filter to prevent rapid correction
     targetPitchAngle = pt1FilterApply4(&velzFilterState, targetPitchAngle, getSmoothnessCutoffFreq(NAV_FW_BASE_PITCH_CUTOFF_FREQUENCY_HZ), US2S(deltaMicros));
 
@@ -460,9 +486,9 @@ static void updatePositionHeadingController_FW(timeUs_t currentTimeUs, timeDelta
                 previousCrossTrackError = navCrossTrackError;
             }
 
-            DEBUG_SET(DEBUG_ALWAYS, 0, navCrossTrackError);
+            // DEBUG_SET(DEBUG_ALWAYS, 0, navCrossTrackError);
             DEBUG_SET(DEBUG_ALWAYS, 3, virtualTargetBearing);
-            DEBUG_SET(DEBUG_ALWAYS, 2, crossTrackErrorRate);
+            // DEBUG_SET(DEBUG_ALWAYS, 2, crossTrackErrorRate);
 
             uint16_t trackingDeadband = METERS_TO_CENTIMETERS(navConfig()->fw.wp_tracking_accuracy);
 
@@ -474,7 +500,7 @@ static void updatePositionHeadingController_FW(timeUs_t currentTimeUs, timeDelta
                 float maxApproachSpeed = posControl.actualState.velXY * sin_approx(CENTIDEGREES_TO_RADIANS(angleLimit));
                 float desiredApproachSpeed = constrainf(navCrossTrackError / 3.0f, 50.0f, maxApproachSpeed);
                 adjustmentFactor = SIGN(adjustmentFactor) * navCrossTrackError * ((desiredApproachSpeed - crossTrackErrorRate) / desiredApproachSpeed);
-                DEBUG_SET(DEBUG_ALWAYS, 1, desiredApproachSpeed);
+                // DEBUG_SET(DEBUG_ALWAYS, 1, desiredApproachSpeed);
                 DEBUG_SET(DEBUG_ALWAYS, 5, adjustmentFactor);
 
                 /* Calculate final adjusted virtualTargetBearing */
