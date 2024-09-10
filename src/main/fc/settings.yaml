@@ -2581,7 +2581,6 @@ groups:
         field: fw.wp_tracking_accuracy
         min: 0
         max: 10
-        # // CR132
       - name: nav_fw_wp_tracking_max_angle
         description: "Sets the maximum allowed alignment convergence angle to the waypoint course line when nav_fw_wp_tracking_accuracy is active [degrees]. Lower values result in smoother alignment with the course line but will take more distance until this is achieved."
         default_value: 60
