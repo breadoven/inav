@@ -198,7 +198,7 @@ tables:
     values: ["NONE", "SERIAL", "MSP"]
     enum: headTrackerDevType_e
   - name: default_altitude_source  # CR131
-    values: ["GPS", "BARO"]
+    values: ["GPS", "BARO", "GPS ONLY", "BARO ONLY"]
     enum: navDefaultAltitudeSensor_e
 
 constants:
@@ -2418,7 +2418,7 @@ groups:
         field: w_z_baro_v
         min: 0
         max: 10
-        default_value: 0.1        
+        default_value: 0.1
         # CR131
       - name: inav_w_z_gps_p
         description: "Weight of GPS altitude measurements in estimated altitude. Setting is used on both airplanes and multirotors."
@@ -2476,7 +2476,7 @@ groups:
         max: 9999
         # CR131
       - name: inav_default_alt_sensor
-        description: "Sets the default altitude sensor to use, GPS or BARO, when the altitude error between the sensors exceeds a set limit. Only the default sensor will be used in this case. GPS error limit = 2 * inav_max_eph_epv. BARO error limit = 4 * inav_baro_epv."
+        description: "Sets the default altitude sensor to use. Settings GPS and BARO always use both sensors with priority given to the selected sensor when the altitude error between the sensors exceeds a set limit. Only the selected sensor will be used in this case. GPS error limit = 2 * inav_max_eph_epv. BARO error limit = 4 * inav_baro_epv. Settings GPS_ONLY and BARO_ONLY will use only the selected sensor even if the other sensor is working. The other sensor will only be used as a backup if the selected sensor is no longer available to use."
         default_value: "GPS"
         field: default_alt_sensor
         table: default_altitude_source

@@ -149,7 +149,7 @@ static void updateAltitudeVelocityAndPitchController_FW(timeDelta_t deltaMicros)
 
     // CR133
     // ****************** TEST FILTER VERT VEL
-    DEBUG_SET(DEBUG_ALWAYS, 0, currentClimbRate);
+    // DEBUG_SET(DEBUG_ALWAYS, 0, currentClimbRate);
     static pt1Filter_t velz2FilterState;
     currentClimbRate = pt1FilterApply4(&velz2FilterState, currentClimbRate, 0.1 * navConfig()->fw.wp_tracking_accuracy, US2S(deltaMicros));
     // DEBUG_SET(DEBUG_ALWAYS, 1, currentClimbRate);
@@ -487,7 +487,7 @@ static void updatePositionHeadingController_FW(timeUs_t currentTimeUs, timeDelta
             }
 
             // DEBUG_SET(DEBUG_ALWAYS, 0, navCrossTrackError);
-            DEBUG_SET(DEBUG_ALWAYS, 3, virtualTargetBearing);
+            // DEBUG_SET(DEBUG_ALWAYS, 3, virtualTargetBearing);
             // DEBUG_SET(DEBUG_ALWAYS, 2, crossTrackErrorRate);
 
             uint16_t trackingDeadband = METERS_TO_CENTIMETERS(navConfig()->fw.wp_tracking_accuracy);
