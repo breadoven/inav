@@ -457,9 +457,9 @@ static void updatePositionHeadingController_FW(timeUs_t currentTimeUs, timeDelta
         // We have virtual position target, calculate heading error
         virtualTargetBearing = calculateBearingToDestination(&virtualDesiredPosition);
     }
-    // CR132
+
     if (isWaypointNavTrackingActive()) {
-        // Calculate cross track error
+        /* Calculate cross track error */
         posControl.wpDistance = calculateDistanceToDestination(&posControl.activeWaypoint.pos);
 
         fpVector3_t virtualCoursePoint;
@@ -469,7 +469,7 @@ static void updatePositionHeadingController_FW(timeUs_t currentTimeUs, timeDelta
                                posControl.wpDistance * sin_approx(CENTIDEGREES_TO_RADIANS(posControl.activeWaypoint.bearing));
         navCrossTrackError = calculateDistanceToDestination(&virtualCoursePoint);
 
-        /* If waypoint tracking enabled force craft toward waypoint course line and hold on course line */
+        /* If waypoint tracking enabled force craft toward and closely track along waypoint course line */
         if (navConfig()->fw.wp_tracking_accuracy && !needToCalculateCircularLoiter) {
             static float crossTrackErrorRate;
             static timeUs_t previousCrossTrackErrorUpdateTime;
@@ -486,10 +486,6 @@ static void updatePositionHeadingController_FW(timeUs_t currentTimeUs, timeDelta
                 previousCrossTrackError = navCrossTrackError;
             }
 
-            // DEBUG_SET(DEBUG_ALWAYS, 0, navCrossTrackError);
-            // DEBUG_SET(DEBUG_ALWAYS, 3, virtualTargetBearing);
-            // DEBUG_SET(DEBUG_ALWAYS, 2, crossTrackErrorRate);
-
             uint16_t trackingDeadband = METERS_TO_CENTIMETERS(navConfig()->fw.wp_tracking_accuracy);
 
             if ((ABS(wrap_18000(virtualTargetBearing - posControl.actualState.cog)) < 9000 || posControl.wpDistance < 1000.0f) && navCrossTrackError > trackingDeadband) {
@@ -500,21 +496,15 @@ static void updatePositionHeadingController_FW(timeUs_t currentTimeUs, timeDelta
                 float maxApproachSpeed = posControl.actualState.velXY * sin_approx(CENTIDEGREES_TO_RADIANS(angleLimit));
                 float desiredApproachSpeed = constrainf(navCrossTrackError / 3.0f, 50.0f, maxApproachSpeed);
                 adjustmentFactor = SIGN(adjustmentFactor) * navCrossTrackError * ((desiredApproachSpeed - crossTrackErrorRate) / desiredApproachSpeed);
-                // DEBUG_SET(DEBUG_ALWAYS, 1, desiredApproachSpeed);
-                DEBUG_SET(DEBUG_ALWAYS, 5, adjustmentFactor);
 
                 /* Calculate final adjusted virtualTargetBearing */
                 uint16_t limit = constrainf(navCrossTrackError, 1000.0f, angleLimit);
                 adjustmentFactor = constrainf(adjustmentFactor, -limit, limit);
                 virtualTargetBearing = wrap_36000(posControl.activeWaypoint.bearing - adjustmentFactor);
-
-                DEBUG_SET(DEBUG_ALWAYS, 7, limit);
-                DEBUG_SET(DEBUG_ALWAYS, 6, adjustmentFactor);
             }
-            DEBUG_SET(DEBUG_ALWAYS, 4, virtualTargetBearing);
         }
     }
-    // CR132
+
     /*
      * Calculate NAV heading error
      * Units are centidegrees
