@@ -37,7 +37,13 @@ typedef enum {
     BARO_FAKE   = 12,
     BARO_MAX    = BARO_FAKE
 } baroSensor_e;
-
+// CR131
+typedef enum {
+    BARO_TEMP_CAL_INITIALISE,
+    BARO_TEMP_CAL_IN_PROGRESS,
+    BARO_TEMP_CAL_COMPLETE,
+} baroTempCalState_e;
+// CR131
 typedef struct baro_s {
     baroDev_t dev;
     int32_t BaroAlt;
@@ -52,6 +58,7 @@ extern baro_t baro;
 typedef struct barometerConfig_s {
     uint8_t baro_hardware;                  // Barometer hardware to use
     uint16_t baro_calibration_tolerance;    // Baro calibration tolerance (cm at sea level)
+    float baro_temp_correction;   // CR131
 } barometerConfig_t;
 
 PG_DECLARE(barometerConfig_t, barometerConfig);

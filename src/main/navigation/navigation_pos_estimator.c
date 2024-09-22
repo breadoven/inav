@@ -282,6 +282,7 @@ void onNewGPSData(void)
 void updatePositionEstimator_BaroTopic(timeUs_t currentTimeUs)
 {
     float newBaroAlt = baroCalculateAltitude();
+    DEBUG_SET(DEBUG_ALWAYS, 4, newBaroAlt);
 
     /* If we are required - keep altitude at zero */
     if (shouldResetReferenceAltitude()) {
@@ -539,9 +540,9 @@ static void estimationPredict(estimationContext_t * ctx)
         posEstimator.est.pos.z += posEstimator.est.vel.z * ctx->dt;
         posEstimator.est.pos.z += posEstimator.imu.accelNEU.z * sq(ctx->dt) / 2.0f;
         // CR131
-        // if (ARMING_FLAG(WAS_EVER_ARMED)) {   // Hold at zero until first armed
+        if (ARMING_FLAG(WAS_EVER_ARMED)) {   // Hold at zero until first armed
             posEstimator.est.vel.z += posEstimator.imu.accelNEU.z * ctx->dt;
-        // }
+        }
         // CR131
         // DEBUG_SET(DEBUG_ALWAYS, 0, posEstimator.est.vel.z * 1000);
         // DEBUG_SET(DEBUG_ALWAYS, 1, posEstimator.imu.accelNEU.z);
@@ -600,9 +601,7 @@ static bool estimationCalculateCorrection_Z(estimationContext_t * ctx)
         }
     }
     // CR131
-        DEBUG_SET(DEBUG_ALWAYS, 2, 10);
     if (ctx->newFlags & EST_BARO_VALID && wBaro) { // CR131
-        DEBUG_SET(DEBUG_ALWAYS, 2, 100);
         timeUs_t currentTimeUs = micros();
 
         if (!ARMING_FLAG(ARMED)) {
@@ -644,9 +643,8 @@ static bool estimationCalculateCorrection_Z(estimationContext_t * ctx)
         correctOK = ARMING_FLAG(WAS_EVER_ARMED);
         // CR131
     }
-DEBUG_SET(DEBUG_ALWAYS, 3, 10);
+// DEBUG_SET(DEBUG_ALWAYS, 4, posEstimator.baro.baroAltRate);
     if (ctx->newFlags & EST_GPS_Z_VALID && wGps) {  // CR131
-        DEBUG_SET(DEBUG_ALWAYS, 3, 100);
         // Reset current estimate to GPS altitude if estimate not valid
         if (!(ctx->newFlags & EST_Z_VALID)) {
             ctx->estPosCorr.z += posEstimator.gps.pos.z - posEstimator.est.pos.z;
@@ -673,8 +671,8 @@ DEBUG_SET(DEBUG_ALWAYS, 3, 10);
         correctOK = ARMING_FLAG(WAS_EVER_ARMED);
         // CR131
     }
-DEBUG_SET(DEBUG_ALWAYS, 0, wBaro);
-DEBUG_SET(DEBUG_ALWAYS, 1, wGps);
+// DEBUG_SET(DEBUG_ALWAYS, 0, wBaro * 100);
+// DEBUG_SET(DEBUG_ALWAYS, 1, wGps * 100);
     return correctOK;
 }
 
