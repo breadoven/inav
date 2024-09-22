@@ -149,10 +149,9 @@ static void updateAltitudeVelocityAndPitchController_FW(timeDelta_t deltaMicros)
 
     // CR133
     // ****************** TEST FILTER VERT VEL
-    // DEBUG_SET(DEBUG_ALWAYS, 0, currentClimbRate);
     static pt1Filter_t velz2FilterState;
-    currentClimbRate = pt1FilterApply4(&velz2FilterState, currentClimbRate, 0.1 * navConfig()->fw.wp_tracking_accuracy, US2S(deltaMicros));
-    // DEBUG_SET(DEBUG_ALWAYS, 1, currentClimbRate);
+    currentClimbRate = pt1FilterApply4(&velz2FilterState, currentClimbRate, 1.0f, US2S(deltaMicros));
+    DEBUG_SET(DEBUG_ALWAYS, 2, currentClimbRate);
     // ******************
 
     // ****************** TEST PID INTEGRATOR
@@ -200,6 +199,7 @@ static void updateAltitudeVelocityAndPitchController_FW(timeDelta_t deltaMicros)
     // **********************8
 
     float targetPitchAngle = navPidApply2(&posControl.pids.fw_alt, desiredClimbRate, currentClimbRate, US2S(deltaMicros), minDiveDeciDeg, maxClimbDeciDeg, PID_DTERM_FROM_ERROR);
+    DEBUG_SET(DEBUG_ALWAYS, 3, posControl.pids.fw_alt.feedForward);
     // DEBUG_SET(DEBUG_ALWAYS, 6, targetPitchAngle);  // CR133
 
     // Apply low-pass filter to prevent rapid correction

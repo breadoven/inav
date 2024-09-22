@@ -509,8 +509,7 @@ bool emergInflightRearmEnabled(void)
     timeMs_t currentTimeMs = millis();
     emergRearmStabiliseTimeout = 0;
 
-    if ((lastDisarmReason != DISARM_SWITCH) ||
-        (currentTimeMs > US2MS(lastDisarmTimeUs) + EMERGENCY_INFLIGHT_REARM_TIME_WINDOW_MS)) {
+    if ((lastDisarmReason != DISARM_SWITCH) || (currentTimeMs > US2MS(lastDisarmTimeUs) + EMERGENCY_INFLIGHT_REARM_TIME_WINDOW_MS)) {
         return false;
     }
 
