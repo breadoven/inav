@@ -282,7 +282,6 @@ void onNewGPSData(void)
 void updatePositionEstimator_BaroTopic(timeUs_t currentTimeUs)
 {
     float newBaroAlt = baroCalculateAltitude();
-    DEBUG_SET(DEBUG_ALWAYS, 4, newBaroAlt);
 
     /* If we are required - keep altitude at zero */
     if (shouldResetReferenceAltitude()) {
