@@ -153,6 +153,13 @@ typedef enum {
     ALTITUDE_SOURCE_BARO_ONLY,
 } navDefaultAltitudeSensor_e;
 // CR131
+// CR134
+typedef enum {
+    SENSOR_TEMP_CAL_INITIALISE,
+    SENSOR_TEMP_CAL_IN_PROGRESS,
+    SENSOR_TEMP_CAL_COMPLETE,
+} sensorTempCalState_e;
+// CR134
 typedef struct {
     timeUs_t    baroGroundTimeout;
     float       baroGroundAlt;
@@ -190,10 +197,13 @@ typedef struct {
     fpVector3_t accBiasCorr;
 } estimationContext_t;
 
+float processSensorTempCorrection(int16_t sensorTemp, float sensorMeasurement, sensorIndex_e sensorType);  // CR134
+
 extern navigationPosEstimator_t posEstimator;
 
 extern float updateEPE(const float oldEPE, const float dt, const float newEPE, const float w);
 extern void estimationCalculateAGL(estimationContext_t * ctx);
 extern bool estimationCalculateCorrection_XY_FLOW(estimationContext_t * ctx);
 extern float navGetAccelerometerWeight(void);
+
 

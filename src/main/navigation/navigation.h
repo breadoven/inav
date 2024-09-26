@@ -262,6 +262,8 @@ typedef struct positionEstimationConfig_s {
     float baro_epv;             // Baro position error
 
     uint8_t default_alt_sensor; // default altitude sensor source  // CR131
+    float baro_temp_correction; // Barometer temperature compensation factor  CR1334
+    float acc_temp_correction;  // Accelerometer temperature compensation factor
 #ifdef USE_GPS_FIX_ESTIMATION
     uint8_t allow_gps_fix_estimation;
 #endif

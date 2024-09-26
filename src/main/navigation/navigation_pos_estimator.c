@@ -41,6 +41,7 @@
 #include "flight/imu.h"
 
 #include "io/gps.h"
+#include "io/beeper.h"  // CR134
 
 #include "navigation/navigation.h"
 #include "navigation/navigation_private.h"
@@ -52,6 +53,7 @@
 #include "sensors/gyro.h"
 #include "sensors/pitotmeter.h"
 #include "sensors/opflow.h"
+#include "sensors/sensors.h"   // CR134
 #include "sensors/temperature.h"
 
 navigationPosEstimator_t posEstimator;
@@ -92,6 +94,8 @@ PG_RESET_TEMPLATE(positionEstimationConfig_t, positionEstimationConfig,
         .max_eph_epv = SETTING_INAV_MAX_EPH_EPV_DEFAULT,
         .baro_epv = SETTING_INAV_BARO_EPV_DEFAULT,
         .default_alt_sensor = SETTING_INAV_DEFAULT_ALT_SENSOR_DEFAULT,   // CR131
+        .baro_temp_correction = SETTING_BARO_TEMP_CORRECTION_DEFAULT,   // CR134
+        .acc_temp_correction = SETTING_ACC_TEMP_CORRECTION_DEFAULT,
 #ifdef USE_GPS_FIX_ESTIMATION
         .allow_gps_fix_estimation = SETTING_INAV_ALLOW_GPS_FIX_ESTIMATION_DEFAULT
 #endif
@@ -379,7 +383,74 @@ float navGetAccelerometerWeight(void)
 
     return accWeightScaled;
 }
+// 134
+float processSensorTempCorrection(int16_t sensorTemp, float sensorMeasurement, sensorIndex_e sensorType)
+{
+    float setting = 0.0f;
+    if (sensorType == SENSOR_INDEX_ACC) {
+        setting = positionEstimationConfig()->acc_temp_correction;
+    } else if (sensorType == SENSOR_INDEX_BARO) {
+        setting = positionEstimationConfig()->baro_temp_correction;
+    }
 
+    DEBUG_SET(DEBUG_ALWAYS, 1, sensorTemp);
+    if (!setting) {
+        return 0.0f;
+    }
+
+    static float correctionFactor = 0.0f;
+    static sensorTempCalState_e calibrationState = SENSOR_TEMP_CAL_INITIALISE;
+    static int16_t referenceTemp = 0.0f;
+    static timeMs_t startTimeMs = 0;
+
+    DEBUG_SET(DEBUG_ALWAYS, 0, correctionFactor * 100);
+    DEBUG_SET(DEBUG_ALWAYS, 5, sensorMeasurement);
+    if (calibrationState == SENSOR_TEMP_CAL_COMPLETE) {
+        float tempCal = correctionFactor * CENTIDEGREES_TO_DEGREES(referenceTemp - sensorTemp);
+        DEBUG_SET(DEBUG_ALWAYS, 2, tempCal);
+        return tempCal;
+        // return correctionFactor * CENTIDEGREES_TO_DEGREES(referenceTemp - baro.baroTemperature);
+    }
+
+    if (!ARMING_FLAG(WAS_EVER_ARMED)) {
+        static float referenceMeasurement = 0.0f;
+        static int16_t lastTemp = 0.0f;
+
+        if (calibrationState == SENSOR_TEMP_CAL_INITIALISE) {
+            referenceTemp = lastTemp = sensorTemp;
+            referenceMeasurement = sensorMeasurement;
+            calibrationState = SENSOR_TEMP_CAL_IN_PROGRESS;
+            startTimeMs = millis();
+        }
+
+        if (setting == 51.0f) {
+            float referenceDeltaTemp = ABS(sensorTemp - referenceTemp);
+            if (referenceDeltaTemp > 300 && referenceDeltaTemp > ABS(lastTemp - referenceTemp)) {  // centidegrees
+                lastTemp = sensorTemp;
+                correctionFactor = 0.8f * correctionFactor + 0.2f * (sensorMeasurement - referenceMeasurement) / CENTIDEGREES_TO_DEGREES(lastTemp - referenceTemp);
+                correctionFactor = constrainf(correctionFactor, -50.0f, 50.0f);
+            }
+        } else {
+            correctionFactor = setting;
+            calibrationState = SENSOR_TEMP_CAL_COMPLETE;
+        }
+    }
+
+    if (calibrationState == SENSOR_TEMP_CAL_IN_PROGRESS && (ARMING_FLAG(WAS_EVER_ARMED) || millis() > startTimeMs + 300000)) {
+        if (sensorType == SENSOR_INDEX_ACC) {
+            positionEstimationConfigMutable()->acc_temp_correction = correctionFactor;
+        } else if (sensorType == SENSOR_INDEX_BARO) {
+            positionEstimationConfigMutable()->baro_temp_correction = correctionFactor;
+        }
+        calibrationState = SENSOR_TEMP_CAL_COMPLETE;
+        if (!ARMING_FLAG(WAS_EVER_ARMED)) {
+            beeper(correctionFactor ? BEEPER_ACTION_SUCCESS : BEEPER_ACTION_FAIL);
+        }
+    }
+
+    return 0.0f;
+}
+// CR134
 static void updateIMUTopic(timeUs_t currentTimeUs)
 {
     const float dt = US2S(currentTimeUs - posEstimator.imu.lastUpdateTime);
@@ -416,10 +487,6 @@ static void updateIMUTopic(timeUs_t currentTimeUs)
         posEstimator.imu.accelNEU.y = accelBF.y;
         posEstimator.imu.accelNEU.z = accelBF.z;
 
-        // int16_t temperature;
-        // const bool valid = getIMUTemperature(&temperature);
-        // DEBUG_SET(DEBUG_ALWAYS, 2, temperature);
-        // DEBUG_SET(DEBUG_ALWAYS, 3, posEstimator.imu.accelNEU.z * 1000);
         // DEBUG_SET(DEBUG_ALWAYS, 4, posEstimator.imu.calibratedGravityCMSS * 1000);
         /* When unarmed, assume that accelerometer should measure 1G. Use that to correct accelerometer gain */
         if (gyroConfig()->init_gyro_cal_enabled) {
@@ -447,6 +514,7 @@ static void updateIMUTopic(timeUs_t currentTimeUs)
             }
 #endif
             posEstimator.imu.accelNEU.z -= posEstimator.imu.calibratedGravityCMSS;
+            posEstimator.imu.accelNEU.z += processSensorTempCorrection(10 * gyroGetTemperature(), imuMeasuredAccelBF.z, SENSOR_INDEX_ACC);  // CR134
         }
         else {  /* If calibration is incomplete - report zero acceleration */
             posEstimator.imu.accelNEU.x = 0.0f;
@@ -539,12 +607,12 @@ static void estimationPredict(estimationContext_t * ctx)
         posEstimator.est.pos.z += posEstimator.est.vel.z * ctx->dt;
         posEstimator.est.pos.z += posEstimator.imu.accelNEU.z * sq(ctx->dt) / 2.0f;
         // CR131
-        if (ARMING_FLAG(WAS_EVER_ARMED)) {   // Hold at zero until first armed
+        // if (ARMING_FLAG(WAS_EVER_ARMED)) {   // Hold at zero until first armed
             posEstimator.est.vel.z += posEstimator.imu.accelNEU.z * ctx->dt;
-        }
+        // }
         // CR131
-        // DEBUG_SET(DEBUG_ALWAYS, 0, posEstimator.est.vel.z * 1000);
-        // DEBUG_SET(DEBUG_ALWAYS, 1, posEstimator.imu.accelNEU.z);
+        DEBUG_SET(DEBUG_ALWAYS, 7, posEstimator.est.vel.z);
+        DEBUG_SET(DEBUG_ALWAYS, 6, posEstimator.imu.accelNEU.z);
     }
 
     /* Prediction step: XY-axis */
@@ -642,7 +710,7 @@ static bool estimationCalculateCorrection_Z(estimationContext_t * ctx)
         correctOK = ARMING_FLAG(WAS_EVER_ARMED);
         // CR131
     }
-// DEBUG_SET(DEBUG_ALWAYS, 4, posEstimator.baro.baroAltRate);
+DEBUG_SET(DEBUG_ALWAYS, 4, posEstimator.baro.baroAltRate);
     if (ctx->newFlags & EST_GPS_Z_VALID && wGps) {  // CR131
         // Reset current estimate to GPS altitude if estimate not valid
         if (!(ctx->newFlags & EST_Z_VALID)) {
@@ -661,7 +729,7 @@ static bool estimationCalculateCorrection_Z(estimationContext_t * ctx)
             ctx->estVelCorr.z += gpsAltResidual * sq(w_z_gps_p) * ctx->dt;
             ctx->estVelCorr.z += gpsVelZResidual * positionEstimationConfig()->w_z_gps_v * ctx->dt;
 
-            ctx->newEPV = updateEPE(posEstimator.est.epv, ctx->dt, MAX(posEstimator.gps.epv, gpsAltResidual), w_z_gps_p);
+            ctx->newEPV = updateEPE(posEstimator.est.epv, ctx->dt, MAX(posEstimator.gps.epv, fabsf(gpsAltResidual)), w_z_gps_p);
 
             // Accelerometer bias
             ctx->accBiasCorr.z -= gpsAltResidual * sq(w_z_gps_p);

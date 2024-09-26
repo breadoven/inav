@@ -47,10 +47,10 @@
 #include "fc/runtime_config.h"
 #include "fc/settings.h"
 
+#include "navigation/navigation_pos_estimator_private.h"   // CR134
+
 #include "sensors/barometer.h"
 #include "sensors/sensors.h"
-
-#include "io/beeper.h"  // CR134
 
 #ifdef USE_HARDWARE_REVISION_DETECTION
 #include "hardware_revision.h"
@@ -65,7 +65,6 @@ PG_REGISTER_WITH_RESET_TEMPLATE(barometerConfig_t, barometerConfig, PG_BAROMETER
 PG_RESET_TEMPLATE(barometerConfig_t, barometerConfig,
     .baro_hardware = SETTING_BARO_HARDWARE_DEFAULT,
     .baro_calibration_tolerance = SETTING_BARO_CAL_TOLERANCE_DEFAULT,
-    .baro_temp_correction = SETTING_BARO_TEMP_CORRECTION_DEFAULT,   // CR134
 );
 
 static zeroCalibrationScalar_t zeroCalibration;
@@ -311,64 +310,6 @@ void baroStartCalibration(void)
     const float acceptedPressureVariance = (101325.0f - altitudeToPressure(barometerConfig()->baro_calibration_tolerance)); // max 30cm deviation during calibration (at sea level)
     zeroCalibrationStartS(&zeroCalibration, CALIBRATING_BARO_TIME_MS, acceptedPressureVariance, false);
 }
-// CR134
-float processBaroTempCorrection(void)
-{
-    float setting = barometerConfig()->baro_temp_correction;
-DEBUG_SET(DEBUG_ALWAYS, 1, baro.baroTemperature);
-    if (!setting) {
-        return 0.0f;
-    }
-
-    static float correctionFactor = 0.0f;
-    static baroTempCalState_e calibrationState = BARO_TEMP_CAL_INITIALISE;
-    static int16_t baroTemp1 = 0.0f;
-    static timeMs_t startTimeMs = 0;
-
-    DEBUG_SET(DEBUG_ALWAYS, 0, correctionFactor * 100);
-    if (calibrationState == BARO_TEMP_CAL_COMPLETE) {
-        float tempCal = correctionFactor * CENTIDEGREES_TO_DEGREES(baroTemp1 - baro.baroTemperature);
-        DEBUG_SET(DEBUG_ALWAYS, 2, tempCal);
-        return tempCal;
-        // return correctionFactor * CENTIDEGREES_TO_DEGREES(baroTemp1 - baro.baroTemperature);
-    }
-
-    if (!ARMING_FLAG(WAS_EVER_ARMED)) {
-        static float baroAlt1 = 0.0f;
-        static int16_t baroTemp2 = 0.0f;
-        float newBaroAlt = pressureToAltitude(baro.baroPressure) - baroGroundAltitude;
-
-        if (calibrationState == BARO_TEMP_CAL_INITIALISE) {
-            baroTemp1 = baroTemp2 = baro.baroTemperature;
-            baroAlt1 = newBaroAlt;
-            calibrationState = BARO_TEMP_CAL_IN_PROGRESS;
-            startTimeMs = millis();
-        }
-
-        if (setting == 51.0f) {
-            float referenceDeltaTemp = ABS(baro.baroTemperature - baroTemp1);
-            if (referenceDeltaTemp > 300 && referenceDeltaTemp > ABS(baroTemp2 - baroTemp1)) {  // centidegrees
-                baroTemp2 = baro.baroTemperature;
-                correctionFactor = 0.8f * correctionFactor + 0.2f * (newBaroAlt - baroAlt1) / CENTIDEGREES_TO_DEGREES(baroTemp2 - baroTemp1);
-                correctionFactor = constrainf(correctionFactor, -50.0f, 50.0f);
-            }
-        } else {
-            correctionFactor = setting;
-            calibrationState = BARO_TEMP_CAL_COMPLETE;
-        }
-    }
-
-    if (calibrationState == BARO_TEMP_CAL_IN_PROGRESS && (ARMING_FLAG(WAS_EVER_ARMED) || millis() > startTimeMs + 300000)) {
-        barometerConfigMutable()->baro_temp_correction = correctionFactor;
-        calibrationState = BARO_TEMP_CAL_COMPLETE;
-        if (!ARMING_FLAG(WAS_EVER_ARMED)) {
-            beeper(correctionFactor ? BEEPER_ACTION_SUCCESS : BEEPER_ACTION_FAIL);
-        }
-    }
-
-    return 0.0f;
-}
-// CR134
 
 int32_t baroCalculateAltitude(void)
 {
@@ -385,7 +326,8 @@ int32_t baroCalculateAltitude(void)
     }
     else {
         // calculates height from ground via baro readings
-        baro.BaroAlt = pressureToAltitude(baro.baroPressure) - baroGroundAltitude + processBaroTempCorrection();  // CR134
+        baro.BaroAlt = pressureToAltitude(baro.baroPressure) - baroGroundAltitude;
+        baro.BaroAlt += processSensorTempCorrection(baro.baroTemperature, baro.BaroAlt, SENSOR_INDEX_BARO);  // CR134
     }
 
     return baro.BaroAlt;
