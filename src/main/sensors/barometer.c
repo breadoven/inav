@@ -327,7 +327,7 @@ int32_t baroCalculateAltitude(void)
     else {
         // calculates height from ground via baro readings
         baro.BaroAlt = pressureToAltitude(baro.baroPressure) - baroGroundAltitude;
-        baro.BaroAlt += processSensorTempCorrection(baro.baroTemperature, baro.BaroAlt, SENSOR_INDEX_BARO);  // CR134
+        baro.BaroAlt += applySensorTempCompensation(baro.baroTemperature, baro.BaroAlt, SENSOR_INDEX_BARO);  // CR134
     }
 
     return baro.BaroAlt;

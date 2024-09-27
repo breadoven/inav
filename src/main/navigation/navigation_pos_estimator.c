@@ -53,7 +53,6 @@
 #include "sensors/gyro.h"
 #include "sensors/pitotmeter.h"
 #include "sensors/opflow.h"
-#include "sensors/sensors.h"   // CR134
 #include "sensors/temperature.h"
 
 navigationPosEstimator_t posEstimator;
@@ -383,74 +382,7 @@ float navGetAccelerometerWeight(void)
 
     return accWeightScaled;
 }
-// 134
-float processSensorTempCorrection(int16_t sensorTemp, float sensorMeasurement, sensorIndex_e sensorType)
-{
-    float setting = 0.0f;
-    if (sensorType == SENSOR_INDEX_ACC) {
-        setting = positionEstimationConfig()->acc_temp_correction;
-    } else if (sensorType == SENSOR_INDEX_BARO) {
-        setting = positionEstimationConfig()->baro_temp_correction;
-    }
 
-    DEBUG_SET(DEBUG_ALWAYS, 1, sensorTemp);
-    if (!setting) {
-        return 0.0f;
-    }
-
-    static float correctionFactor = 0.0f;
-    static sensorTempCalState_e calibrationState = SENSOR_TEMP_CAL_INITIALISE;
-    static int16_t referenceTemp = 0.0f;
-    static timeMs_t startTimeMs = 0;
-
-    DEBUG_SET(DEBUG_ALWAYS, 0, correctionFactor * 100);
-    DEBUG_SET(DEBUG_ALWAYS, 5, sensorMeasurement);
-    if (calibrationState == SENSOR_TEMP_CAL_COMPLETE) {
-        float tempCal = correctionFactor * CENTIDEGREES_TO_DEGREES(referenceTemp - sensorTemp);
-        DEBUG_SET(DEBUG_ALWAYS, 2, tempCal);
-        return tempCal;
-        // return correctionFactor * CENTIDEGREES_TO_DEGREES(referenceTemp - baro.baroTemperature);
-    }
-
-    if (!ARMING_FLAG(WAS_EVER_ARMED)) {
-        static float referenceMeasurement = 0.0f;
-        static int16_t lastTemp = 0.0f;
-
-        if (calibrationState == SENSOR_TEMP_CAL_INITIALISE) {
-            referenceTemp = lastTemp = sensorTemp;
-            referenceMeasurement = sensorMeasurement;
-            calibrationState = SENSOR_TEMP_CAL_IN_PROGRESS;
-            startTimeMs = millis();
-        }
-
-        if (setting == 51.0f) {
-            float referenceDeltaTemp = ABS(sensorTemp - referenceTemp);
-            if (referenceDeltaTemp > 300 && referenceDeltaTemp > ABS(lastTemp - referenceTemp)) {  // centidegrees
-                lastTemp = sensorTemp;
-                correctionFactor = 0.8f * correctionFactor + 0.2f * (sensorMeasurement - referenceMeasurement) / CENTIDEGREES_TO_DEGREES(lastTemp - referenceTemp);
-                correctionFactor = constrainf(correctionFactor, -50.0f, 50.0f);
-            }
-        } else {
-            correctionFactor = setting;
-            calibrationState = SENSOR_TEMP_CAL_COMPLETE;
-        }
-    }
-
-    if (calibrationState == SENSOR_TEMP_CAL_IN_PROGRESS && (ARMING_FLAG(WAS_EVER_ARMED) || millis() > startTimeMs + 300000)) {
-        if (sensorType == SENSOR_INDEX_ACC) {
-            positionEstimationConfigMutable()->acc_temp_correction = correctionFactor;
-        } else if (sensorType == SENSOR_INDEX_BARO) {
-            positionEstimationConfigMutable()->baro_temp_correction = correctionFactor;
-        }
-        calibrationState = SENSOR_TEMP_CAL_COMPLETE;
-        if (!ARMING_FLAG(WAS_EVER_ARMED)) {
-            beeper(correctionFactor ? BEEPER_ACTION_SUCCESS : BEEPER_ACTION_FAIL);
-        }
-    }
-
-    return 0.0f;
-}
-// CR134
 static void updateIMUTopic(timeUs_t currentTimeUs)
 {
     const float dt = US2S(currentTimeUs - posEstimator.imu.lastUpdateTime);
@@ -514,7 +446,7 @@ static void updateIMUTopic(timeUs_t currentTimeUs)
             }
 #endif
             posEstimator.imu.accelNEU.z -= posEstimator.imu.calibratedGravityCMSS;
-            posEstimator.imu.accelNEU.z += processSensorTempCorrection(10 * gyroGetTemperature(), imuMeasuredAccelBF.z, SENSOR_INDEX_ACC);  // CR134
+            posEstimator.imu.accelNEU.z += applySensorTempCompensation(10 * gyroGetTemperature(), imuMeasuredAccelBF.z, SENSOR_INDEX_ACC);  // CR134
         }
         else {  /* If calibration is incomplete - report zero acceleration */
             posEstimator.imu.accelNEU.x = 0.0f;
@@ -601,7 +533,6 @@ static uint32_t calculateCurrentValidityFlags(timeUs_t currentTimeUs)
 
 static void estimationPredict(estimationContext_t * ctx)
 {
-
     /* Prediction step: Z-axis */
     if ((ctx->newFlags & EST_Z_VALID)) {
         posEstimator.est.pos.z += posEstimator.est.vel.z * ctx->dt;
@@ -1026,3 +957,71 @@ bool navIsCalibrationComplete(void)
     // return gravityCalibrationComplete();
     return gravityCalibrationIsValid();   // CR131
 }
+// CR134
+sensor_compensation_t sensor_comp_data[SENSOR_INDEX_COUNT];
+float applySensorTempCompensation(int16_t sensorTemp, float sensorMeasurement, sensorIndex_e sensorType)
+{
+    float setting = 0.0f;
+    if (sensorType == SENSOR_INDEX_ACC) {
+        setting = positionEstimationConfig()->acc_temp_correction;
+    } else if (sensorType == SENSOR_INDEX_BARO) {
+        setting = positionEstimationConfig()->baro_temp_correction;
+    }
+
+    // DEBUG_SET(DEBUG_ALWAYS, 1, sensorTemp);
+    if (!setting) {
+        return 0.0f;
+    }
+
+    // DEBUG_SET(DEBUG_ALWAYS, 0, sensor_comp_data[sensorType].correctionFactor * 100);
+    // DEBUG_SET(DEBUG_ALWAYS, 5, sensorMeasurement);
+    static timeMs_t startTimeMs = 0;
+    if (sensor_comp_data[sensorType].calibrationState == SENSOR_TEMP_CAL_COMPLETE) {
+        startTimeMs = 0;
+        float tempCal = sensor_comp_data[sensorType].correctionFactor * CENTIDEGREES_TO_DEGREES(sensor_comp_data[sensorType].referenceTemp - sensorTemp);
+        // DEBUG_SET(DEBUG_ALWAYS, 2, tempCal);
+        return tempCal;
+        // return correctionFactor * CENTIDEGREES_TO_DEGREES(referenceTemp - baro.baroTemperature);
+    }
+
+
+
+    if (!ARMING_FLAG(WAS_EVER_ARMED)) {
+        static float referenceMeasurement = 0.0f;
+        static int16_t lastTemp = 0.0f;
+
+        if (sensor_comp_data[sensorType].calibrationState == SENSOR_TEMP_CAL_INITIALISE) {
+            sensor_comp_data[sensorType].referenceTemp = lastTemp = sensorTemp;
+            referenceMeasurement = sensorMeasurement;
+            sensor_comp_data[sensorType].calibrationState = SENSOR_TEMP_CAL_IN_PROGRESS;
+            startTimeMs = millis();
+        }
+
+        if (setting == 51.0f) {
+            float referenceDeltaTemp = ABS(sensorTemp - sensor_comp_data[sensorType].referenceTemp);
+            if (referenceDeltaTemp > 300 && referenceDeltaTemp > ABS(lastTemp - sensor_comp_data[sensorType].referenceTemp)) {  // centidegrees
+                lastTemp = sensorTemp;
+                sensor_comp_data[sensorType].correctionFactor = 0.8f * sensor_comp_data[sensorType].correctionFactor + 0.2f * (sensorMeasurement - referenceMeasurement) / CENTIDEGREES_TO_DEGREES(lastTemp - sensor_comp_data[sensorType].referenceTemp);
+                sensor_comp_data[sensorType].correctionFactor = constrainf(sensor_comp_data[sensorType].correctionFactor, -50.0f, 50.0f);
+            }
+        } else {
+            sensor_comp_data[sensorType].correctionFactor = setting;
+            sensor_comp_data[sensorType].calibrationState = SENSOR_TEMP_CAL_COMPLETE;
+        }
+    }
+
+    if (sensor_comp_data[sensorType].calibrationState == SENSOR_TEMP_CAL_IN_PROGRESS && (ARMING_FLAG(WAS_EVER_ARMED) || millis() > startTimeMs + 300000)) {
+        if (sensorType == SENSOR_INDEX_ACC) {
+            positionEstimationConfigMutable()->acc_temp_correction = sensor_comp_data[sensorType].correctionFactor;
+        } else if (sensorType == SENSOR_INDEX_BARO) {
+            positionEstimationConfigMutable()->baro_temp_correction = sensor_comp_data[sensorType].correctionFactor;
+        }
+        sensor_comp_data[sensorType].calibrationState = SENSOR_TEMP_CAL_COMPLETE;
+        if (!ARMING_FLAG(WAS_EVER_ARMED)) {
+            beeper(sensor_comp_data[sensorType].correctionFactor ? BEEPER_ACTION_SUCCESS : BEEPER_ACTION_FAIL);
+        }
+    }
+
+    return 0.0f;
+}
+// CR134
