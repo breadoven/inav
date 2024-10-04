@@ -47,8 +47,6 @@
 #include "fc/runtime_config.h"
 #include "fc/settings.h"
 
-#include "navigation/navigation_pos_estimator_private.h"   // CR134
-
 #include "sensors/barometer.h"
 #include "sensors/sensors.h"
 
@@ -65,6 +63,7 @@ PG_REGISTER_WITH_RESET_TEMPLATE(barometerConfig_t, barometerConfig, PG_BAROMETER
 PG_RESET_TEMPLATE(barometerConfig_t, barometerConfig,
     .baro_hardware = SETTING_BARO_HARDWARE_DEFAULT,
     .baro_calibration_tolerance = SETTING_BARO_CAL_TOLERANCE_DEFAULT,
+    .baro_temp_correction = SETTING_BARO_TEMP_CORRECTION_DEFAULT,   // CR134
 );
 
 static zeroCalibrationScalar_t zeroCalibration;
