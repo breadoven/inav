@@ -285,7 +285,7 @@ void updatePositionEstimator_BaroTopic(timeUs_t currentTimeUs)
     float newBaroAlt = baroCalculateAltitude();
 
     if (sensors(SENSOR_BARO) && baroIsCalibrationComplete()) {
-        /* If we are required - keep altitude at zero */
+        /* If we are required - keep altitude at zero */  // CR134
         if (shouldResetReferenceAltitude()) {
             initialBaroAltitudeOffset = newBaroAlt;
         }
