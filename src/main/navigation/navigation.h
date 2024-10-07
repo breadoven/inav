@@ -239,7 +239,7 @@ typedef struct positionEstimationConfig_s {
     uint16_t max_surface_altitude;
 
     float w_z_baro_p;           // Weight (cutoff frequency) for barometer altitude measurements
-    float w_z_baro_v;           // Weight (cutoff frequency) for barometer climb rate measurements  CR131_X
+    float w_z_baro_v;           // Weight (cutoff frequency) for barometer climb rate measurements
 
     float w_z_surface_p;        // Weight (cutoff frequency) for surface altitude measurements
     float w_z_surface_v;        // Weight (cutoff frequency) for surface velocity measurements
@@ -261,7 +261,7 @@ typedef struct positionEstimationConfig_s {
     float max_eph_epv;          // Max estimated position error acceptable for estimation (cm)
     float baro_epv;             // Baro position error
 
-    uint8_t default_alt_sensor; // default altitude sensor source  // CR131
+    uint8_t default_alt_sensor; // default altitude sensor source
 #ifdef USE_GPS_FIX_ESTIMATION
     uint8_t allow_gps_fix_estimation;
 #endif

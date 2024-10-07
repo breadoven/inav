@@ -1172,6 +1172,16 @@ S.Port telemetry: Send pitch and roll degrees*10 instead of raw accelerometer da
 
 ---
 
+### frsky_use_legacy_gps_mode_sensor_ids
+
+S.Port telemetry: If `ON`, send the legacy telemetry IDs for modes (Tmp1) and GNSS (Tmp2). These are old IDs, deprecated, and will be removed in INAV 10.0. Tools and scripts using these IDs should be updated to use the new IDs of **470** for Modes and **480** for GNSS. Default: 'OFF'
+
+| Default | Min | Max |
+| --- | --- | --- |
+| OFF | OFF | ON |
+
+---
+
 ### fw_autotune_max_rate_deflection
 
 The target percentage of maximum mixer output used for determining the rates in `AUTO` and `LIMIT`.
@@ -2004,7 +2014,7 @@ Uncertainty value for barometric sensor [cm]
 
 ### inav_default_alt_sensor
 
-Sets the default altitude sensor to use. Settings GPS and BARO always use both sensors with priority given to the selected sensor when the altitude error between the sensors exceeds a set limit. Only the selected sensor will be used in this case. GPS error limit = 2 * inav_max_eph_epv. BARO error limit = 4 * inav_baro_epv. Settings GPS_ONLY and BARO_ONLY will use only the selected sensor even if the other sensor is working. The other sensor will only be used as a backup if the selected sensor is no longer available to use.
+
 
 | Default | Min | Max |
 | --- | --- | --- |
@@ -2572,6 +2582,16 @@ Rate of the extra3 message for MAVLink telemetry
 
 ---
 
+### mavlink_min_txbuffer
+
+Minimum percent of TX buffer space free, before attempting to transmit telemetry. Requuires RADIO_STATUS messages to be processed. 0 = always transmits.
+
+| Default | Min | Max |
+| --- | --- | --- |
+| 33 | 0 | 100 |
+
+---
+
 ### mavlink_pos_rate
 
 Rate of the position message for MAVLink telemetry
@@ -2579,6 +2599,16 @@ Rate of the position message for MAVLink telemetry
 | Default | Min | Max |
 | --- | --- | --- |
 | 2 | 0 | 255 |
+
+---
+
+### mavlink_radio_type
+
+Mavlink radio type. Affects how RSSI and LQ are reported on OSD.
+
+| Default | Min | Max |
+| --- | --- | --- |
+| GENERIC |  |  |
 
 ---
 
@@ -3704,7 +3734,7 @@ Maximum speed allowed in fully autonomous modes (RTH, WP) [cm/s] [Multirotor onl
 
 ### nav_max_terrain_follow_alt
 
-Max allowed above the ground altitude for terrain following mode
+Max allowed above the ground altitude for terrain following mode [cm]
 
 | Default | Min | Max |
 | --- | --- | --- |
@@ -5044,7 +5074,7 @@ Number of leading digits removed from plus code. Removing 2, 4 and 6 digits requ
 
 ### osd_radar_peers_display_time
 
-Time in seconds to display next peer 
+Time in seconds to display next peer
 
 | Default | Min | Max |
 | --- | --- | --- |
