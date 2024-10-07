@@ -122,6 +122,16 @@ Frequency of the software notch filter to remove mechanical vibrations from the 
 
 ---
 
+### acc_temp_correction
+
+Accelerometer temperature correction factor to compensate for acceleromter drift with changes in acceleromter temperature [cm/s2 per Degs C]. Internally limited to between -50 and 50. Typical setting for MPU6000 acceleromter is around 2.5. Setting to 51 initiates auto calibration which ends after 5 minutes or on first Arm.
+
+| Default | Min | Max |
+| --- | --- | --- |
+| 0 | -50 | 51 |
+
+---
+
 ### accgain_x
 
 Calculated value after '6 position avanced calibration'. Uncalibrated value is 4096. See Wiki page.
@@ -2014,7 +2024,7 @@ Uncertainty value for barometric sensor [cm]
 
 ### inav_default_alt_sensor
 
-
+Sets the default altitude sensor to use. Settings GPS and BARO always use both sensors unless there is an altitude error between the sensors that exceeds a set limit. In this case only the selected sensor will be used while the altitude error limit is exceeded. GPS error limit = 2 * inav_max_eph_epv. BARO error limit = 4 * inav_baro_epv. Settings GPS_ONLY and BARO_ONLY will use only the selected sensor even if the other sensor is working. The other sensor will only be used as a backup if the selected sensor is no longer available to use.
 
 | Default | Min | Max |
 | --- | --- | --- |
@@ -5074,7 +5084,7 @@ Number of leading digits removed from plus code. Removing 2, 4 and 6 digits requ
 
 ### osd_radar_peers_display_time
 
-Time in seconds to display next peer
+Time in seconds to display next peer 
 
 | Default | Min | Max |
 | --- | --- | --- |

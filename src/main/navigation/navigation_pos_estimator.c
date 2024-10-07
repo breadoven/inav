@@ -743,8 +743,6 @@ static void updateEstimatedTopic(timeUs_t currentTimeUs)
     ctx.dt = US2S(currentTimeUs - posEstimator.est.lastUpdateTime);
     posEstimator.est.lastUpdateTime = currentTimeUs;
 
-    const float max_eph_epv = positionEstimationConfig()->max_eph_epv;   // CR131_X
-
     /* If IMU is not ready we can't estimate anything */
     if (!isImuReady()) {
         posEstimator.est.eph = max_eph_epv + 0.001f;
