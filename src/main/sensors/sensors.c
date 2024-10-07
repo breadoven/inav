@@ -41,10 +41,12 @@ float applySensorTempCompensation(int16_t sensorTemp, float sensorMeasurement, s
     float setting = 0.0f;
     if (sensorType == SENSOR_INDEX_ACC) {
         setting = accelerometerConfig()->acc_temp_correction;
-    } else if (sensorType == SENSOR_INDEX_BARO) {
+    }
+#ifdef USE_BARO
+    else if (sensorType == SENSOR_INDEX_BARO) {
         setting = barometerConfig()->baro_temp_correction;
     }
-
+#endif
     if (!setting) {
         return 0.0f;
     }
@@ -66,19 +68,16 @@ float applySensorTempCompensation(int16_t sensorTemp, float sensorMeasurement, s
         }
 
         if (setting == 51.0f) {
-            static float referenceMeasurement = 0.0f;
-            static int16_t lastTemp = 0.0f;
-
             if (sensor_comp_data[sensorType].referenceTemp == sensorTemp) {
-                referenceMeasurement = sensorMeasurement;
-                lastTemp = sensorTemp;
+                sensor_comp_data[sensorType].referenceMeasurement = sensorMeasurement;
+                sensor_comp_data[sensorType].lastTemp = sensorTemp;
                 startTimeMs = millis();
             }
 
-            float referenceDeltaTemp = ABS(sensorTemp - sensor_comp_data[sensorType].referenceTemp);
-            if (referenceDeltaTemp > 300 && referenceDeltaTemp > ABS(lastTemp - sensor_comp_data[sensorType].referenceTemp)) {  // centidegrees
-                lastTemp = sensorTemp;
-                sensor_comp_data[sensorType].correctionFactor = 0.9f * sensor_comp_data[sensorType].correctionFactor + 0.1f * (sensorMeasurement - referenceMeasurement) / CENTIDEGREES_TO_DEGREES(lastTemp - sensor_comp_data[sensorType].referenceTemp);
+            float referenceDeltaTemp = ABS(sensorTemp - sensor_comp_data[sensorType].referenceTemp);   // centidegrees
+            if (referenceDeltaTemp > 300 && referenceDeltaTemp > ABS(sensor_comp_data[sensorType].lastTemp - sensor_comp_data[sensorType].referenceTemp)) {
+                sensor_comp_data[sensorType].lastTemp = sensorTemp;
+                sensor_comp_data[sensorType].correctionFactor = 0.9f * sensor_comp_data[sensorType].correctionFactor + 0.1f * (sensorMeasurement - sensor_comp_data[sensorType].referenceMeasurement) / CENTIDEGREES_TO_DEGREES(sensor_comp_data[sensorType].lastTemp - sensor_comp_data[sensorType].referenceTemp);
                 sensor_comp_data[sensorType].correctionFactor = constrainf(sensor_comp_data[sensorType].correctionFactor, -50.0f, 50.0f);
             }
         } else {
@@ -94,9 +93,12 @@ float applySensorTempCompensation(int16_t sensorTemp, float sensorMeasurement, s
 
         if (sensorType == SENSOR_INDEX_ACC) {
             accelerometerConfigMutable()->acc_temp_correction = sensor_comp_data[sensorType].correctionFactor;
-        } else if (sensorType == SENSOR_INDEX_BARO) {
+        }
+#ifdef USE_BARO
+        else if (sensorType == SENSOR_INDEX_BARO) {
             barometerConfigMutable()->baro_temp_correction = sensor_comp_data[sensorType].correctionFactor;
         }
+#endif
         sensor_comp_data[sensorType].calibrationState = SENSOR_TEMP_CAL_COMPLETE;
         startTimeMs = 0;
     }
