@@ -149,8 +149,8 @@ static void updateAltitudeVelocityAndPitchController_FW(timeDelta_t deltaMicros)
 
     // CR133
     // ****************** TEST FILTER VERT VEL
-    static pt1Filter_t velz2FilterState;
-    currentClimbRate = pt1FilterApply4(&velz2FilterState, currentClimbRate, 1.0f, US2S(deltaMicros));
+    // static pt1Filter_t velz2FilterState;
+    // currentClimbRate = pt1FilterApply4(&velz2FilterState, currentClimbRate, 1.0f, US2S(deltaMicros));
     DEBUG_SET(DEBUG_ALWAYS, 3, currentClimbRate);
     // ******************
 
@@ -176,31 +176,23 @@ static void updateAltitudeVelocityAndPitchController_FW(timeDelta_t deltaMicros)
     // float targetPitchAngle = navPidApply2(&posControl.pids.fw_alt, 0, climbRateError, US2S(deltaMicros), minDiveDeciDeg, maxClimbDeciDeg, pidFlags);
     // ******************
 
-    // ****************** TEST USING POSITION AGAIN
-    // PIDS = P 10 @ 100 PID factor, I 1 @ 30, D 10 @ 50
-    // float desiredAltitude = 0; //posControl.desiredState.pos.z;
-    // static float desiredRateLimitedAltitude = 0;
+    // // ****************** TEST USING POSITION AGAIN
+    // // PIDS = P 10 @ 100 PID factor, I 1 @ 30, D 10 @ 50
+    // float desiredAltitude = posControl.desiredState.pos.z;
     // float currentAltitude = navGetCurrentActualPositionAndVelocity()->pos.z;
 
-    // if (posControl.flags.rocToAltMode == ROC_TO_ALT_CONSTANT) {
+    // if (posControl.flags.rocToAltMode == ROC_TO_ALT_CONSTANT || navigationIsExecutingAnEmergencyLanding()) {
         // posControl.desiredState.pos.z += desiredClimbRate * US2S(deltaMicros);
         // desiredAltitude = 2 * posControl.desiredState.pos.z - currentAltitude;
-    // } else {
-        // static float lastPosZ = -10000000;
-        // if (posControl.desiredState.pos.z != lastPosZ) {
-            // lastPosZ = posControl.desiredState.pos.z;
-            // desiredRateLimitedAltitude = currentAltitude;
-        // }
-        // desiredRateLimitedAltitude += desiredClimbRate * US2S(deltaMicros);
-        // desiredAltitude = 2 * desiredRateLimitedAltitude - currentAltitude;
     // }
+
     // float targetPitchAngle = navPidApply2(&posControl.pids.fw_alt, desiredAltitude, currentAltitude, US2S(deltaMicros), minDiveDeciDeg, maxClimbDeciDeg, 0);
-    // DEBUG_SET(DEBUG_ALWAYS, 1, desiredAltitude);
-    // **********************8
+    // // DEBUG_SET(DEBUG_ALWAYS, 1, desiredAltitude);
+    // // **********************
 
     float targetPitchAngle = navPidApply2(&posControl.pids.fw_alt, desiredClimbRate, currentClimbRate, US2S(deltaMicros), minDiveDeciDeg, maxClimbDeciDeg, PID_DTERM_FROM_ERROR);
     // DEBUG_SET(DEBUG_ALWAYS, 3, posControl.pids.fw_alt.feedForward);
-    // DEBUG_SET(DEBUG_ALWAYS, 6, targetPitchAngle);  // CR133
+    DEBUG_SET(DEBUG_ALWAYS, 6, targetPitchAngle);  // CR133
 
     // Apply low-pass filter to prevent rapid correction
     targetPitchAngle = pt1FilterApply4(&velzFilterState, targetPitchAngle, getSmoothnessCutoffFreq(NAV_FW_BASE_PITCH_CUTOFF_FREQUENCY_HZ), US2S(deltaMicros));

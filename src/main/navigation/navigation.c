@@ -1001,6 +1001,7 @@ static const navigationFSMStateDescriptor_t navFSM[NAV_STATE_COUNT] = {
             [NAV_FSM_EVENT_SWITCH_TO_ALTHOLD]           = NAV_STATE_ALTHOLD_INITIALIZE,
             [NAV_FSM_EVENT_SWITCH_TO_POSHOLD_3D]        = NAV_STATE_POSHOLD_3D_INITIALIZE,
             [NAV_FSM_EVENT_SWITCH_TO_RTH]               = NAV_STATE_RTH_INITIALIZE,
+            [NAV_FSM_EVENT_SWITCH_TO_EMERGENCY_LANDING] = NAV_STATE_EMERGENCY_LANDING_INITIALIZE, // CR135
             [NAV_FSM_EVENT_SWITCH_TO_WAYPOINT]          = NAV_STATE_WAYPOINT_INITIALIZE,
             [NAV_FSM_EVENT_SWITCH_TO_COURSE_HOLD]       = NAV_STATE_COURSE_HOLD_INITIALIZE,
             [NAV_FSM_EVENT_SWITCH_TO_CRUISE]            = NAV_STATE_CRUISE_INITIALIZE,
@@ -4767,9 +4768,9 @@ void navigationUsePIDs(void)
     );
                                                                                                 // CR133
     navPidInit(&posControl.pids.fw_alt, (float)pidProfile()->bank_fw.pid[PID_POS_Z].P / 100.0f,  // 0.6 All for response factor of 50
-                                        (float)pidProfile()->bank_fw.pid[PID_POS_Z].I / 50.0f,  // 0.333
-                                        (float)pidProfile()->bank_fw.pid[PID_POS_Z].D / 50.0f,  // 0.15 to 0.3
-                                        (float)pidProfile()->bank_fw.pid[PID_POS_Z].FF / 50.0f,  // poss new FF, original was 0.0f
+                                        (float)pidProfile()->bank_fw.pid[PID_POS_Z].I / 100.0f,  // 0.333
+                                        (float)pidProfile()->bank_fw.pid[PID_POS_Z].D / 200.0f,  // 0.15 to 0.3
+                                        (float)pidProfile()->bank_fw.pid[PID_POS_Z].FF / 100.0f,  // poss new FF, original was 0.0f
                                         NAV_DTERM_CUT_HZ,
                                         0.0f
     );
