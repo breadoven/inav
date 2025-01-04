@@ -928,7 +928,7 @@ EzTune filter cutoff frequency
 
 | Default | Min | Max |
 | --- | --- | --- |
-| 110 | 10 | 300 |
+| 110 | 20 | 300 |
 
 ---
 
@@ -1198,7 +1198,7 @@ The target percentage of maximum mixer output used for determining the rates in 
 
 | Default | Min | Max |
 | --- | --- | --- |
-| 80 | 50 | 100 |
+| 90 | 50 | 100 |
 
 ---
 
@@ -1489,6 +1489,76 @@ Yaw Iterm is frozen when bank angle is above this threshold [degrees]. This solv
 | Default | Min | Max |
 | --- | --- | --- |
 | 0 | 0 | 90 |
+
+---
+
+### geozone_avoid_altitude_range
+
+Altitude range in which an attempt is made to avoid a geozone upwards
+
+| Default | Min | Max |
+| --- | --- | --- |
+| 5000 | 0 | 1000000 |
+
+---
+
+### geozone_detection_distance
+
+Distance from which a geozone is detected
+
+| Default | Min | Max |
+| --- | --- | --- |
+| 50000 | 0 | 1000000 |
+
+---
+
+### geozone_mr_stop_distance
+
+Distance in which multirotors stops before the border
+
+| Default | Min | Max |
+| --- | --- | --- |
+| 15000 | 0 | 100000 |
+
+---
+
+### geozone_no_way_home_action
+
+Action if RTH with active geozones is unable to calculate a course to home
+
+| Default | Min | Max |
+| --- | --- | --- |
+| RTH |  |  |
+
+---
+
+### geozone_safe_altitude_distance
+
+Vertical distance that must be maintained to the upper and lower limits of the zone.
+
+| Default | Min | Max |
+| --- | --- | --- |
+| 1000 | 0 | 10000 |
+
+---
+
+### geozone_safehome_as_inclusive
+
+Treat nearest safehome as inclusive geozone
+
+| Default | Min | Max |
+| --- | --- | --- |
+| OFF | OFF | ON |
+
+---
+
+### geozone_safehome_zone_action
+
+Fence action for safehome zone
+
+| Default | Min | Max |
+| --- | --- | --- |
+| NONE |  |  |
 
 ---
 
@@ -2968,7 +3038,7 @@ If enabled, motor will stop when throttle is low on this mixer_profile
 
 | Default | Min | Max |
 | --- | --- | --- |
-| OFF | OFF | ON |
+| ON | OFF | ON |
 
 ---
 
@@ -4622,6 +4692,26 @@ Value above which the OSD current consumption element will start blinking. Measu
 
 ---
 
+### osd_decimals_altitude
+
+Number of decimals for the altitude displayed in the OSD [3-5].
+
+| Default | Min | Max |
+| --- | --- | --- |
+| 3 | 3 | 5 |
+
+---
+
+### osd_decimals_distance
+
+Number of decimals for distance displayed in the OSD [3-5]. This includes distance from home, total distance, and distance remaining.
+
+| Default | Min | Max |
+| --- | --- | --- |
+| 3 | 3 | 5 |
+
+---
+
 ### osd_dist_alarm
 
 Value above which to make the OSD distance from home indicator blink (meters)
@@ -4988,7 +5078,7 @@ Number of digits used for mAh precision. Currently used by mAh Used and Battery 
 
 | Default | Min | Max |
 | --- | --- | --- |
-| 4 | 4 | 6 |
+| 4 | 3 | 6 |
 
 ---
 
@@ -5198,7 +5288,7 @@ Value below which Crossfire SNR Alarm pops-up. (dB)
 
 | Default | Min | Max |
 | --- | --- | --- |
-| 4 | -20 | 10 |
+| 4 | -20 | 99 |
 
 ---
 

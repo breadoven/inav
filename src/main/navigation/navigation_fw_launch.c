@@ -683,7 +683,7 @@ bool isFixedWingLaunchFinishedThrottleLow(void)
 void abortFixedWingLaunch(void)
 {
     setCurrentState(FW_LAUNCH_STATE_ABORTED, 0);
-    DISABLE_FLIGHT_MODE(NAV_LAUNCH_MODE);  // CR135
+    DISABLE_FLIGHT_MODE(NAV_LAUNCH_MODE);
 }
 
 const char * fixedWingLaunchStateMessage(void)
