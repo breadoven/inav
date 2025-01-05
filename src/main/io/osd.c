@@ -3094,7 +3094,11 @@ static bool osdDrawSingleElement(uint8_t item)
     case OSD_VEL_Z_PIDS:
         osdDisplayNavPIDValues(elemPosX, elemPosY, "VZ", PID_VEL_Z, ADJUSTMENT_VEL_Z_P, ADJUSTMENT_VEL_Z_I, ADJUSTMENT_VEL_Z_D);
         return true;
-
+    // CR136
+    case OSD_NAV_FW_ALT_CONTROL_RESPONSE:
+        osdDisplayAdjustableDecimalValue(elemPosX, elemPosY, "ACR", 0, pidProfile()->fwAltControlResponseFactor, 3, 0, ADJUSTMENT_NAV_FW_ALT_CONTROL_RESPONSE);
+        return true;
+    // CR136
     case OSD_HEADING_P:
         osdDisplayAdjustableDecimalValue(elemPosX, elemPosY, "HP", 0, pidBank()->pid[PID_HEADING].P, 3, 0, ADJUSTMENT_HEADING_P);
         return true;
