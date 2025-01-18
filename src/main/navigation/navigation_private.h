@@ -426,7 +426,7 @@ typedef enum {
 #ifdef USE_GEOZONE
 typedef struct navSendTo_s {
     fpVector3_t targetPos;
-    uint16_t altitudeTargetRange;   // 0 for only "2D" 
+    uint16_t altitudeTargetRange;   // 0 for only "2D"
     uint32_t targetRange;
     bool lockSticks;
     uint32_t lockStickTime;
@@ -557,6 +557,7 @@ bool isNavHoldPositionActive(void);
 bool isLastMissionWaypoint(void);
 float getActiveSpeed(void);
 bool isWaypointNavTrackingActive(void);
+float getTakeoffAltitude(void);  // CR138
 
 void updateActualHeading(bool headingValid, int32_t newHeading, int32_t newGroundCourse);
 void updateActualHorizontalPositionAndVelocity(bool estPosValid, bool estVelValid, float newX, float newY, float newVelX, float newVelY);

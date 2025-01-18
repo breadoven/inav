@@ -3573,6 +3573,7 @@ void updateLandingStatus(timeMs_t currentTimeMs)
             landingDetectorIsActive = false;
         }
         resetLandingDetector();
+        getTakeoffAltitude();
 
         return;
     }
@@ -5137,14 +5138,14 @@ void activateSendTo(void)
     if (!geozone.avoidInRTHInProgress) {
         abortFixedWingLaunch();
         posControl.flags.sendToActive = true;
-        navProcessFSMEvents(selectNavEventFromBoxModeInput());
+        navProcessFSMEvents(selectNavEventFromBoxModeInput(false));  // CR6
     }
 }
 
 void abortSendTo(void)
 {
     posControl.flags.sendToActive = false;
-    navProcessFSMEvents(selectNavEventFromBoxModeInput());
+    navProcessFSMEvents(selectNavEventFromBoxModeInput(false));   // CR6
 }
 
 void activateForcedPosHold(void)
@@ -5152,14 +5153,14 @@ void activateForcedPosHold(void)
     if (!geozone.avoidInRTHInProgress) {
         abortFixedWingLaunch();
         posControl.flags.forcedPosholdActive = true;
-        navProcessFSMEvents(selectNavEventFromBoxModeInput());
+        navProcessFSMEvents(selectNavEventFromBoxModeInput(false));   // CR6
     }
 }
 
 void abortForcedPosHold(void)
 {
     posControl.flags.forcedPosholdActive = false;
-    navProcessFSMEvents(selectNavEventFromBoxModeInput());
+    navProcessFSMEvents(selectNavEventFromBoxModeInput(false));   // CR6
 }
 #endif
 
@@ -5323,6 +5324,17 @@ uint8_t getActiveWpNumber(void)
 {
     return NAV_Status.activeWpNumber;
 }
+// CR138
+float getTakeoffAltitude(void)
+{
+    static float refTakeoffAltitude = 0.0f;
+    if (!ARMING_FLAG(ARMED) && !landingDetectorIsActive) {
+        refTakeoffAltitude = posControl.actualState.abs.pos.z;
+    }
+
+    return refTakeoffAltitude;
+}
+// CR138
 #ifdef USE_FW_AUTOLAND
 static void resetFwAutoland(void)
 {

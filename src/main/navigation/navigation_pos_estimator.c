@@ -374,15 +374,15 @@ static void updateIMUEstimationWeight(const float dt)
     // DEBUG_VIBE[0-3] are used in IMU
     DEBUG_SET(DEBUG_VIBE, 4, posEstimator.imu.accWeightFactor * 1000);
 }
+// CR137
+// float navGetAccelerometerWeight(void)  // pointless
+// {
+    // const float accWeightScaled = posEstimator.imu.accWeightFactor;
+    // DEBUG_SET(DEBUG_VIBE, 5, accWeightScaled * 1000);
 
-float navGetAccelerometerWeight(void)
-{
-    const float accWeightScaled = posEstimator.imu.accWeightFactor;
-    DEBUG_SET(DEBUG_VIBE, 5, accWeightScaled * 1000);
-
-    return accWeightScaled;
-}
-
+    // return accWeightScaled;
+// }
+// CR137
 static void updateIMUTopic(timeUs_t currentTimeUs)
 {
     const float dt = US2S(currentTimeUs - posEstimator.imu.lastUpdateTime);
@@ -623,7 +623,7 @@ static bool estimationCalculateCorrection_Z(estimationContext_t * ctx)
         const float w_z_baro_p = positionEstimationConfig()->w_z_baro_p;
 
         ctx->estPosCorr.z += baroAltResidual * w_z_baro_p * ctx->dt;
-        ctx->estVelCorr.z += baroAltResidual * sq(w_z_baro_p) * ctx->dt;
+        // ctx->estVelCorr.z += baroAltResidual * sq(w_z_baro_p) * ctx->dt;  // CR137
         ctx->estVelCorr.z += baroVelZResidual * positionEstimationConfig()->w_z_baro_v * ctx->dt;
 
         ctx->newEPV = updateEPE(posEstimator.est.epv, ctx->dt, posEstimator.baro.epv, w_z_baro_p);
@@ -650,7 +650,7 @@ DEBUG_SET(DEBUG_ALWAYS, 4, posEstimator.baro.baroAltRate);
             const float w_z_gps_p = positionEstimationConfig()->w_z_gps_p;
 
             ctx->estPosCorr.z += gpsAltResidual * w_z_gps_p * ctx->dt;
-            ctx->estVelCorr.z += gpsAltResidual * sq(w_z_gps_p) * ctx->dt;
+            // ctx->estVelCorr.z += gpsAltResidual * sq(w_z_gps_p) * ctx->dt;  // CR137
             ctx->estVelCorr.z += gpsVelZResidual * positionEstimationConfig()->w_z_gps_v * ctx->dt;
 
             ctx->newEPV = updateEPE(posEstimator.est.epv, ctx->dt, MAX(posEstimator.gps.epv, fabsf(gpsAltResidual)), w_z_gps_p);
@@ -694,9 +694,9 @@ static bool estimationCalculateCorrection_XY_GPS(estimationContext_t * ctx)
             ctx->estPosCorr.x += gpsPosXResidual * w_xy_gps_p * ctx->dt;
             ctx->estPosCorr.y += gpsPosYResidual * w_xy_gps_p * ctx->dt;
 
-            // Velocity from coordinates
-            ctx->estVelCorr.x += gpsPosXResidual * sq(w_xy_gps_p) * ctx->dt;
-            ctx->estVelCorr.y += gpsPosYResidual * sq(w_xy_gps_p) * ctx->dt;
+            // Velocity from coordinates - CR137
+            // ctx->estVelCorr.x += gpsPosXResidual * sq(w_xy_gps_p) * ctx->dt;
+            // ctx->estVelCorr.y += gpsPosYResidual * sq(w_xy_gps_p) * ctx->dt;
 
             // Velocity from direct measurement
             ctx->estVelCorr.x += gpsVelXResidual * w_xy_gps_v * ctx->dt;
@@ -783,7 +783,8 @@ static void updateEstimatedTopic(timeUs_t currentTimeUs)
     }
 
     // Boost the corrections based on accWeight
-    const float accWeight = navGetAccelerometerWeight();
+    // const float accWeight = navGetAccelerometerWeight();  // CR137
+    const float accWeight = posEstimator.imu.accWeightFactor;
     vectorScale(&ctx.estPosCorr, &ctx.estPosCorr, 1.0f/accWeight);
     vectorScale(&ctx.estVelCorr, &ctx.estVelCorr, 1.0f/accWeight);
 
