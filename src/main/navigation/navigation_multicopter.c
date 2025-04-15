@@ -52,6 +52,8 @@
 #include "navigation/navigation_private.h"
 #include "navigation/sqrt_controller.h"
 
+#include "rx/rx.h"  // CR139
+
 #include "sensors/battery.h"
 
 /*-----------------------------------------------------------
@@ -137,22 +139,31 @@ bool adjustMulticopterAltitudeFromRCInput(void)
         return true;
     }
     else {
-        const int16_t rcThrottleAdjustment = applyDeadbandRescaled(rcCommand[THROTTLE] - altHoldThrottleRCZero, rcControlsConfig()->alt_hold_deadband, -500, 500);
+        // const int16_t rcThrottleAdjustment = applyDeadbandRescaled(rcCommand[THROTTLE] - altHoldThrottleRCZero, rcControlsConfig()->alt_hold_deadband, -500, 500);
+        const int16_t rcThrottleAdjustment = applyDeadbandRescaled(rxGetChannelValue(THROTTLE) - altHoldThrottleRCZero, rcControlsConfig()->alt_hold_deadband, -500, 500);  // CR139
 
         if (rcThrottleAdjustment) {
             // set velocity proportional to stick movement
-            float rcClimbRate;
+            // float rcClimbRate;
 
             // Make sure we can satisfy max_manual_climb_rate in both up and down directions
-            if (rcThrottleAdjustment > 0) {
-                // Scaling from altHoldThrottleRCZero to maxthrottle
-                rcClimbRate = rcThrottleAdjustment * navConfig()->mc.max_manual_climb_rate / (float)(getMaxThrottle() - altHoldThrottleRCZero - rcControlsConfig()->alt_hold_deadband);
-            }
-            else {
-                // Scaling from minthrottle to altHoldThrottleRCZero
-                rcClimbRate = rcThrottleAdjustment * navConfig()->mc.max_manual_climb_rate / (float)(altHoldThrottleRCZero - getThrottleIdleValue() - rcControlsConfig()->alt_hold_deadband);
-            }
+            // if (rcThrottleAdjustment > 0) {
+                // // Scaling from altHoldThrottleRCZero to maxthrottle
+                // rcClimbRate = rcThrottleAdjustment * navConfig()->mc.max_manual_climb_rate / (float)(getMaxThrottle() - altHoldThrottleRCZero - rcControlsConfig()->alt_hold_deadband);
+            // }
+            // else {
+                // // Scaling from minthrottle to altHoldThrottleRCZero
+                // rcClimbRate = rcThrottleAdjustment * navConfig()->mc.max_manual_climb_rate / (float)(altHoldThrottleRCZero - getThrottleIdleValue() - rcControlsConfig()->alt_hold_deadband);
+            // }
+            // CR139
+            // int16_t limitValue = rcThrottleAdjustment > 0 ? getMaxThrottle() : getThrottleIdleValue();
+            int16_t limitValue = rcThrottleAdjustment > 0 ? PWM_RANGE_MAX : PWM_RANGE_MIN;
+            limitValue = applyDeadbandRescaled(limitValue - altHoldThrottleRCZero, rcControlsConfig()->alt_hold_deadband, -500, 500);
+            // CR139
+            int16_t rcClimbRate = ABS(rcThrottleAdjustment) * navConfig()->mc.max_manual_climb_rate / limitValue;
 
+            DEBUG_SET(DEBUG_ALWAYS, 4, rcThrottleAdjustment);
+            DEBUG_SET(DEBUG_ALWAYS, 5, rcClimbRate);
             updateClimbRateToAltitudeController(rcClimbRate, 0, ROC_TO_ALT_CONSTANT);
 
             return true;
@@ -179,7 +190,8 @@ void setupMulticopterAltitudeController(void)
     } else if (throttleType == MC_ALT_HOLD_HOVER) {
         altHoldThrottleRCZero = currentBatteryProfile->nav.mc.hover_throttle;
     } else {
-        altHoldThrottleRCZero = rcLookupThrottleMid();
+        // altHoldThrottleRCZero = rcLookupThrottleMid();
+        altHoldThrottleRCZero = PWM_RANGE_MIDDLE;  // CR139
     }
 
     // Make sure we are able to satisfy the deadband
@@ -762,7 +774,17 @@ bool isMulticopterFlying(void)
 
     return throttleCondition && gyroCondition;
 }
+// CR140
+bool isToiletBowlingDetected(void)
+{
+// Based on:
+// Increasing distance to holdpoint
+// High roll and pitch rates
+// Increasing speed
+// Desired direction movement doesn't match CoG
 
+}
+// CR140
 /*-----------------------------------------------------------
  * Multicopter landing detector
  *-----------------------------------------------------------*/
