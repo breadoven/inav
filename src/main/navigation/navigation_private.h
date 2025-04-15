@@ -557,7 +557,7 @@ bool isNavHoldPositionActive(void);
 bool isLastMissionWaypoint(void);
 float getActiveSpeed(void);
 bool isWaypointNavTrackingActive(void);
-float getTakeoffAltitude(void);  // CR138
+float getTakeoffAltitude(void);
 
 void updateActualHeading(bool headingValid, int32_t newHeading, int32_t newGroundCourse);
 void updateActualHorizontalPositionAndVelocity(bool estPosValid, bool estVelValid, float newX, float newY, float newVelX, float newVelY);

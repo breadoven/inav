@@ -5324,7 +5324,7 @@ uint8_t getActiveWpNumber(void)
 {
     return NAV_Status.activeWpNumber;
 }
-// CR138
+
 float getTakeoffAltitude(void)
 {
     static float refTakeoffAltitude = 0.0f;
@@ -5334,7 +5334,7 @@ float getTakeoffAltitude(void)
 
     return refTakeoffAltitude;
 }
-// CR138
+
 #ifdef USE_FW_AUTOLAND
 static void resetFwAutoland(void)
 {

@@ -764,11 +764,11 @@ bool isFixedWingFlying(void)
     }
 #endif
     bool throttleCondition = getMotorCount() == 0 || rcCommand[THROTTLE] > currentBatteryProfile->nav.fw.cruise_throttle;
-    bool velCondition = posControl.actualState.velXY > 350.0f || airspeed > 350.0f;   // CR138
-    bool altCondition = fabsf(posControl.actualState.abs.pos.z - getTakeoffAltitude()) > 500.0f; // CR138
+    bool velCondition = posControl.actualState.velXY > 350.0f || airspeed > 350.0f;
+    bool altCondition = fabsf(posControl.actualState.abs.pos.z - getTakeoffAltitude()) > 500.0f;
     bool launchCondition = isNavLaunchEnabled() && fixedWingLaunchStatus() == FW_LAUNCH_FLYING;
 
-    return (isGPSHeadingValid() && throttleCondition && velCondition && altCondition) || launchCondition;   // CR138
+    return (isGPSHeadingValid() && throttleCondition && velCondition && altCondition) || launchCondition;
 }
 
 /*-----------------------------------------------------------
