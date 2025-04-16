@@ -145,7 +145,7 @@ bool adjustMulticopterAltitudeFromRCInput(void)
         if (rcThrottleAdjustment) {
             /* Set velocity proportional to stick movement
              * Scale from altHoldThrottleRCZero to maxthrottle or minthrottle to altHoldThrottleRCZero */
-            
+
             // Calculate max up or min down limit value scaled for deadband
             // CR139
             // int16_t limitValue = rcThrottleAdjustment > 0 ? getMaxThrottle() : getThrottleIdleValue();
@@ -766,17 +766,17 @@ bool isMulticopterFlying(void)
 
     return throttleCondition && gyroCondition;
 }
-// CR140
-bool isToiletBowlingDetected(void)
-{
+// CR141
+// bool isToiletBowlingDetected(void)
+// {
 // Based on:
 // Increasing distance to holdpoint
 // High roll and pitch rates
 // Increasing speed
 // Desired direction movement doesn't match CoG
 
-}
-// CR140
+// }
+// CR141
 /*-----------------------------------------------------------
  * Multicopter landing detector
  *-----------------------------------------------------------*/

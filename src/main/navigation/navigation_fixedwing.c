@@ -154,28 +154,6 @@ static void updateAltitudeVelocityAndPitchController_FW(timeDelta_t deltaMicros)
     DEBUG_SET(DEBUG_ALWAYS, 3, currentClimbRate);
     // ******************
 
-    // ****************** TEST PID INTEGRATOR
-    // const float climbRateError = currentClimbRate - desiredClimbRate;
-
-    // static timeUs_t previousTimeMonitoringUpdate;
-    // static int32_t previousClimbRateError;
-    // static bool errorIsDecreasing;
-
-    // // Slow error monitoring (2Hz rate)
-    // if ((micros() - previousTimeMonitoringUpdate) >= HZ2US(NAV_FW_CONTROL_MONITORING_RATE)) {
-        // // Check if error is decreasing over time
-        // errorIsDecreasing = (ABS(previousClimbRateError) > ABS(climbRateError));
-
-        // // Save values for next iteration
-        // previousClimbRateError = climbRateError;
-        // previousTimeMonitoringUpdate = micros();
-    // }
-
-    // // Only allow PID integrator to shrink if error is decreasing over time
-    // const pidControllerFlags_e pidFlags = PID_DTERM_FROM_ERROR | (errorIsDecreasing ? PID_SHRINK_INTEGRATOR : 0);
-    // float targetPitchAngle = navPidApply2(&posControl.pids.fw_alt, 0, climbRateError, US2S(deltaMicros), minDiveDeciDeg, maxClimbDeciDeg, pidFlags);
-    // ******************
-
     // // ****************** TEST USING POSITION AGAIN
     // // PIDS = P 10 @ 100 PID factor, I 1 @ 30, D 10 @ 50
     // float desiredAltitude = posControl.desiredState.pos.z;
