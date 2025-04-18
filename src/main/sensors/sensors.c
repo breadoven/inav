@@ -50,12 +50,12 @@ float applySensorTempCompensation(int16_t sensorTemp, float sensorMeasurement, s
     if (!setting) {
         return 0.0f;
     }
-    DEBUG_SET(DEBUG_ALWAYS, 1, sensorTemp);
-    DEBUG_SET(DEBUG_ALWAYS, 0, sensor_comp_data[sensorType].correctionFactor * 100);
+    // DEBUG_SET(DEBUG_ALWAYS, 1, sensorTemp);
+    // DEBUG_SET(DEBUG_ALWAYS, 0, sensor_comp_data[sensorType].correctionFactor * 100);
     // DEBUG_SET(DEBUG_ALWAYS, 5, sensorMeasurement);
     if (sensor_comp_data[sensorType].calibrationState == SENSOR_TEMP_CAL_COMPLETE) {
         float tempCal = sensor_comp_data[sensorType].correctionFactor * CENTIDEGREES_TO_DEGREES(sensor_comp_data[sensorType].referenceTemp - sensorTemp);
-        DEBUG_SET(DEBUG_ALWAYS, 2, tempCal);
+        // DEBUG_SET(DEBUG_ALWAYS, 2, tempCal);
         return tempCal;
         // return sensor_comp_data[sensorType].correctionFactor * CENTIDEGREES_TO_DEGREES(sensor_comp_data[sensorType].referenceTemp - sensorTemp);
     }
