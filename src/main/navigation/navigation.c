@@ -919,7 +919,7 @@ static const navigationFSMStateDescriptor_t navFSM[NAV_STATE_COUNT] = {
         .persistentId = NAV_PERSISTENT_ID_EMERGENCY_LANDING_INITIALIZE,
         .onEntry = navOnEnteringState_NAV_STATE_EMERGENCY_LANDING_INITIALIZE,
         .timeoutMs = 0,
-        .stateFlags = NAV_CTL_EMERG | NAV_CTL_HOLD | NAV_REQUIRE_ANGLE,     // CR117
+        .stateFlags = NAV_CTL_EMERG | NAV_CTL_HOLD | NAV_REQUIRE_ANGLE,    
         .mapToFlightModes = 0,
         .mwState = MW_NAV_STATE_EMERGENCY_LANDING,
         .mwError = MW_NAV_ERROR_LANDING,
@@ -2915,17 +2915,13 @@ void updateActualHeading(bool headingValid, int32_t newHeading, int32_t newGroun
     /* Update heading. Check if we're acquiring a valid heading for the
      * first time and update home heading accordingly.
      */
-    // CR27
-    /* Check compass heading matches GPS COG if available
-     * latch mismatch error if exists. Reset on disarm ? ONLY FOR TEST !! */
-    if (STATE(MULTIROTOR) && ARMING_FLAG(ARMED)) {
-        if (!posControl.flags.compassGpsCogMismatchError) {
-            posControl.flags.compassGpsCogMismatchError = compassHeadingGPSCogErrorCheck();
-        } else if (!ARMING_FLAG(ARMED)) {       // TEST ONLY REMOVE AFTER !!
-            posControl.flags.compassGpsCogMismatchError = false;
-        }
+    // CR141
+    if (STATE(MULTIROTOR) && IS_RC_MODE_ACTIVE(BOXBEEPERON)) {
+        newHeading = wrap_36000(newHeading + 9000);
+    } else {
+        posControl.toiletBowlingHeadingCorrection = 0;
     }
-    // CR27
+    // CR141
     navigationEstimateStatus_e newEstHeading = headingValid ? EST_TRUSTED : EST_NONE;
 
 #ifdef USE_DEV_TOOLS
@@ -5027,7 +5023,6 @@ void navigationInit(void)
     posControl.flags.estVelStatus = EST_NONE;
     posControl.flags.estHeadingStatus = EST_NONE;
     posControl.flags.estAglStatus = EST_NONE;
-    posControl.flags.compassGpsCogMismatchError = false;    // CR27
 
     posControl.flags.forcedRTHActivated = false;
     posControl.flags.forcedEmergLandingActivated = false;

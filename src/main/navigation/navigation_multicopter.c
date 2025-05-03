@@ -154,8 +154,8 @@ bool adjustMulticopterAltitudeFromRCInput(void)
             // CR139
             int16_t rcClimbRate = ABS(rcThrottleAdjustment) * navConfig()->mc.max_manual_climb_rate / limitValue;
 
-            DEBUG_SET(DEBUG_ALWAYS, 4, rcThrottleAdjustment);
-            DEBUG_SET(DEBUG_ALWAYS, 5, rcClimbRate);
+            // DEBUG_SET(DEBUG_ALWAYS, 4, rcThrottleAdjustment);
+            // DEBUG_SET(DEBUG_ALWAYS, 5, rcClimbRate);
             updateClimbRateToAltitudeController(rcClimbRate, 0, ROC_TO_ALT_CONSTANT);
 
             return true;
@@ -463,7 +463,55 @@ bool adjustMulticopterPositionFromRCInput(int16_t rcPitchAdjustment, int16_t rcR
 
     return false;
 }
+// CR141
+static void isToiletBowlingDetected(void)
+{
+    static timeMs_t startTime = 0;
+    static uint32_t maxSpeed = 0;
 
+    uint16_t courseToHoldPoint = calculateBearingToDestination(&posControl.desiredState.pos);
+    int16_t courseError = wrap_18000(courseToHoldPoint - 10 * gpsSol.groundCourse);
+    bool courseErrorCheck = ABS(courseError) > 3000 && ABS(courseError) < 15500;
+
+    DEBUG_SET(DEBUG_ALWAYS, 7, posControl.actualState.yaw);
+    DEBUG_SET(DEBUG_ALWAYS, 6, courseToHoldPoint);
+
+    if (IS_RC_MODE_ACTIVE(BOXBEEPERON)) {
+        DEBUG_SET(DEBUG_ALWAYS, 0, courseError);
+        DEBUG_SET(DEBUG_ALWAYS, 1, calculateDistanceToDestination(&posControl.desiredState.pos));
+    }
+
+    if (posControl.toiletBowlingHeadingCorrection) {
+        uint16_t correctedHeading = wrap_36000(posControl.actualState.yaw - 0.67 * posControl.toiletBowlingHeadingCorrection);
+        posControl.actualState.sinYaw = sin_approx(CENTIDEGREES_TO_RADIANS(correctedHeading));
+        posControl.actualState.cosYaw = cos_approx(CENTIDEGREES_TO_RADIANS(correctedHeading));
+        if (IS_RC_MODE_ACTIVE(BOXBEEPERON)) {
+            DEBUG_SET(DEBUG_ALWAYS, 3, posControl.toiletBowlingHeadingCorrection);
+            DEBUG_SET(DEBUG_ALWAYS, 4, correctedHeading);
+        }
+    } else if (posControl.actualState.velXY > 150 && courseErrorCheck && calculateDistanceToDestination(&posControl.desiredState.pos) > 100) {
+        maxSpeed = posControl.actualState.velXY > maxSpeed ? posControl.actualState.velXY : maxSpeed;
+        bool speedErrorCheck = posControl.actualState.velXY >= (maxSpeed - 10);
+
+        if (speedErrorCheck) {
+            if (startTime == 0) {
+                startTime = millis();
+            } else if (millis() - startTime > 1000) {
+                // Try to correct heading error
+                posControl.toiletBowlingHeadingCorrection = courseError;
+            }
+        } else {
+            startTime = 0;
+            maxSpeed = 0;
+        }
+
+        if (IS_RC_MODE_ACTIVE(BOXBEEPERON)) DEBUG_SET(DEBUG_ALWAYS, 2, speedErrorCheck);
+    } else {
+        startTime = 0;
+        maxSpeed = 0;
+    }
+}
+// CR141
 static float getVelocityHeadingAttenuationFactor(void)
 {
     // In WP mode scale velocity if heading is different from bearing
@@ -505,7 +553,13 @@ static void updatePositionVelocityController_MC(const float maxSpeed)
 
     const float posErrorX = posControl.desiredState.pos.x - navGetCurrentActualPositionAndVelocity()->pos.x;
     const float posErrorY = posControl.desiredState.pos.y - navGetCurrentActualPositionAndVelocity()->pos.y;
-
+    // CR141
+    if (isNavHoldPositionActive()) {
+        isToiletBowlingDetected();
+    } else {
+        posControl.toiletBowlingHeadingCorrection = 0;
+    }
+    // CR141
     // Calculate target velocity
     float neuVelX = posErrorX * posControl.pids.pos[X].param.kP;
     float neuVelY = posErrorY * posControl.pids.pos[Y].param.kP;
@@ -766,17 +820,7 @@ bool isMulticopterFlying(void)
 
     return throttleCondition && gyroCondition;
 }
-// CR141
-// bool isToiletBowlingDetected(void)
-// {
-// Based on:
-// Increasing distance to holdpoint
-// High roll and pitch rates
-// Increasing speed
-// Desired direction movement doesn't match CoG
 
-// }
-// CR141
 /*-----------------------------------------------------------
  * Multicopter landing detector
  *-----------------------------------------------------------*/

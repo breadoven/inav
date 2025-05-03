@@ -177,7 +177,7 @@
 // Wind estimator
 #define USE_WIND_ESTIMATOR
 
-#define USE_SIMULATOR
+// #define USE_SIMULATOR
 #define USE_PITOT_VIRTUAL
 #define USE_FAKE_BATT_SENSOR
 
@@ -210,7 +210,7 @@
 #define MAX_MIXER_PROFILE_COUNT 2
 #define USE_SMARTPORT_MASTER
 #ifdef USE_GPS
-#define USE_GEOZONE
+// #define USE_GEOZONE
 #define MAX_GEOZONES_IN_CONFIG 63
 #define MAX_VERTICES_IN_CONFIG 126
 #endif

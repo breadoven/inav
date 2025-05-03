@@ -529,8 +529,10 @@ static void estimationPredict(estimationContext_t * ctx)
             posEstimator.est.vel.z += posEstimator.imu.accelNEU.z * ctx->dt;
         // }
         // CR131
-        DEBUG_SET(DEBUG_ALWAYS, 7, posEstimator.est.vel.z);
-        DEBUG_SET(DEBUG_ALWAYS, 6, posEstimator.imu.accelNEU.z);
+        // if (!IS_RC_MODE_ACTIVE(BOXBEEPERON)) {
+            // DEBUG_SET(DEBUG_ALWAYS, 7, posEstimator.est.vel.z);
+            // DEBUG_SET(DEBUG_ALWAYS, 7, posEstimator.imu.accelNEU.z);
+        // }
     }
 
     /* Prediction step: XY-axis */
@@ -616,13 +618,11 @@ static bool estimationCalculateCorrection_Z(estimationContext_t * ctx)
         ctx->newEPV = updateEPE(posEstimator.est.epv, ctx->dt, posEstimator.baro.epv, w_z_baro_p);
 
         // Accelerometer bias // CR140 use baroVelZResidual instead or both
-        DEBUG_SET(DEBUG_ALWAYS, 3, baroAltResidual);
-        DEBUG_SET(DEBUG_ALWAYS, 4, baroVelZResidual);
-        DEBUG_SET(DEBUG_ALWAYS, 2, 0);
+        // DEBUG_SET(DEBUG_ALWAYS, 3, baroAltResidual);
+        // DEBUG_SET(DEBUG_ALWAYS, 4, baroVelZResidual);
         if (!isAirCushionEffectDetected) {
             ctx->accBiasCorr.z += (baroAltResidual * sq(w_z_baro_p) + baroVelZResidual * sq(w_z_baro_v));   // CR140
         }
-            DEBUG_SET(DEBUG_ALWAYS, 2, posEstimator.baro.alt);
 
         correctOK = ARMING_FLAG(WAS_EVER_ARMED);    // No correction until first armed
     }
@@ -807,13 +807,15 @@ static void updateEstimatedTopic(timeUs_t currentTimeUs)
     // Keep flags for further usage
     posEstimator.flags = ctx.newFlags;
 
-
-    DEBUG_SET(DEBUG_ALWAYS, 0, posEstimator.imu.accelBias.z * 1000);
-    DEBUG_SET(DEBUG_ALWAYS, 1, ctx.accBiasCorr.z);
-    // DEBUG_SET(DEBUG_ALWAYS, 4, ctx.estPosCorr.z * 1000);
-    // DEBUG_SET(DEBUG_ALWAYS, 3, ctx.estVelCorr.z * 1000);
-    // DEBUG_SET(DEBUG_ALWAYS, 4, posEstimator.imu.accWeightFactor * 100);
-    DEBUG_SET(DEBUG_ALWAYS, 5, posEstimator.baro.baroAltRate);
+    if (!IS_RC_MODE_ACTIVE(BOXBEEPERON)) {
+        DEBUG_SET(DEBUG_ALWAYS, 0, posEstimator.imu.accelBias.z * 1000);
+        DEBUG_SET(DEBUG_ALWAYS, 1, ctx.accBiasCorr.z);
+        DEBUG_SET(DEBUG_ALWAYS, 2, ctx.estPosCorr.z * 1000);
+        DEBUG_SET(DEBUG_ALWAYS, 3, ctx.estVelCorr.z * 1000);
+        DEBUG_SET(DEBUG_ALWAYS, 4, posEstimator.imu.accWeightFactor * 100);
+        DEBUG_SET(DEBUG_ALWAYS, 5, posEstimator.baro.baroAltRate);
+        // DEBUG_SET(DEBUG_ALWAYS, 6, posEstimator.baro.alt);
+    }
 }
 
 /**

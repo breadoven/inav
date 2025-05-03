@@ -89,7 +89,6 @@ typedef struct navigationFlags_s {
     navigationEstimateStatus_e estVelStatus;        // Indicates that GPS is working (or not)
     navigationEstimateStatus_e estAglStatus;
     navigationEstimateStatus_e estHeadingStatus;    // Indicate valid heading - wither mag or GPS at certain speed on airplane
-    bool compassGpsCogMismatchError;                // mismatch between compass heading and valid GPS heading   // CR27
     bool gpsCfEstimatedAltitudeMismatch;            // Indicates a mismatch between GPS altitude and estimated altitude
 
     climbRateToAltitudeControllerMode_e rocToAltMode;
@@ -459,6 +458,7 @@ typedef struct {
 
     uint32_t                    lastValidPositionTimeMs;
     uint32_t                    lastValidAltitudeTimeMs;
+    int16_t                     toiletBowlingHeadingCorrection;    // Indicsates toilet bowling detected multirotor // CR141
 
     /* INAV GPS origin (position where GPS fix first acquired) */
     gpsOrigin_t                 gpsOrigin;
