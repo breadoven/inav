@@ -31,6 +31,8 @@ main_sources(COMMON_SRC
     common/gps_conversion.h
     common/log.c
     common/log.h
+    common/lulu.c
+    common/lulu.h
     common/maths.c
     common/maths.h
     common/memory.c
@@ -574,6 +576,7 @@ main_sources(COMMON_SRC
     navigation/navigation_pos_estimator_flow.c
     navigation/navigation_private.h
     navigation/navigation_rover_boat.c
+    navigation/navigation_geozone.c
     navigation/sqrt_controller.c
     navigation/sqrt_controller.h
     navigation/rth_trackback.c
@@ -610,6 +613,10 @@ main_sources(COMMON_SRC
     telemetry/mavlink.h
     telemetry/msp_shared.c
     telemetry/msp_shared.h
+    telemetry/sbus2.c
+    telemetry/sbus2.h
+    telemetry/sbus2_sensors.c
+    telemetry/sbus2_sensors.h
     telemetry/smartport.c
     telemetry/smartport.h
     telemetry/sim.c
