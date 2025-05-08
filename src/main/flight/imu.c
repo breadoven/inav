@@ -731,11 +731,17 @@ void imuUpdateTailSitter(void)
     }
     lastTailSitter = STATE(TAILSITTER);
 }
-
+// CR141
+// static bool navCompassSanityIsOK = true;
+// void imuNavCompassSanity(bool navCompassStatus)
+// {
+    // navCompassSanityIsOK = navCompassStatus;
+// }
+// CR141
 static void imuCalculateEstimatedAttitude(float dT)
 {
 #if defined(USE_MAG)
-    const bool canUseMAG = sensors(SENSOR_MAG) && compassIsHealthy();
+    const bool canUseMAG = sensors(SENSOR_MAG) && compassIsHealthy();  // && navCompassSanityIsOK;  // CR141
 #else
     const bool canUseMAG = false;
 #endif

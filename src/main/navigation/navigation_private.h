@@ -458,7 +458,6 @@ typedef struct {
 
     uint32_t                    lastValidPositionTimeMs;
     uint32_t                    lastValidAltitudeTimeMs;
-    int16_t                     toiletBowlingHeadingCorrection;    // Indicsates toilet bowling detected multirotor // CR141
 
     /* INAV GPS origin (position where GPS fix first acquired) */
     gpsOrigin_t                 gpsOrigin;
@@ -528,6 +527,7 @@ PG_DECLARE_ARRAY(navWaypoint_t, NAV_MAX_WAYPOINTS, nonVolatileWaypointList);
 
 extern navigationPosControl_t posControl;
 extern multicopterPosXyCoefficients_t multicopterPosXyCoefficients;
+extern int16_t toiletBowlingHeadingCorrection;    // Indicates toilet bowling detected multirotor // CR141
 
 /* Internally used functions */
 const navEstimatedPosVel_t * navGetCurrentActualPositionAndVelocity(void);

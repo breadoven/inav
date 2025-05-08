@@ -529,10 +529,8 @@ static void estimationPredict(estimationContext_t * ctx)
             posEstimator.est.vel.z += posEstimator.imu.accelNEU.z * ctx->dt;
         // }
         // CR131
-        // if (!IS_RC_MODE_ACTIVE(BOXBEEPERON)) {
-            // DEBUG_SET(DEBUG_ALWAYS, 7, posEstimator.est.vel.z);
-            // DEBUG_SET(DEBUG_ALWAYS, 7, posEstimator.imu.accelNEU.z);
-        // }
+        // DEBUG_SET(DEBUG_ALWAYS, 7, posEstimator.est.vel.z);
+        // DEBUG_SET(DEBUG_ALWAYS, 7, posEstimator.imu.accelNEU.z);
     }
 
     /* Prediction step: XY-axis */
@@ -807,15 +805,13 @@ static void updateEstimatedTopic(timeUs_t currentTimeUs)
     // Keep flags for further usage
     posEstimator.flags = ctx.newFlags;
 
-    if (!IS_RC_MODE_ACTIVE(BOXBEEPERON)) {
-        DEBUG_SET(DEBUG_ALWAYS, 0, posEstimator.imu.accelBias.z * 1000);
-        DEBUG_SET(DEBUG_ALWAYS, 1, ctx.accBiasCorr.z);
-        DEBUG_SET(DEBUG_ALWAYS, 2, ctx.estPosCorr.z * 1000);
-        DEBUG_SET(DEBUG_ALWAYS, 3, ctx.estVelCorr.z * 1000);
-        DEBUG_SET(DEBUG_ALWAYS, 4, posEstimator.imu.accWeightFactor * 100);
-        DEBUG_SET(DEBUG_ALWAYS, 5, posEstimator.baro.baroAltRate);
-        // DEBUG_SET(DEBUG_ALWAYS, 6, posEstimator.baro.alt);
-    }
+    // DEBUG_SET(DEBUG_ALWAYS, 0, posEstimator.imu.accelBias.z * 1000);
+    // DEBUG_SET(DEBUG_ALWAYS, 1, ctx.accBiasCorr.z);
+    // DEBUG_SET(DEBUG_ALWAYS, 2, ctx.estPosCorr.z * 1000);
+    // DEBUG_SET(DEBUG_ALWAYS, 3, ctx.estVelCorr.z * 1000);
+    // DEBUG_SET(DEBUG_ALWAYS, 4, posEstimator.imu.accWeightFactor * 100);
+    // DEBUG_SET(DEBUG_ALWAYS, 5, posEstimator.baro.baroAltRate);
+    // DEBUG_SET(DEBUG_ALWAYS, 6, posEstimator.baro.alt);
 }
 
 /**

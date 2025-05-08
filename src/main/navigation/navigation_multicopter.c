@@ -463,55 +463,7 @@ bool adjustMulticopterPositionFromRCInput(int16_t rcPitchAdjustment, int16_t rcR
 
     return false;
 }
-// CR141
-static void isToiletBowlingDetected(void)
-{
-    static timeMs_t startTime = 0;
-    static uint32_t maxSpeed = 0;
 
-    uint16_t courseToHoldPoint = calculateBearingToDestination(&posControl.desiredState.pos);
-    int16_t courseError = wrap_18000(courseToHoldPoint - 10 * gpsSol.groundCourse);
-    bool courseErrorCheck = ABS(courseError) > 3000 && ABS(courseError) < 15500;
-
-    DEBUG_SET(DEBUG_ALWAYS, 7, posControl.actualState.yaw);
-    DEBUG_SET(DEBUG_ALWAYS, 6, courseToHoldPoint);
-
-    if (IS_RC_MODE_ACTIVE(BOXBEEPERON)) {
-        DEBUG_SET(DEBUG_ALWAYS, 0, courseError);
-        DEBUG_SET(DEBUG_ALWAYS, 1, calculateDistanceToDestination(&posControl.desiredState.pos));
-    }
-
-    if (posControl.toiletBowlingHeadingCorrection) {
-        uint16_t correctedHeading = wrap_36000(posControl.actualState.yaw - 0.67 * posControl.toiletBowlingHeadingCorrection);
-        posControl.actualState.sinYaw = sin_approx(CENTIDEGREES_TO_RADIANS(correctedHeading));
-        posControl.actualState.cosYaw = cos_approx(CENTIDEGREES_TO_RADIANS(correctedHeading));
-        if (IS_RC_MODE_ACTIVE(BOXBEEPERON)) {
-            DEBUG_SET(DEBUG_ALWAYS, 3, posControl.toiletBowlingHeadingCorrection);
-            DEBUG_SET(DEBUG_ALWAYS, 4, correctedHeading);
-        }
-    } else if (posControl.actualState.velXY > 150 && courseErrorCheck && calculateDistanceToDestination(&posControl.desiredState.pos) > 100) {
-        maxSpeed = posControl.actualState.velXY > maxSpeed ? posControl.actualState.velXY : maxSpeed;
-        bool speedErrorCheck = posControl.actualState.velXY >= (maxSpeed - 10);
-
-        if (speedErrorCheck) {
-            if (startTime == 0) {
-                startTime = millis();
-            } else if (millis() - startTime > 1000) {
-                // Try to correct heading error
-                posControl.toiletBowlingHeadingCorrection = courseError;
-            }
-        } else {
-            startTime = 0;
-            maxSpeed = 0;
-        }
-
-        if (IS_RC_MODE_ACTIVE(BOXBEEPERON)) DEBUG_SET(DEBUG_ALWAYS, 2, speedErrorCheck);
-    } else {
-        startTime = 0;
-        maxSpeed = 0;
-    }
-}
-// CR141
 static float getVelocityHeadingAttenuationFactor(void)
 {
     // In WP mode scale velocity if heading is different from bearing
@@ -553,13 +505,7 @@ static void updatePositionVelocityController_MC(const float maxSpeed)
 
     const float posErrorX = posControl.desiredState.pos.x - navGetCurrentActualPositionAndVelocity()->pos.x;
     const float posErrorY = posControl.desiredState.pos.y - navGetCurrentActualPositionAndVelocity()->pos.y;
-    // CR141
-    if (isNavHoldPositionActive()) {
-        isToiletBowlingDetected();
-    } else {
-        posControl.toiletBowlingHeadingCorrection = 0;
-    }
-    // CR141
+
     // Calculate target velocity
     float neuVelX = posErrorX * posControl.pids.pos[X].param.kP;
     float neuVelY = posErrorY * posControl.pids.pos[Y].param.kP;
@@ -621,9 +567,54 @@ static float computeVelocityScale(
     // return constrainf(scale, 0, attenuationFactor);
     // CR47
 }
+// CR141
+static void checkForToiletBowling(void)
+{
+    bool isHoldingPosition = ((FLIGHT_MODE(NAV_COURSE_HOLD_MODE) && posControl.cruise.multicopterSpeed < 50) || navGetCurrentStateFlags() & NAV_CTL_HOLD);
 
+    if (navConfig()->mc.toiletbowl_detection == 0 || !isHoldingPosition || posControl.flags.isAdjustingPosition) {
+        // toiletBowlingHeadingCorrection = 0;
+        return;
+    }
+
+    static timeMs_t startTime = 0;
+
+    uint16_t courseToHoldPoint = calculateBearingToDestination(&posControl.desiredState.pos);
+    int16_t courseError = wrap_18000(courseToHoldPoint - 10 * gpsSol.groundCourse);
+    bool courseErrorCheck = ABS(courseError) > 3000 && ABS(courseError) < 15500;
+
+    uint16_t distanceToHoldPoint = calculateDistanceToDestination(&posControl.desiredState.pos);
+    bool distanceSpeedCheck = posControl.actualState.velXY * distanceToHoldPoint > (navConfig()->mc.toiletbowl_detection * 10000);
+
+    DEBUG_SET(DEBUG_ALWAYS, 0, courseError);
+    DEBUG_SET(DEBUG_ALWAYS, 1, distanceToHoldPoint);
+    DEBUG_SET(DEBUG_ALWAYS, 2, posControl.actualState.velXY * distanceToHoldPoint);
+    DEBUG_SET(DEBUG_ALWAYS, 3, toiletBowlingHeadingCorrection);
+    DEBUG_SET(DEBUG_ALWAYS, 5, posControl.actualState.velXY);
+    DEBUG_SET(DEBUG_ALWAYS, 6, courseToHoldPoint);
+    DEBUG_SET(DEBUG_ALWAYS, 7, posControl.actualState.yaw);
+
+    if (toiletBowlingHeadingCorrection) {
+        uint16_t correctedHeading = wrap_36000(posControl.actualState.yaw - 0.67 * toiletBowlingHeadingCorrection);
+        posControl.actualState.sinYaw = sin_approx(CENTIDEGREES_TO_RADIANS(correctedHeading));
+        posControl.actualState.cosYaw = cos_approx(CENTIDEGREES_TO_RADIANS(correctedHeading));
+        DEBUG_SET(DEBUG_ALWAYS, 4, correctedHeading);
+    } else if (posControl.actualState.velXY > 100 && distanceToHoldPoint > 100 && courseErrorCheck  && distanceSpeedCheck) {
+        if (startTime == 0) {
+            startTime = millis();
+        } else if (millis() - startTime > 1000) {
+            // Try to correct heading error
+            toiletBowlingHeadingCorrection = courseError;
+        }
+    } else {
+        startTime = 0;
+    }
+}
+// CR141
 static void updatePositionAccelController_MC(timeDelta_t deltaMicros, float maxAccelLimit)  // , const float maxSpeed)   CR47
 {
+    checkForToiletBowling();    // CR141
+
     const float measurementX = navGetCurrentActualPositionAndVelocity()->vel.x;
     const float measurementY = navGetCurrentActualPositionAndVelocity()->vel.y;
 

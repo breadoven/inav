@@ -6182,7 +6182,7 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
                 }
             }
             // CR141
-            if (STATE(MULTIROTOR) && isNavHoldPositionActive() && posControl.toiletBowlingHeadingCorrection) {
+            if (STATE(MULTIROTOR) && isNavHoldPositionActive() && toiletBowlingHeadingCorrection) {
                 messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_TOILET_BOWL);
             }
             // CR141

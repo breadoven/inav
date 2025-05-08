@@ -200,6 +200,7 @@ PG_RESET_TEMPLATE(navConfig_t, navConfig,
         .slowDownForTurning = SETTING_NAV_MC_WP_SLOWDOWN_DEFAULT,
         .althold_throttle_type = SETTING_NAV_MC_ALTHOLD_THROTTLE_DEFAULT,                        // STICK
         .inverted_crash_detection = SETTING_NAV_MC_INVERTED_CRASH_DETECTION_DEFAULT,             // 0 - disarm time delay for inverted crash detection
+        .toiletbowl_detection = SETTING_NAV_MC_TOILETBOWL_DETECTION_DEFAULT,                     // 0 - sensitivity factor for toilet bowling detection  // CR141
     },
 
     // Fixed wing
@@ -252,6 +253,7 @@ static navWapointHeading_t wpHeadingControl;
 navigationPosControl_t posControl;
 navSystemStatus_t NAV_Status;
 static bool landingDetectorIsActive = false;
+int16_t toiletBowlingHeadingCorrection;    // Indicates toilet bowling detected multirotor // CR141
 
 EXTENDED_FASTRAM multicopterPosXyCoefficients_t multicopterPosXyCoefficients;
 
@@ -498,7 +500,7 @@ static const navigationFSMStateDescriptor_t navFSM[NAV_STATE_COUNT] = {
         }
     },
 
-        [NAV_STATE_COURSE_HOLD_ADJUSTING] = {
+    [NAV_STATE_COURSE_HOLD_ADJUSTING] = {
         .persistentId = NAV_PERSISTENT_ID_COURSE_HOLD_ADJUSTING,
         .onEntry = navOnEnteringState_NAV_STATE_COURSE_HOLD_ADJUSTING,
         .timeoutMs = 10,
@@ -919,7 +921,7 @@ static const navigationFSMStateDescriptor_t navFSM[NAV_STATE_COUNT] = {
         .persistentId = NAV_PERSISTENT_ID_EMERGENCY_LANDING_INITIALIZE,
         .onEntry = navOnEnteringState_NAV_STATE_EMERGENCY_LANDING_INITIALIZE,
         .timeoutMs = 0,
-        .stateFlags = NAV_CTL_EMERG | NAV_CTL_HOLD | NAV_REQUIRE_ANGLE,    
+        .stateFlags = NAV_CTL_EMERG | NAV_CTL_HOLD | NAV_REQUIRE_ANGLE,
         .mapToFlightModes = 0,
         .mwState = MW_NAV_STATE_EMERGENCY_LANDING,
         .mwError = MW_NAV_ERROR_LANDING,
@@ -2919,8 +2921,9 @@ void updateActualHeading(bool headingValid, int32_t newHeading, int32_t newGroun
     if (STATE(MULTIROTOR) && IS_RC_MODE_ACTIVE(BOXBEEPERON)) {
         newHeading = wrap_36000(newHeading + 9000);
     } else {
-        posControl.toiletBowlingHeadingCorrection = 0;
+        toiletBowlingHeadingCorrection = 0;
     }
+    // imuNavCompassSanity(toiletBowlingHeadingCorrection == 0);
     // CR141
     navigationEstimateStatus_e newEstHeading = headingValid ? EST_TRUSTED : EST_NONE;
 
