@@ -253,7 +253,7 @@ static navWapointHeading_t wpHeadingControl;
 navigationPosControl_t posControl;
 navSystemStatus_t NAV_Status;
 static bool landingDetectorIsActive = false;
-int16_t toiletBowlingHeadingCorrection;    // Indicates toilet bowling detected multirotor // CR141
+int16_t mcToiletBowlingHeadingCorrection;    // Indicates toilet bowling detected multirotor // CR141
 
 EXTENDED_FASTRAM multicopterPosXyCoefficients_t multicopterPosXyCoefficients;
 
@@ -1291,6 +1291,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_IDLE(navigationFSMState
     resetAltitudeController(false);
     resetHeadingController();
     resetPositionController();
+    mcToiletBowlingHeadingCorrection = 0;  // CR141
 #ifdef USE_FW_AUTOLAND
     resetFwAutoland();
 #endif
@@ -2921,9 +2922,9 @@ void updateActualHeading(bool headingValid, int32_t newHeading, int32_t newGroun
     if (STATE(MULTIROTOR) && IS_RC_MODE_ACTIVE(BOXBEEPERON)) {
         newHeading = wrap_36000(newHeading + 9000);
     } else {
-        toiletBowlingHeadingCorrection = 0;
+        mcToiletBowlingHeadingCorrection = 0;
     }
-    // imuNavCompassSanity(toiletBowlingHeadingCorrection == 0);
+    // imuNavCompassSanity(mcToiletBowlingHeadingCorrection == 0);
     // CR141
     navigationEstimateStatus_e newEstHeading = headingValid ? EST_TRUSTED : EST_NONE;
 

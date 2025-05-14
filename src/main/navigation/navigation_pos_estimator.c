@@ -406,6 +406,11 @@ static void updateIMUTopic(timeUs_t currentTimeUs)
         posEstimator.imu.accelNEU.y = accelReading.y + posEstimator.imu.accelBias.y;
         posEstimator.imu.accelNEU.z = accelReading.z + posEstimator.imu.accelBias.z;
         // CR140
+        // CR142
+        if (IS_RC_MODE_ACTIVE(BOXBEEPERON)) {
+            posEstimator.imu.accelNEU.z += -navConfig()->mc.max_auto_climb_rate;
+        }
+        // CR142
 
         /* When unarmed, assume that accelerometer should measure 1G. Use that to correct accelerometer gain */
         if (gyroConfig()->init_gyro_cal_enabled) {
@@ -530,7 +535,7 @@ static void estimationPredict(estimationContext_t * ctx)
         // }
         // CR131
         // DEBUG_SET(DEBUG_ALWAYS, 7, posEstimator.est.vel.z);
-        // DEBUG_SET(DEBUG_ALWAYS, 7, posEstimator.imu.accelNEU.z);
+        DEBUG_SET(DEBUG_ALWAYS, 7, posEstimator.imu.accelNEU.z);
     }
 
     /* Prediction step: XY-axis */
@@ -707,9 +712,8 @@ static bool estimationCalculateCorrection_XY_GPS(estimationContext_t * ctx)
     return false;
 }
 
-static void estimationCalculateGroundCourse(timeUs_t currentTimeUs)
+static void estimationCalculateGroundCourse(void)
 {
-    UNUSED(currentTimeUs);
     if ((STATE(GPS_FIX)
 #ifdef USE_GPS_FIX_ESTIMATION
             || STATE(GPS_ESTIMATED_FIX)
@@ -719,7 +723,34 @@ static void estimationCalculateGroundCourse(timeUs_t currentTimeUs)
         posEstimator.est.cog = CENTIDEGREES_TO_DECIDEGREES(groundCourse);
     }
 }
+// CR142
+static void checkEstimateSanity(timeMs_t currentTimeMs)
+{
+    static timeMs_t startTime[3];
+    static bool useGpsRecovery = false;
+    uint8_t axis;
 
+    for (axis = 0; axis < XYZ_AXIS_COUNT; axis++) {
+        bool estimateSanityDegraded = ABS(posEstimator.est.vel.v[axis] - posEstimator.gps.vel.v[axis]) > 200 ||
+                                      ABS(posEstimator.est.pos.v[axis] - posEstimator.gps.pos.v[axis]) > 1000;
+
+        if (estimateSanityDegraded || useGpsRecovery) {
+            if (startTime[axis] == 0) {
+                startTime[axis] = currentTimeMs;
+            } else if (currentTimeMs - startTime[axis] > 3000) {
+                posEstimator.imu.accelBias.v[axis] = 0;
+                posEstimator.est.vel.v[axis] = posEstimator.gps.vel.v[axis];
+                posEstimator.est.pos.v[axis] = posEstimator.gps.pos.v[axis];
+                useGpsRecovery = currentTimeMs - startTime[axis] < 13000;
+            }
+        } else {
+            startTime[axis] = 0;
+        }
+
+        posControl.flags.posEstimateDegraded = useGpsRecovery;
+    }
+}
+// CR142
 /**
  * Calculate next estimate using IMU and apply corrections from reference sensors (GPS, BARO etc)
  *  Function is called at main loop rate
@@ -780,7 +811,11 @@ static void updateEstimatedTopic(timeUs_t currentTimeUs)
     // Apply corrections
     vectorAdd(&posEstimator.est.pos, &posEstimator.est.pos, &ctx.estPosCorr);
     vectorAdd(&posEstimator.est.vel, &posEstimator.est.vel, &ctx.estVelCorr);
-
+    // CR142
+    if (ctx.newFlags & EST_XY_VALID && ctx.newFlags & EST_GPS_XY_VALID && ctx.newFlags & EST_Z_VALID && ctx.newFlags & EST_GPS_Z_VALID) {
+        checkEstimateSanity(US2MS(currentTimeUs));
+    }
+    // CR142
     /* Correct accelerometer bias */
     const float w_acc_bias = positionEstimationConfig()->w_acc_bias;
     if (w_acc_bias > 0.0f) {
@@ -796,7 +831,7 @@ static void updateEstimatedTopic(timeUs_t currentTimeUs)
     }
     // CR140
     /* Update ground course */
-    estimationCalculateGroundCourse(currentTimeUs);
+    estimationCalculateGroundCourse();
 
     /* Update uncertainty */
     posEstimator.est.eph = ctx.newEPH;
@@ -805,13 +840,13 @@ static void updateEstimatedTopic(timeUs_t currentTimeUs)
     // Keep flags for further usage
     posEstimator.flags = ctx.newFlags;
 
-    // DEBUG_SET(DEBUG_ALWAYS, 0, posEstimator.imu.accelBias.z * 1000);
-    // DEBUG_SET(DEBUG_ALWAYS, 1, ctx.accBiasCorr.z);
-    // DEBUG_SET(DEBUG_ALWAYS, 2, ctx.estPosCorr.z * 1000);
-    // DEBUG_SET(DEBUG_ALWAYS, 3, ctx.estVelCorr.z * 1000);
-    // DEBUG_SET(DEBUG_ALWAYS, 4, posEstimator.imu.accWeightFactor * 100);
-    // DEBUG_SET(DEBUG_ALWAYS, 5, posEstimator.baro.baroAltRate);
-    // DEBUG_SET(DEBUG_ALWAYS, 6, posEstimator.baro.alt);
+    DEBUG_SET(DEBUG_ALWAYS, 0, posEstimator.imu.accelBias.z * 1000);
+    DEBUG_SET(DEBUG_ALWAYS, 1, ctx.accBiasCorr.z);
+    DEBUG_SET(DEBUG_ALWAYS, 2, ctx.estPosCorr.z * 1000);
+    DEBUG_SET(DEBUG_ALWAYS, 3, ctx.estVelCorr.z * 1000);
+    DEBUG_SET(DEBUG_ALWAYS, 4, posEstimator.imu.accWeightFactor * 100);
+    DEBUG_SET(DEBUG_ALWAYS, 5, posEstimator.baro.baroAltRate);
+    DEBUG_SET(DEBUG_ALWAYS, 6, posEstimator.baro.alt);
 }
 
 /**

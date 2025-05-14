@@ -90,6 +90,8 @@ typedef struct navigationFlags_s {
     navigationEstimateStatus_e estAglStatus;
     navigationEstimateStatus_e estHeadingStatus;    // Indicate valid heading - wither mag or GPS at certain speed on airplane
     bool gpsCfEstimatedAltitudeMismatch;            // Indicates a mismatch between GPS altitude and estimated altitude
+    
+    bool posEstimateDegraded;                       // CR142
 
     climbRateToAltitudeControllerMode_e rocToAltMode;
 
@@ -527,7 +529,7 @@ PG_DECLARE_ARRAY(navWaypoint_t, NAV_MAX_WAYPOINTS, nonVolatileWaypointList);
 
 extern navigationPosControl_t posControl;
 extern multicopterPosXyCoefficients_t multicopterPosXyCoefficients;
-extern int16_t toiletBowlingHeadingCorrection;    // Indicates toilet bowling detected multirotor // CR141
+extern int16_t mcToiletBowlingHeadingCorrection;    // Indicates toilet bowling detected multirotor // CR141
 
 /* Internally used functions */
 const navEstimatedPosVel_t * navGetCurrentActualPositionAndVelocity(void);

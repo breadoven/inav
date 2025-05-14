@@ -5989,7 +5989,7 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
 
         /* WARNING: ensure number of messages returned does not exceed messages array size
          * Messages array set 1 larger than maximum expected message count of 6 */
-        const char *messages[7];
+        const char *messages[8];
         unsigned messageCount = 0;
 
         const char *failsafeInfoMessage = NULL;
@@ -5997,7 +5997,7 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
 
         if (ARMING_FLAG(ARMED)) {
             if (FLIGHT_MODE(FAILSAFE_MODE) || FLIGHT_MODE(NAV_RTH_MODE) || FLIGHT_MODE(NAV_WP_MODE) || navigationIsExecutingAnEmergencyLanding()) {
-                /* ADDS MAXIMUM OF 3 MESSAGES TO TOTAL NORMALLY, 5 MESSAGES DURING FAILSAFE */
+                /* ADDS MAXIMUM OF 4 MESSAGES TO TOTAL NORMALLY, 6 MESSAGES DURING FAILSAFE */
                 if (navGetCurrentStateFlags() & NAV_AUTO_WP_DONE) {
                     messages[messageCount++] = STATE(LANDING_DETECTED) ? OSD_MESSAGE_STR(OSD_MSG_WP_LANDED) : OSD_MESSAGE_STR(OSD_MSG_WP_FINISHED);
                 } else if (NAV_Status.state == MW_NAV_STATE_WP_ENROUTE) {
@@ -6063,7 +6063,7 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
                 messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_LANDED);
             } else {
                 /* Messages shown only when Failsafe, WP, RTH or Emergency Landing not active and landed state inactive */
-                /* ADDS MAXIMUM OF 4 MESSAGES TO TOTAL */
+                /* ADDS MAXIMUM OF 5 MESSAGES TO TOTAL */
 #ifdef USE_GEOZONE
                 char buf[12], buf1[12];
                 switch (geozone.messageState) {
@@ -6181,8 +6181,13 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
                     }
                 }
             }
+            // CR142
+            if (posControl.flags.posEstimateDegraded) {
+                messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_POSEST_DEGRADED);
+            }
+            // CR142
             // CR141
-            if (STATE(MULTIROTOR) && isNavHoldPositionActive() && toiletBowlingHeadingCorrection) {
+            if (STATE(MULTIROTOR) && mcToiletBowlingHeadingCorrection) {
                 messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_TOILET_BOWL);
             }
             // CR141
