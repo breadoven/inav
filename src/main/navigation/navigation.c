@@ -2920,7 +2920,7 @@ void updateActualHeading(bool headingValid, int32_t newHeading, int32_t newGroun
      */
     // CR141
     if (STATE(MULTIROTOR) && IS_RC_MODE_ACTIVE(BOXBEEPERON)) {
-        newHeading = wrap_36000(newHeading + 9000);
+        newHeading = wrap_36000(newHeading + 100 * systemConfig()->devTestSetting);
     } else {
         mcToiletBowlingHeadingCorrection = 0;
     }

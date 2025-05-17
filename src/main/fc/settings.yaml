@@ -3910,6 +3910,15 @@ groups:
         default_value: OFF
         field: groundTestMode
         type: bool
+        # CR143
+      - name: test_setting
+        description: "For developer use. General use test setting from -1000 to 1000"
+        condition: USE_DEV_TOOLS
+        default_value: 0
+        field: devTestSetting
+        min: -1000
+        max: 1000
+        # CR143
       - name: throttle_tilt_comp_str
         description: "Can be used in ANGLE and HORIZON mode and will automatically boost throttle when banking. Setting is in percentage, 0=disabled."
         default_value: 0

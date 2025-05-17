@@ -73,6 +73,7 @@ typedef struct systemConfig_s {
     uint8_t debug_mode;
 #ifdef USE_DEV_TOOLS
     bool groundTestMode;                    // Disables motor ouput, sets heading trusted on FW (for dev use)
+    int16_t devTestSetting;                 // CR143
 #endif
 #ifdef USE_I2C
     uint8_t i2c_speed;
