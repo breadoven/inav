@@ -570,17 +570,18 @@ static float computeVelocityScale(
 // CR141
 static void checkForToiletBowling(void)
 {
-    // bool isHoldingPosition = ((FLIGHT_MODE(NAV_COURSE_HOLD_MODE) && posControl.cruise.multicopterSpeed < 50) || navGetCurrentStateFlags() & NAV_CTL_HOLD);
-    bool isHoldingPosition = FLIGHT_MODE(NAV_COURSE_HOLD_MODE) || navGetCurrentStateFlags() & NAV_CTL_HOLD;
+    bool isHoldingPosition = ((FLIGHT_MODE(NAV_COURSE_HOLD_MODE) && posControl.cruise.multicopterSpeed < 50) || navGetCurrentStateFlags() & NAV_CTL_HOLD);
     uint16_t distanceToHoldPoint = calculateDistanceToDestination(&posControl.desiredState.pos);
 
-    if (posControl.actualState.velXY < 100 || distanceToHoldPoint < 100 || !isHoldingPosition) {  // || posControl.flags.isAdjustingPosition) {
+    if (posControl.actualState.velXY < 100 || distanceToHoldPoint < 100 || (!isHoldingPosition && !FLIGHT_MODE(NAV_COURSE_HOLD_MODE))) {
         return;
     }
 
+    uint16_t course = FLIGHT_MODE(NAV_COURSE_HOLD_MODE) ? posControl.cruise.course : calculateBearingToDestination(&posControl.desiredState.pos);
+
     static timeMs_t startTime = 0;
 
-    int16_t courseError = wrap_18000(calculateBearingToDestination(&posControl.desiredState.pos) - 10 * gpsSol.groundCourse);
+    int16_t courseError = wrap_18000(course - 10 * gpsSol.groundCourse);
     bool courseErrorCheck = ABS(courseError) > 3000 && ABS(courseError) < 15500;
 
     bool distanceSpeedCheck = posControl.actualState.velXY * distanceToHoldPoint > (navConfig()->mc.toiletbowl_detection * 10000);
@@ -595,24 +596,24 @@ static void checkForToiletBowling(void)
         startTime = 0;
     }
 
-    // DEBUG_SET(DEBUG_ALWAYS, 0, courseError);
-    // DEBUG_SET(DEBUG_ALWAYS, 2, posControl.actualState.velXY * distanceToHoldPoint);
+    DEBUG_SET(DEBUG_ALWAYS, 0, courseError);
+    DEBUG_SET(DEBUG_ALWAYS, 2, posControl.actualState.velXY * distanceToHoldPoint);
 }
 // CR141
 static void updatePositionAccelController_MC(timeDelta_t deltaMicros, float maxAccelLimit)  // , const float maxSpeed)   CR47
 {
     // CR141
-    // DEBUG_SET(DEBUG_ALWAYS, 1, calculateDistanceToDestination(&posControl.desiredState.pos));
-    // DEBUG_SET(DEBUG_ALWAYS, 3, mcToiletBowlingHeadingCorrection);
-    // DEBUG_SET(DEBUG_ALWAYS, 5, posControl.actualState.velXY);
-    // DEBUG_SET(DEBUG_ALWAYS, 6, calculateBearingToDestination(&posControl.desiredState.pos));
-    // DEBUG_SET(DEBUG_ALWAYS, 7, posControl.actualState.yaw);
+    DEBUG_SET(DEBUG_ALWAYS, 1, calculateDistanceToDestination(&posControl.desiredState.pos));
+    DEBUG_SET(DEBUG_ALWAYS, 3, mcToiletBowlingHeadingCorrection);
+    DEBUG_SET(DEBUG_ALWAYS, 5, posControl.actualState.velXY);
+    DEBUG_SET(DEBUG_ALWAYS, 6, calculateBearingToDestination(&posControl.desiredState.pos));
+    DEBUG_SET(DEBUG_ALWAYS, 7, posControl.actualState.yaw);
     if (navConfig()->mc.toiletbowl_detection) {
         if (mcToiletBowlingHeadingCorrection) {
             uint16_t correctedHeading = wrap_36000(posControl.actualState.yaw - mcToiletBowlingHeadingCorrection);
             posControl.actualState.sinYaw = sin_approx(CENTIDEGREES_TO_RADIANS(correctedHeading));
             posControl.actualState.cosYaw = cos_approx(CENTIDEGREES_TO_RADIANS(correctedHeading));
-            // DEBUG_SET(DEBUG_ALWAYS, 4, correctedHeading);
+            DEBUG_SET(DEBUG_ALWAYS, 4, correctedHeading);
         } else {
             checkForToiletBowling();
         }

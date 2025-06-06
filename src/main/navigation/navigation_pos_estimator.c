@@ -406,10 +406,10 @@ static void updateIMUTopic(timeUs_t currentTimeUs)
         posEstimator.imu.accelNEU.y = accelReading.y + posEstimator.imu.accelBias.y;
         posEstimator.imu.accelNEU.z = accelReading.z + posEstimator.imu.accelBias.z;
         // CR140
-        // CR142
-        if (IS_RC_MODE_ACTIVE(BOXBEEPERON)) {
-            posEstimator.imu.accelNEU.z += -navConfig()->mc.max_auto_climb_rate;
-        }
+        // CR142 for test only
+        // if (IS_RC_MODE_ACTIVE(BOXBEEPERON)) {
+            // posEstimator.imu.accelNEU.z += systemConfig()->devTestSetting;
+        // }
         // CR142
 
         /* When unarmed, assume that accelerometer should measure 1G. Use that to correct accelerometer gain */
@@ -534,8 +534,7 @@ static void estimationPredict(estimationContext_t * ctx)
             posEstimator.est.vel.z += posEstimator.imu.accelNEU.z * ctx->dt;
         // }
         // CR131
-        // DEBUG_SET(DEBUG_ALWAYS, 7, posEstimator.est.vel.z);
-        DEBUG_SET(DEBUG_ALWAYS, 7, posEstimator.imu.accelNEU.z);
+        // DEBUG_SET(DEBUG_ALWAYS, 7, posEstimator.imu.accelNEU.z);
     }
 
     /* Prediction step: XY-axis */
@@ -610,15 +609,18 @@ static bool estimationCalculateCorrection_Z(estimationContext_t * ctx)
                                           (posEstimator.state.isBaroGroundValid && posEstimator.baro.alt < posEstimator.state.baroGroundAlt));   // CR140
 
         // Altitude
+        const float w_z_baro_p = positionEstimationConfig()->w_z_baro_p;  // CR140
+        float w_z_baro_v = positionEstimationConfig()->w_z_baro_v;
+
         const float baroAltResidual = wBaro * ((isAirCushionEffectDetected ? posEstimator.state.baroGroundAlt : posEstimator.baro.alt) - posEstimator.est.pos.z);
         const float baroVelZResidual = isAirCushionEffectDetected ? 0.0f : wBaro * (posEstimator.baro.baroAltRate - posEstimator.est.vel.z);
-        const float w_z_baro_p = positionEstimationConfig()->w_z_baro_p;  // CR140
-        const float w_z_baro_v = positionEstimationConfig()->w_z_baro_v;
+        w_z_baro_v *= fabsf(baroVelZResidual) > 200.0f ? 2.0f : 1.0f;
 
         ctx->estPosCorr.z += baroAltResidual * w_z_baro_p * ctx->dt;
+        // ctx->estVelCorr.z += baroAltResidual * sq(w_z_baro_p) * ctx->dt;  // CR140 keep ?
         ctx->estVelCorr.z += baroVelZResidual * w_z_baro_v * ctx->dt;  // CR140 use same w_z_baro for p and v
 
-        ctx->newEPV = updateEPE(posEstimator.est.epv, ctx->dt, posEstimator.baro.epv, w_z_baro_p);
+        ctx->newEPV = updateEPE(posEstimator.est.epv, ctx->dt, MAX(posEstimator.baro.epv, fabsf(baroAltResidual)), w_z_baro_p);
 
         // Accelerometer bias // CR140 use baroVelZResidual instead or both
         // DEBUG_SET(DEBUG_ALWAYS, 3, baroAltResidual);
@@ -639,12 +641,15 @@ static bool estimationCalculateCorrection_Z(estimationContext_t * ctx)
         }
         else {
             // Altitude
+            const float w_z_gps_p = positionEstimationConfig()->w_z_gps_p;
+            float w_z_gps_v = positionEstimationConfig()->w_z_gps_v;
             const float gpsAltResidual = wGps * (posEstimator.gps.pos.z - posEstimator.est.pos.z);
             const float gpsVelZResidual = wGps * (posEstimator.gps.vel.z - posEstimator.est.vel.z);
-            const float w_z_gps_p = positionEstimationConfig()->w_z_gps_p;
-            const float w_z_gps_v = positionEstimationConfig()->w_z_gps_v;
+            w_z_gps_v *= fabsf(gpsVelZResidual) > 200.0f ? 2.0f : 1.0f;
+            // w_z_gps_v *= 1 + (fabsf(gpsVelZResidual) > 100 ? ((fabsf(gpsVelZResidual) - 100) / 100) : 0);
 
             ctx->estPosCorr.z += gpsAltResidual * w_z_gps_p * ctx->dt;
+            // ctx->estVelCorr.z += gpsAltResidual * sq(w_z_gps_p) * ctx->dt;  // CR140  keep ?
             ctx->estVelCorr.z += gpsVelZResidual * w_z_gps_v * ctx->dt;  // CR140 use same w_z_gps for p and v
 
             ctx->newEPV = updateEPE(posEstimator.est.epv, ctx->dt, MAX(posEstimator.gps.epv, fabsf(gpsAltResidual)), w_z_gps_p);
@@ -694,6 +699,10 @@ static bool estimationCalculateCorrection_XY_GPS(estimationContext_t * ctx)
             ctx->estPosCorr.x += gpsPosXResidual * w_xy_gps_p * ctx->dt;
             ctx->estPosCorr.y += gpsPosYResidual * w_xy_gps_p * ctx->dt;
 
+            // Velocity from coordinates  ... keep ??  // CR140
+            // ctx->estVelCorr.x += gpsPosXResidual * sq(w_xy_gps_p) * ctx->dt;
+            // ctx->estVelCorr.y += gpsPosYResidual * sq(w_xy_gps_p) * ctx->dt;
+
             // Velocity from direct measurement
             ctx->estVelCorr.x += gpsVelXResidual * w_xy_gps_v * ctx->dt;
             ctx->estVelCorr.y += gpsVelYResidual * w_xy_gps_v * ctx->dt;
@@ -724,15 +733,19 @@ static void estimationCalculateGroundCourse(void)
     }
 }
 // CR142
-static void checkEstimateSanity(timeMs_t currentTimeMs)
+static void checkEstimateSanity(timeMs_t currentTimeMs, fpVector3_t previousPos)
 {
     static timeMs_t startTime[3];
     static bool useGpsRecovery = false;
     uint8_t axis;
 
     for (axis = 0; axis < XYZ_AXIS_COUNT; axis++) {
+        bool posChangeVelocityMismatch = fabsf(posEstimator.est.vel.v[axis]) > 50.0f &&
+                                         SIGN(posEstimator.est.pos.v[axis] - previousPos.v[axis]) != SIGN(posEstimator.est.vel.v[axis]);
+
         bool estimateSanityDegraded = ABS(posEstimator.est.vel.v[axis] - posEstimator.gps.vel.v[axis]) > 200 ||
-                                      ABS(posEstimator.est.pos.v[axis] - posEstimator.gps.pos.v[axis]) > 1000;
+                                      ABS(posEstimator.est.pos.v[axis] - posEstimator.gps.pos.v[axis]) > positionEstimationConfig()->max_eph_epv ||
+                                      posChangeVelocityMismatch;
 
         if (estimateSanityDegraded || useGpsRecovery) {
             if (startTime[axis] == 0) {
@@ -781,6 +794,8 @@ static void updateEstimatedTopic(timeUs_t currentTimeUs)
     vectorZero(&ctx.estVelCorr);
     vectorZero(&ctx.accBiasCorr);
 
+    fpVector3_t tempPos = posEstimator.est.pos;  // CR142
+
     /* AGL estimation - separate process, decouples from Z coordinate */
     estimationCalculateAGL(&ctx);
 
@@ -813,7 +828,7 @@ static void updateEstimatedTopic(timeUs_t currentTimeUs)
     vectorAdd(&posEstimator.est.vel, &posEstimator.est.vel, &ctx.estVelCorr);
     // CR142
     if (ctx.newFlags & EST_XY_VALID && ctx.newFlags & EST_GPS_XY_VALID && ctx.newFlags & EST_Z_VALID && ctx.newFlags & EST_GPS_Z_VALID) {
-        checkEstimateSanity(US2MS(currentTimeUs));
+        checkEstimateSanity(US2MS(currentTimeUs), tempPos);
     }
     // CR142
     /* Correct accelerometer bias */
@@ -840,13 +855,13 @@ static void updateEstimatedTopic(timeUs_t currentTimeUs)
     // Keep flags for further usage
     posEstimator.flags = ctx.newFlags;
 
-    DEBUG_SET(DEBUG_ALWAYS, 0, posEstimator.imu.accelBias.z * 1000);
-    DEBUG_SET(DEBUG_ALWAYS, 1, ctx.accBiasCorr.z);
-    DEBUG_SET(DEBUG_ALWAYS, 2, ctx.estPosCorr.z * 1000);
-    DEBUG_SET(DEBUG_ALWAYS, 3, ctx.estVelCorr.z * 1000);
-    DEBUG_SET(DEBUG_ALWAYS, 4, posEstimator.imu.accWeightFactor * 100);
-    DEBUG_SET(DEBUG_ALWAYS, 5, posEstimator.baro.baroAltRate);
-    DEBUG_SET(DEBUG_ALWAYS, 6, posEstimator.baro.alt);
+    // DEBUG_SET(DEBUG_ALWAYS, 0, posEstimator.imu.accelBias.z * 1000);
+    // DEBUG_SET(DEBUG_ALWAYS, 1, ctx.accBiasCorr.z);
+    // DEBUG_SET(DEBUG_ALWAYS, 2, ctx.estPosCorr.z * 1000);
+    // DEBUG_SET(DEBUG_ALWAYS, 3, ctx.estVelCorr.z * 1000);
+    // DEBUG_SET(DEBUG_ALWAYS, 4, posEstimator.imu.accWeightFactor * 100);
+    // DEBUG_SET(DEBUG_ALWAYS, 5, posEstimator.baro.baroAltRate);
+    // DEBUG_SET(DEBUG_ALWAYS, 6, posEstimator.baro.alt);
 }
 
 /**
