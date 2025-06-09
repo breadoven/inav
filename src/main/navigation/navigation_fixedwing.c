@@ -131,7 +131,7 @@ bool adjustFixedWingAltitudeFromRCInput(void)
 // Position to velocity controller for Z axis
 static void updateAltitudeVelocityAndPitchController_FW(timeDelta_t deltaMicros)
 {
-    static pt1Filter_t velzFilterState;
+    static pt1Filter_t pitchFilterState;  // CR145
 
     float desiredClimbRate = getDesiredClimbRate(posControl.desiredState.pos.z, deltaMicros);
 
@@ -141,40 +141,65 @@ static void updateAltitudeVelocityAndPitchController_FW(timeDelta_t deltaMicros)
     }
 
     // Here we use negative values for dive for better clarity
-    const float maxClimbDeciDeg = DEGREES_TO_DECIDEGREES(navConfig()->fw.max_climb_angle);
+    float maxClimbDeciDeg = DEGREES_TO_DECIDEGREES(navConfig()->fw.max_climb_angle);
     const float minDiveDeciDeg = -DEGREES_TO_DECIDEGREES(navConfig()->fw.max_dive_angle);
 
     // PID controller to translate desired climb rate error into pitch angle [decideg]
-    float currentClimbRate = navGetCurrentActualPositionAndVelocity()->vel.z;
+    // float currentClimbRate = navGetCurrentActualPositionAndVelocity()->vel.z;
 
-    // CR133
-    // ****************** TEST FILTER VERT VEL
-    // static pt1Filter_t velz2FilterState;
-    // currentClimbRate = pt1FilterApply4(&velz2FilterState, currentClimbRate, 1.0f, US2S(deltaMicros));
-    // DEBUG_SET(DEBUG_ALWAYS, 3, currentClimbRate);
-    // ******************
+    // CR145
+    // Default control based on climb rate (velocity)
+    float targetValue = desiredClimbRate;
+    float measuredValue = navGetCurrentActualPositionAndVelocity()->vel.z;
 
-    // // ****************** TEST USING POSITION AGAIN
-    // // PIDS = P 10 @ 100 PID factor, I 1 @ 30, D 10 @ 50
-    // float desiredAltitude = posControl.desiredState.pos.z;
-    // float currentAltitude = navGetCurrentActualPositionAndVelocity()->pos.z;
+    // Optional control based on altitude (position)
+    if (pidProfile()->fwAltControlUsePos) {
+        // PIDS = P 20 @ 100 PID factor, I 5 @ 100, D 30 @ 100
+        static float currentDesiredPosZ = 0.0f;
+        static float trackingAltitude = 0.0f;
+        static bool altitudeRateControlActive = false;
 
-    // if (posControl.flags.rocToAltMode == ROC_TO_ALT_CONSTANT || navigationIsExecutingAnEmergencyLanding()) {
-        // posControl.desiredState.pos.z += desiredClimbRate * US2S(deltaMicros);
-        // desiredAltitude = 2 * posControl.desiredState.pos.z - currentAltitude;
-    // }
+        float desiredAltitude = posControl.desiredState.pos.z;
+        float currentAltitude = navGetCurrentActualPositionAndVelocity()->pos.z;
 
-    // float targetPitchAngle = navPidApply2(&posControl.pids.fw_alt, desiredAltitude, currentAltitude, US2S(deltaMicros), minDiveDeciDeg, maxClimbDeciDeg, 0);
-    // // DEBUG_SET(DEBUG_ALWAYS, 1, desiredAltitude);
-    // // **********************
+        if (fabsf(currentDesiredPosZ - desiredAltitude) > 100.0f || !isPitchAdjustmentValid) {
+            altitudeRateControlActive = desiredClimbRate && fabsf(desiredAltitude - currentAltitude) > navConfig()->fw.max_auto_climb_rate &&
+                                        !posControl.flags.rthTrackbackActive;
+            trackingAltitude = currentAltitude;
+        }
+        currentDesiredPosZ = desiredAltitude;
 
-    float targetPitchAngle = navPidApply2(&posControl.pids.fw_alt, desiredClimbRate, currentClimbRate, US2S(deltaMicros), minDiveDeciDeg, maxClimbDeciDeg, PID_DTERM_FROM_ERROR);
-    // DEBUG_SET(DEBUG_ALWAYS, 3, posControl.pids.fw_alt.feedForward);
-    // DEBUG_SET(DEBUG_ALWAYS, 6, targetPitchAngle);  // CR133
+        float absDesiredClimbRate = fabsf(desiredClimbRate);
+        if (posControl.flags.rocToAltMode == ROC_TO_ALT_CONSTANT) {
+            posControl.desiredState.pos.z += desiredClimbRate * US2S(deltaMicros);
+            desiredAltitude = posControl.desiredState.pos.z;
+        } else if (altitudeRateControlActive) {
+            altitudeRateControlActive = fabsf(desiredAltitude - currentAltitude) > MAX(absDesiredClimbRate, 50.0f);
 
+            static float absLastClimbRate = 0;
+            float absClimbRate = fabsf(measuredValue);
+            float accelerationZ = (absClimbRate - absLastClimbRate) / US2S(deltaMicros);
+            absLastClimbRate = absClimbRate;
+            float adjustmentFactor = constrainf(scaleRangef(accelerationZ, 0, 200, 1, 0), 0, 1);
+            DEBUG_SET(DEBUG_ALWAYS, 5, 100 * adjustmentFactor);
+
+            trackingAltitude += adjustmentFactor * desiredClimbRate * US2S(deltaMicros);
+            desiredAltitude = trackingAltitude;
+        }
+
+        targetValue = desiredAltitude;
+        measuredValue = currentAltitude;
+        DEBUG_SET(DEBUG_ALWAYS, 0, desiredAltitude);
+        DEBUG_SET(DEBUG_ALWAYS, 3, altitudeRateControlActive);
+        DEBUG_SET(DEBUG_ALWAYS, 2, trackingAltitude);
+    }
+
+    // PID controller to translate desired target error (velocity or position) into pitch angle [decideg]
+    float targetPitchAngle = navPidApply2(&posControl.pids.fw_alt, targetValue, measuredValue, US2S(deltaMicros), minDiveDeciDeg, maxClimbDeciDeg, PID_DTERM_FROM_ERROR);
+    // CR145
     // Apply low-pass filter to prevent rapid correction
-    targetPitchAngle = pt1FilterApply4(&velzFilterState, targetPitchAngle, getSmoothnessCutoffFreq(NAV_FW_BASE_PITCH_CUTOFF_FREQUENCY_HZ), US2S(deltaMicros));
-
+    targetPitchAngle = pt1FilterApply4(&pitchFilterState, targetPitchAngle, getSmoothnessCutoffFreq(NAV_FW_BASE_PITCH_CUTOFF_FREQUENCY_HZ), US2S(deltaMicros));
+    DEBUG_SET(DEBUG_ALWAYS, 1, targetPitchAngle);
     // Reconstrain pitch angle (> 0 - climb, < 0 - dive)
     targetPitchAngle = constrainf(targetPitchAngle, minDiveDeciDeg, maxClimbDeciDeg);
     posControl.rcAdjustment[PITCH] = targetPitchAngle;
@@ -195,6 +220,7 @@ void applyFixedWingAltitudeAndThrottleController(timeUs_t currentTimeUs)
             // Check if last correction was not too long ago
             if (deltaMicrosPositionUpdate < MAX_POSITION_UPDATE_INTERVAL_US) {
                 updateAltitudeVelocityAndPitchController_FW(deltaMicrosPositionUpdate);
+                isPitchAdjustmentValid = true;  // CR145
             }
             else {
                 // Position update has not occurred in time (first iteration or glitch), reset altitude controller
@@ -204,8 +230,6 @@ void applyFixedWingAltitudeAndThrottleController(timeUs_t currentTimeUs)
             // Indicate that information is no longer usable
             posControl.flags.verticalPositionDataConsumed = true;
         }
-
-        isPitchAdjustmentValid = true;
     }
     else {
         // No valid altitude sensor data, don't adjust pitch automatically, rcCommand[PITCH] is passed through to PID controller

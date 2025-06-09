@@ -2187,6 +2187,13 @@ groups:
         field: fwAltControlResponseFactor
         min: 5
         max: 100
+        # CR145
+      - name: nav_fw_alt_use_position
+        description: "Use position for fixed wing altitude control rather than velocity."
+        default_value: OFF
+        field: fwAltControlUsePos
+        type: bool
+        # CR145
       - name: nav_fw_pos_xy_p
         description: "P gain of 2D trajectory PID controller. Play with this to get a straight line between waypoints or a straight RTH"
         default_value: 75

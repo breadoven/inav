@@ -1613,7 +1613,11 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_RTH_CLIMB_TO_SAFE_ALT(n
         posControl.rthState.rthInitialDistance = posControl.homeDistance;
         posControl.activeWaypoint.bearing = posControl.homeDirection;
         fpVector3_t * tmpHomePos = rthGetHomeTargetPosition(RTH_HOME_ENROUTE_INITIAL);
-
+        // CR146
+        if (navConfig()->general.flags.rth_climb_first == RTH_CLIMB_OFF) {
+            posControl.rthState.rthInitialAltitude = posControl.actualState.abs.pos.z;
+        }
+        // CR146
         if (navConfig()->general.flags.rth_tail_first && !STATE(FIXED_WING_LEGACY)) {
             setDesiredPosition(tmpHomePos, 0, NAV_POS_UPDATE_XY | NAV_POS_UPDATE_Z | NAV_POS_UPDATE_BEARING_TAIL_FIRST);
         }
@@ -2736,9 +2740,10 @@ static fpVector3_t * rthGetHomeTargetPosition(rthTargetMode_e mode)
 
         case RTH_HOME_ENROUTE_PROPORTIONAL:
             {
-                float rthTotalDistanceToTravel = posControl.rthState.rthInitialDistance - (STATE(FIXED_WING_LEGACY) ? navConfig()->fw.loiter_radius : 0);
+                uint16_t endPointDistance = STATE(FIXED_WING_LEGACY) ? navConfig()->fw.loiter_radius : 0;  // CR146
+                float rthTotalDistanceToTravel = posControl.rthState.rthInitialDistance - endPointDistance;
                 if (rthTotalDistanceToTravel >= 100) {
-                    float ratioNotTravelled = constrainf(posControl.homeDistance / rthTotalDistanceToTravel, 0.0f, 1.0f);
+                    float ratioNotTravelled = constrainf((posControl.homeDistance - endPointDistance) / rthTotalDistanceToTravel, 0.0f, 1.0f);  // CR146
                     posControl.rthState.homeTmpWaypoint.z = (posControl.rthState.rthInitialAltitude * ratioNotTravelled) + (posControl.rthState.rthFinalAltitude * (1.0f - ratioNotTravelled));
                 }
                 else {
@@ -3639,7 +3644,6 @@ bool isProbablyStillFlying(void)
  *-----------------------------------------------------------*/
 float getDesiredClimbRate(float targetAltitude, timeDelta_t deltaMicros)
 {
-
     const bool emergLandingIsActive = navigationIsExecutingAnEmergencyLanding();
 
 #ifdef USE_GEOZONE
@@ -4996,15 +5000,25 @@ void navigationUsePIDs(void)
                                         NAV_DTERM_CUT_HZ,
                                         0.0f
     );
-
-    navPidInit(&posControl.pids.fw_alt, (float)pidProfile()->bank_fw.pid[PID_POS_Z].P / 100.0f,
-                                        (float)pidProfile()->bank_fw.pid[PID_POS_Z].I / 100.0f,
-                                        (float)pidProfile()->bank_fw.pid[PID_POS_Z].D / 300.0f,
-                                        (float)pidProfile()->bank_fw.pid[PID_POS_Z].FF / 100.0f,
-                                        NAV_DTERM_CUT_HZ,
-                                        0.0f
-    );
-
+    // CR145
+    if (pidProfile()->fwAltControlUsePos) {
+        navPidInit(&posControl.pids.fw_alt, (float)pidProfile()->bank_fw.pid[PID_POS_Z].P / 100.0f,
+                                            (float)pidProfile()->bank_fw.pid[PID_POS_Z].I / 100.0f,
+                                            (float)pidProfile()->bank_fw.pid[PID_POS_Z].D / 30.0f,
+                                            0.0f,
+                                            NAV_DTERM_CUT_HZ,
+                                            0.0f
+        );
+    } else {
+        navPidInit(&posControl.pids.fw_alt, (float)pidProfile()->bank_fw.pid[PID_POS_Z].P / 100.0f,
+                                            (float)pidProfile()->bank_fw.pid[PID_POS_Z].I / 100.0f,
+                                            (float)pidProfile()->bank_fw.pid[PID_POS_Z].D / 300.0f,
+                                            (float)pidProfile()->bank_fw.pid[PID_POS_Z].FF / 100.0f,
+                                            NAV_DTERM_CUT_HZ,
+                                            0.0f
+        );
+    }
+    // CR145
     navPidInit(&posControl.pids.fw_heading, (float)pidProfile()->bank_fw.pid[PID_POS_HEADING].P / 10.0f,
                                         (float)pidProfile()->bank_fw.pid[PID_POS_HEADING].I / 10.0f,
                                         (float)pidProfile()->bank_fw.pid[PID_POS_HEADING].D / 100.0f,
