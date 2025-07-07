@@ -587,34 +587,41 @@ static bool estimationCalculateCorrection_Z(estimationContext_t * ctx)
     }
 
     if (ctx->newFlags & EST_BARO_VALID && wBaro) {
-        timeUs_t currentTimeUs = micros();
+        // CR147
+        bool isAirCushionEffectDetected = false;
+        static float baroGroundAlt = 0.0f;
 
-        if (!ARMING_FLAG(ARMED)) {
-            posEstimator.state.baroGroundAlt = posEstimator.est.pos.z;
-            posEstimator.state.isBaroGroundValid = true;
-            posEstimator.state.baroGroundTimeout = currentTimeUs + 250000;   // 0.25 sec
-        }
-        else {
-            if (posEstimator.est.vel.z > 15) {
-                posEstimator.state.isBaroGroundValid = currentTimeUs > posEstimator.state.baroGroundTimeout ? false: true;
-            }
-            else {
-                posEstimator.state.baroGroundTimeout = currentTimeUs + 250000;   // 0.25 sec
-            }
-        }
+        if (STATE(MULTIROTOR)) {
+            static bool isBaroGroundValid = false;
 
-        // We might be experiencing air cushion effect during takeoff - use sonar or baro ground altitude to detect it
-        bool isAirCushionEffectDetected = ARMING_FLAG(ARMED) &&
-                                          (((ctx->newFlags & EST_SURFACE_VALID) && posEstimator.surface.alt < 20.0f && posEstimator.state.isBaroGroundValid) ||
-                                          (posEstimator.state.isBaroGroundValid && posEstimator.baro.alt < posEstimator.state.baroGroundAlt));   // CR140
+            if (!ARMING_FLAG(ARMED)) {
+                baroGroundAlt = posEstimator.baro.alt;
+                isBaroGroundValid = true;
+            }
+            else if (isBaroGroundValid) {
+                // We might be experiencing air cushion effect during takeoff - use sonar or baro ground altitude to detect it
+                if (isMulticopterThrottleAboveMidHover()) {
+                    isBaroGroundValid = fabsf(posEstimator.est.pos.z - posEstimator.baro.alt) > 20.0f && posEstimator.baro.alt < 100.0f;
+                }
+
+                isAirCushionEffectDetected = (isEstimatedAglTrusted() && posEstimator.surface.alt < 20.0f) || posEstimator.baro.alt < baroGroundAlt + 20.0f; // CR140
+            }
+            // DEBUG_SET(DEBUG_ALWAYS, 0, isBaroGroundValid);
+        }
+        // CR147
 
         // Altitude
         const float w_z_baro_p = positionEstimationConfig()->w_z_baro_p;  // CR140
         float w_z_baro_v = positionEstimationConfig()->w_z_baro_v;
 
-        const float baroAltResidual = wBaro * ((isAirCushionEffectDetected ? posEstimator.state.baroGroundAlt : posEstimator.baro.alt) - posEstimator.est.pos.z);
+        float baroAltResidual = wBaro * ((isAirCushionEffectDetected ? baroGroundAlt : posEstimator.baro.alt) - posEstimator.est.pos.z);
         const float baroVelZResidual = isAirCushionEffectDetected ? 0.0f : wBaro * (posEstimator.baro.baroAltRate - posEstimator.est.vel.z);
-        w_z_baro_v *= fabsf(baroVelZResidual) > 200.0f ? 2.0f : 1.0f;
+        // CR147
+        if (isAirCushionEffectDetected && isMulticopterThrottleAboveMidHover()) {
+            baroAltResidual = 0.0f;
+        }
+        // CR147
+        w_z_baro_v *= fabsf(baroVelZResidual) > 200.0f ? 2.0f : 1.0f;  // increase vel correction if error large  CR140
 
         ctx->estPosCorr.z += baroAltResidual * w_z_baro_p * ctx->dt;
         // ctx->estVelCorr.z += baroAltResidual * sq(w_z_baro_p) * ctx->dt;  // CR140 keep ?
@@ -623,8 +630,10 @@ static bool estimationCalculateCorrection_Z(estimationContext_t * ctx)
         ctx->newEPV = updateEPE(posEstimator.est.epv, ctx->dt, MAX(posEstimator.baro.epv, fabsf(baroAltResidual)), w_z_baro_p);
 
         // Accelerometer bias // CR140 use baroVelZResidual instead or both
-        // DEBUG_SET(DEBUG_ALWAYS, 3, baroAltResidual);
-        // DEBUG_SET(DEBUG_ALWAYS, 4, baroVelZResidual);
+        DEBUG_SET(DEBUG_ALWAYS, 2, posEstimator.baro.alt);
+        DEBUG_SET(DEBUG_ALWAYS, 3, baroAltResidual);
+        DEBUG_SET(DEBUG_ALWAYS, 4, baroVelZResidual);
+
         if (!isAirCushionEffectDetected) {
             ctx->accBiasCorr.z += (baroAltResidual * sq(w_z_baro_p) + baroVelZResidual * sq(w_z_baro_v));   // CR140
         }

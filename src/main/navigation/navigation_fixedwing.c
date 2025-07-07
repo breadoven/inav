@@ -136,7 +136,8 @@ static void updateAltitudeVelocityAndPitchController_FW(timeDelta_t deltaMicros)
     float desiredClimbRate = getDesiredClimbRate(posControl.desiredState.pos.z, deltaMicros);
 
     // Reduce max allowed climb rate by 2/3 if performing loiter (stall prevention)
-    if (needToCalculateCircularLoiter && desiredClimbRate > 0.67f * navConfig()->fw.max_auto_climb_rate) {
+    // if (needToCalculateCircularLoiter && desiredClimbRate > 0.67f * navConfig()->fw.max_auto_climb_rate) {
+    if (navGetCurrentStateFlags() & NAV_CTL_HOLD && desiredClimbRate > 0.67f * navConfig()->fw.max_auto_climb_rate) {
         desiredClimbRate = 0.67f * navConfig()->fw.max_auto_climb_rate;
     }
 
@@ -154,7 +155,6 @@ static void updateAltitudeVelocityAndPitchController_FW(timeDelta_t deltaMicros)
 
     // Optional control based on altitude (position)
     if (pidProfile()->fwAltControlUsePos) {
-        // PIDS = P 20 @ 100 PID factor, I 5 @ 100, D 30 @ 100
         static float currentDesiredPosZ = 0.0f;
         static float trackingAltitude = 0.0f;
         static bool altitudeRateControlActive = false;
@@ -169,22 +169,24 @@ static void updateAltitudeVelocityAndPitchController_FW(timeDelta_t deltaMicros)
         }
         currentDesiredPosZ = desiredAltitude;
 
-        float absDesiredClimbRate = fabsf(desiredClimbRate);
-        if (posControl.flags.rocToAltMode == ROC_TO_ALT_CONSTANT) {
-            posControl.desiredState.pos.z += desiredClimbRate * US2S(deltaMicros);
-            desiredAltitude = posControl.desiredState.pos.z;
-        } else if (altitudeRateControlActive) {
-            altitudeRateControlActive = fabsf(desiredAltitude - currentAltitude) > MAX(absDesiredClimbRate, 50.0f);
-
-            static float absLastClimbRate = 0;
+        if (posControl.flags.rocToAltMode == ROC_TO_ALT_CONSTANT || altitudeRateControlActive) {
+            static float absLastClimbRate = 0.0f;
             float absClimbRate = fabsf(measuredValue);
             float accelerationZ = (absClimbRate - absLastClimbRate) / US2S(deltaMicros);
             absLastClimbRate = absClimbRate;
-            float adjustmentFactor = constrainf(scaleRangef(accelerationZ, 0, 200, 1, 0), 0, 1);
+            float adjustmentFactor = constrainf(scaleRangef(accelerationZ, 0.0f, 200.0f, 1.0f, 0.0f), 0.0f, 1.0f);
             DEBUG_SET(DEBUG_ALWAYS, 5, 100 * adjustmentFactor);
 
-            trackingAltitude += adjustmentFactor * desiredClimbRate * US2S(deltaMicros);
-            desiredAltitude = trackingAltitude;
+            if (posControl.flags.rocToAltMode == ROC_TO_ALT_CONSTANT) {
+                posControl.desiredState.pos.z += adjustmentFactor * desiredClimbRate * US2S(deltaMicros);
+                desiredAltitude = posControl.desiredState.pos.z;
+            } else {
+                altitudeRateControlActive = fabsf(desiredAltitude - currentAltitude) > MAX(fabsf(desiredClimbRate), 50.0f);
+                trackingAltitude += adjustmentFactor * desiredClimbRate * US2S(deltaMicros);
+                desiredAltitude = trackingAltitude;
+            }
+        } else {
+            desiredClimbRate = 0;
         }
 
         targetValue = desiredAltitude;
@@ -195,7 +197,7 @@ static void updateAltitudeVelocityAndPitchController_FW(timeDelta_t deltaMicros)
     }
 
     // PID controller to translate desired target error (velocity or position) into pitch angle [decideg]
-    float targetPitchAngle = navPidApply2(&posControl.pids.fw_alt, targetValue, measuredValue, US2S(deltaMicros), minDiveDeciDeg, maxClimbDeciDeg, PID_DTERM_FROM_ERROR);
+    float targetPitchAngle = navPidApply2(&posControl.pids.fw_alt, targetValue, measuredValue, US2S(deltaMicros), minDiveDeciDeg, maxClimbDeciDeg, 0);
     // CR145
     // Apply low-pass filter to prevent rapid correction
     targetPitchAngle = pt1FilterApply4(&pitchFilterState, targetPitchAngle, getSmoothnessCutoffFreq(NAV_FW_BASE_PITCH_CUTOFF_FREQUENCY_HZ), US2S(deltaMicros));
@@ -581,6 +583,8 @@ void applyFixedWingPositionController(timeUs_t currentTimeUs)
                 calculateVirtualPositionTarget_FW(HZ2S(MIN_POSITION_UPDATE_RATE_HZ) * 2);
                 updatePositionHeadingController_FW(currentTimeUs, deltaMicrosPositionUpdate);
                 needToCalculateCircularLoiter = false;
+                isRollAdjustmentValid = true;   // CR147
+                isYawAdjustmentValid = true;    // CR147
             }
             else {
                 // Position update has not occurred in time (first iteration or glitch), reset altitude controller
@@ -591,8 +595,8 @@ void applyFixedWingPositionController(timeUs_t currentTimeUs)
             posControl.flags.horizontalPositionDataConsumed = true;
         }
 
-        isRollAdjustmentValid = true;
-        isYawAdjustmentValid = true;
+        // isRollAdjustmentValid = true;  // CR147
+        // isYawAdjustmentValid = true;
     }
     else {
         // No valid pos sensor data, don't adjust pitch automatically, rcCommand[ROLL] is passed through to PID controller

@@ -1291,7 +1291,6 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_IDLE(navigationFSMState
     resetAltitudeController(false);
     resetHeadingController();
     resetPositionController();
-    mcToiletBowlingHeadingCorrection = 0;  // CR141
 #ifdef USE_FW_AUTOLAND
     resetFwAutoland();
 #endif
@@ -2923,12 +2922,12 @@ void updateActualHeading(bool headingValid, int32_t newHeading, int32_t newGroun
     /* Update heading. Check if we're acquiring a valid heading for the
      * first time and update home heading accordingly.
      */
-    // CR141
-    if (STATE(MULTIROTOR) && IS_RC_MODE_ACTIVE(BOXBEEPERON)) {
-        newHeading = wrap_36000(newHeading + 100 * systemConfig()->devTestSetting);
-    } else {
-        mcToiletBowlingHeadingCorrection = 0;
-    }
+    // CR141 test only
+    // if (STATE(MULTIROTOR) && IS_RC_MODE_ACTIVE(BOXBEEPERON)) {
+        // newHeading = wrap_36000(newHeading + 100 * systemConfig()->devTestSetting);
+    // } else {
+        // mcToiletBowlingHeadingCorrection = 0;
+    // }
     // imuNavCompassSanity(mcToiletBowlingHeadingCorrection == 0);
     // CR141
     navigationEstimateStatus_e newEstHeading = headingValid ? EST_TRUSTED : EST_NONE;
@@ -3118,8 +3117,8 @@ float getFinalRTHAltitude(void)
 static void updateDesiredRTHAltitude(void)
 {
     if (ARMING_FLAG(ARMED)) {
-        if (!((navGetStateFlags(posControl.navState) & NAV_AUTO_RTH)
-          || ((navGetStateFlags(posControl.navState) & NAV_AUTO_WP) && posControl.waypointList[posControl.activeWaypointIndex].action == NAV_WP_ACTION_RTH))) {
+        if (!((navGetStateFlags(posControl.navState) & NAV_AUTO_RTH) ||
+            ((navGetStateFlags(posControl.navState) & NAV_AUTO_WP) && posControl.waypointList[posControl.activeWaypointIndex].action == NAV_WP_ACTION_RTH))) {
             switch (navConfig()->general.flags.rth_climb_first_stage_mode) {
                 case NAV_RTH_CLIMB_STAGE_AT_LEAST:
                     posControl.rthState.rthClimbStageAltitude = posControl.rthState.homePosition.pos.z + navConfig()->general.rth_climb_first_stage_altitude;
@@ -3128,16 +3127,14 @@ static void updateDesiredRTHAltitude(void)
                     posControl.rthState.rthClimbStageAltitude = posControl.actualState.abs.pos.z + navConfig()->general.rth_climb_first_stage_altitude;
                     break;
             }
-
+            // CR146
             switch (navConfig()->general.flags.rth_alt_control_mode) {
                 case NAV_RTH_NO_ALT:
                     posControl.rthState.rthInitialAltitude = posControl.actualState.abs.pos.z;
-                    posControl.rthState.rthFinalAltitude = posControl.rthState.rthInitialAltitude;
                     break;
 
                 case NAV_RTH_EXTRA_ALT: // Maintain current altitude + predefined safety margin
                     posControl.rthState.rthInitialAltitude = posControl.actualState.abs.pos.z + navConfig()->general.rth_altitude;
-                    posControl.rthState.rthFinalAltitude = posControl.rthState.rthInitialAltitude;
                     break;
 
                 case NAV_RTH_MAX_ALT:
@@ -3145,19 +3142,17 @@ static void updateDesiredRTHAltitude(void)
                     if (navConfig()->general.rth_altitude > 0) {
                         posControl.rthState.rthInitialAltitude = MAX(posControl.rthState.rthInitialAltitude, posControl.rthState.homePosition.pos.z + navConfig()->general.rth_altitude);
                     }
-                    posControl.rthState.rthFinalAltitude = posControl.rthState.rthInitialAltitude;
                     break;
 
                 case NAV_RTH_AT_LEAST_ALT:  // Climb to at least some predefined altitude above home
                     posControl.rthState.rthInitialAltitude = MAX(posControl.rthState.homePosition.pos.z + navConfig()->general.rth_altitude, posControl.actualState.abs.pos.z);
-                    posControl.rthState.rthFinalAltitude = posControl.rthState.rthInitialAltitude;
                     break;
 
                 case NAV_RTH_CONST_ALT:     // Climb/descend to predefined altitude above home
                 default:
                     posControl.rthState.rthInitialAltitude = posControl.rthState.homePosition.pos.z + navConfig()->general.rth_altitude;
-                    posControl.rthState.rthFinalAltitude = posControl.rthState.rthInitialAltitude;
             }
+            posControl.rthState.rthFinalAltitude = posControl.rthState.rthInitialAltitude;  // CR146
 
             if ((navConfig()->general.flags.rth_use_linear_descent) && (navConfig()->general.rth_home_altitude > 0) && (navConfig()->general.rth_linear_descent_start_distance == 0) ) {
                 posControl.rthState.rthFinalAltitude = posControl.rthState.homePosition.pos.z + navConfig()->general.rth_home_altitude;
@@ -5004,7 +4999,7 @@ void navigationUsePIDs(void)
     if (pidProfile()->fwAltControlUsePos) {
         navPidInit(&posControl.pids.fw_alt, (float)pidProfile()->bank_fw.pid[PID_POS_Z].P / 100.0f,
                                             (float)pidProfile()->bank_fw.pid[PID_POS_Z].I / 100.0f,
-                                            (float)pidProfile()->bank_fw.pid[PID_POS_Z].D / 30.0f,
+                                            (float)pidProfile()->bank_fw.pid[PID_POS_Z].D / 100.0f,
                                             0.0f,
                                             NAV_DTERM_CUT_HZ,
                                             0.0f

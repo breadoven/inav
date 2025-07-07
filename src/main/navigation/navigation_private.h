@@ -90,7 +90,7 @@ typedef struct navigationFlags_s {
     navigationEstimateStatus_e estAglStatus;
     navigationEstimateStatus_e estHeadingStatus;    // Indicate valid heading - wither mag or GPS at certain speed on airplane
     bool gpsCfEstimatedAltitudeMismatch;            // Indicates a mismatch between GPS altitude and estimated altitude
-    
+
     bool posEstimateDegraded;                       // CR142
 
     climbRateToAltitudeControllerMode_e rocToAltMode;
@@ -586,6 +586,8 @@ void applyMulticopterNavigationController(navigationFSMStateFlags_t navStateFlag
 bool isMulticopterLandingDetected(void);
 void calculateMulticopterInitialHoldPosition(fpVector3_t * pos);
 float getSqrtControllerVelocity(float targetAltitude, timeDelta_t deltaMicros);
+
+bool isMulticopterThrottleAboveMidHover(void);  // CR147
 
 /* Fixed-wing specific functions */
 void setupFixedWingAltitudeController(void);

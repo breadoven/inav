@@ -152,13 +152,13 @@ typedef enum {
     ALTITUDE_SOURCE_GPS_ONLY,
     ALTITUDE_SOURCE_BARO_ONLY,
 } navDefaultAltitudeSensor_e;
-
-typedef struct {
-    timeUs_t    baroGroundTimeout;
-    float       baroGroundAlt;
-    bool        isBaroGroundValid;
-} navPositionEstimatorSTATE_t;
-
+// CR147
+// typedef struct {
+    // timeUs_t    baroGroundTimeout;
+    // float       baroGroundAlt;
+    // // bool        isBaroGroundValid;
+// } navPositionEstimatorSTATE_t;
+// CR147
 
 typedef struct {
     uint32_t                    flags;
@@ -177,7 +177,7 @@ typedef struct {
     navPositionEstimatorESTIMATE_t  est;
 
     // Extra state variables
-    navPositionEstimatorSTATE_t state;
+    // navPositionEstimatorSTATE_t state;  // CR147
 } navigationPosEstimator_t;
 
 typedef struct {
