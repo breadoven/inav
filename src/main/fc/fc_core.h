@@ -48,3 +48,5 @@ void resetFlightTime(void);
 float getArmTime(void);
 
 void fcReboot(bool bootLoader);
+
+bool isMspConfigActive(bool isActive);  // CR148
