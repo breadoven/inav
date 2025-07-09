@@ -51,7 +51,6 @@
 #include "sensors/compass.h"
 #include "sensors/gyro.h"
 #include "sensors/opflow.h"
-#include "sensors/temperature.h"  // ???
 #include "sensors/pitotmeter.h"
 #include "sensors/sensors.h"
 
