@@ -50,10 +50,10 @@
 #include "sensors/barometer.h"
 #include "sensors/compass.h"
 #include "sensors/gyro.h"
-#include "sensors/pitotmeter.h"
 #include "sensors/opflow.h"
-#include "sensors/sensors.h"  // CR134
-#include "sensors/temperature.h"
+#include "sensors/temperature.h"  // ???
+#include "sensors/pitotmeter.h"
+#include "sensors/sensors.h"
 
 navigationPosEstimator_t posEstimator;
 static float initialBaroAltitudeOffset = 0.0f;
@@ -286,7 +286,7 @@ void updatePositionEstimator_BaroTopic(timeUs_t currentTimeUs)
     float newBaroAlt = baroCalculateAltitude();
 
     if (sensors(SENSOR_BARO) && baroIsCalibrationComplete()) {
-        /* If we are required - keep altitude at zero */  // CR134
+        /* If required - keep altitude at zero */
         if (shouldResetReferenceAltitude()) {
             initialBaroAltitudeOffset = newBaroAlt;
         }
@@ -438,7 +438,7 @@ static void updateIMUTopic(timeUs_t currentTimeUs)
             }
 #endif
             posEstimator.imu.accelNEU.z -= posEstimator.imu.calibratedGravityCMSS;
-            posEstimator.imu.accelNEU.z += applySensorTempCompensation(10 * gyroGetTemperature(), imuMeasuredAccelBF.z, SENSOR_INDEX_ACC);  // CR134
+            posEstimator.imu.accelNEU.z += applySensorTempCompensation(10 * gyroGetTemperature(), imuMeasuredAccelBF.z, SENSOR_INDEX_ACC);
         }
         else {      // If calibration is incomplete - report zero acceleration
             posEstimator.imu.accelNEU.x = 0.0f;

@@ -85,7 +85,7 @@ static EXTENDED_FASTRAM void *accNotchFilter[XYZ_AXIS_COUNT];
 static EXTENDED_FASTRAM float fAccZero[XYZ_AXIS_COUNT];
 static EXTENDED_FASTRAM float fAccGain[XYZ_AXIS_COUNT];
 
-PG_REGISTER_WITH_RESET_FN(accelerometerConfig_t, accelerometerConfig, PG_ACCELEROMETER_CONFIG, 5);
+PG_REGISTER_WITH_RESET_FN(accelerometerConfig_t, accelerometerConfig, PG_ACCELEROMETER_CONFIG, 6);
 
 void pgResetFn_accelerometerConfig(accelerometerConfig_t *instance)
 {
@@ -95,7 +95,7 @@ void pgResetFn_accelerometerConfig(accelerometerConfig_t *instance)
         .acc_notch_hz = SETTING_ACC_NOTCH_HZ_DEFAULT,
         .acc_notch_cutoff = SETTING_ACC_NOTCH_CUTOFF_DEFAULT,
         .acc_soft_lpf_type = SETTING_ACC_LPF_TYPE_DEFAULT,
-        .acc_temp_correction = SETTING_ACC_TEMP_CORRECTION_DEFAULT  // CR134
+        .acc_temp_correction = SETTING_ACC_TEMP_CORRECTION_DEFAULT
     );
     RESET_CONFIG_2(flightDynamicsTrims_t, &instance->accZero,
         .raw[X] = SETTING_ACCZERO_X_DEFAULT,

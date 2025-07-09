@@ -50,32 +50,31 @@ float applySensorTempCompensation(int16_t sensorTemp, float sensorMeasurement, s
     if (!setting) {
         return 0.0f;
     }
-    // DEBUG_SET(DEBUG_ALWAYS, 1, sensorTemp);
-    // DEBUG_SET(DEBUG_ALWAYS, 0, sensor_comp_data[sensorType].correctionFactor * 100);
-    // DEBUG_SET(DEBUG_ALWAYS, 5, sensorMeasurement);
+
     if (sensor_comp_data[sensorType].calibrationState == SENSOR_TEMP_CAL_COMPLETE) {
-        float tempCal = sensor_comp_data[sensorType].correctionFactor * CENTIDEGREES_TO_DEGREES(sensor_comp_data[sensorType].referenceTemp - sensorTemp);
-        // DEBUG_SET(DEBUG_ALWAYS, 2, tempCal);
-        return tempCal;
-        // return sensor_comp_data[sensorType].correctionFactor * CENTIDEGREES_TO_DEGREES(sensor_comp_data[sensorType].referenceTemp - sensorTemp);
+        return sensor_comp_data[sensorType].correctionFactor * CENTIDEGREES_TO_DEGREES(sensor_comp_data[sensorType].referenceTemp - sensorTemp);
     }
 
     static timeMs_t startTimeMs = 0;
+
     if (!ARMING_FLAG(WAS_EVER_ARMED)) {
         if (sensor_comp_data[sensorType].calibrationState == SENSOR_TEMP_CAL_INITIALISE) {
             sensor_comp_data[sensorType].referenceTemp = sensorTemp;
             sensor_comp_data[sensorType].calibrationState = SENSOR_TEMP_CAL_IN_PROGRESS;
         }
 
-        if (setting == 51.0f) {
+        if (setting == 51.0f) {   // initiate auto calibration
             if (sensor_comp_data[sensorType].referenceTemp == sensorTemp) {
                 sensor_comp_data[sensorType].referenceMeasurement = sensorMeasurement;
                 sensor_comp_data[sensorType].lastTemp = sensorTemp;
                 startTimeMs = millis();
             }
 
-            float referenceDeltaTemp = ABS(sensorTemp - sensor_comp_data[sensorType].referenceTemp);   // centidegrees
+            float referenceDeltaTemp = ABS(sensorTemp - sensor_comp_data[sensorType].referenceTemp);    // centidegrees
             if (referenceDeltaTemp > 300 && referenceDeltaTemp > ABS(sensor_comp_data[sensorType].lastTemp - sensor_comp_data[sensorType].referenceTemp)) {
+                /* Min 3 deg reference temperature difference required for valid calibration.
+                 * Correction adjusted only if temperature difference to reference temperature increasing
+                 * Calibration assumes a simple linear relationship */
                 sensor_comp_data[sensorType].lastTemp = sensorTemp;
                 sensor_comp_data[sensorType].correctionFactor = 0.9f * sensor_comp_data[sensorType].correctionFactor + 0.1f * (sensorMeasurement - sensor_comp_data[sensorType].referenceMeasurement) / CENTIDEGREES_TO_DEGREES(sensor_comp_data[sensorType].lastTemp - sensor_comp_data[sensorType].referenceTemp);
                 sensor_comp_data[sensorType].correctionFactor = constrainf(sensor_comp_data[sensorType].correctionFactor, -50.0f, 50.0f);
@@ -86,6 +85,7 @@ float applySensorTempCompensation(int16_t sensorTemp, float sensorMeasurement, s
         }
     }
 
+    // Calibration ends on first Arm or after 5 min timeout
     if (sensor_comp_data[sensorType].calibrationState == SENSOR_TEMP_CAL_IN_PROGRESS && (ARMING_FLAG(WAS_EVER_ARMED) || millis() > startTimeMs + 300000)) {
         if (!ARMING_FLAG(WAS_EVER_ARMED)) {
             beeper(sensor_comp_data[sensorType].correctionFactor ? BEEPER_ACTION_SUCCESS : BEEPER_ACTION_FAIL);

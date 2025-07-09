@@ -75,7 +75,7 @@ typedef struct accelerometerConfig_s {
     uint8_t acc_notch_hz;                   // Accelerometer notch filter frequency
     uint8_t acc_notch_cutoff;               // Accelerometer notch filter cutoff frequency
     uint8_t acc_soft_lpf_type;              // Accelerometer LPF type
-    float acc_temp_correction;              // Accelerometer temperature compensation factor    CR134
+    float acc_temp_correction;              // Accelerometer temperature compensation factor
 } accelerometerConfig_t;
 
 PG_DECLARE(accelerometerConfig_t, accelerometerConfig);

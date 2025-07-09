@@ -58,12 +58,12 @@ baro_t baro;                        // barometer access functions
 
 #ifdef USE_BARO
 
-PG_REGISTER_WITH_RESET_TEMPLATE(barometerConfig_t, barometerConfig, PG_BAROMETER_CONFIG, 4);
+PG_REGISTER_WITH_RESET_TEMPLATE(barometerConfig_t, barometerConfig, PG_BAROMETER_CONFIG, 5);
 
 PG_RESET_TEMPLATE(barometerConfig_t, barometerConfig,
     .baro_hardware = SETTING_BARO_HARDWARE_DEFAULT,
     .baro_calibration_tolerance = SETTING_BARO_CAL_TOLERANCE_DEFAULT,
-    .baro_temp_correction = SETTING_BARO_TEMP_CORRECTION_DEFAULT,   // CR134
+    .baro_temp_correction = SETTING_BARO_TEMP_CORRECTION_DEFAULT,
 );
 
 static zeroCalibrationScalar_t zeroCalibration;
@@ -326,8 +326,8 @@ int32_t baroCalculateAltitude(void)
     else {
         // calculates height from ground via baro readings
         baro.BaroAlt = pressureToAltitude(baro.baroPressure) - baroGroundAltitude;
-        baro.BaroAlt += applySensorTempCompensation(baro.baroTemperature, baro.BaroAlt, SENSOR_INDEX_BARO);  // CR134
-    }
+        baro.BaroAlt += applySensorTempCompensation(baro.baroTemperature, baro.BaroAlt, SENSOR_INDEX_BARO);
+   }
 
     return baro.BaroAlt;
 }
