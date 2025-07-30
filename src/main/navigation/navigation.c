@@ -2923,11 +2923,11 @@ void updateActualHeading(bool headingValid, int32_t newHeading, int32_t newGroun
      * first time and update home heading accordingly.
      */
     // CR141 test only
-    // if (STATE(MULTIROTOR) && IS_RC_MODE_ACTIVE(BOXBEEPERON)) {
-        // newHeading = wrap_36000(newHeading + 100 * systemConfig()->devTestSetting);
-    // } else {
-        // mcToiletBowlingHeadingCorrection = 0;
-    // }
+    if (STATE(MULTIROTOR) && IS_RC_MODE_ACTIVE(BOXBEEPERON)) {
+        newHeading = wrap_36000(newHeading + 100 * systemConfig()->devTestSetting);
+    } else {
+        mcToiletBowlingHeadingCorrection = 0;
+    }
     // imuNavCompassSanity(mcToiletBowlingHeadingCorrection == 0);
     // CR141
     navigationEstimateStatus_e newEstHeading = headingValid ? EST_TRUSTED : EST_NONE;
@@ -3127,7 +3127,7 @@ static void updateDesiredRTHAltitude(void)
                     posControl.rthState.rthClimbStageAltitude = posControl.actualState.abs.pos.z + navConfig()->general.rth_climb_first_stage_altitude;
                     break;
             }
-            // CR146
+
             switch (navConfig()->general.flags.rth_alt_control_mode) {
                 case NAV_RTH_NO_ALT:
                     posControl.rthState.rthInitialAltitude = posControl.actualState.abs.pos.z;

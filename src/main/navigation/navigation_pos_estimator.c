@@ -404,6 +404,10 @@ static void updateIMUTopic(timeUs_t currentTimeUs)
         posEstimator.imu.accelNEU.x = accelReading.x + posEstimator.imu.accelBias.x;
         posEstimator.imu.accelNEU.y = accelReading.y + posEstimator.imu.accelBias.y;
         posEstimator.imu.accelNEU.z = accelReading.z + posEstimator.imu.accelBias.z;
+
+        DEBUG_SET(DEBUG_VIBE, 5, posEstimator.imu.accelBias.x);
+        DEBUG_SET(DEBUG_VIBE, 6, posEstimator.imu.accelBias.y);
+        DEBUG_SET(DEBUG_VIBE, 7, posEstimator.imu.accelBias.z);
         // CR140
         // CR142 for test only
         // if (IS_RC_MODE_ACTIVE(BOXBEEPERON)) {
@@ -626,12 +630,12 @@ static bool estimationCalculateCorrection_Z(estimationContext_t * ctx)
         // ctx->estVelCorr.z += baroAltResidual * sq(w_z_baro_p) * ctx->dt;  // CR140 keep ?
         ctx->estVelCorr.z += baroVelZResidual * w_z_baro_v * ctx->dt;  // CR140 use same w_z_baro for p and v
 
-        ctx->newEPV = updateEPE(posEstimator.est.epv, ctx->dt, MAX(posEstimator.baro.epv, fabsf(baroAltResidual)), w_z_baro_p);
+        ctx->newEPV = updateEPE(posEstimator.est.epv, ctx->dt, MAX(posEstimator.baro.epv, fabsf(baroAltResidual)), w_z_baro_p);  // CR140
 
         // Accelerometer bias // CR140 use baroVelZResidual instead or both
-        DEBUG_SET(DEBUG_ALWAYS, 2, posEstimator.baro.alt);
-        DEBUG_SET(DEBUG_ALWAYS, 3, baroAltResidual);
-        DEBUG_SET(DEBUG_ALWAYS, 4, baroVelZResidual);
+        // DEBUG_SET(DEBUG_ALWAYS, 2, posEstimator.baro.alt);
+        // DEBUG_SET(DEBUG_ALWAYS, 3, baroAltResidual);
+        // DEBUG_SET(DEBUG_ALWAYS, 4, baroVelZResidual);
 
         if (!isAirCushionEffectDetected) {
             ctx->accBiasCorr.z += (baroAltResidual * sq(w_z_baro_p) + baroVelZResidual * sq(w_z_baro_v));   // CR140
@@ -640,7 +644,7 @@ static bool estimationCalculateCorrection_Z(estimationContext_t * ctx)
         correctOK = ARMING_FLAG(WAS_EVER_ARMED);    // No correction until first armed
     }
 
-    if (ctx->newFlags & EST_GPS_Z_VALID && wGps) {
+    if (ctx->newFlags & EST_GPS_Z_VALID && (wGps || !(ctx->newFlags & EST_Z_VALID))) {  // CR140
         // Reset current estimate to GPS altitude if estimate not valid
         if (!(ctx->newFlags & EST_Z_VALID)) {
             ctx->estPosCorr.z += posEstimator.gps.pos.z - posEstimator.est.pos.z;
@@ -669,12 +673,10 @@ static bool estimationCalculateCorrection_Z(estimationContext_t * ctx)
         correctOK = ARMING_FLAG(WAS_EVER_ARMED);    // No correction until first armed
     }
     // CR140
-    // Double corrections if only a single sensor used
-    if (wGps == 0 || wBaro == 0) {
-        ctx->estPosCorr.z *= 2.0f;
-        ctx->estVelCorr.z *= 2.0f;
-        ctx->accBiasCorr.z *= 2.0f;
-    }
+    // Factor corrections for sensor weightings
+    ctx->estPosCorr.z *= 2.0f / (wGps + wBaro);
+    ctx->estVelCorr.z *= 2.0f / (wGps + wBaro);
+    ctx->accBiasCorr.z *= 2.0f / (wGps + wBaro);
     // CR140
     return correctOK;
 }
@@ -842,15 +844,15 @@ static void updateEstimatedTopic(timeUs_t currentTimeUs)
     /* Correct accelerometer bias */
     const float w_acc_bias = positionEstimationConfig()->w_acc_bias;
     if (w_acc_bias > 0.0f) {
-        // CR140
-        ctx.accBiasCorr.x = constrainf(ctx.accBiasCorr.x, -INAV_ACC_BIAS_ACCEPTANCE_VALUE, INAV_ACC_BIAS_ACCEPTANCE_VALUE);
-        ctx.accBiasCorr.y = constrainf(ctx.accBiasCorr.y, -INAV_ACC_BIAS_ACCEPTANCE_VALUE, INAV_ACC_BIAS_ACCEPTANCE_VALUE);
-        ctx.accBiasCorr.z = constrainf(ctx.accBiasCorr.z, -INAV_ACC_BIAS_ACCEPTANCE_VALUE, INAV_ACC_BIAS_ACCEPTANCE_VALUE);
-
+    // CR140
         /* Correct accel bias */
         posEstimator.imu.accelBias.x += ctx.accBiasCorr.x * w_acc_bias * ctx.dt;
         posEstimator.imu.accelBias.y += ctx.accBiasCorr.y * w_acc_bias * ctx.dt;
         posEstimator.imu.accelBias.z += ctx.accBiasCorr.z * w_acc_bias * ctx.dt;
+
+        posEstimator.imu.accelBias.x = constrainf(posEstimator.imu.accelBias.x, -INAV_ACC_BIAS_ACCEPTANCE_VALUE, INAV_ACC_BIAS_ACCEPTANCE_VALUE);
+        posEstimator.imu.accelBias.y = constrainf(posEstimator.imu.accelBias.y, -INAV_ACC_BIAS_ACCEPTANCE_VALUE, INAV_ACC_BIAS_ACCEPTANCE_VALUE);
+        posEstimator.imu.accelBias.z = constrainf(posEstimator.imu.accelBias.z, -INAV_ACC_BIAS_ACCEPTANCE_VALUE, INAV_ACC_BIAS_ACCEPTANCE_VALUE);
     }
     // CR140
     /* Update ground course */

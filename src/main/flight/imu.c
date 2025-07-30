@@ -780,16 +780,16 @@ static void imuCalculateEstimatedAttitude(float dT)
     static fpVector3_t vEstcentrifugalAccelBF_velned;
     static fpVector3_t vEstcentrifugalAccelBF_turnrate;
     float acc_ignore_slope_multipiler = 1.0f; // when using gps centrifugal_force_compensation, AccelerometerWeightRateIgnore slope will be multiplied by this value
-    if (isGPSTrustworthy())
-    {
+
+    if (isGPSTrustworthy()) {
         imuCalculateGPSacceleration(&vEstcentrifugalAccelBF_velned, &acc_ignore_slope_multipiler);
     }
-    if (STATE(AIRPLANE))
-    {
+
+    if (STATE(AIRPLANE)) {
         imuCalculateTurnRateacceleration(&vEstcentrifugalAccelBF_turnrate, dT, &acc_ignore_slope_multipiler);
     }
-    if (imuConfig()->inertia_comp_method == COMPMETHOD_ADAPTIVE && isGPSTrustworthy() && STATE(AIRPLANE))
-    {
+
+    if (imuConfig()->inertia_comp_method == COMPMETHOD_ADAPTIVE && isGPSTrustworthy() && STATE(AIRPLANE)) {
         //pick the best centrifugal acceleration between velned and turnrate
         fpVector3_t compansatedGravityBF_velned;
         vectorAdd(&compansatedGravityBF_velned, &imuMeasuredAccelBF, &vEstcentrifugalAccelBF_velned);
@@ -801,18 +801,15 @@ static void imuCalculateEstimatedAttitude(float dT)
 
         compansatedGravityBF = velned_error > turnrate_error? compansatedGravityBF_turnrate:compansatedGravityBF_velned;
     }
-    else if (((imuConfig()->inertia_comp_method == COMPMETHOD_VELNED) || (imuConfig()->inertia_comp_method == COMPMETHOD_ADAPTIVE)) && isGPSTrustworthy())
-    {
+    else if (((imuConfig()->inertia_comp_method == COMPMETHOD_VELNED) || (imuConfig()->inertia_comp_method == COMPMETHOD_ADAPTIVE)) && isGPSTrustworthy()) {
         //velned centrifugal force compensation, quad will use this method
         vectorAdd(&compansatedGravityBF, &imuMeasuredAccelBF, &vEstcentrifugalAccelBF_velned);
     }
-    else if (STATE(AIRPLANE))
-    {
+    else if (STATE(AIRPLANE)) {
         //turnrate centrifugal force compensation
         vectorAdd(&compansatedGravityBF, &imuMeasuredAccelBF, &vEstcentrifugalAccelBF_turnrate);
     }
-    else
-    {
+    else {
         compansatedGravityBF = imuMeasuredAccelBF;
     }
 #else
@@ -820,6 +817,7 @@ static void imuCalculateEstimatedAttitude(float dT)
     if (canUseMAG) {
         useMag = true;
     }
+
     compansatedGravityBF = imuMeasuredAccelBF
 #endif
     float accWeight = imuGetPGainScaleFactor() * imuCalculateAccelerometerWeightNearness(&compansatedGravityBF);
