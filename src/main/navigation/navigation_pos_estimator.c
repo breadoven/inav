@@ -590,7 +590,6 @@ static bool estimationCalculateCorrection_Z(estimationContext_t * ctx)
     }
 
     if (ctx->newFlags & EST_BARO_VALID && wBaro) {
-        // CR147
         bool isAirCushionEffectDetected = false;
         static float baroGroundAlt = 0.0f;
 
@@ -604,26 +603,26 @@ static bool estimationCalculateCorrection_Z(estimationContext_t * ctx)
             else if (isBaroGroundValid) {
                 // We might be experiencing air cushion effect during takeoff - use sonar or baro ground altitude to detect it
                 if (isMulticopterThrottleAboveMidHover()) {
+                    // Disable ground effect detection at lift off when est alt and baro alt converge. Always disable if baro alt > 1m.
                     isBaroGroundValid = fabsf(posEstimator.est.pos.z - posEstimator.baro.alt) > 20.0f && posEstimator.baro.alt < 100.0f;
                 }
 
-                isAirCushionEffectDetected = (isEstimatedAglTrusted() && posEstimator.surface.alt < 20.0f) || posEstimator.baro.alt < baroGroundAlt + 20.0f; // CR140
+                isAirCushionEffectDetected = (isEstimatedAglTrusted() && posEstimator.surface.alt < 20.0f) || posEstimator.baro.alt < baroGroundAlt + 20.0f;
             }
-            // DEBUG_SET(DEBUG_ALWAYS, 0, isBaroGroundValid);
         }
-        // CR147
 
         // Altitude
         const float w_z_baro_p = positionEstimationConfig()->w_z_baro_p;  // CR140
-        float w_z_baro_v = positionEstimationConfig()->w_z_baro_v;
-
+        float w_z_baro_v = positionEstimationConfig()->w_z_baro_v;        
+        
         float baroAltResidual = wBaro * ((isAirCushionEffectDetected ? baroGroundAlt : posEstimator.baro.alt) - posEstimator.est.pos.z);
         const float baroVelZResidual = isAirCushionEffectDetected ? 0.0f : wBaro * (posEstimator.baro.baroAltRate - posEstimator.est.vel.z);
-        // CR147
+        
+        // Disable alt pos correction at point of lift off if ground effect active
         if (isAirCushionEffectDetected && isMulticopterThrottleAboveMidHover()) {
             baroAltResidual = 0.0f;
         }
-        // CR147
+
         w_z_baro_v *= fabsf(baroVelZResidual) > 200.0f ? 2.0f : 1.0f;  // increase vel correction if error large  CR140
 
         ctx->estPosCorr.z += baroAltResidual * w_z_baro_p * ctx->dt;

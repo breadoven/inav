@@ -587,7 +587,7 @@ bool isMulticopterLandingDetected(void);
 void calculateMulticopterInitialHoldPosition(fpVector3_t * pos);
 float getSqrtControllerVelocity(float targetAltitude, timeDelta_t deltaMicros);
 
-bool isMulticopterThrottleAboveMidHover(void);  // CR147
+bool isMulticopterThrottleAboveMidHover(void);
 
 /* Fixed-wing specific functions */
 void setupFixedWingAltitudeController(void);
