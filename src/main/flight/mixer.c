@@ -264,7 +264,6 @@ void mixerResetDisarmedMotors(void)
         motor_disarmed[i] = motorZeroCommand;
     }
 }
-// CR144
 #if !defined(SITL_BUILD)
 static uint16_t handleOutputScaling(
     int16_t input,          // Input value from the mixer
@@ -277,8 +276,8 @@ static uint16_t handleOutputScaling(
     bool moveForward        // If motor should be rotating FORWARD or BACKWARD
 )
 {
-    int16_t value;  // CR144
-    if ((moveForward && input < stopThreshold) || (!moveForward && input > stopThreshold)) {  // CR144
+    int16_t value;
+    if ((moveForward && input < stopThreshold) || (!moveForward && input > stopThreshold)) {
         //Send motor stop command
         value = onStopValue;
     }
@@ -291,7 +290,7 @@ static uint16_t handleOutputScaling(
     return value;
 }
 #endif
-#ifdef USE_DSHOT  // CR144
+#ifdef USE_DSHOT
 static void applyTurtleModeToMotors(void) {
 
     if (ARMING_FLAG(ARMED)) {
@@ -373,7 +372,7 @@ void FAST_CODE writeMotors(void)
     for (int i = 0; i < motorCount; i++) {
         uint16_t motorValue;
 #ifdef USE_DSHOT
-        if (isMotorProtocolDigital()) {  // CR144
+        if (isMotorProtocolDigital()) {
             // If we use DSHOT we need to convert motorValue to DSHOT ranges
             if (feature(FEATURE_REVERSIBLE_MOTORS)) {
                 if (reversibleMotorsThrottleState == MOTOR_DIRECTION_FORWARD) {
@@ -412,9 +411,9 @@ void FAST_CODE writeMotors(void)
                     true
                 );
             }
-        } else
-#endif  // CR144
-        // We don't define USE_DSHOT
+        }
+        else
+#endif
         {
             if (feature(FEATURE_REVERSIBLE_MOTORS)) {
                 if (reversibleMotorsThrottleState == MOTOR_DIRECTION_FORWARD) {
@@ -444,10 +443,6 @@ void FAST_CODE writeMotors(void)
                 motorValue = motor[i];
             }
         }
-// #else   // CR144
-        //
-        // motorValue = motor[i];
-
 
     pwmWriteMotor(i, motorValue);
     }
@@ -576,7 +571,7 @@ void FAST_CODE mixTable(void)
         motorValueWhenStopped = getReversibleMotorsThrottleDeadband();
         mixerThrottleCommand = constrain(rcCommand[THROTTLE], throttleRangeMin, throttleRangeMax);
 #ifdef USE_DSHOT
-        if(isMotorProtocolDigital() && reversibleMotorsThrottleState == MOTOR_DIRECTION_BACKWARD) {  // CR144
+        if(isMotorProtocolDigital() && reversibleMotorsThrottleState == MOTOR_DIRECTION_BACKWARD) {
             /*
              * We need to start the throttle output from stick input to start in the middle of the stick at the low and.
              * Without this, it's starting at the high side.

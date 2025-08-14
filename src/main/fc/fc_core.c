@@ -22,7 +22,7 @@
 #include "platform.h"
 
 #include "blackbox/blackbox.h"
-#include "blackbox/blackbox_io.h"  // CR148
+#include "blackbox/blackbox_io.h"
 
 #include "build/debug.h"
 
@@ -439,12 +439,6 @@ void disarm(disarmReason_t disarmReason)
         lastDisarmTimeUs = micros();
         DISABLE_ARMING_FLAG(ARMED);
         DISABLE_STATE(IN_FLIGHT_EMERG_REARM);
-
-// #ifdef USE_BLACKBOX  // CR148
-        // if (feature(FEATURE_BLACKBOX)) {
-            // blackboxFinish();
-        // }
-// #endif
 #ifdef USE_DSHOT
         if (FLIGHT_MODE(TURTLE_MODE)) {
             sendDShotCommand(DSHOT_CMD_SPIN_DIRECTION_NORMAL);
@@ -585,16 +579,6 @@ void tryArm(void)
         headFreeModeHold = DECIDEGREES_TO_DEGREES(attitude.values.yaw);
 
         resetHeadingHoldTarget(DECIDEGREES_TO_DEGREES(attitude.values.yaw));
-
-// #ifdef USE_BLACKBOX  // CR148
-        // if (feature(FEATURE_BLACKBOX)) {
-            // serialPort_t *sharedBlackboxAndMspPort = findSharedSerialPort(FUNCTION_BLACKBOX, FUNCTION_MSP);
-            // if (sharedBlackboxAndMspPort) {
-                // mspSerialReleasePortIfAllocated(sharedBlackboxAndMspPort);
-            // }
-            // blackboxStart();
-        // }
-// #endif
 
         //beep to indicate arming
         if (navigationPositionEstimateIsHealthy()) {
@@ -876,7 +860,7 @@ static void applyThrottleTiltCompensation(void)
         }
     }
 }
-// CR148
+
 bool isMspConfigActive(bool isActive)
 {
     static timeMs_t lastActive = 0;
@@ -894,17 +878,20 @@ static void processBlackbox(void)
         return;
     }
 
+    /* Logging with arm_control set to -1 inhibited when connected to Configurator to avoid Blackbox setting issues */
     if (getBlackboxState() == BLACKBOX_STATE_STOPPED) {
         if ((blackboxConfig()->arm_control == -1 && !areSensorsCalibrating() && !isMspConfigActive(NULL)) || ARMING_FLAG(ARMED)) {
             serialPort_t *sharedBlackboxAndMspPort = findSharedSerialPort(FUNCTION_BLACKBOX, FUNCTION_MSP);
             if (sharedBlackboxAndMspPort) {
                 mspSerialReleasePortIfAllocated(sharedBlackboxAndMspPort);
             }
+
             blackboxStart();
         }
     } else if (!ARMING_FLAG(ARMED)) {
         if ((blackboxConfig()->arm_control == -1 && isMspConfigActive(NULL)) ||
             (blackboxConfig()->arm_control >= 0 && micros() - lastDisarmTimeUs > (timeUs_t)(USECS_PER_SEC * blackboxConfig()->arm_control))) {
+
             blackboxFinish();
         }
     }
@@ -912,7 +899,6 @@ static void processBlackbox(void)
     blackboxUpdate(micros());
 }
 #endif
-// CR148
 void taskMainPidLoop(timeUs_t currentTimeUs)
 {
     cycleTime = getTaskDeltaTime(TASK_SELF);
@@ -1014,7 +1000,6 @@ void taskMainPidLoop(timeUs_t currentTimeUs)
 #ifdef USE_BLACKBOX
     if (!cliMode && feature(FEATURE_BLACKBOX)) {
         processBlackbox();
-        // blackboxUpdate(micros());  // CR148
     }
 #endif
 

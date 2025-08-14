@@ -423,7 +423,7 @@ static bool mspFcProcessOutCommand(uint16_t cmdMSP, sbuf_t *dst, mspPostProcessF
         sbufWriteU8(dst, getHwPitotmeterStatus());
         sbufWriteU8(dst, getHwOpticalFlowStatus());
 
-        isMspConfigActive(true);  // CR148
+        isMspConfigActive(true);  // used to indicate configurator connection active
         break;
 
     case MSP_ACTIVEBOXES:
@@ -2823,13 +2823,11 @@ static mspResult_e mspFcProcessInCommand(uint16_t cmdMSP, sbuf_t *src)
 
 #ifdef USE_FLASHFS
     case MSP_DATAFLASH_ERASE:
-        // CR148
         if (blackboxMayEditConfig()) {
             flashfsEraseCompletely();
         } else {
             return MSP_RESULT_ERROR;
         }
-        // CR148
         break;
 #endif
 

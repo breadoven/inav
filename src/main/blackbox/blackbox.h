@@ -37,7 +37,7 @@ typedef enum {
     BLACKBOX_FEATURE_GYRO_PEAKS_YAW     = 1 << 12,
     BLACKBOX_FEATURE_SERVOS             = 1 << 13,
 } blackboxFeatureMask_e;
-// CR148
+
 typedef enum BlackboxState {
     BLACKBOX_STATE_DISABLED = 0,
     BLACKBOX_STATE_STOPPED,
@@ -52,14 +52,14 @@ typedef enum BlackboxState {
     BLACKBOX_STATE_RUNNING,
     BLACKBOX_STATE_SHUTTING_DOWN
 } BlackboxState;
-// CR148
+
 typedef struct blackboxConfig_s {
     uint16_t rate_num;
     uint16_t rate_denom;
     uint8_t device;
     uint8_t invertedCardDetection;
     uint32_t includeFlags;
-    int8_t arm_control;  // CR148
+    int8_t arm_control;
 } blackboxConfig_t;
 
 PG_DECLARE(blackboxConfig_t, blackboxConfig);
@@ -74,4 +74,4 @@ bool blackboxMayEditConfig(void);
 void blackboxIncludeFlagSet(uint32_t mask);
 void blackboxIncludeFlagClear(uint32_t mask);
 bool blackboxIncludeFlag(uint32_t mask);
-BlackboxState getBlackboxState(void);  // CR148
+BlackboxState getBlackboxState(void);
