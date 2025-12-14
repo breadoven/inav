@@ -6182,9 +6182,9 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
                 }
             }
             // CR142
-            if (posControl.flags.posEstimateDegraded) {
-                messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_POSEST_DEGRADED);
-            }
+            // if (posControl.flags.posEstimateDegraded) {
+                // messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_POSEST_DEGRADED);
+            // }
             // CR142
             // CR141
             if (STATE(MULTIROTOR) && mcToiletBowlingHeadingCorrection) {

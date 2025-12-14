@@ -742,36 +742,36 @@ static void estimationCalculateGroundCourse(void)
     }
 }
 // CR142
-static void checkEstimateSanity(timeMs_t currentTimeMs, fpVector3_t previousPos)
-{
-    static timeMs_t startTime[3];
-    static bool useGpsRecovery = false;
-    uint8_t axis;
+// static void checkEstimateSanity(timeMs_t currentTimeMs, fpVector3_t previousPos)
+// {
+    // static timeMs_t startTime[3];
+    // static bool useGpsRecovery = false;
+    // uint8_t axis;
 
-    for (axis = 0; axis < XYZ_AXIS_COUNT; axis++) {
-        bool posChangeVelocityMismatch = fabsf(posEstimator.est.vel.v[axis]) > 50.0f &&
-                                         SIGN(posEstimator.est.pos.v[axis] - previousPos.v[axis]) != SIGN(posEstimator.est.vel.v[axis]);
+    // for (axis = 0; axis < XYZ_AXIS_COUNT; axis++) {
+        // bool posChangeVelocityMismatch = fabsf(posEstimator.est.vel.v[axis]) > 50.0f &&
+                                         // SIGN(posEstimator.est.pos.v[axis] - previousPos.v[axis]) != SIGN(posEstimator.est.vel.v[axis]);
 
-        bool estimateSanityDegraded = ABS(posEstimator.est.vel.v[axis] - posEstimator.gps.vel.v[axis]) > 200 ||
-                                      ABS(posEstimator.est.pos.v[axis] - posEstimator.gps.pos.v[axis]) > positionEstimationConfig()->max_eph_epv ||
-                                      posChangeVelocityMismatch;
+        // bool estimateSanityDegraded = ABS(posEstimator.est.vel.v[axis] - posEstimator.gps.vel.v[axis]) > 200 ||
+                                      // ABS(posEstimator.est.pos.v[axis] - posEstimator.gps.pos.v[axis]) > positionEstimationConfig()->max_eph_epv ||
+                                      // posChangeVelocityMismatch;
 
-        if (estimateSanityDegraded || useGpsRecovery) {
-            if (startTime[axis] == 0) {
-                startTime[axis] = currentTimeMs;
-            } else if (currentTimeMs - startTime[axis] > 3000) {
-                posEstimator.imu.accelBias.v[axis] = 0;
-                posEstimator.est.vel.v[axis] = posEstimator.gps.vel.v[axis];
-                posEstimator.est.pos.v[axis] = posEstimator.gps.pos.v[axis];
-                useGpsRecovery = currentTimeMs - startTime[axis] < 13000;
-            }
-        } else {
-            startTime[axis] = 0;
-        }
+        // if (estimateSanityDegraded || useGpsRecovery) {
+            // if (startTime[axis] == 0) {
+                // startTime[axis] = currentTimeMs;
+            // } else if (currentTimeMs - startTime[axis] > 3000) {
+                // posEstimator.imu.accelBias.v[axis] = 0;
+                // posEstimator.est.vel.v[axis] = posEstimator.gps.vel.v[axis];
+                // posEstimator.est.pos.v[axis] = posEstimator.gps.pos.v[axis];
+                // useGpsRecovery = currentTimeMs - startTime[axis] < 13000;
+            // }
+        // } else {
+            // startTime[axis] = 0;
+        // }
 
-        posControl.flags.posEstimateDegraded = useGpsRecovery;
-    }
-}
+        // posControl.flags.posEstimateDegraded = useGpsRecovery;
+    // }
+// }
 // CR142
 /**
  * Calculate next estimate using IMU and apply corrections from reference sensors (GPS, BARO etc)
@@ -803,7 +803,7 @@ static void updateEstimatedTopic(timeUs_t currentTimeUs)
     vectorZero(&ctx.estVelCorr);
     vectorZero(&ctx.accBiasCorr);
 
-    fpVector3_t tempPos = posEstimator.est.pos;  // CR142
+    // fpVector3_t tempPos = posEstimator.est.pos;  // CR142
 
     /* AGL estimation - separate process, decouples from Z coordinate */
     estimationCalculateAGL(&ctx);
@@ -836,9 +836,9 @@ static void updateEstimatedTopic(timeUs_t currentTimeUs)
     vectorAdd(&posEstimator.est.pos, &posEstimator.est.pos, &ctx.estPosCorr);
     vectorAdd(&posEstimator.est.vel, &posEstimator.est.vel, &ctx.estVelCorr);
     // CR142
-    if (ctx.newFlags & EST_XY_VALID && ctx.newFlags & EST_GPS_XY_VALID && ctx.newFlags & EST_Z_VALID && ctx.newFlags & EST_GPS_Z_VALID) {
-        checkEstimateSanity(US2MS(currentTimeUs), tempPos);
-    }
+    // if (ctx.newFlags & EST_XY_VALID && ctx.newFlags & EST_GPS_XY_VALID && ctx.newFlags & EST_Z_VALID && ctx.newFlags & EST_GPS_Z_VALID) {
+        // checkEstimateSanity(US2MS(currentTimeUs), tempPos);
+    // }
     // CR142
     /* Correct accelerometer bias */
     const float w_acc_bias = positionEstimationConfig()->w_acc_bias;

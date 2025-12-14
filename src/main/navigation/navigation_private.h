@@ -91,7 +91,7 @@ typedef struct navigationFlags_s {
     navigationEstimateStatus_e estHeadingStatus;    // Indicate valid heading - wither mag or GPS at certain speed on airplane
     bool gpsCfEstimatedAltitudeMismatch;            // Indicates a mismatch between GPS altitude and estimated altitude
 
-    bool posEstimateDegraded;                       // CR142
+    // bool posEstimateDegraded;                       // CR142
 
     climbRateToAltitudeControllerMode_e rocToAltMode;
 
