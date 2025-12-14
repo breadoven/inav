@@ -683,3 +683,10 @@ bool isMixerUsingServos(void)
 {
     return mixerUsesServos;
 }
+// CR149
+uint8_t getMinServoIndex(void)
+{
+    return minServoIndex;
+}
+// CR149
+
