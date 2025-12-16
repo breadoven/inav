@@ -148,8 +148,9 @@ void estimationCalculateAGL(estimationContext_t * ctx)
 
         // Update estimate
         posEstimator.est.aglAlt += posEstimator.est.aglVel * ctx->dt;
-        posEstimator.est.aglAlt += posEstimator.imu.accelNEU.z * sq(ctx->dt) / 2.0f * posEstimator.imu.accWeightFactor;  // CR140
-        posEstimator.est.aglVel += posEstimator.imu.accelNEU.z * ctx->dt * sq(posEstimator.imu.accWeightFactor);  // CR140
+        posEstimator.est.aglAlt += posEstimator.imu.accelNEU.z * sq(ctx->dt) / 2.0f * posEstimator.imu.accWeightFactor;
+        posEstimator.est.aglVel += posEstimator.imu.accelNEU.z * ctx->dt * sq(posEstimator.imu.accWeightFactor);
+
 
         // Apply correction
         if (posEstimator.est.aglQual == SURFACE_QUAL_HIGH) {

@@ -67,7 +67,7 @@
 #include "flight/ez_tune.h"
 
 #include "fc/config.h"
-#include "fc/controlrate_profile.h"
+#include "fc/control_profile.h"
 #include "fc/rc_adjustments.h"
 #include "fc/rc_controls.h"
 #include "fc/rc_curves.h"
@@ -322,7 +322,7 @@ void resetConfigs(void)
 
 static void activateConfig(void)
 {
-    activateControlRateConfig();
+    activateControlConfig();
     activateBatteryProfile();
     activateMixerConfig();
 
@@ -444,7 +444,7 @@ bool setConfigProfile(uint8_t profileIndex)
     pgActivateProfile(profileIndex);
     systemConfigMutable()->current_profile_index = profileIndex;
     // set the control rate profile to match
-    setControlRateProfile(profileIndex);
+    setControlProfile(profileIndex);
 #ifdef USE_EZ_TUNE
     ezTuneUpdate();
 #endif
