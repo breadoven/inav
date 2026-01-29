@@ -1728,11 +1728,11 @@ static void loadMainState(timeUs_t currentTimeUs)
 
     const uint8_t minServoIndex = getMinServoIndex();
     const int servoCount = getServoCount();
-    // for (int i = 0; i < servoCount; i++) {
+
     for (int i = 0; i < servoCount; i++) {
         blackboxCurrent->servo[i] = servo[i + minServoIndex];
     }
-    // CR149
+
     blackboxCurrent->navState = navCurrentState;
     blackboxCurrent->navFlags = navFlags;
     blackboxCurrent->navEPH = navEPH;

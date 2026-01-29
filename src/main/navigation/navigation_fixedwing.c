@@ -141,7 +141,7 @@ static void updateAltitudeVelocityAndPitchController_FW(timeDelta_t deltaMicros)
     }
 
     // Here we use negative values for dive for better clarity
-    float maxClimbDeciDeg = DEGREES_TO_DECIDEGREES(navConfig()->fw.max_climb_angle);
+    const float maxClimbDeciDeg = DEGREES_TO_DECIDEGREES(navConfig()->fw.max_climb_angle);
     const float minDiveDeciDeg = -DEGREES_TO_DECIDEGREES(navConfig()->fw.max_dive_angle);
 
     // Default control based on climb rate (velocity)
@@ -581,8 +581,8 @@ void applyFixedWingPositionController(timeUs_t currentTimeUs)
                 calculateVirtualPositionTarget_FW(HZ2S(MIN_POSITION_UPDATE_RATE_HZ) * 2);
                 updatePositionHeadingController_FW(currentTimeUs, deltaMicrosPositionUpdate);
                 needToCalculateCircularLoiter = false;
-                isRollAdjustmentValid = true;   // CR147
-                isYawAdjustmentValid = true;    // CR147
+                isRollAdjustmentValid = true;   // CR??? not used release custom only, maybe should be release also
+                isYawAdjustmentValid = true;    // CR???
             }
             else {
                 // Position update has not occurred in time (first iteration or glitch), reset altitude controller
@@ -593,7 +593,7 @@ void applyFixedWingPositionController(timeUs_t currentTimeUs)
             posControl.flags.horizontalPositionDataConsumed = true;
         }
 
-        // isRollAdjustmentValid = true;  // CR147
+        // isRollAdjustmentValid = true;  // CR???
         // isYawAdjustmentValid = true;
     }
     else {

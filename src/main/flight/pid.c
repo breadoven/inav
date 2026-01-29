@@ -1456,9 +1456,9 @@ float getFixedWingLevelTrim(void)
 }
 
 uint16_t getPidSumLimit(const flight_dynamics_index_t axis) {
-    if (axis == FD_YAW) {
-        return STATE(MULTIROTOR) ? 400 : 500;
-    } else {
-        return 500;
+    if (axis == FD_YAW && STATE(MULTIROTOR)) {
+        return 400;
     }
+
+    return 500;
 }

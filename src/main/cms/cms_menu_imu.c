@@ -493,7 +493,7 @@ static const OSD_Entry cmsx_menuImuEntries[] =
     OSD_SUBMENU_ENTRY("MECHANICS",  &cmsx_menuMechanics),
 
     // Rate profile dependent
-    OSD_UINT8_CALLBACK_ENTRY("RATE PROF", cmsx_profileIndexOnChange, (&(const OSD_UINT8_t){ &tmpProfileIndex, 1, MAX_CONTROL_PROFILE_COUNT, 1})),
+    // OSD_UINT8_CALLBACK_ENTRY("RATE PROF", cmsx_profileIndexOnChange, (&(const OSD_UINT8_t){ &tmpProfileIndex, 1, MAX_CONTROL_PROFILE_COUNT, 1})),
     OSD_SUBMENU_ENTRY("RATE", &cmsx_menuRateProfile),
     OSD_SUBMENU_ENTRY("MANU RATE", &cmsx_menuManualRateProfile),
 
