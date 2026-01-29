@@ -6392,6 +6392,16 @@ Which aux channel to use to change serial output & baud rate (MSP / Telemetry). 
 
 ---
 
+### test_setting
+
+For developer use. General use test setting from -1000 to 1000
+
+| Default | Min | Max |
+| --- | --- | --- |
+| 0 | -1000 | 1000 |
+
+---
+
 ### thr_comp_weight
 
 Weight used for the throttle compensation based on battery voltage. See the [battery documentation](Battery.md#automatic-throttle-compensation-based-on-battery-voltage)

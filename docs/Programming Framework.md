@@ -169,7 +169,7 @@ for complete documentation on using JavaScript to program your flight controller
 | 29            | CRSF LQ                               | Link quality as returned by the CRSF protocol |
 | 30            | CRSF SNR                              | SNR as returned by the CRSF protocol |
 | 31            | GPS Valid Fix                         | Boolean `0`/`1`. True when the GPS has a valid 3D Fix |
-| 32            | Loiter Radius [cm]                    | The current loiter radius setting in `cm`. |
+| 32            | Loiter Radius [cm]                    | The current loiter radius in cm. |
 | 33            | Active Control Profile                | Integer for the active config profile `[1..MAX_PROFILE_COUNT]` |
 | 34            | Battery cells                         | Number of battery cells detected |
 | 35            | AGL status [0/1]                      | Boolean `1` when AGL can be trusted, `0` when AGL estimate can not be trusted |

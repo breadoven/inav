@@ -100,28 +100,28 @@ void osdCanvasDrawThrottleGauge(displayPort_t *display, displayCanvas_t *canvas,
         displayCanvasDrawCharacter(canvas, x, y, SYM_THR_GAUGE_HALF, DISPLAY_CANVAS_BITMAP_OPT_ERASE_TRANSPARENT);
     else
         displayCanvasDrawCharacter(canvas, x, y, SYM_THR_GAUGE_EMPTY, DISPLAY_CANVAS_BITMAP_OPT_ERASE_TRANSPARENT);
-    
+
     if (thrPos >= 80)
         displayCanvasDrawCharacter(canvas, x, y + canvas->gridElementHeight, SYM_THR_GAUGE_FULL, DISPLAY_CANVAS_BITMAP_OPT_ERASE_TRANSPARENT);
     else if (thrPos >= 70)
         displayCanvasDrawCharacter(canvas, x, y + canvas->gridElementHeight, SYM_THR_GAUGE_HALF, DISPLAY_CANVAS_BITMAP_OPT_ERASE_TRANSPARENT);
     else
         displayCanvasDrawCharacter(canvas, x, y + canvas->gridElementHeight, SYM_THR_GAUGE_EMPTY, DISPLAY_CANVAS_BITMAP_OPT_ERASE_TRANSPARENT);
-    
+
     if (thrPos >= 60)
         displayCanvasDrawCharacter(canvas, x, y + (canvas->gridElementHeight * 2), SYM_THR_GAUGE_FULL, DISPLAY_CANVAS_BITMAP_OPT_ERASE_TRANSPARENT);
     else if (thrPos >= 50)
         displayCanvasDrawCharacter(canvas, x, y + (canvas->gridElementHeight * 2), SYM_THR_GAUGE_HALF, DISPLAY_CANVAS_BITMAP_OPT_ERASE_TRANSPARENT);
     else
         displayCanvasDrawCharacter(canvas, x, y + (canvas->gridElementHeight * 2), SYM_THR_GAUGE_EMPTY, DISPLAY_CANVAS_BITMAP_OPT_ERASE_TRANSPARENT);
-    
+
     if (thrPos >= 40)
         displayCanvasDrawCharacter(canvas, x, y + (canvas->gridElementHeight * 3), SYM_THR_GAUGE_FULL, DISPLAY_CANVAS_BITMAP_OPT_ERASE_TRANSPARENT);
     else if (thrPos >= 30)
         displayCanvasDrawCharacter(canvas, x, y + (canvas->gridElementHeight * 3), SYM_THR_GAUGE_HALF, DISPLAY_CANVAS_BITMAP_OPT_ERASE_TRANSPARENT);
     else
         displayCanvasDrawCharacter(canvas, x, y + (canvas->gridElementHeight * 3), SYM_THR_GAUGE_EMPTY, DISPLAY_CANVAS_BITMAP_OPT_ERASE_TRANSPARENT);
-    
+
     if (thrPos >= 20)
         displayCanvasDrawCharacter(canvas, x, y + (canvas->gridElementHeight * 4), SYM_THR_GAUGE_FULL, DISPLAY_CANVAS_BITMAP_OPT_ERASE_TRANSPARENT);
     else if (thrPos >= 10)
@@ -743,6 +743,7 @@ static bool osdCanvasDrawSidebar(uint32_t *configured, displayWidgets_t *widgets
         osdCrosshairPosition(&ex, &ey);
         const int height = 2 * OSD_AH_SIDEBAR_HEIGHT_POS * OSD_CHAR_HEIGHT;
         const int y = (ey - OSD_AH_SIDEBAR_HEIGHT_POS) * OSD_CHAR_HEIGHT;
+
         widgetSidebarConfiguration_t config = {
             .rect.y = y,
             .rect.w = width,

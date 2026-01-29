@@ -352,7 +352,7 @@ typedef enum {
 
     NAV_MIXERAT             = (1 << 16),    // MIXERAT in progress
 
-    NAV_CTL_HOLD            = (1 << 17),    // position hold active
+    NAV_CTL_HOLD            = (1 << 17),    // Nav loiter active at position
     NAV_CTL_COURSE          = (1 << 18),    // course hold active  // CR117
 } navigationFSMStateFlags_t;
 
@@ -461,7 +461,7 @@ typedef struct {
     uint32_t                    lastValidPositionTimeMs;
     uint32_t                    lastValidAltitudeTimeMs;
 
-    /* INAV GPS origin (position where GPS fix first acquired) */
+    /* INAV GPS origin (position where GPS fix was first acquired) */
     gpsOrigin_t                 gpsOrigin;
 
     /* Home/RTH parameters - NEU coordinates (geodetic position of home (LLH) is stored in GPS_home variable) */
