@@ -4368,6 +4368,7 @@ PG_RESET_TEMPLATE(osdConfig_t, osdConfig,
     .use_pilot_logo = SETTING_OSD_USE_PILOT_LOGO_DEFAULT,
     .inav_to_pilot_logo_spacing = SETTING_OSD_INAV_TO_PILOT_LOGO_SPACING_DEFAULT,
     .arm_screen_display_time = SETTING_OSD_ARM_SCREEN_DISPLAY_TIME_DEFAULT,
+    .multifunction_warning_cycle_time = SETTING_MULTIFUNCTION_WARNING_CYCLE_TIME_DEFAULT,  // CR151
 
 #ifdef USE_WIND_ESTIMATOR
     .estimations_wind_compensation = SETTING_OSD_ESTIMATIONS_WIND_COMPENSATION_DEFAULT,
@@ -6471,7 +6472,8 @@ static bool osdCheckWarning(bool condition, uint8_t warningFlag, uint8_t *warnin
         if (currentTimeMs > redisplayStartTimeMs) {
             warningDisplayStartTime = currentTimeMs;
             osdWarningTimerDuration = newWarningFlags ? 10000 : WARNING_REDISPLAY_DURATION;
-            redisplayStartTimeMs = currentTimeMs + osdWarningTimerDuration + 30000;
+            // redisplayStartTimeMs = currentTimeMs + osdWarningTimerDuration + 30000;
+            redisplayStartTimeMs = currentTimeMs + osdWarningTimerDuration + S2MS(osdConfig()->multifunction_warning_cycle_time);  // CR151
         }
 
         if (currentTimeMs - warningDisplayStartTime < osdWarningTimerDuration) {
@@ -6568,15 +6570,15 @@ static textAttributes_t osdGetMultiFunctionMessage(char *buff)
     const batteryState_e batteryVoltageState = checkBatteryVoltageState();
     warningCondition = batteryVoltageState == BATTERY_CRITICAL || batteryVoltageState == BATTERY_WARNING;
     if (osdCheckWarning(warningCondition, warningFlagID, &warningsCount)) {
-        messages[messageCount++] = batteryVoltageState == BATTERY_CRITICAL ? "VBATT CRIT" : "VBATT LOW ";
+        messages[messageCount++] = batteryVoltageState == BATTERY_CRITICAL ? "VBATT LAND" : "VBATT LOW ";
     }
 
     // Low Battery Capacity
     if (batteryUsesCapacityThresholds()) {
         const batteryState_e batteryState = getBatteryState();
-        warningCondition = batteryState == BATTERY_CRITICAL || batteryVoltageState == BATTERY_WARNING;
+        warningCondition = batteryState == BATTERY_CRITICAL || batteryState == BATTERY_WARNING;
         if (osdCheckWarning(warningCondition, warningFlagID <<= 1, &warningsCount)) {
-            messages[messageCount++] = batteryState == BATTERY_CRITICAL ? "BATT EMPTY" : "BATT LOW  ";
+            messages[messageCount++] = batteryState == BATTERY_CRITICAL ? "BATT EMPTY" : "BATT DYING";
         }
     }
 #if defined(USE_GPS)
@@ -6642,7 +6644,6 @@ static textAttributes_t osdGetMultiFunctionMessage(char *buff)
     if (messageCount) {
         message = messages[OSD_ALTERNATING_CHOICES(1000, messageCount)];    // display each warning on 1s cycle
         strcpy(buff, message);
-        TEXT_ATTRIBUTES_ADD_BLINK(elemAttr);
     } else if (warningsCount) {
         buff[0] = SYM_ALERT;
         tfp_sprintf(buff + 1, "%u        ", warningsCount);

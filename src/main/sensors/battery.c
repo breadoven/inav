@@ -324,34 +324,36 @@ static void updateBatteryVoltage(timeUs_t timeDelta, bool justConnected)
         vbat = pt1FilterApply4(&vbatFilterState, vbat, VBATT_LPF_FREQ, US2S(timeDelta));
     }
 }
-
+// CR151
 batteryState_e checkBatteryVoltageState(void)
 {
     uint16_t stateVoltage = getBatteryVoltage();
-    switch (batteryState)
+    static batteryState_e currentBatteryVoltageState = BATTERY_OK;  // CR151
+
+    switch (currentBatteryVoltageState)  // CR151
     {
         case BATTERY_OK:
             if (stateVoltage <= (batteryWarningVoltage - VBATT_HYSTERESIS)) {
-                return BATTERY_WARNING;
+                currentBatteryVoltageState = BATTERY_WARNING;   // CR151
             }
             break;
         case BATTERY_WARNING:
             if (stateVoltage <= (batteryCriticalVoltage - VBATT_HYSTERESIS)) {
-                return BATTERY_CRITICAL;
+                currentBatteryVoltageState = BATTERY_CRITICAL;   // CR151
             } else if (stateVoltage > (batteryWarningVoltage + VBATT_HYSTERESIS)){
-                return BATTERY_OK;
+                currentBatteryVoltageState = BATTERY_OK;   // CR151
             }
             break;
         case BATTERY_CRITICAL:
             if (stateVoltage > (batteryCriticalVoltage + VBATT_HYSTERESIS)) {
-                return BATTERY_WARNING;
+                currentBatteryVoltageState = BATTERY_WARNING;   // CR151
             }
             break;
         default:
             break;
     }
 
-    return batteryState;
+    return currentBatteryVoltageState;  // CR151
 }
 
 static void checkBatteryCapacityState(void)
