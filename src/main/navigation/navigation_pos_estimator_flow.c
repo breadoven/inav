@@ -73,6 +73,15 @@ bool estimationCalculateCorrection_XY_FLOW(estimationContext_t * ctx)
         return false;
     }
 
+    // CR152
+    if (!opflow.updateDt) {
+        return true;
+    }
+    posEstimator.flow.updateDt = opflow.updateDt;
+    opflow.updateDt = 0;
+    const float dt = posEstimator.flow.updateDt;
+
+    // CR152
     // Calculate linear velocity based on angular velocity and altitude
     // Technically we should calculate arc length here, but for fast sampling this is accurate enough
     fpVector3_t flowVel = {
@@ -88,8 +97,8 @@ bool estimationCalculateCorrection_XY_FLOW(estimationContext_t * ctx)
     const float flowVelXInnov = flowVel.x - posEstimator.est.vel.x;
     const float flowVelYInnov = flowVel.y - posEstimator.est.vel.y;
 
-    ctx->estVelCorr.x = flowVelXInnov * positionEstimationConfig()->w_xy_flow_v * ctx->dt;
-    ctx->estVelCorr.y = flowVelYInnov * positionEstimationConfig()->w_xy_flow_v * ctx->dt;
+    ctx->estVelCorr.x = flowVelXInnov * positionEstimationConfig()->w_xy_flow_v * dt; // ctx->dt;  // CR152
+    ctx->estVelCorr.y = flowVelYInnov * positionEstimationConfig()->w_xy_flow_v * dt; // ctx->dt;  // CR152
 
     // Calculate position correction if possible/allowed
     if ((ctx->newFlags & EST_GPS_XY_VALID)) {
@@ -98,16 +107,17 @@ bool estimationCalculateCorrection_XY_FLOW(estimationContext_t * ctx)
         posEstimator.est.flowCoordinates[Y] = posEstimator.gps.pos.y;
     }
     else if (positionEstimationConfig()->allow_dead_reckoning) {
-        posEstimator.est.flowCoordinates[X] += flowVel.x * ctx->dt;
-        posEstimator.est.flowCoordinates[Y] += flowVel.y * ctx->dt;
+        posEstimator.est.flowCoordinates[X] += flowVel.x * dt; // ctx->dt;  // CR152
+        posEstimator.est.flowCoordinates[Y] += flowVel.y * dt; // ctx->dt;  // CR152
 
         const float flowResidualX = posEstimator.est.flowCoordinates[X] - posEstimator.est.pos.x;
         const float flowResidualY = posEstimator.est.flowCoordinates[Y] - posEstimator.est.pos.y;
 
-        ctx->estPosCorr.x = flowResidualX * positionEstimationConfig()->w_xy_flow_p * ctx->dt;
-        ctx->estPosCorr.y = flowResidualY * positionEstimationConfig()->w_xy_flow_p * ctx->dt;
+        ctx->estPosCorr.x = flowResidualX * positionEstimationConfig()->w_xy_flow_p * dt; // ctx->dt;  // CR152
+        ctx->estPosCorr.y = flowResidualY * positionEstimationConfig()->w_xy_flow_p * dt; // ctx->dt;  // CR152
 
-        ctx->newEPH = updateEPE(posEstimator.est.eph, ctx->dt, calc_length_pythagorean_2D(flowResidualX, flowResidualY), positionEstimationConfig()->w_xy_flow_p);
+        // ctx->newEPH = updateEPE(posEstimator.est.eph, ctx->dt, calc_length_pythagorean_2D(flowResidualX, flowResidualY), positionEstimationConfig()->w_xy_flow_p);  // CR152
+        ctx->newEPH = updateEPE(posEstimator.est.eph, dt, calc_length_pythagorean_2D(flowResidualX, flowResidualY), positionEstimationConfig()->w_xy_flow_p);
     }
 
     DEBUG_SET(DEBUG_FLOW, 0, RADIANS_TO_DEGREES(posEstimator.flow.flowRate[X]));
@@ -115,7 +125,7 @@ bool estimationCalculateCorrection_XY_FLOW(estimationContext_t * ctx)
     DEBUG_SET(DEBUG_FLOW, 2, posEstimator.est.flowCoordinates[X]);
     DEBUG_SET(DEBUG_FLOW, 3, posEstimator.est.flowCoordinates[Y]);
 
-    return true;
+    return ctx->applyCorrections = true;  // CR152
 #else
     UNUSED(ctx);
     return false;
