@@ -758,7 +758,7 @@ static bool gpsParseFrameUBLOX(void)
             DEBUG_SET(DEBUG_GPS, 4, _buffer.navsig.numSigs);
             gpsState.flags.sig = 1;
 
-            if(_buffer.navsig.numSigs > 0) 
+            if(_buffer.navsig.numSigs > 0)
             {
                 for(int i=0; i < MIN(UBLOX_MAX_SIGNALS, _buffer.navsig.numSigs); ++i)
                 {
@@ -1231,11 +1231,13 @@ STATIC_PROTOTHREAD(gpsProtocolStateThread)
                 if (gpsState.hwVersion == UBX_HW_VERSION_UNKNOWN)
                 {
                     pollVersion();
-                    ptWaitTimeout((_ack_state == UBX_ACK_GOT_ACK || _ack_state == UBX_ACK_GOT_NAK), GPS_CFG_CMD_TIMEOUT_MS);
+                    // ptWaitTimeout((_ack_state == UBX_ACK_GOT_ACK || _ack_state == UBX_ACK_GOT_NAK), GPS_CFG_CMD_TIMEOUT_MS);
+                    ptWaitTimeout(gpsState.hwVersion != UBX_HW_VERSION_UNKNOWN, GPS_CFG_CMD_TIMEOUT_MS);
                 }
 
                 pollGnssCapabilities();
-                ptWaitTimeout((_ack_state == UBX_ACK_GOT_ACK || _ack_state == UBX_ACK_GOT_NAK), GPS_CFG_CMD_TIMEOUT_MS);
+                // ptWaitTimeout((_ack_state == UBX_ACK_GOT_ACK || _ack_state == UBX_ACK_GOT_NAK), GPS_CFG_CMD_TIMEOUT_MS);
+                ptWaitTimeout(gpsState.lastCapaUpdMs > gpsState.lastCapaPoolMs, GPS_CFG_CMD_TIMEOUT_MS);
             }
         }
     }

@@ -233,7 +233,7 @@ typedef enum {
 typedef struct {
     uint8_t gnssId;   // gnssid 0 = GPS, 1 = SBAS, 2 = GALILEO, 3 = BEIDOU, 4 = IMES, 5 = QZSS, 6 = GLONASS
     uint8_t svId;     // space vehicle ID
-    uint8_t sigId;    // signal ID 
+    uint8_t sigId;    // signal ID
     uint8_t freqId;   // 0-13 slot +, 0-13, glonass only
     int16_t prRes;    // pseudo range residual (0.1m)
     uint8_t cno;      // carrier to noise density ratio (dbHz)
