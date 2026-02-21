@@ -149,10 +149,11 @@ bool adjustMulticopterAltitudeFromRCInput(void)
             // Calculate max up or min down limit value scaled for deadband
             // CR139
             // int16_t limitValue = rcThrottleAdjustment > 0 ? getMaxThrottle() : getThrottleIdleValue();
-            int16_t limitValue = rcThrottleAdjustment > 0 ? PWM_RANGE_MAX : PWM_RANGE_MIN;
-            limitValue = applyDeadbandRescaled(limitValue - altHoldThrottleRCZero, rcControlsConfig()->alt_hold_deadband, -500, 500);
+            // int16_t limitValue = rcThrottleAdjustment > 0 ? PWM_RANGE_MAX : PWM_RANGE_MIN;
+            // limitValue = applyDeadbandRescaled(limitValue - altHoldThrottleRCZero, rcControlsConfig()->alt_hold_deadband, -500, 500);
             // CR139
-            int16_t rcClimbRate = ABS(rcThrottleAdjustment) * navConfig()->mc.max_manual_climb_rate / limitValue;
+            // int16_t rcClimbRate = ABS(rcThrottleAdjustment) * navConfig()->mc.max_manual_climb_rate / limitValue;
+            int16_t rcClimbRate = rcThrottleAdjustment * navConfig()->mc.max_manual_climb_rate / 500;
 
             // DEBUG_SET(DEBUG_ALWAYS, 4, rcThrottleAdjustment);
             // DEBUG_SET(DEBUG_ALWAYS, 5, rcClimbRate);
@@ -595,24 +596,24 @@ static void checkForToiletBowling(void)
         startTime = 0;
     }
 
-    DEBUG_SET(DEBUG_ALWAYS, 0, courseError);
-    DEBUG_SET(DEBUG_ALWAYS, 2, posControl.actualState.velXY * distanceToHoldPoint);
+    // DEBUG_SET(DEBUG_ALWAYS, 0, courseError);
+    // DEBUG_SET(DEBUG_ALWAYS, 2, posControl.actualState.velXY * distanceToHoldPoint);
 }
 // CR141
 static void updatePositionAccelController_MC(timeDelta_t deltaMicros, float maxAccelLimit)  // , const float maxSpeed)   CR47
 {
     // CR141
-    DEBUG_SET(DEBUG_ALWAYS, 1, calculateDistanceToDestination(&posControl.desiredState.pos));
-    DEBUG_SET(DEBUG_ALWAYS, 3, mcToiletBowlingHeadingCorrection);
-    DEBUG_SET(DEBUG_ALWAYS, 5, posControl.actualState.velXY);
-    DEBUG_SET(DEBUG_ALWAYS, 6, calculateBearingToDestination(&posControl.desiredState.pos));
-    DEBUG_SET(DEBUG_ALWAYS, 7, posControl.actualState.yaw);
+    // DEBUG_SET(DEBUG_ALWAYS, 1, calculateDistanceToDestination(&posControl.desiredState.pos));
+    // DEBUG_SET(DEBUG_ALWAYS, 3, mcToiletBowlingHeadingCorrection);
+    // DEBUG_SET(DEBUG_ALWAYS, 5, posControl.actualState.velXY);
+    // DEBUG_SET(DEBUG_ALWAYS, 6, calculateBearingToDestination(&posControl.desiredState.pos));
+    // DEBUG_SET(DEBUG_ALWAYS, 7, posControl.actualState.yaw);
     if (navConfig()->mc.toiletbowl_detection) {
         if (mcToiletBowlingHeadingCorrection) {
             uint16_t correctedHeading = wrap_36000(posControl.actualState.yaw - mcToiletBowlingHeadingCorrection);
             posControl.actualState.sinYaw = sin_approx(CENTIDEGREES_TO_RADIANS(correctedHeading));
             posControl.actualState.cosYaw = cos_approx(CENTIDEGREES_TO_RADIANS(correctedHeading));
-            DEBUG_SET(DEBUG_ALWAYS, 4, correctedHeading);
+            // DEBUG_SET(DEBUG_ALWAYS, 4, correctedHeading);
         } else {
             checkForToiletBowling();
         }
