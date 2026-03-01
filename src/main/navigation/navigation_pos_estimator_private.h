@@ -183,7 +183,8 @@ typedef struct {
     fpVector3_t estPosCorr;
     fpVector3_t estVelCorr;
     fpVector3_t accBiasCorr;
-    bool applyCorrections;  // CR152
+    bool applyCorrectionsXY;  // CR152.1
+    bool applyCorrectionsZ;  // CR152.1
 } estimationContext_t;
 
 extern navigationPosEstimator_t posEstimator;
