@@ -2923,11 +2923,11 @@ void updateActualHeading(bool headingValid, int32_t newHeading, int32_t newGroun
      * first time and update home heading accordingly.
      */
     // CR141 test only
-    if (STATE(MULTIROTOR) && IS_RC_MODE_ACTIVE(BOXBEEPERON)) {
-        newHeading = wrap_36000(newHeading + 100 * systemConfig()->devTestSetting);
-    } else {
-        mcToiletBowlingHeadingCorrection = 0;
-    }
+    // if (STATE(MULTIROTOR) && IS_RC_MODE_ACTIVE(BOXBEEPERON)) {
+        // newHeading = wrap_36000(newHeading + 100 * systemConfig()->devTestSetting);
+    // } else {
+        // mcToiletBowlingHeadingCorrection = 0;
+    // }
     // imuNavCompassSanity(mcToiletBowlingHeadingCorrection == 0);
     // CR141
     navigationEstimateStatus_e newEstHeading = headingValid ? EST_TRUSTED : EST_NONE;

@@ -134,7 +134,7 @@ bool throttleStickIsLow(void)
 int16_t throttleStickMixedValue(void)
 {
     int16_t throttleValue;
-    uint16_t lowLimit = feature(FEATURE_REVERSIBLE_MOTORS) ? PWM_RANGE_MIN : rxConfig()->mincheck;
+    uint16_t lowLimit = feature(FEATURE_REVERSIBLE_MOTORS) ? PWM_RANGE_MIN : getThrottleIdleValue(); // rxConfig()->mincheck;
 
     throttleValue = constrain(rxGetChannelValue(THROTTLE), lowLimit, PWM_RANGE_MAX);
     throttleValue = (uint16_t)(throttleValue - lowLimit) * PWM_RANGE_MIN / (PWM_RANGE_MAX - lowLimit);  // [LOWLIMIT;2000] -> [0;1000]
