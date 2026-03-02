@@ -112,6 +112,7 @@ PG_RESET_TEMPLATE(systemConfig_t, systemConfig,
     .debug_mode = SETTING_DEBUG_MODE_DEFAULT,
 #ifdef USE_DEV_TOOLS
     .groundTestMode = SETTING_GROUND_TEST_MODE_DEFAULT,     // disables motors, set heading trusted for FW (for dev use)
+    .devTestSetting = SETTING_TEST_SETTING_DEFAULT,         // CR143
 #endif
 #ifdef USE_I2C
     .i2c_speed = SETTING_I2C_SPEED_DEFAULT,

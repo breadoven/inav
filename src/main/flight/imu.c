@@ -46,6 +46,7 @@
 #include "fc/config.h"
 #include "fc/runtime_config.h"
 #include "fc/settings.h"
+#include "fc/rc_controls.h"
 
 #include "flight/imu.h"
 #include "flight/mixer.h"
@@ -658,7 +659,7 @@ static void imuCalculateFilters(float dT)
     imuMeasuredRotationBFFiltered.x = pt1FilterApply4(&rotRateFilterX, imuMeasuredRotationBF.x, IMU_ROTATION_LPF, dT);
     imuMeasuredRotationBFFiltered.y = pt1FilterApply4(&rotRateFilterY, imuMeasuredRotationBF.y, IMU_ROTATION_LPF, dT);
     imuMeasuredRotationBFFiltered.z = pt1FilterApply4(&rotRateFilterZ, imuMeasuredRotationBF.z, IMU_ROTATION_LPF, dT);
-    
+
     imuMeasuredAccelBFFiltered.x = pt1FilterApply4(&accelFilterX, imuMeasuredAccelBF.x, IMU_ROTATION_LPF, dT);
     imuMeasuredAccelBFFiltered.y = pt1FilterApply4(&accelFilterY, imuMeasuredAccelBF.y, IMU_ROTATION_LPF, dT);
     imuMeasuredAccelBFFiltered.z = pt1FilterApply4(&accelFilterZ, imuMeasuredAccelBF.z, IMU_ROTATION_LPF, dT);
@@ -699,7 +700,7 @@ static void imuCalculateGPSacceleration(fpVector3_t *vEstAccelEF,fpVector3_t *vE
 }
 
 static void imuCalculateTurnRateacceleration(fpVector3_t *vEstcentrifugalAccelBF, float dT, float *acc_ignore_slope_multipiler)
-{   
+{
     //fixed wing only
     static float lastspeed = -1.0f;
     float currentspeed = 0;
@@ -755,11 +756,17 @@ void imuUpdateTailSitter(void)
     }
     lastTailSitter = STATE(TAILSITTER);
 }
-
+// CR141
+// static bool navCompassSanityIsOK = true;
+// void imuNavCompassSanity(bool navCompassStatus)
+// {
+    // navCompassSanityIsOK = navCompassStatus;
+// }
+// CR141
 static void imuCalculateEstimatedAttitude(float dT)
 {
 #if defined(USE_MAG)
-    const bool canUseMAG = sensors(SENSOR_MAG) && compassIsHealthy();
+    const bool canUseMAG = sensors(SENSOR_MAG) && compassIsHealthy();  // && navCompassSanityIsOK;  // CR141
 #else
     const bool canUseMAG = false;
 #endif
@@ -807,17 +814,17 @@ static void imuCalculateEstimatedAttitude(float dT)
     static fpVector3_t vEstcentrifugalAccelBF_velned;
     static fpVector3_t vEstcentrifugalAccelBF_turnrate;
     float acc_ignore_slope_multipiler = 1.0f; // when using gps centrifugal_force_compensation, AccelerometerWeightRateIgnore slope will be multiplied by this value
-    if (isGPSTrustworthy())
-    {
+
+    if (isGPSTrustworthy()) {
         imuCalculateGPSacceleration(&vCOGAcc, &vEstcentrifugalAccelBF_velned, &acc_ignore_slope_multipiler);
         useCOGAcc = true; //currently only for multicopter
     }
-    if (STATE(AIRPLANE))
-    {
+
+    if (STATE(AIRPLANE)) {
         imuCalculateTurnRateacceleration(&vEstcentrifugalAccelBF_turnrate, dT, &acc_ignore_slope_multipiler);
     }
-    if (imuConfig()->inertia_comp_method == COMPMETHOD_ADAPTIVE && isGPSTrustworthy() && STATE(AIRPLANE))
-    {
+
+    if (imuConfig()->inertia_comp_method == COMPMETHOD_ADAPTIVE && isGPSTrustworthy() && STATE(AIRPLANE)) {
         //pick the best centrifugal acceleration between velned and turnrate
         fpVector3_t compansatedGravityBF_velned;
         vectorAdd(&compansatedGravityBF_velned, &imuMeasuredAccelBF, &vEstcentrifugalAccelBF_velned);
@@ -829,18 +836,15 @@ static void imuCalculateEstimatedAttitude(float dT)
 
         compansatedGravityBF = velned_error > turnrate_error? compansatedGravityBF_turnrate:compansatedGravityBF_velned;
     }
-    else if (((imuConfig()->inertia_comp_method == COMPMETHOD_VELNED) || (imuConfig()->inertia_comp_method == COMPMETHOD_ADAPTIVE)) && isGPSTrustworthy())
-    {
+    else if (((imuConfig()->inertia_comp_method == COMPMETHOD_VELNED) || (imuConfig()->inertia_comp_method == COMPMETHOD_ADAPTIVE)) && isGPSTrustworthy()) {
         //velned centrifugal force compensation, quad will use this method
         vectorAdd(&compansatedGravityBF, &imuMeasuredAccelBF, &vEstcentrifugalAccelBF_velned);
     }
-    else if (STATE(AIRPLANE))
-    {
+    else if (STATE(AIRPLANE)) {
         //turnrate centrifugal force compensation
         vectorAdd(&compansatedGravityBF, &imuMeasuredAccelBF, &vEstcentrifugalAccelBF_turnrate);
     }
-    else
-    {
+    else {
         compansatedGravityBF = imuMeasuredAccelBF;
     }
 #else
@@ -848,6 +852,7 @@ static void imuCalculateEstimatedAttitude(float dT)
     if (canUseMAG) {
         useMag = true;
     }
+
     compansatedGravityBF = imuMeasuredAccelBF
 #endif
     float accWeight = imuGetPGainScaleFactor() * imuCalculateAccelerometerWeightNearness(&compansatedGravityBF);
@@ -907,7 +912,7 @@ void imuUpdateAttitude(timeUs_t currentTimeUs)
         acc.accADCf[Z] = 0.0f;
     }
 }
- 
+
 
 bool isImuReady(void)
 {

@@ -104,8 +104,9 @@
 #define OSD_MSG_LANDING             "LANDING"
 #define OSD_MSG_LOITERING_HOME      "LOITERING AROUND HOME"
 #define OSD_MSG_HOVERING            "HOVERING"
-#define OSD_MSG_LANDED              "LANDED"
+#define OSD_MSG_LANDED              "! LANDED !"
 #define OSD_MSG_PREPARING_LAND      "PREPARING TO LAND"
+// #define OSD_MSG_NAV_SENSOR_LOSS     "NAV FAIL -> SENSOR LOSS"   // CR44
 #define OSD_MSG_AUTOLAUNCH          "AUTOLAUNCH"
 #define OSD_MSG_AUTOLAUNCH_MANUAL   "AUTOLAUNCH (MANUAL)"
 #define OSD_MSG_ALTITUDE_HOLD       "(ALTITUDE HOLD)"
@@ -122,6 +123,9 @@
 #define OSD_MSG_ANGLEHOLD_PITCH     "(ANGLEHOLD PITCH)"
 #define OSD_MSG_ANGLEHOLD_LEVEL     "(ANGLEHOLD LEVEL)"
 #define OSD_MSG_MOVE_STICKS         "MOVE STICKS TO ABORT"
+#define OSD_MSG_TOILET_BOWL         "!MAG BAD>FIX ATTEMPTED!"   // CR141
+// #define OSD_MSG_POSEST_DEGRADED     "!POSITION ACCURACY POOR!"   // CR142
+
 
 #ifdef USE_DEV_TOOLS
 #define OSD_MSG_GRD_TEST_MODE       "GRD TEST > MOTORS DISABLED"
@@ -294,7 +298,7 @@ typedef enum {
     OSD_RANGEFINDER,
     OSD_PLIMIT_REMAINING_BURST_TIME,
     OSD_PLIMIT_ACTIVE_CURRENT_LIMIT,
-    OSD_PLIMIT_ACTIVE_POWER_LIMIT,
+    OSD_PLIMIT_ACTIVE_POWER_LIMIT,  // limit of CMS entries
     OSD_GLIDESLOPE,
     OSD_GPS_MAX_SPEED,
     OSD_3D_MAX_SPEED,
@@ -311,7 +315,7 @@ typedef enum {
     OSD_GLIDE_RANGE,
     OSD_CLIMB_EFFICIENCY,
     OSD_NAV_WP_MULTI_MISSION_INDEX,
-    OSD_GROUND_COURSE,      // 140
+    OSD_GROUND_COURSE, // 140
     OSD_CROSS_TRACK_ERROR,
     OSD_PILOT_NAME,
     OSD_PAN_SERVO_CENTRED,
@@ -584,8 +588,6 @@ void osdFormatAltitudeSymbol(char *buff, int32_t alt);
 int osdFormatVelocityStr(char* buff, int32_t vel, osd_SpeedTypes_e speedType, bool _max);
 // Returns a heading angle in degrees normalized to [0, 360).
 int osdGetHeadingAngle(int angle);
-
-void osdResetWarningFlags(void);
 
 int16_t osdGetPanServoOffset(void);
 

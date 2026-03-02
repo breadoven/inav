@@ -197,7 +197,7 @@ typedef struct geozone_s {
     int32_t distanceHorToNearestZone;
     int32_t distanceVertToNearestZone;
     int32_t zoneInfo;
-    int32_t currentzoneMaxAltitude; 
+    int32_t currentzoneMaxAltitude;
     int32_t currentzoneMinAltitude;
     bool nearestHorZoneHasAction;
     bool sticksLocked;
@@ -237,7 +237,7 @@ void abortForcedPosHold(void);
 #define NAV_MAX_WAYPOINTS 15
 #endif
 
-#define NAV_ACCEL_CUTOFF_FREQUENCY_HZ 2       // low-pass filter on XY-acceleration target
+#define NAV_ACCEL_CUTOFF_FREQUENCY_HZ   2       // low-pass filter on XY-acceleration target
 
 enum {
     NAV_GPS_ATTI    = 0,                    // Pitch/roll stick controls attitude (pitch/roll lean angles)
@@ -311,8 +311,8 @@ typedef enum {
 
 typedef enum {  // keep aligned with fixedWingLaunchState_t
     FW_LAUNCH_DETECTED = 5,
-    FW_LAUNCH_ABORTED = 10,
-    FW_LAUNCH_FLYING = 11,
+    FW_LAUNCH_ABORTED = 11,
+    FW_LAUNCH_FLYING = 12,
 } navFwLaunchStatus_e;
 
 typedef enum {
@@ -464,6 +464,7 @@ typedef struct navConfig_s {
         bool slowDownForTurning;                // Slow down during WP missions when changing heading on next waypoint
         uint8_t althold_throttle_type;          // throttle zero datum type for alt hold
         uint8_t inverted_crash_detection;       // Enables inverted crash detection, setting defines disarm time delay (0 = disabled)
+        uint8_t toiletbowl_detection;           // Enables toilet bowling detection and heading correction (0 = disabled)  // CR141
     } mc;
 
     struct {
@@ -488,11 +489,14 @@ typedef struct navConfig_s {
         uint8_t  launch_wiggle_wake_idle;    // Activate the idle throttle by wiggling the plane. 0 = disabled, 1 or 2 specify the number of wiggles.
         uint16_t launch_motor_spinup_time;   // Time to speed-up motors from idle to launch_throttle (ESC desync prevention)
         uint16_t launch_end_time;            // Time to make the transition from launch angle to leveled and throttle transition from launch throttle to the stick position
-        uint16_t launch_min_time;	         // Minimum time in launch mode to prevent possible bump of the sticks from leaving launch mode early
+        uint16_t launch_min_time;            // Minimum time in launch mode to prevent possible bump of the sticks from leaving launch mode early
         uint16_t launch_timeout;             // Launch timeout to disable launch mode and swith to normal flight (ms)
         uint16_t launch_max_altitude;        // cm, altitude where to consider launch ended
         uint8_t  launch_climb_angle;         // Target climb angle for launch (deg)
         uint8_t  launch_max_angle;           // Max tilt angle (pitch/roll combined) to consider launch successful. Set to 180 to disable completely [deg]
+        // CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+        bool     launch_allow_throttle_low;  // Allow launch with throttle low
+        // xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
         bool     launch_manual_throttle;     // Allows launch with manual throttle control
         uint8_t  launch_land_abort_deadband;      // roll/pitch stick movement deadband for launch abort
         uint8_t  cruise_yaw_rate;            // Max yaw rate (dps) when CRUISE MODE is enabled
@@ -774,6 +778,9 @@ emergLandState_e getStateOfForcedEmergLanding(void);
 
 /* Getter functions which return data about the state of the navigation system */
 bool navigationInAutomaticThrottleMode(void);
+// CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+bool launchAllowedWithThrottleLow(void);
+// CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 bool navigationIsControllingThrottle(void);
 bool isFixedWingAutoThrottleManuallyIncreased(void);
 bool navigationIsFlyingAutonomousMode(void);
@@ -788,6 +795,7 @@ bool isWaypointMissionRTHActive(void);
 bool rthClimbStageActiveAndComplete(void);
 
 bool isNavLaunchEnabled(void);
+bool isFixedWingLaunchFinishedThrottleLow(void);    // CR6
 uint8_t fixedWingLaunchStatus(void);
 const char * fixedWingLaunchStateMessage(void);
 

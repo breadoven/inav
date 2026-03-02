@@ -758,7 +758,7 @@ static bool gpsParseFrameUBLOX(void)
             DEBUG_SET(DEBUG_GPS, 4, _buffer.navsig.numSigs);
             gpsState.flags.sig = 1;
 
-            if(_buffer.navsig.numSigs > 0) 
+            if(_buffer.navsig.numSigs > 0)
             {
                 for(int i=0; i < MIN(UBLOX_MAX_SIGNALS, _buffer.navsig.numSigs); ++i)
                 {
@@ -1228,8 +1228,7 @@ STATIC_PROTOTHREAD(gpsProtocolStateThread)
             if ((millis() - gpsState.lastCapaPoolMs) > GPS_CAPA_INTERVAL) {
                 gpsState.lastCapaPoolMs = millis();
 
-                if (gpsState.hwVersion == UBX_HW_VERSION_UNKNOWN)
-                {
+                if (gpsState.hwVersion == UBX_HW_VERSION_UNKNOWN) {
                     pollVersion();
                 }
 

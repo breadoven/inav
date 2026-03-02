@@ -52,6 +52,8 @@
 #include "navigation/navigation_private.h"
 #include "navigation/sqrt_controller.h"
 
+#include "rx/rx.h"  // CR139
+
 #include "sensors/battery.h"
 
 /*-----------------------------------------------------------
@@ -137,17 +139,19 @@ bool adjustMulticopterAltitudeFromRCInput(void)
         return true;
     }
     else {
-        const int16_t rcThrottleAdjustment = applyDeadbandRescaled(rcCommand[THROTTLE] - altHoldThrottleRCZero, rcControlsConfig()->alt_hold_deadband, -500, 500);
+        const uint8_t deadband = rcControlsConfig()->alt_hold_deadband;  // CR153
+        const int16_t rcThrottleAdjustment = applyDeadband(rcCommand[THROTTLE] - altHoldThrottleRCZero, deadband);  // CR153
 
         if (rcThrottleAdjustment) {
             /* Set velocity proportional to stick movement
              * Scale from altHoldThrottleRCZero to maxthrottle or minthrottle to altHoldThrottleRCZero */
+            // CR153
+            int16_t controlRange = -deadband;
+            // controlRange += rcThrottleAdjustment > 0 ? PWM_RANGE_MAX - altHoldThrottleRCZero : altHoldThrottleRCZero - PWM_RANGE_MIN;
+            controlRange += rcThrottleAdjustment > 0 ? getMaxThrottle() - altHoldThrottleRCZero : altHoldThrottleRCZero - getThrottleIdleValue();
 
-            // Calculate max up or min down limit value scaled for deadband
-            int16_t limitValue = rcThrottleAdjustment > 0 ? getMaxThrottle() : getThrottleIdleValue();
-            limitValue = applyDeadbandRescaled(limitValue - altHoldThrottleRCZero, rcControlsConfig()->alt_hold_deadband, -500, 500);
-
-            int16_t rcClimbRate = ABS(rcThrottleAdjustment) * navConfig()->mc.max_manual_climb_rate / limitValue;
+            const int16_t rcClimbRate = rcThrottleAdjustment * navConfig()->mc.max_manual_climb_rate / controlRange;
+            // CR153
             updateClimbRateToAltitudeController(rcClimbRate, 0, ROC_TO_ALT_CONSTANT);
 
             return true;
@@ -171,10 +175,12 @@ void setupMulticopterAltitudeController(void)
     if (throttleType == MC_ALT_HOLD_STICK && !throttleIsLow) {
         // Only use current throttle if not LOW - use Thr Mid otherwise
         altHoldThrottleRCZero = rcCommand[THROTTLE];
+        // altHoldThrottleRCZero = rxGetChannelValue(THROTTLE);
     } else if (throttleType == MC_ALT_HOLD_HOVER) {
         altHoldThrottleRCZero = currentBatteryProfile->nav.mc.hover_throttle;
     } else {
         altHoldThrottleRCZero = rcLookupThrottleMid();
+        // altHoldThrottleRCZero = PWM_RANGE_MIDDLE;
     }
 
     // Make sure we are able to satisfy the deadband
@@ -207,15 +213,11 @@ void resetMulticopterAltitudeController(void)
     pt1FilterReset(&posControl.pids.vel[Z].error_filter_state, 0.0f);
     pt1FilterReset(&posControl.pids.vel[Z].dterm_filter_state, 0.0f);
 
+    float climbRateToUse = navConfig()->mc.max_manual_climb_rate;
     if (FLIGHT_MODE(FAILSAFE_MODE) || FLIGHT_MODE(NAV_RTH_MODE) || FLIGHT_MODE(NAV_WP_MODE) || navigationIsExecutingAnEmergencyLanding()) {
-        nav_speed_up = navConfig()->mc.max_auto_climb_rate;
-        nav_accel_z = navConfig()->mc.max_auto_climb_rate;
-        nav_speed_down = navConfig()->mc.max_auto_climb_rate;
-    } else {
-        nav_speed_up = navConfig()->mc.max_manual_climb_rate;
-        nav_accel_z = navConfig()->mc.max_manual_climb_rate;
-        nav_speed_down = navConfig()->mc.max_manual_climb_rate;
+        climbRateToUse = navConfig()->mc.max_auto_climb_rate;
     }
+    nav_speed_up = nav_accel_z = nav_speed_down = climbRateToUse;
 
     sqrtControllerInit(
         &alt_hold_sqrt_controller,
@@ -541,21 +543,79 @@ static float computeNormalizedVelocity(const float value, const float maxValue)
 }
 
 static float computeVelocityScale(
-    const float value,
-    const float maxValue,
+    float value,
+    // const float maxValue,   // CR47
     const float attenuationFactor,
-    const float attenuationStart,
-    const float attenuationEnd
+    const float attenuationStartVel,    // CR47
+    const float attenuationEndVel   // CR47
 )
 {
-    const float normalized = computeNormalizedVelocity(value, maxValue);
+    // CR47
+    value -= attenuationStartVel;
+    if (value <= 0.0f) {
+        return 0.0f;
+    }
+    const float normalized = computeNormalizedVelocity(value, attenuationEndVel - attenuationStartVel);
+    float scale = scaleRangef(normalized, 0.0f, 1.0f, 0.0f, attenuationFactor);
+    return constrainf(scale, 0.0f, attenuationFactor);
 
-    float scale = scaleRangef(normalized, attenuationStart, attenuationEnd, 0, attenuationFactor);
-    return constrainf(scale, 0, attenuationFactor);
+    // const float normalized = computeNormalizedVelocity(value, maxValue);
+    // float scale = scaleRangef(normalized, attenuationStart, attenuationEnd, 0, attenuationFactor);
+    // return constrainf(scale, 0, attenuationFactor);
+    // CR47
 }
-
-static void updatePositionAccelController_MC(timeDelta_t deltaMicros, float maxAccelLimit, const float maxSpeed)
+// CR141
+static void checkForToiletBowling(void)
 {
+    bool isHoldingPosition = (FLIGHT_MODE(NAV_COURSE_HOLD_MODE) && posControl.cruise.multicopterSpeed < 50) || navGetCurrentStateFlags() & NAV_CTL_HOLD;
+    uint16_t distanceToHoldPoint = calculateDistanceToDestination(&posControl.desiredState.pos);
+
+    if (posControl.actualState.velXY < 100 || distanceToHoldPoint < 100 || !isHoldingPosition || (posControl.flags.isAdjustingPosition && navConfig()->general.flags.user_control_mode == NAV_GPS_ATTI)) {
+
+        return;
+    }
+
+    static timeMs_t startTime = 0;
+
+    int16_t courseError = wrap_18000(calculateBearingToDestination(&posControl.desiredState.pos) - 10 * gpsSol.groundCourse);
+    bool courseErrorCheck = ABS(courseError) > 3000 && ABS(courseError) < 15500;
+
+    bool distanceSpeedCheck = posControl.actualState.velXY * distanceToHoldPoint > (navConfig()->mc.toiletbowl_detection * 10000);
+
+    if (courseErrorCheck && distanceSpeedCheck) {
+        if (startTime == 0) {
+            startTime = millis();
+        } else if (millis() - startTime > 1000) {
+            mcToiletBowlingHeadingCorrection = 0.67 * courseError;   // Try to correct heading error
+        }
+    } else {
+        startTime = 0;
+    }
+
+    // DEBUG_SET(DEBUG_ALWAYS, 0, courseError);
+    // DEBUG_SET(DEBUG_ALWAYS, 2, posControl.actualState.velXY * distanceToHoldPoint);
+}
+// CR141
+static void updatePositionAccelController_MC(timeDelta_t deltaMicros, float maxAccelLimit)  // , const float maxSpeed)   CR47
+{
+    // CR141
+    // DEBUG_SET(DEBUG_ALWAYS, 1, calculateDistanceToDestination(&posControl.desiredState.pos));
+    // DEBUG_SET(DEBUG_ALWAYS, 3, mcToiletBowlingHeadingCorrection);
+    // DEBUG_SET(DEBUG_ALWAYS, 5, posControl.actualState.velXY);
+    // DEBUG_SET(DEBUG_ALWAYS, 6, calculateBearingToDestination(&posControl.desiredState.pos));
+    // DEBUG_SET(DEBUG_ALWAYS, 7, posControl.actualState.yaw);
+    if (navConfig()->mc.toiletbowl_detection) {
+        if (mcToiletBowlingHeadingCorrection) {
+            uint16_t correctedHeading = wrap_36000(posControl.actualState.yaw - mcToiletBowlingHeadingCorrection);
+            posControl.actualState.sinYaw = sin_approx(CENTIDEGREES_TO_RADIANS(correctedHeading));
+            posControl.actualState.cosYaw = cos_approx(CENTIDEGREES_TO_RADIANS(correctedHeading));
+            // DEBUG_SET(DEBUG_ALWAYS, 4, correctedHeading);
+        } else {
+            checkForToiletBowling();
+        }
+    }
+    // CR141
+
     const float measurementX = navGetCurrentActualPositionAndVelocity()->vel.x;
     const float measurementY = navGetCurrentActualPositionAndVelocity()->vel.y;
 
@@ -572,8 +632,8 @@ static void updatePositionAccelController_MC(timeDelta_t deltaMicros, float maxA
     const float velErrorMagnitude = calc_length_pythagorean_2D(velErrorX, velErrorY);
 
     if (velErrorMagnitude > 0.1f) {
-        accelLimitX = maxAccelLimit / velErrorMagnitude * fabsf(velErrorX);
-        accelLimitY = maxAccelLimit / velErrorMagnitude * fabsf(velErrorY);
+        accelLimitX = maxAccelLimit * (fabsf(velErrorX) / velErrorMagnitude);
+        accelLimitY = maxAccelLimit * (fabsf(velErrorY) / velErrorMagnitude);
     } else {
         accelLimitX = maxAccelLimit / 1.414213f;
         accelLimitY = accelLimitX;
@@ -605,14 +665,15 @@ static void updatePositionAccelController_MC(timeDelta_t deltaMicros, float maxA
      */
     const float setpointScale = computeVelocityScale(
         setpointXY,
-        maxSpeed,
+        // maxSpeed,    // CR47
         multicopterPosXyCoefficients.dTermAttenuation,
         multicopterPosXyCoefficients.dTermAttenuationStart,
         multicopterPosXyCoefficients.dTermAttenuationEnd
     );
+
     const float measurementScale = computeVelocityScale(
         posControl.actualState.velXY,
-        maxSpeed,
+        // maxSpeed,    // CR47
         multicopterPosXyCoefficients.dTermAttenuation,
         multicopterPosXyCoefficients.dTermAttenuationStart,
         multicopterPosXyCoefficients.dTermAttenuationEnd
@@ -620,6 +681,7 @@ static void updatePositionAccelController_MC(timeDelta_t deltaMicros, float maxA
 
     //Choose smaller attenuation factor and convert from attenuation to scale
     const float dtermScale = 1.0f - MIN(setpointScale, measurementScale);
+    // DEBUG_SET(DEBUG_ALWAYS, 4, dtermScale * 100);
 
     // Apply PID with output limiting and I-term anti-windup
     // Pre-calculated accelLimit and the logic of navPidApply2 function guarantee that our newAccel won't exceed maxAccelLimit
@@ -646,7 +708,7 @@ static void updatePositionAccelController_MC(timeDelta_t deltaMicros, float maxA
         1.0f,   // Total gain scale
         dtermScale    // Additional dTerm scale
     );
-
+// DEBUG_SET(DEBUG_ALWAYS, 3, newAccelX * 1000);
     int32_t maxBankAngle = DEGREES_TO_DECIDEGREES(navConfig()->mc.max_bank_angle);
 
 #ifdef USE_MR_BRAKING_MODE
@@ -673,7 +735,6 @@ static void updatePositionAccelController_MC(timeDelta_t deltaMicros, float maxA
         maxBankAngle = DEGREES_TO_DECIDEGREES(navConfig()->mc.braking_bank_angle);
     }
 #endif
-
     // Save last acceleration target
     lastAccelTargetX = newAccelX;
     lastAccelTargetY = newAccelY;
@@ -688,6 +749,9 @@ static void updatePositionAccelController_MC(timeDelta_t deltaMicros, float maxA
 
     posControl.rcAdjustment[ROLL] = constrain(RADIANS_TO_DECIDEGREES(desiredRoll), -maxBankAngle, maxBankAngle);
     posControl.rcAdjustment[PITCH] = constrain(RADIANS_TO_DECIDEGREES(desiredPitch), -maxBankAngle, maxBankAngle);
+
+    // DEBUG_SET(DEBUG_ALWAYS, 2, accelForward);
+    // DEBUG_SET(DEBUG_ALWAYS, 3, posControl.rcAdjustment[PITCH]);
 }
 
 static void applyMulticopterPositionController(timeUs_t currentTimeUs)
@@ -724,7 +788,7 @@ static void applyMulticopterPositionController(timeUs_t currentTimeUs)
             // Get max speed for current NAV mode
             float maxSpeed = getActiveSpeed();
             updatePositionVelocityController_MC(maxSpeed);
-            updatePositionAccelController_MC(deltaMicrosPositionUpdate, NAV_ACCELERATION_XY_MAX, maxSpeed);
+            updatePositionAccelController_MC(deltaMicrosPositionUpdate, NAV_ACCELERATION_XY_MAX);   // , maxSpeed);  CR47
 
             navDesiredVelocity[X] = constrain(lrintf(posControl.desiredState.vel.x), -32678, 32767);
             navDesiredVelocity[Y] = constrain(lrintf(posControl.desiredState.vel.y), -32678, 32767);
@@ -750,7 +814,7 @@ bool isMulticopterFlying(void)
 }
 
 /*-----------------------------------------------------------
- * Multicopter land detector
+ * Multicopter landing detector
  *-----------------------------------------------------------*/
 #if defined(USE_BARO)
 static float baroAltRate;
@@ -841,7 +905,11 @@ bool isMulticopterLandingDetected(void)
     bool startCondition = (navGetCurrentStateFlags() & (NAV_CTL_LAND | NAV_CTL_EMERG))
                           || (FLIGHT_MODE(FAILSAFE_MODE) && !FLIGHT_MODE(NAV_WP_MODE) && !isMulticopterThrottleAboveMidHover())
                           || (!navigationIsFlyingAutonomousMode() && throttleStickIsLow());
-
+    // CR137
+    if (FLIGHT_MODE(NAV_RTH_MODE)) {
+        startCondition = startCondition && posControl.actualState.abs.pos.z < 3000;
+    }
+    // CR137
     static timeMs_t landingDetectorStartedAt;
 
     if (!startCondition || posControl.flags.resetLandingDetector) {
@@ -944,6 +1012,7 @@ static void applyMulticopterEmergencyLandingController(timeUs_t currentTimeUs)
             rcCommand[THROTTLE] = getThrottleIdleValue();
             return;
         }
+
         rcCommand[THROTTLE] = setDesiredThrottle(currentBatteryProfile->failsafe_throttle, true);
         return;
     }
@@ -993,6 +1062,7 @@ void calculateMulticopterInitialHoldPosition(fpVector3_t * pos)
 void resetMulticopterHeadingController(void)
 {
     updateHeadingHoldTarget(CENTIDEGREES_TO_DEGREES(posControl.actualState.yaw));
+    mcToiletBowlingHeadingCorrection = 0;  // CR141
 }
 
 static void applyMulticopterHeadingController(void)

@@ -282,8 +282,8 @@ PG_RESET_TEMPLATE(pidProfile_t, pidProfile,
 
         .navVelXyDTermLpfHz = SETTING_NAV_MC_VEL_XY_DTERM_LPF_HZ_DEFAULT,
         .navVelXyDtermAttenuation = SETTING_NAV_MC_VEL_XY_DTERM_ATTENUATION_DEFAULT,
-        .navVelXyDtermAttenuationStart = SETTING_NAV_MC_VEL_XY_DTERM_ATTENUATION_START_DEFAULT,
-        .navVelXyDtermAttenuationEnd = SETTING_NAV_MC_VEL_XY_DTERM_ATTENUATION_END_DEFAULT,
+        .navVelXyDtermAttenuationStart = SETTING_NAV_MC_VEL_XY_DTERM_ATTENUATION_START_SPEED_DEFAULT,   //CR47
+        .navVelXyDtermAttenuationEnd = SETTING_NAV_MC_VEL_XY_DTERM_ATTENUATION_END_SPEED_DEFAULT,    //CR47
         .iterm_relax_cutoff = SETTING_MC_ITERM_RELAX_CUTOFF_DEFAULT,
         .iterm_relax = SETTING_MC_ITERM_RELAX_DEFAULT,
 
@@ -1148,21 +1148,22 @@ void checkItermLimitingActive(pidState_t *pidState)
 }
 
 void checkItermFreezingActive(pidState_t *pidState, flight_dynamics_index_t axis)
-{
+{// CR ?
+    pidState->itermFreezeActive = false;
     if (usedPidControllerType == PID_TYPE_PIFF && pidProfile()->fixedWingYawItermBankFreeze != 0 && axis == FD_YAW) {
         // Do not allow yaw I-term to grow when bank angle is too large
         float bankAngle = DECIDEGREES_TO_DEGREES(attitude.values.roll);
         if (fabsf(bankAngle) > pidProfile()->fixedWingYawItermBankFreeze && !(FLIGHT_MODE(AUTO_TUNE) || FLIGHT_MODE(TURN_ASSISTANT))) {
             pidState->itermFreezeActive = true;
-        } else
-        {
-            pidState->itermFreezeActive = false;
-        }
-    } else
-    {
-        pidState->itermFreezeActive = false;
+        } // else
+        // {
+            // pidState->itermFreezeActive = false;
+        // }
+    // } else
+    // {
+        // pidState->itermFreezeActive = false;
     }
-
+    // CR ?
 }
 
 bool isAngleHoldLevel(void)
@@ -1443,7 +1444,7 @@ bool isFixedWingLevelTrimActive(void)
            !navigationIsControllingAltitude() && !(navCheckActiveAngleHoldAxis() == FD_PITCH && !angleHoldIsLevel);
 }
 
-void updateFixedWingLevelTrim(timeUs_t currentTimeUs)
+void updateFixedWingLevelTrim(timeUs_t currentTimeUs)  // called by task scheduler
 {
     if (!STATE(AIRPLANE)) {
         return;
@@ -1469,15 +1470,14 @@ void updateFixedWingLevelTrim(timeUs_t currentTimeUs)
     const float dT = US2S(currentTimeUs - previousUpdateTimeUs);
     previousUpdateTimeUs = currentTimeUs;
 
-    /*
-     * Prepare flags for the PID controller
-     */
+    // Prepare flags for the PID controller
     pidControllerFlags_e flags = PID_LIMIT_INTEGRATOR;
 
     // Iterm should freeze when conditions for setting level trim aren't met or time since last expected update too long ago
     if (!isFixedWingLevelTrimActive() || (dT > 5.0f * US2S(TASK_PERIOD_HZ(TASK_AUX_RATE_HZ)))) {
         flags |= PID_FREEZE_INTEGRATOR;
     }
+    DEBUG_SET(DEBUG_AUTOLEVEL, 3, flags);
 
     const float output = navPidApply3(
         &fixedWingLevelTrimController,
@@ -1490,7 +1490,6 @@ void updateFixedWingLevelTrim(timeUs_t currentTimeUs)
         1.0f,
         1.0f
     );
-
     DEBUG_SET(DEBUG_AUTOLEVEL, 4, output);
     fixedWingLevelTrim = pidProfile()->fixedWingLevelTrim + (output * FIXED_WING_LEVEL_TRIM_MULTIPLIER);
 }
@@ -1501,9 +1500,9 @@ float getFixedWingLevelTrim(void)
 }
 
 uint16_t getPidSumLimit(const flight_dynamics_index_t axis) {
-    if (axis == FD_YAW) {
-        return STATE(MULTIROTOR) ? 400 : 500;
-    } else {
-        return 500;
+    if (axis == FD_YAW && STATE(MULTIROTOR)) {
+        return 400;
     }
+
+    return 500;
 }

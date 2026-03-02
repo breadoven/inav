@@ -283,6 +283,7 @@ void initActiveBoxIds(void)
         if (sensors(SENSOR_BARO)) {
             ADD_ACTIVE_BOX(BOXAUTOLEVEL);
         }
+
         if (sensors(SENSOR_ACC)) {
             ADD_ACTIVE_BOX(BOXANGLEHOLD);
         }

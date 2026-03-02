@@ -129,7 +129,7 @@ void autotuneStart(void)
     lastGainsUpdateTime = millis();
 }
 
-void autotuneUpdateState(void)
+void autotuneUpdateState(void)  // called fc_core rxupdate
 {
     if (isFwAutoModeActive(BOXAUTOTUNE) && STATE(AIRPLANE) && ARMING_FLAG(ARMED)) {
         if (!FLIGHT_MODE(AUTO_TUNE)) {

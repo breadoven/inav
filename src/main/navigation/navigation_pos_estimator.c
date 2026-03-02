@@ -175,6 +175,7 @@ void onNewGPSData(void)
     static int32_t previousLon;
     static int32_t previousAlt;
     static bool isFirstGPSUpdate = true;
+    static bool originAltitudeCorrectionIsActive = true;  // CR153
 
     gpsLocation_t newLLH;
     const timeUs_t currentTimeUs = micros();
@@ -210,6 +211,7 @@ void onNewGPSData(void)
                 magDeclinationSet = true;
             }
         }
+
         /* Process position update if GPS origin is already set, or precision is good enough */
         // FIXME: Add HDOP check for acquisition of GPS origin
         /* Set GPS origin or reset the origin altitude - keep initial pre-arming altitude at zero */
@@ -219,7 +221,19 @@ void onNewGPSData(void)
         else if (shouldResetReferenceAltitude()) {
             /* If we were never armed - keep altitude at zero */
             geoSetOrigin(&posControl.gpsOrigin, &newLLH, GEO_ORIGIN_RESET_ALTITUDE);
+        } // CR153
+        else if (ARMING_FLAG(ARMED) && originAltitudeCorrectionIsActive) {
+            if (posEstimator.gps.epv >= positionEstimationConfig()->max_eph_epv) {
+                posControl.gpsOrigin.alt = newLLH.alt - posEstimator.est.pos.z;
+            } else {
+                originAltitudeCorrectionIsActive = false;
+            }
         }
+
+        // DEBUG_SET(DEBUG_ALWAYS, 0, originAltitudeCorrectionIsActive);
+        // DEBUG_SET(DEBUG_ALWAYS, 1, posControl.gpsOrigin.alt);
+        // DEBUG_SET(DEBUG_ALWAYS, 2, posEstimator.gps.epv);
+        // CR153
 
         if (posControl.gpsOrigin.valid) {
             /* Convert LLH position to local coordinates */
@@ -352,6 +366,12 @@ static bool gravityCalibrationComplete(void)
 
     return zeroCalibrationIsCompleteS(&posEstimator.imu.gravityCalibration);
 }
+// CR131
+static bool gravityCalibrationIsValid(void)
+{
+    return gravityCalibrationComplete() || posEstimator.imu.calibratedGravityCMSS;
+}
+// CR131
 
 #define ACC_VIB_FACTOR_S 1.0f
 #define ACC_VIB_FACTOR_E 3.0f
@@ -389,7 +409,6 @@ static void updateIMUTopic(timeUs_t currentTimeUs)
     else {
         /* Update acceleration weight based on vibration levels and clipping */
         updateIMUEstimationWeight(dt);
-
         fpVector3_t accelReading;
 
         /* Read acceleration data in body frame */
@@ -412,12 +431,14 @@ static void updateIMUTopic(timeUs_t currentTimeUs)
         /* When unarmed, assume that accelerometer should measure 1G. Use that to correct accelerometer gain */
         if (gyroConfig()->init_gyro_cal_enabled) {
             if (!ARMING_FLAG(ARMED) && !gravityCalibrationComplete()) {
+            // if (!ARMING_FLAG(WAS_EVER_ARMED)) {  // CR131
                 zeroCalibrationAddValueS(&posEstimator.imu.gravityCalibration, posEstimator.imu.accelNEU.z);
 
                 if (gravityCalibrationComplete()) {
                     zeroCalibrationGetZeroS(&posEstimator.imu.gravityCalibration, &posEstimator.imu.calibratedGravityCMSS);
                     setGravityCalibration(posEstimator.imu.calibratedGravityCMSS);
                     LOG_DEBUG(POS_ESTIMATOR, "Gravity calibration complete (%d)", (int)lrintf(posEstimator.imu.calibratedGravityCMSS));
+                    // restartGravityCalibration();  // CR131
                 }
             }
         } else {
@@ -425,7 +446,8 @@ static void updateIMUTopic(timeUs_t currentTimeUs)
             posEstimator.imu.calibratedGravityCMSS = gyroConfig()->gravity_cmss_cal;
         }
 
-        if (gravityCalibrationComplete()) {
+        // if (gravityCalibrationComplete()) {
+        if (gravityCalibrationIsValid()) {  // CR131
 #ifdef USE_SIMULATOR
             if (ARMING_FLAG(SIMULATOR_MODE_HITL) || ARMING_FLAG(SIMULATOR_MODE_SITL)) {
                 posEstimator.imu.calibratedGravityCMSS = GRAVITY_CMSS;
@@ -482,17 +504,16 @@ static uint32_t calculateCurrentValidityFlags(timeUs_t currentTimeUs)
 
     if ((sensors(SENSOR_GPS)
 #ifdef USE_GPS_FIX_ESTIMATION
-            || STATE(GPS_ESTIMATED_FIX)
+        || STATE(GPS_ESTIMATED_FIX)
 #endif
-        ) && posControl.gpsOrigin.valid &&
-        ((currentTimeUs - posEstimator.gps.lastUpdateTime) <= MS2US(INAV_GPS_TIMEOUT_MS)) &&
+        ) && posControl.gpsOrigin.valid && ((currentTimeUs - posEstimator.gps.lastUpdateTime) <= MS2US(INAV_GPS_TIMEOUT_MS)) &&
         (posEstimator.gps.eph < max_eph_epv)) {
-        if (posEstimator.gps.epv < max_eph_epv) {
-            newFlags |= EST_GPS_XY_VALID | EST_GPS_Z_VALID;
-        }
-        else {
-            newFlags |= EST_GPS_XY_VALID;
-        }
+            if (posEstimator.gps.epv < max_eph_epv) {
+                newFlags |= EST_GPS_XY_VALID | EST_GPS_Z_VALID;
+            }
+            else {
+                newFlags |= EST_GPS_XY_VALID;
+            }
     }
 
     if (sensors(SENSOR_BARO) && ((currentTimeUs - posEstimator.baro.lastUpdateTime) <= MS2US(INAV_BARO_TIMEOUT_MS))) {
@@ -520,14 +541,16 @@ static uint32_t calculateCurrentValidityFlags(timeUs_t currentTimeUs)
 
 static void estimationPredict(estimationContext_t * ctx)
 {
-
     /* Prediction step: Z-axis */
     if ((ctx->newFlags & EST_Z_VALID)) {
         posEstimator.est.pos.z += posEstimator.est.vel.z * ctx->dt;
         posEstimator.est.pos.z += posEstimator.imu.accelNEU.z * sq(ctx->dt) / 2.0f;
-        if (ARMING_FLAG(WAS_EVER_ARMED)) {   // Hold at zero until first armed
+        // CR131
+        // if (ARMING_FLAG(WAS_EVER_ARMED)) {   // Hold at zero until first armed
             posEstimator.est.vel.z += posEstimator.imu.accelNEU.z * ctx->dt;
-        }
+        // }
+        // CR131
+        // DEBUG_SET(DEBUG_ALWAYS, 7, posEstimator.imu.accelNEU.z);
     }
 
     /* Prediction step: XY-axis */
@@ -549,12 +572,12 @@ static void estimationPredict(estimationContext_t * ctx)
 static bool estimationCalculateCorrection_Z(estimationContext_t * ctx)
 {
     DEBUG_SET(DEBUG_ALTITUDE, 0, posEstimator.est.pos.z);       // Position estimate
-    DEBUG_SET(DEBUG_ALTITUDE, 2, posEstimator.baro.alt);        // Baro altitude
-    DEBUG_SET(DEBUG_ALTITUDE, 4, posEstimator.gps.pos.z);       // GPS altitude
-    DEBUG_SET(DEBUG_ALTITUDE, 6, accGetVibrationLevel());       // Vibration level
     DEBUG_SET(DEBUG_ALTITUDE, 1, posEstimator.est.vel.z);       // Vertical speed estimate
+    DEBUG_SET(DEBUG_ALTITUDE, 2, posEstimator.baro.alt);        // Baro altitude
     DEBUG_SET(DEBUG_ALTITUDE, 3, posEstimator.imu.accelNEU.z);  // Vertical acceleration on earth frame
+    DEBUG_SET(DEBUG_ALTITUDE, 4, posEstimator.gps.pos.z);       // GPS altitude
     DEBUG_SET(DEBUG_ALTITUDE, 5, posEstimator.gps.vel.z);       // GPS vertical speed
+    DEBUG_SET(DEBUG_ALTITUDE, 6, accGetVibrationLevel());       // Vibration level
     DEBUG_SET(DEBUG_ALTITUDE, 7, accGetClipCount());            // Clip count
 
     bool correctOK = false;
@@ -580,10 +603,11 @@ static bool estimationCalculateCorrection_Z(estimationContext_t * ctx)
     }
 
     if (ctx->newFlags & EST_BARO_VALID && wBaro) {
+        // CR152
         if (posEstimator.baro.updateDt) {   // only update corrections once every sensor update
-            ctx->applyCorrections = true;
+            ctx->applyCorrectionsZ = true;  // CR152.1
             const float dT = posEstimator.baro.updateDt;
-
+            // CR152
             bool isAirCushionEffectDetected = false;
             static float baroGroundAlt = 0.0f;
 
@@ -616,7 +640,9 @@ static bool estimationCalculateCorrection_Z(estimationContext_t * ctx)
 
             const float baroVelZResidual = isAirCushionEffectDetected ? 0.0f : wBaro * (posEstimator.baro.baroAltRate - posEstimator.est.vel.z);
             const float w_z_baro_p = positionEstimationConfig()->w_z_baro_p;
-            const float w_z_baro_v = positionEstimationConfig()->w_z_baro_v;
+            float w_z_baro_v = positionEstimationConfig()->w_z_baro_v;
+
+            w_z_baro_v *= fabsf(baroVelZResidual) > 200.0f ? 2.0f : 1.0f;  // increase vel correction if error large  CR140
 
             ctx->estPosCorr.z = baroAltResidual * w_z_baro_p * dT;
             ctx->estVelCorr.z = baroVelZResidual * w_z_baro_v * dT;
@@ -641,14 +667,17 @@ static bool estimationCalculateCorrection_Z(estimationContext_t * ctx)
                 ctx->newEPV = posEstimator.gps.epv;
             }
             else {
-                ctx->applyCorrections = true;
+                ctx->applyCorrectionsZ = true;  // CR152.1
                 const float dT = posEstimator.gps.updateDt;
 
                 // Altitude
                 const float gpsAltResidual = wGps * (posEstimator.gps.pos.z - posEstimator.est.pos.z);
                 const float gpsVelZResidual = wGps * (posEstimator.gps.vel.z - posEstimator.est.vel.z);
                 const float w_z_gps_p = positionEstimationConfig()->w_z_gps_p;
-                const float w_z_gps_v = positionEstimationConfig()->w_z_gps_v;
+                float w_z_gps_v = positionEstimationConfig()->w_z_gps_v;
+
+                w_z_gps_v *= fabsf(gpsVelZResidual) > 200.0f ? 2.0f : 1.0f;
+                // w_z_gps_v *= 1 + (fabsf(gpsVelZResidual) > 100 ? ((fabsf(gpsVelZResidual) - 100) / 100) : 0);
 
                 ctx->estPosCorr.z += gpsAltResidual * w_z_gps_p * dT;
                 ctx->estVelCorr.z += gpsVelZResidual * w_z_gps_v * dT;
@@ -686,7 +715,7 @@ static bool estimationCalculateCorrection_XY_GPS(estimationContext_t * ctx)
             ctx->newEPH = posEstimator.gps.eph;
         }
         else {
-            ctx->applyCorrections = true;
+            ctx->applyCorrectionsXY = true;  // CR152.1
             const float dT = posEstimator.gps.updateDt;
 
             const float gpsPosXResidual = posEstimator.gps.pos.x - posEstimator.est.pos.x;
@@ -715,6 +744,8 @@ static bool estimationCalculateCorrection_XY_GPS(estimationContext_t * ctx)
 
             /* Adjust EPH */
             ctx->newEPH = updateEPE(posEstimator.est.eph, dT, MAX(posEstimator.gps.eph, gpsPosResidualMag), w_xy_gps_p);
+
+            DEBUG_SET(DEBUG_ALWAYS, 4, gpsPosResidualMag);
         }
 
         return true;
@@ -723,9 +754,8 @@ static bool estimationCalculateCorrection_XY_GPS(estimationContext_t * ctx)
     return false;
 }
 
-static void estimationCalculateGroundCourse(timeUs_t currentTimeUs)
+static void estimationCalculateGroundCourse(void)
 {
-    UNUSED(currentTimeUs);
     if ((STATE(GPS_FIX)
 #ifdef USE_GPS_FIX_ESTIMATION
             || STATE(GPS_ESTIMATED_FIX)
@@ -735,7 +765,38 @@ static void estimationCalculateGroundCourse(timeUs_t currentTimeUs)
         posEstimator.est.cog = CENTIDEGREES_TO_DECIDEGREES(groundCourse);
     }
 }
+// CR142
+// static void checkEstimateSanity(timeMs_t currentTimeMs, fpVector3_t previousPos)
+// {
+    // static timeMs_t startTime[3];
+    // static bool useGpsRecovery = false;
+    // uint8_t axis;
 
+    // for (axis = 0; axis < XYZ_AXIS_COUNT; axis++) {
+        // bool posChangeVelocityMismatch = fabsf(posEstimator.est.vel.v[axis]) > 50.0f &&
+                                         // SIGN(posEstimator.est.pos.v[axis] - previousPos.v[axis]) != SIGN(posEstimator.est.vel.v[axis]);
+
+        // bool estimateSanityDegraded = ABS(posEstimator.est.vel.v[axis] - posEstimator.gps.vel.v[axis]) > 200 ||
+                                      // ABS(posEstimator.est.pos.v[axis] - posEstimator.gps.pos.v[axis]) > positionEstimationConfig()->max_eph_epv ||
+                                      // posChangeVelocityMismatch;
+
+        // if (estimateSanityDegraded || useGpsRecovery) {
+            // if (startTime[axis] == 0) {
+                // startTime[axis] = currentTimeMs;
+            // } else if (currentTimeMs - startTime[axis] > 3000) {
+                // posEstimator.imu.accelBias.v[axis] = 0;
+                // posEstimator.est.vel.v[axis] = posEstimator.gps.vel.v[axis];
+                // posEstimator.est.pos.v[axis] = posEstimator.gps.pos.v[axis];
+                // useGpsRecovery = currentTimeMs - startTime[axis] < 13000;
+            // }
+        // } else {
+            // startTime[axis] = 0;
+        // }
+
+        // posControl.flags.posEstimateDegraded = useGpsRecovery;
+    // }
+// }
+// CR142
 /**
  * Calculate next estimate using IMU and apply corrections from reference sensors (GPS, BARO etc)
  *  Function is called at main loop rate
@@ -743,6 +804,8 @@ static void estimationCalculateGroundCourse(timeUs_t currentTimeUs)
 static void updateEstimatedTopic(timeUs_t currentTimeUs)
 {
     estimationContext_t ctx;
+    static timeMs_t lastXYSensorUpdateMs = 0;  // CR152.1
+    static timeMs_t lastZSensorUpdateMs = 0;  // CR152.1
 
     const float max_eph_epv = positionEstimationConfig()->max_eph_epv;
 
@@ -758,14 +821,21 @@ static void updateEstimatedTopic(timeUs_t currentTimeUs)
         return;
     }
 
-    /* Calculate new degraded EPH and EPV for the case we didn't update estimation from sensors - linear degradation in max 10s */
-    ctx.newEPH = posEstimator.est.eph + ((posEstimator.est.eph <= max_eph_epv) ? 100.0f * ctx.dt : 0.0f);
-    ctx.newEPV = posEstimator.est.epv + ((posEstimator.est.epv <= max_eph_epv) ? 100.0f * ctx.dt : 0.0f);
+    /* Calculate new EPH and EPV for the case we didn't update position */
+    bool XYSensorUpdateTimeout = US2MS(currentTimeUs) - lastXYSensorUpdateMs > 200;  // CR152.1
+    ctx.newEPH = posEstimator.est.eph + ((posEstimator.est.eph <= max_eph_epv && XYSensorUpdateTimeout) ? 100.0f * ctx.dt : 0.0f);  // CR152.1
+    bool ZSensorUpdateTimeout = US2MS(currentTimeUs) - lastZSensorUpdateMs > 200;  // CR152.1
+    ctx.newEPV = posEstimator.est.epv + ((posEstimator.est.epv <= max_eph_epv && ZSensorUpdateTimeout) ? 100.0f * ctx.dt : 0.0f);  // CR152.1
+    // CR152.1
 
     ctx.newFlags = calculateCurrentValidityFlags(currentTimeUs);
     vectorZero(&ctx.estPosCorr);
     vectorZero(&ctx.estVelCorr);
     vectorZero(&ctx.accBiasCorr);
+    ctx.applyCorrectionsXY = false;  // CR152.1
+    ctx.applyCorrectionsZ = false;  // CR152.1
+
+    // fpVector3_t tempPos = posEstimator.est.pos;  // CR142
 
     /* AGL estimation - separate process, decouples from Z coordinate */
     estimationCalculateAGL(&ctx);
@@ -791,48 +861,67 @@ static void updateEstimatedTopic(timeUs_t currentTimeUs)
         posEstimator.est.vel.z -= posEstimator.est.vel.z * positionEstimationConfig()->w_z_res_v * ctx.dt;
     }
 
-    // Only apply corrections if new sensor update available
-    if (ctx.applyCorrections) {
-        ctx.applyCorrections = false;
-
-        // Boost the corrections based on accWeight
-        vectorScale(&ctx.estPosCorr, &ctx.estPosCorr, 1.0f / posEstimator.imu.accWeightFactor);
-        vectorScale(&ctx.estVelCorr, &ctx.estVelCorr, 1.0f / posEstimator.imu.accWeightFactor);
-
-        // Constrain corrections to prevent instability
+    // CR152.1
+    if (ctx.applyCorrectionsXY || ctx.applyCorrectionsZ) {
         float maxUpdateDt = MAX(posEstimator.gps.updateDt, posEstimator.baro.updateDt);
         maxUpdateDt = MAX(maxUpdateDt, posEstimator.flow.updateDt);
-        const float correctionLimit = INAV_EST_CORR_LIMIT_VALUE * maxUpdateDt;
-        for (uint8_t axis = 0; axis < 3; axis++) {
+        float correctionLimit = INAV_EST_CORR_LIMIT_VALUE * maxUpdateDt;
+
+        uint8_t axisStart = 0;
+        uint8_t axisEnd = 2;
+
+        if (!ctx.applyCorrectionsXY) {
+            axisStart = 2;
+        } else if (!ctx.applyCorrectionsZ) {
+            axisEnd = 1;
+        }
+
+        for (uint8_t axis = axisStart; axis <= axisEnd; axis++) {
+            // Boost the corrections based on accWeight
+            ctx.estPosCorr.v[axis] *= 1.0f / posEstimator.imu.accWeightFactor;
+            ctx.estVelCorr.v[axis] *= 1.0f / posEstimator.imu.accWeightFactor;
+
+            // Constrain corrections to prevent instability
             ctx.estPosCorr.v[axis] = constrainf(ctx.estPosCorr.v[axis], -correctionLimit, correctionLimit);
             ctx.estVelCorr.v[axis] = constrainf(ctx.estVelCorr.v[axis], -correctionLimit, correctionLimit);
+
+            // Apply corrections
+            posEstimator.est.pos.v[axis] += ctx.estPosCorr.v[axis];
+            posEstimator.est.vel.v[axis] += ctx.estVelCorr.v[axis];
+
+            /* Correct accelerometer bias */
+            const float w_acc_bias = positionEstimationConfig()->w_acc_bias;
+            if (w_acc_bias > 0.0f) {
+                /* Correct accel bias */
+                posEstimator.imu.accelBias.v[axis] += ctx.accBiasCorr.v[axis] * w_acc_bias;
+                posEstimator.imu.accelBias.v[axis] = constrainf(posEstimator.imu.accelBias.v[axis], -INAV_ACC_BIAS_ACCEPTANCE_VALUE, INAV_ACC_BIAS_ACCEPTANCE_VALUE);
+            }
         }
+        DEBUG_SET(DEBUG_ALWAYS, 0, ctx.estVelCorr.x);
+        DEBUG_SET(DEBUG_ALWAYS, 1, ctx.estVelCorr.y);
+        DEBUG_SET(DEBUG_ALWAYS, 5, ctx.newEPH);
 
-        // Apply corrections
-        vectorAdd(&posEstimator.est.pos, &posEstimator.est.pos, &ctx.estPosCorr);
-        vectorAdd(&posEstimator.est.vel, &posEstimator.est.vel, &ctx.estVelCorr);
-
-        /* Correct accelerometer bias */
-        const float w_acc_bias = positionEstimationConfig()->w_acc_bias;
-        if (w_acc_bias > 0.0f) {
-            /* Correct accel bias */
-            posEstimator.imu.accelBias.x += ctx.accBiasCorr.x * w_acc_bias;
-            posEstimator.imu.accelBias.y += ctx.accBiasCorr.y * w_acc_bias;
-            posEstimator.imu.accelBias.z += ctx.accBiasCorr.z * w_acc_bias;
-
-            posEstimator.imu.accelBias.x = constrainf(posEstimator.imu.accelBias.x, -INAV_ACC_BIAS_ACCEPTANCE_VALUE, INAV_ACC_BIAS_ACCEPTANCE_VALUE);
-            posEstimator.imu.accelBias.y = constrainf(posEstimator.imu.accelBias.y, -INAV_ACC_BIAS_ACCEPTANCE_VALUE, INAV_ACC_BIAS_ACCEPTANCE_VALUE);
-            posEstimator.imu.accelBias.z = constrainf(posEstimator.imu.accelBias.z, -INAV_ACC_BIAS_ACCEPTANCE_VALUE, INAV_ACC_BIAS_ACCEPTANCE_VALUE);
-        }
-
-        // Reset sensor update time deltas once sensor corrections applied after sensor update
         posEstimator.gps.updateDt = 0.0f;
-        posEstimator.baro.updateDt = 0.0f;
         posEstimator.flow.updateDt = 0.0f;
+        posEstimator.baro.updateDt = 0.0f;
+
+        if (ctx.applyCorrectionsXY) {
+            lastXYSensorUpdateMs = US2MS(currentTimeUs);
+        }
+        if (ctx.applyCorrectionsZ) {
+            lastZSensorUpdateMs = US2MS(currentTimeUs);
+        }
     }
+    // CR152.1
+
+    // CR142
+    // if (ctx.newFlags & EST_XY_VALID && ctx.newFlags & EST_GPS_XY_VALID && ctx.newFlags & EST_Z_VALID && ctx.newFlags & EST_GPS_Z_VALID) {
+        // checkEstimateSanity(US2MS(currentTimeUs), tempPos);
+    // }
+    // CR142
 
     /* Update ground course */
-    estimationCalculateGroundCourse(currentTimeUs);
+    estimationCalculateGroundCourse();
 
     /* Update uncertainty */
     posEstimator.est.eph = constrainf(ctx.newEPH, 0.0f, 2.0f * max_eph_epv);
@@ -840,6 +929,16 @@ static void updateEstimatedTopic(timeUs_t currentTimeUs)
 
     // Keep flags for further usage
     posEstimator.flags = ctx.newFlags;
+
+    // DEBUG_SET(DEBUG_ALWAYS, 0, posEstimator.imu.accelBias.z * 1000);
+    // DEBUG_SET(DEBUG_ALWAYS, 1, ctx.accBiasCorr.z);
+    // DEBUG_SET(DEBUG_ALWAYS, 2, ctx.estPosCorr.z * 1000);
+    // DEBUG_SET(DEBUG_ALWAYS, 3, ctx.estVelCorr.z * 1000);
+    // DEBUG_SET(DEBUG_ALWAYS, 4, posEstimator.imu.accWeightFactor * 100);
+    // DEBUG_SET(DEBUG_ALWAYS, 5, posEstimator.baro.baroAltRate);
+    // DEBUG_SET(DEBUG_ALWAYS, 6, posEstimator.baro.alt);
+    // DEBUG_SET(DEBUG_ALWAYS, 5, ctx.accBiasCorr.x * 100);
+    // DEBUG_SET(DEBUG_ALWAYS, 7, posEstimator.est.eph);
 }
 
 /**
@@ -860,8 +959,18 @@ static void publishEstimatedTopic(timeUs_t currentTimeUs)
 
         /* Publish position update */
         if (posEstimator.est.eph < positionEstimationConfig()->max_eph_epv) {
+            // CR152.1
+            static pt1Filter_t estVelFilterState_X;
+            static pt1Filter_t estVelFilterState_Y;
+            float filteredVelX = pt1FilterApply4(&estVelFilterState_X, posEstimator.est.vel.x, 3.0f, HZ2S(INAV_POSITION_PUBLISH_RATE_HZ));
+            float filteredVelY = pt1FilterApply4(&estVelFilterState_Y, posEstimator.est.vel.y, 3.0f, HZ2S(INAV_POSITION_PUBLISH_RATE_HZ));
+
+            DEBUG_SET(DEBUG_ALWAYS, 2, posEstimator.est.vel.x);
+            DEBUG_SET(DEBUG_ALWAYS, 3, filteredVelX);
             // FIXME!!!!!
-            updateActualHorizontalPositionAndVelocity(true, true, posEstimator.est.pos.x, posEstimator.est.pos.y, posEstimator.est.vel.x, posEstimator.est.vel.y);
+            // updateActualHorizontalPositionAndVelocity(true, true, posEstimator.est.pos.x, posEstimator.est.pos.y, posEstimator.est.vel.x, posEstimator.est.vel.y);
+            updateActualHorizontalPositionAndVelocity(true, true, posEstimator.est.pos.x, posEstimator.est.pos.y, filteredVelX, filteredVelY);
+            // CR152.1
         }
         else {
             updateActualHorizontalPositionAndVelocity(false, false, posEstimator.est.pos.x, posEstimator.est.pos.y, 0, 0);
@@ -869,9 +978,15 @@ static void publishEstimatedTopic(timeUs_t currentTimeUs)
 
         /* Publish altitude update and set altitude validity */
         if (posEstimator.est.epv < positionEstimationConfig()->max_eph_epv) {
+            // CR152.1
+            static pt1Filter_t estVelFilterState_Z;
+            float filteredVelZ = pt1FilterApply4(&estVelFilterState_Z, posEstimator.est.vel.z, 3.0f, HZ2S(INAV_POSITION_PUBLISH_RATE_HZ));
+
             const float gpsCfEstimatedAltitudeError = STATE(GPS_FIX) ? posEstimator.gps.pos.z - posEstimator.est.pos.z : 0;
             navigationEstimateStatus_e aglStatus = (posEstimator.est.aglQual == SURFACE_QUAL_LOW) ? EST_USABLE : EST_TRUSTED;
-            updateActualAltitudeAndClimbRate(true, posEstimator.est.pos.z, posEstimator.est.vel.z, posEstimator.est.aglAlt, posEstimator.est.aglVel, aglStatus, gpsCfEstimatedAltitudeError);
+            // updateActualAltitudeAndClimbRate(true, posEstimator.est.pos.z, posEstimator.est.vel.z, posEstimator.est.aglAlt, posEstimator.est.aglVel, aglStatus, gpsCfEstimatedAltitudeError);
+            updateActualAltitudeAndClimbRate(true, posEstimator.est.pos.z, filteredVelZ, posEstimator.est.aglAlt, posEstimator.est.aglVel, aglStatus, gpsCfEstimatedAltitudeError);
+            // CR152.1
         }
         else {
             updateActualAltitudeAndClimbRate(false, posEstimator.est.pos.z, 0, posEstimator.est.aglAlt, 0, EST_NONE, 0);
@@ -969,5 +1084,6 @@ void updatePositionEstimator(void)
 
 bool navIsCalibrationComplete(void)
 {
-    return gravityCalibrationComplete();
+    // return gravityCalibrationComplete();
+    return gravityCalibrationIsValid();   // CR131
 }

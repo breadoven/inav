@@ -206,7 +206,7 @@ int getServoCount(void)
 
 void loadCustomServoMixer(void)
 {
-    
+
     //move the rate filter to new servo rules
     int movefilterCount = 0;
     static servoMixerSwitch_t servoMixerSwitchHelper[MAX_SERVO_RULES_SWITCH_CARRY]; // helper to keep track of servoSpeedLimitFilter of servo rules
@@ -684,11 +684,11 @@ void processContinuousServoAutotrim(const float dT)
     DEBUG_SET(DEBUG_AUTOTRIM, 7, axisPID_I[FD_PITCH]);
 }
 
-void processServoAutotrim(const float dT) {
+void processServoAutotrim(const float dT) {  // called fc_core main loop
 #ifdef USE_SIMULATOR
-    if (ARMING_FLAG(SIMULATOR_MODE_HITL)) {
-        return;
-    }
+    // if (ARMING_FLAG(SIMULATOR_MODE_HITL)) {
+        // return;
+    // }
 #endif
     if(!STATE(AIRPLANE))
     {
@@ -720,3 +720,4 @@ uint8_t getMinServoIndex(void)
 {
     return minServoIndex;
 }
+

@@ -134,7 +134,7 @@ bool throttleStickIsLow(void)
 int16_t throttleStickMixedValue(void)
 {
     int16_t throttleValue;
-    uint16_t lowLimit = feature(FEATURE_REVERSIBLE_MOTORS) ? PWM_RANGE_MIN : rxConfig()->mincheck;
+    uint16_t lowLimit = feature(FEATURE_REVERSIBLE_MOTORS) ? PWM_RANGE_MIN : getThrottleIdleValue(); // rxConfig()->mincheck;
 
     throttleValue = constrain(rxGetChannelValue(THROTTLE), lowLimit, PWM_RANGE_MAX);
     throttleValue = (uint16_t)(throttleValue - lowLimit) * PWM_RANGE_MIN / (PWM_RANGE_MAX - lowLimit);  // [LOWLIMIT;2000] -> [0;1000]
@@ -230,7 +230,7 @@ void processRcStickPositions(bool isThrottleLow)
             // Disarming via ARM BOX
             // Don't disarm via switch if failsafe is active or receiver doesn't receive data - we can't trust receiver
             // and can't afford to risk disarming in the air
-            if (ARMING_FLAG(ARMED) && !IS_RC_MODE_ACTIVE(BOXFAILSAFE) && rxIsReceivingSignal() && !failsafeIsActive()) {
+            if (ARMING_FLAG(ARMED) && !IS_RC_MODE_ACTIVE(BOXFAILSAFE) && rxIsReceivingSignal() && rxAreFlightChannelsValid() && !failsafeIsActive()) {
                 const timeMs_t disarmDelay = currentTimeMs - rcDisarmTimeMs;
                 if (disarmDelay > armingConfig()->switchDisarmDelayMs) {
                     if (armingConfig()->disarm_always || isThrottleLow) {
@@ -298,7 +298,6 @@ void processRcStickPositions(bool isThrottleLow)
         beeper(BEEPER_ACTION_FAIL); // The above cannot fail, but traditionally, we play FAIL for not-loading
     }
 #endif
-
     // Multiple configuration profiles
     if (feature(FEATURE_TX_PROF_SEL)) {
 

@@ -508,8 +508,7 @@ bool emergInflightRearmEnabled(void)
     timeMs_t currentTimeMs = millis();
     emergRearmStabiliseTimeout = 0;
 
-    if ((lastDisarmReason != DISARM_SWITCH) ||
-        (currentTimeMs > US2MS(lastDisarmTimeUs) + EMERGENCY_INFLIGHT_REARM_TIME_WINDOW_MS)) {
+    if ((lastDisarmReason != DISARM_SWITCH) || (currentTimeMs > US2MS(lastDisarmTimeUs) + EMERGENCY_INFLIGHT_REARM_TIME_WINDOW_MS)) {
         return false;
     }
 
@@ -546,7 +545,6 @@ void tryArm(void)
         return;
     }
 #endif
-
 #ifdef USE_PROGRAMMING_FRAMEWORK
     if (emergInflightRearmEnabled() || !isArmingDisabled() || emergencyArmingIsEnabled() ||
         LOGIC_CONDITION_GLOBAL_FLAG(LOGIC_CONDITION_GLOBAL_FLAG_OVERRIDE_ARMING_SAFETY)) {
@@ -729,7 +727,7 @@ void processRx(timeUs_t currentTimeUs)
     // Handle passthrough mode
     if (STATE(FIXED_WING_LEGACY)) {
         if ((IS_RC_MODE_ACTIVE(BOXMANUAL) && !navigationRequiresAngleMode() && !failsafeRequiresAngleMode()) ||    // Normal activation of passthrough
-            (!ARMING_FLAG(ARMED) && areSensorsCalibrating())){                                                              // Backup - if we are not armed - enforce passthrough while calibrating
+            (!ARMING_FLAG(ARMED) && areSensorsCalibrating())) {     // Backup - if we are not armed - enforce passthrough while calibrating
             ENABLE_FLIGHT_MODE(MANUAL_MODE);
         } else {
             DISABLE_FLIGHT_MODE(MANUAL_MODE);
@@ -906,7 +904,6 @@ static void processBlackbox(void)
 #endif
 void taskMainPidLoop(timeUs_t currentTimeUs)
 {
-
     cycleTime = getTaskDeltaTime(TASK_SELF);
     dT = (float)cycleTime * 0.000001f;
 
@@ -1013,6 +1010,7 @@ void taskMainPidLoop(timeUs_t currentTimeUs)
         processBlackbox();
     }
 #endif
+
 }
 
 // This function is called in a busy-loop, everything called from here should do it's own

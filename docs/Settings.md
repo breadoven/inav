@@ -2318,7 +2318,7 @@ Calculated 1G of Acc axis Z to use in INS
 
 | Default | Min | Max |
 | --- | --- | --- |
-| 0.0 | 0 | 2000 |
+| 0 | 0 | 2000 |
 
 ---
 
@@ -3064,7 +3064,7 @@ Protocol that is used to send motor updates to ESCs. Possible values - STANDARD,
 
 ### motor_pwm_rate
 
-Output frequency (in Hz) for motor pins.  Applies only to brushed motors. 
+Output frequency (in Hz) for motor pins.  Applies only to brushed motors.
 
 | Default | Min | Max |
 | --- | --- | --- |
@@ -3359,6 +3359,16 @@ Forward acceleration threshold for bungee launch or throw launch [cm/s/s], 1G = 
 | Default | Min | Max |
 | --- | --- | --- |
 | 1863 | 1350 | 20000 |
+
+---
+
+### nav_fw_launch_allow_throttle_low
+
+Allow launch sequence with throttle maintained low throughout. When main launch sequence completes control is maintained with Nav cruise throttle until sticks moved/throttle raised or control switches to other Nav mode if preselected
+
+| Default | Min | Max |
+| --- | --- | --- |
+| OFF | OFF | ON |
 
 ---
 
@@ -4052,6 +4062,16 @@ P gain of altitude PID controller (Multirotor)
 
 ---
 
+### nav_mc_toiletbowl_detection
+
+Sets sensitivity of toilet bowling detection for multirotors. On detection a heading correction is applied which should stop the toilet bowling. A setting of 2 works well for 5 inch multirotors. Increasing the setting will reduce sensitivity and delay detection. Set to 0 to disable. (Toilet bowling occurs most obviously during position hold when an inaccurate compass heading causes a rapidly increasing fast sweeping bowl shaped flight path).
+
+| Default | Min | Max |
+| --- | --- | --- |
+| 0 | 0 | 20 |
+
+---
+
 ### nav_mc_vel_xy_d
 
 D gain of Position-Rate (Velocity to Acceleration) PID controller. It can damp P and I. Increasing D might help when drone overshoots target.
@@ -4072,23 +4092,23 @@ Maximum D-term attenution percentage for horizontal velocity PID controller (Mul
 
 ---
 
-### nav_mc_vel_xy_dterm_attenuation_end
+### nav_mc_vel_xy_dterm_attenuation_end_speed
 
-A point (in percent of both target and current horizontal velocity) where nav_mc_vel_xy_dterm_attenuation reaches maximum
-
-| Default | Min | Max |
-| --- | --- | --- |
-| 60 | 0 | 100 |
-
----
-
-### nav_mc_vel_xy_dterm_attenuation_start
-
-A point (in percent of both target and current horizontal velocity) where nav_mc_vel_xy_dterm_attenuation begins
+Horizontal speed at which nav_mc_vel_xy_dterm_attenuation reaches maximum [m/s]
 
 | Default | Min | Max |
 | --- | --- | --- |
 | 10 | 0 | 100 |
+
+---
+
+### nav_mc_vel_xy_dterm_attenuation_start_speed
+
+Horizontal speed at which nav_mc_vel_xy_dterm_attenuation begins [m/s]
+
+| Default | Min | Max |
+| --- | --- | --- |
+| 5 | 0 | 100 |
 
 ---
 
@@ -6369,6 +6389,16 @@ Which aux channel to use to change serial output & baud rate (MSP / Telemetry). 
 | Default | Min | Max |
 | --- | --- | --- |
 | OFF | OFF | ON |
+
+---
+
+### test_setting
+
+For developer use. General use test setting from -1000 to 1000
+
+| Default | Min | Max |
+| --- | --- | --- |
+| 0 | -1000 | 1000 |
 
 ---
 

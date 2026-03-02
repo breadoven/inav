@@ -91,6 +91,8 @@ typedef struct navigationFlags_s {
     navigationEstimateStatus_e estHeadingStatus;    // Indicate valid heading - wither mag or GPS at certain speed on airplane
     bool gpsCfEstimatedAltitudeMismatch;            // Indicates a mismatch between GPS altitude and estimated altitude
 
+    // bool posEstimateDegraded;                       // CR142
+
     climbRateToAltitudeControllerMode_e rocToAltMode;
 
     bool isAdjustingPosition;
@@ -349,7 +351,9 @@ typedef enum {
     NAV_AUTO_WP_DONE        = (1 << 15),    // Waypoint mission reached the last waypoint and is idling
 
     NAV_MIXERAT             = (1 << 16),    // MIXERAT in progress
+
     NAV_CTL_HOLD            = (1 << 17),    // Nav loiter active at position
+    NAV_CTL_COURSE          = (1 << 18),    // course hold active  // CR117
 } navigationFSMStateFlags_t;
 
 typedef struct {
@@ -525,6 +529,7 @@ PG_DECLARE_ARRAY(navWaypoint_t, NAV_MAX_WAYPOINTS, nonVolatileWaypointList);
 
 extern navigationPosControl_t posControl;
 extern multicopterPosXyCoefficients_t multicopterPosXyCoefficients;
+extern int16_t mcToiletBowlingHeadingCorrection;    // Indicates toilet bowling detected multirotor // CR141
 
 /* Internally used functions */
 const navEstimatedPosVel_t * navGetCurrentActualPositionAndVelocity(void);
@@ -547,7 +552,7 @@ flightModeFlags_e navGetMappedFlightModes(navigationFSMState_t state);
 void setHomePosition(const fpVector3_t * pos, int32_t heading, navSetWaypointFlags_t useMask, navigationHomeFlags_t homeFlags);
 void setDesiredPosition(const fpVector3_t * pos, int32_t yaw, navSetWaypointFlags_t useMask);
 void setDesiredSurfaceOffset(float surfaceOffset);
-void setDesiredPositionToFarAwayTarget(int32_t yaw, int32_t distance, navSetWaypointFlags_t useMask);   // NOT USED
+// void setDesiredPositionToFarAwayTarget(int32_t yaw, int32_t distance, navSetWaypointFlags_t useMask);   // NOT USED
 void updateClimbRateToAltitudeController(float desiredClimbRate, float targetAltitude, climbRateToAltitudeControllerMode_e mode);
 
 bool isNavHoldPositionActive(void);
@@ -605,6 +610,7 @@ void calculateFixedWingInitialHoldPosition(fpVector3_t * pos);
 
 /* Fixed-wing launch controller */
 void resetFixedWingLaunchController(timeUs_t currentTimeUs);
+// bool isFixedWingLaunchFinishedThrottleLow(void);    // CR6
 void enableFixedWingLaunchController(timeUs_t currentTimeUs);
 void abortFixedWingLaunch(void);
 void applyFixedWingLaunchController(timeUs_t currentTimeUs);

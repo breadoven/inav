@@ -151,6 +151,7 @@ void estimationCalculateAGL(estimationContext_t * ctx)
         posEstimator.est.aglAlt += posEstimator.imu.accelNEU.z * sq(ctx->dt) / 2.0f * posEstimator.imu.accWeightFactor;
         posEstimator.est.aglVel += posEstimator.imu.accelNEU.z * ctx->dt * posEstimator.imu.accWeightFactor;
 
+
         // Apply correction
         if (posEstimator.est.aglQual == SURFACE_QUAL_HIGH) {
             // Correct estimate from rangefinder

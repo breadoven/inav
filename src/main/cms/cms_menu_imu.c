@@ -283,7 +283,6 @@ static const OSD_Entry cmsx_menuPidGpsnavEntries[] =
     OTHER_PIDFF_ENTRY("VEL I", &cmsx_pidVelXY.I),
     OTHER_PIDFF_ENTRY("VEL D", &cmsx_pidVelXY.D),
     OTHER_PIDFF_ENTRY("VEL FF", &cmsx_pidVelXY.FF),
-
     OSD_BACK_AND_END_ENTRY,
 };
 
@@ -463,6 +462,8 @@ static const OSD_Entry cmsx_menuMechanicsEntries[] =
     OSD_SETTING_ENTRY("ITERM RELAX", SETTING_MC_ITERM_RELAX),
     OSD_SETTING_ENTRY("ITERM CUTOFF", SETTING_MC_ITERM_RELAX_CUTOFF),
     OSD_SETTING_ENTRY("CD LPF", SETTING_MC_CD_LPF_HZ),
+    OSD_SETTING_ENTRY("MC DTERM ATT START", SETTING_NAV_MC_VEL_XY_DTERM_ATTENUATION_START_SPEED),  //CR47
+    OSD_SETTING_ENTRY("MC DTERM ATT END", SETTING_NAV_MC_VEL_XY_DTERM_ATTENUATION_END_SPEED),    //CR47
 
     OSD_BACK_AND_END_ENTRY,
 };
@@ -492,7 +493,7 @@ static const OSD_Entry cmsx_menuImuEntries[] =
     OSD_SUBMENU_ENTRY("MECHANICS",  &cmsx_menuMechanics),
 
     // Rate profile dependent
-    OSD_UINT8_CALLBACK_ENTRY("RATE PROF", cmsx_profileIndexOnChange, (&(const OSD_UINT8_t){ &tmpProfileIndex, 1, MAX_CONTROL_PROFILE_COUNT, 1})),
+    // OSD_UINT8_CALLBACK_ENTRY("RATE PROF", cmsx_profileIndexOnChange, (&(const OSD_UINT8_t){ &tmpProfileIndex, 1, MAX_CONTROL_PROFILE_COUNT, 1})),
     OSD_SUBMENU_ENTRY("RATE", &cmsx_menuRateProfile),
     OSD_SUBMENU_ENTRY("MANU RATE", &cmsx_menuManualRateProfile),
 
