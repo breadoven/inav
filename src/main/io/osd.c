@@ -206,7 +206,6 @@ static uint8_t armState;
 // Multifunction display
 static textAttributes_t osdGetMultiFunctionMessage(char *buff);
 multiFunctionWarning_t multiFunctionWarning;
-// static uint16_t osdWarningsFlags = 0;
 
 typedef struct osdMapData_s {
     uint32_t scale;
@@ -4369,7 +4368,6 @@ PG_RESET_TEMPLATE(osdConfig_t, osdConfig,
     .use_pilot_logo = SETTING_OSD_USE_PILOT_LOGO_DEFAULT,
     .inav_to_pilot_logo_spacing = SETTING_OSD_INAV_TO_PILOT_LOGO_SPACING_DEFAULT,
     .arm_screen_display_time = SETTING_OSD_ARM_SCREEN_DISPLAY_TIME_DEFAULT,
-    .multifunction_warning_cycle_time = SETTING_MULTIFUNCTION_WARNING_CYCLE_TIME_DEFAULT,  // CR151
 
 #ifdef USE_WIND_ESTIMATOR
     .estimations_wind_compensation = SETTING_OSD_ESTIMATIONS_WIND_COMPENSATION_DEFAULT,
@@ -6441,8 +6439,7 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
     return elemAttr;
 }
 
-// static bool newWarningActive = false;  // CR151.1
-static bool osdCheckWarning(bool condition, uint8_t warningFlag)  //, uint8_t *warningsCount)
+static bool osdCheckWarning(bool condition, uint8_t warningFlag)
 {
     const timeMs_t currentTimeMs = millis();
     static timeMs_t newWarningEndTime;
@@ -6470,7 +6467,6 @@ static bool osdCheckWarning(bool condition, uint8_t warningFlag)  //, uint8_t *w
             multiFunctionWarning.newWarningActive = false;
         }
         return true;
-        // *warningsCount += 1;
     } else if (multiFunctionWarning.osdWarningsFlags & warningFlag) {
         multiFunctionWarning.osdWarningsFlags &= ~warningFlag;
     }
@@ -6483,7 +6479,6 @@ static textAttributes_t osdGetMultiFunctionMessage(char *buff)
     /* Message length limit 10 char max */
 
     textAttributes_t elemAttr = TEXT_ATTRIBUTES_NONE;
-    // static uint8_t warningsCount;
     const char *message = NULL;
 
 #ifdef USE_MULTI_FUNCTIONS
@@ -6495,10 +6490,6 @@ static textAttributes_t osdGetMultiFunctionMessage(char *buff)
 
         switch (selectedFunction) {
         case MULTI_FUNC_NONE:
-        // case MULTI_FUNC_1:
-            // // message = warningsCount ? "WARNINGS !" : "0 WARNINGS";
-            // message = "0 WARNINGS";
-            // break;
         case MULTI_FUNC_1:
             message = posControl.flags.manualEmergLandActive ? "ABORT LAND" : "EMERG LAND";
             break;
@@ -6553,13 +6544,11 @@ static textAttributes_t osdGetMultiFunctionMessage(char *buff)
     const char *messages[9];
     uint8_t messageCount = 0;
     bool warningCondition = false;
-    // warningsCount = 0;
     uint16_t warningFlagID = 1;
 
     // Low Battery Voltage
     const batteryState_e batteryVoltageState = checkBatteryVoltageState();
     warningCondition = batteryVoltageState == BATTERY_CRITICAL || batteryVoltageState == BATTERY_WARNING;
-    // if (osdCheckWarning(warningCondition, warningFlagID, &warningsCount)) {
     if (osdCheckWarning(warningCondition, warningFlagID)) {
         messages[messageCount++] = batteryVoltageState == BATTERY_CRITICAL ? "VBATT LAND" : "VBATT LOW ";
     }
@@ -6568,7 +6557,6 @@ static textAttributes_t osdGetMultiFunctionMessage(char *buff)
     if (batteryUsesCapacityThresholds()) {
         const batteryState_e batteryState = getBatteryState();
         warningCondition = batteryState == BATTERY_CRITICAL || batteryState == BATTERY_WARNING;
-        // if (osdCheckWarning(warningCondition, warningFlagID <<= 1, &warningsCount)) {
         if (osdCheckWarning(warningCondition, warningFlagID <<= 1)) {
             messages[messageCount++] = batteryState == BATTERY_CRITICAL ? "BATT EMPTY" : "BATT DYING";
         }
@@ -6576,7 +6564,6 @@ static textAttributes_t osdGetMultiFunctionMessage(char *buff)
 #if defined(USE_GPS)
     // GPS Fix and Failure
     if (feature(FEATURE_GPS)) {
-        // if (osdCheckWarning(!STATE(GPS_FIX), warningFlagID <<= 1, &warningsCount)) {
         if (osdCheckWarning(!STATE(GPS_FIX), warningFlagID <<= 1)) {
             bool gpsFailed = getHwGPSStatus() == HW_SENSOR_UNAVAILABLE;
             messages[messageCount++] = gpsFailed ? "GPS FAILED" : "NO GPS FIX";
@@ -6586,13 +6573,11 @@ static textAttributes_t osdGetMultiFunctionMessage(char *buff)
     // RTH sanity (warning if RTH heads 200m further away from home than closest point)
     warningCondition = NAV_Status.state == MW_NAV_STATE_RTH_ENROUTE && !posControl.flags.rthTrackbackActive &&
                        (posControl.homeDistance - posControl.rthSanityChecker.minimalDistanceToHome) > 20000;
-    // if (osdCheckWarning(warningCondition, warningFlagID <<= 1, &warningsCount)) {
     if (osdCheckWarning(warningCondition, warningFlagID <<= 1)) {
         messages[messageCount++] = "RTH SANITY";
     }
 
     // Altitude sanity (warning if significant mismatch between estimated and GPS altitude)
-    // if (osdCheckWarning(posControl.flags.gpsCfEstimatedAltitudeMismatch, warningFlagID <<= 1, &warningsCount)) {
     if (osdCheckWarning(posControl.flags.gpsCfEstimatedAltitudeMismatch, warningFlagID <<= 1)) {
         messages[messageCount++] = "ALT SANITY";
     }
@@ -6601,7 +6586,6 @@ static textAttributes_t osdGetMultiFunctionMessage(char *buff)
     // Magnetometer failure
     if (requestedSensors[SENSOR_INDEX_MAG] != MAG_NONE) {
         hardwareSensorStatus_e magStatus = getHwCompassStatus();
-        // if (osdCheckWarning(magStatus == HW_SENSOR_UNAVAILABLE || magStatus == HW_SENSOR_UNHEALTHY, warningFlagID <<= 1, &warningsCount)) {
         if (osdCheckWarning(magStatus == HW_SENSOR_UNAVAILABLE || magStatus == HW_SENSOR_UNHEALTHY, warningFlagID <<= 1)) {
             messages[messageCount++] = "MAG FAILED";
         }
@@ -6611,7 +6595,6 @@ static textAttributes_t osdGetMultiFunctionMessage(char *buff)
 #if defined(USE_PITOT)
     // Pitot sensor validation failure (blocked/failed pitot tube)
     if (sensors(SENSOR_PITOT) && detectedSensors[SENSOR_INDEX_PITOT] != PITOT_VIRTUAL) {
-        // if (osdCheckWarning(pitotHasFailed(), warningFlagID <<= 1, &warningsCount)) {
         if (osdCheckWarning(pitotHasFailed(), warningFlagID <<= 1)) {
             messages[messageCount++] = "PITOT FAIL";
         }
@@ -6622,20 +6605,18 @@ static textAttributes_t osdGetMultiFunctionMessage(char *buff)
     const float vibrationLevel = accGetVibrationLevel();
     // DEBUG_SET(DEBUG_ALWAYS, 0, vibrationLevel * 100);
     warningCondition = vibrationLevel > 1.5f;
-    // if (osdCheckWarning(warningCondition, warningFlagID <<= 1, &warningsCount)) {
     if (osdCheckWarning(warningCondition, warningFlagID <<= 1)) {
         messages[messageCount++] = vibrationLevel > 2.5f ? "BAD VIBRTN" : "VIBRATION!";
     }
 
 #ifdef USE_DEV_TOOLS
-    // if (osdCheckWarning(systemConfig()->groundTestMode, warningFlagID <<= 1, &warningsCount)) {
     if (osdCheckWarning(systemConfig()->groundTestMode, warningFlagID <<= 1)) {
         messages[messageCount++] = "GRD TEST !";
     }
 #endif
 
 // #if defined(USE_BARO)
-    // if (osdCheckWarning(getHwBarometerStatus() == HW_SENSOR_UNAVAILABLE, warningFlagID <<= 1, &warningsCount)) {
+    // if (osdCheckWarning(getHwBarometerStatus() == HW_SENSOR_UNAVAILABLE, warningFlagID <<= 1)) {
         // messages[messageCount++] = "BARO FAIL";
     // }
 // #endif
@@ -6646,10 +6627,7 @@ static textAttributes_t osdGetMultiFunctionMessage(char *buff)
         if (multiFunctionWarning.newWarningActive) {
             TEXT_ATTRIBUTES_ADD_BLINK(elemAttr);
         }
-    } // else if (warningsCount) {
-        // buff[0] = SYM_ALERT;
-        // tfp_sprintf(buff + 1, "%u        ", warningsCount);
-    // }
+    }
 
     return elemAttr;
 }

@@ -834,10 +834,10 @@ static void updateEstimatedTopic(timeUs_t currentTimeUs)
     /* Calculate new EPH and EPV for the case we didn't update position */
     // ctx.newEPH = posEstimator.est.eph * ((posEstimator.est.eph <= max_eph_epv) ? 1.0f + ctx.dt : 1.0f);  // CR152
     // ctx.newEPV = posEstimator.est.epv * ((posEstimator.est.epv <= max_eph_epv) ? 1.0f + ctx.dt : 1.0f);  // CR152
-    bool XYPosUpdateTimeout = US2MS(currentTimeUs) - lastXYSensorUpdateMs > 200;  // CR152.1
-    ctx.newEPH = posEstimator.est.eph + ((posEstimator.est.eph <= max_eph_epv && XYPosUpdateTimeout) ? 100.0f * ctx.dt : 0.0f);  // CR152.1
-    bool ZPosUpdateTimeout = US2MS(currentTimeUs) - lastZSensorUpdateMs > 200;  // CR152.1
-    ctx.newEPV = posEstimator.est.epv + ((posEstimator.est.epv <= max_eph_epv && ZPosUpdateTimeout) ? 100.0f * ctx.dt : 0.0f);  // CR152.1
+    bool XYSensorUpdateTimeout = US2MS(currentTimeUs) - lastXYSensorUpdateMs > 200;  // CR152.1
+    ctx.newEPH = posEstimator.est.eph + ((posEstimator.est.eph <= max_eph_epv && XYSensorUpdateTimeout) ? 100.0f * ctx.dt : 0.0f);  // CR152.1
+    bool ZSensorUpdateTimeout = US2MS(currentTimeUs) - lastZSensorUpdateMs > 200;  // CR152.1
+    ctx.newEPV = posEstimator.est.epv + ((posEstimator.est.epv <= max_eph_epv && ZSensorUpdateTimeout) ? 100.0f * ctx.dt : 0.0f);  // CR152.1
     // CR152.1
 
     ctx.newFlags = calculateCurrentValidityFlags(currentTimeUs);
