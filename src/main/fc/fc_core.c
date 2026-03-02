@@ -593,7 +593,10 @@ void tryArm(void)
     }
 
     if (!ARMING_FLAG(ARMED)) {
-        beeperConfirmationBeeps(1);
+        // Only beep if blocked by something other than DShot beeper guard delay to avoid feedback loop
+        if (armingFlags & ~ARMING_DISABLED_DSHOT_BEEPER) {
+            beeperConfirmationBeeps(1);
+        }
     }
 }
 
@@ -940,7 +943,12 @@ void taskMainPidLoop(timeUs_t currentTimeUs)
 
     processPilotAndFailSafeActions(dT);
 
-    updateArmingStatus();
+    // Check battery, GPS signal, arming status etc @ 200 Hz
+    static uint8_t armingStatusDivider = 0;
+    if (++armingStatusDivider >= 10) {
+        armingStatusDivider = 0;
+        updateArmingStatus();
+    }
 
     if (rxConfig()->rcFilterFrequency) {
         rcInterpolationApply(isRXDataNew, currentTimeUs);

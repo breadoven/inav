@@ -34,7 +34,7 @@
 
 #define INAV_ACC_BIAS_ACCEPTANCE_VALUE      (GRAVITY_CMSS * 0.25f)   // Max accepted bias correction of 0.25G - unlikely we are going to be that much off anyway
 
-#define INAV_EST_CORR_LIMIT_VALUE           4000.0f
+#define INAV_EST_CORR_LIMIT_VALUE           4000.0f   // Sanity constraint limit for pos/vel estimate correction value (max 40m correction per s)
 
 #define INAV_GPS_GLITCH_RADIUS              250.0f  // 2.5m GPS glitch radius
 #define INAV_GPS_GLITCH_ACCEL               1000.0f // 10m/s/s max possible acceleration for GPS glitch detection
@@ -71,7 +71,7 @@ typedef struct {
     fpVector3_t vel;            // GPS velocity (cms)
     float       eph;
     float       epv;
-    float       updateDt;  // CR152
+    float       updateDt;
 } navPositionEstimatorGPS_t;
 
 typedef struct {
@@ -80,7 +80,7 @@ typedef struct {
     float       alt;            // Raw barometric altitude (cm)
     float       epv;
     float       baroAltRate;    // Baro altitude rate of change (cm/s)
-    float       updateDt;  // CR152
+    float       updateDt;
 } navPositionEstimatorBARO_t;
 
 typedef struct {
@@ -107,7 +107,7 @@ typedef struct {
     float       quality;
     float       flowRate[2];
     float       bodyRate[2];
-    float       updateDt;  // CR152
+    float       updateDt;
 } navPositionEstimatorFLOW_t;
 
 typedef struct {
