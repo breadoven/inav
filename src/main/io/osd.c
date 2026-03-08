@@ -203,7 +203,7 @@ static bool fullRedraw = false;
 
 static uint8_t armState;
 
-// Multifunction display
+// Multifunction
 static textAttributes_t osdGetMultiFunctionMessage(char *buff);
 multiFunctionWarning_t multiFunctionWarning;
 
@@ -6441,12 +6441,14 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
 
 static bool osdCheckWarning(bool condition, uint8_t warningFlag)
 {
+    static timeMs_t newWarningEndTime = 0;
+    static uint16_t newWarningFlags = 0;  // bitfield
     const timeMs_t currentTimeMs = millis();
-    static timeMs_t newWarningEndTime;
-    static uint16_t newWarningFlags;
 
+    /* New warnings dislayed individually for 10s with blinking after which
+     * all current warnings displayed without blinking on 1 second cycle */
     if (condition) {    // condition required to trigger warning
-        if (!(multiFunctionWarning.osdWarningsFlags & warningFlag)) {
+        if (!(multiFunctionWarning.osdWarningsFlags & warningFlag)) {  // check for new warnings
             multiFunctionWarning.osdWarningsFlags |= warningFlag;
             newWarningFlags |= warningFlag;
             newWarningEndTime = currentTimeMs + 10000;
@@ -6457,11 +6459,8 @@ static bool osdCheckWarning(bool condition, uint8_t warningFlag)
             return true;
         }
 #endif
-        /* Warnings displayed in full for set time before shrinking down to alert symbol with warning count only.
-         * All current warnings then redisplayed for 5s on 30s rolling cycle.
-         * New warnings dislayed individually for 10s */
         if (currentTimeMs < newWarningEndTime) {
-            return (newWarningFlags & warningFlag);
+            return (newWarningFlags & warningFlag);  // filter out new warnings excluding older warnings
         } else {
             newWarningFlags = 0;
             multiFunctionWarning.newWarningActive = false;

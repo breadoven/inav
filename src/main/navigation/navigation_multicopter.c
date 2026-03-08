@@ -139,19 +139,18 @@ bool adjustMulticopterAltitudeFromRCInput(void)
         return true;
     }
     else {
-        const uint8_t deadband = rcControlsConfig()->alt_hold_deadband;  // CR153
-        const int16_t rcThrottleAdjustment = applyDeadband(rcCommand[THROTTLE] - altHoldThrottleRCZero, deadband);  // CR153
+        const uint8_t deadband = rcControlsConfig()->alt_hold_deadband;
+        const int16_t rcThrottleAdjustment = applyDeadband(rcCommand[THROTTLE] - altHoldThrottleRCZero, deadband);
 
         if (rcThrottleAdjustment) {
             /* Set velocity proportional to stick movement
              * Scale from altHoldThrottleRCZero to maxthrottle or minthrottle to altHoldThrottleRCZero */
-            // CR153
-            int16_t controlRange = -deadband;
             // controlRange += rcThrottleAdjustment > 0 ? PWM_RANGE_MAX - altHoldThrottleRCZero : altHoldThrottleRCZero - PWM_RANGE_MIN;
+
+            int16_t controlRange = -deadband;
             controlRange += rcThrottleAdjustment > 0 ? getMaxThrottle() - altHoldThrottleRCZero : altHoldThrottleRCZero - getThrottleIdleValue();
 
             const int16_t rcClimbRate = rcThrottleAdjustment * navConfig()->mc.max_manual_climb_rate / controlRange;
-            // CR153
             updateClimbRateToAltitudeController(rcClimbRate, 0, ROC_TO_ALT_CONSTANT);
 
             return true;

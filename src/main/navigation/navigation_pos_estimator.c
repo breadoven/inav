@@ -603,11 +603,9 @@ static bool estimationCalculateCorrection_Z(estimationContext_t * ctx)
     }
 
     if (ctx->newFlags & EST_BARO_VALID && wBaro) {
-        // CR152
         if (posEstimator.baro.updateDt) {   // only update corrections once every sensor update
-            ctx->applyCorrectionsZ = true;  // CR152.1
+            ctx->applyCorrectionsZ = true;
             const float dT = posEstimator.baro.updateDt;
-            // CR152
             bool isAirCushionEffectDetected = false;
             static float baroGroundAlt = 0.0f;
 
@@ -667,7 +665,7 @@ static bool estimationCalculateCorrection_Z(estimationContext_t * ctx)
                 ctx->newEPV = posEstimator.gps.epv;
             }
             else {
-                ctx->applyCorrectionsZ = true;  // CR152.1
+                ctx->applyCorrectionsZ = true;
                 const float dT = posEstimator.gps.updateDt;
 
                 // Altitude
@@ -715,7 +713,7 @@ static bool estimationCalculateCorrection_XY_GPS(estimationContext_t * ctx)
             ctx->newEPH = posEstimator.gps.eph;
         }
         else {
-            ctx->applyCorrectionsXY = true;  // CR152.1
+            ctx->applyCorrectionsXY = true;
             const float dT = posEstimator.gps.updateDt;
 
             const float gpsPosXResidual = posEstimator.gps.pos.x - posEstimator.est.pos.x;
@@ -804,8 +802,8 @@ static void estimationCalculateGroundCourse(void)
 static void updateEstimatedTopic(timeUs_t currentTimeUs)
 {
     estimationContext_t ctx;
-    static timeMs_t lastXYSensorUpdateMs = 0;  // CR152.1
-    static timeMs_t lastZSensorUpdateMs = 0;  // CR152.1
+    static timeMs_t lastXYSensorUpdateMs = 0;
+    static timeMs_t lastZSensorUpdateMs = 0;
 
     const float max_eph_epv = positionEstimationConfig()->max_eph_epv;
 
@@ -821,20 +819,18 @@ static void updateEstimatedTopic(timeUs_t currentTimeUs)
         return;
     }
 
-    /* Calculate new EPH and EPV for the case we didn't update position */
-    bool XYSensorUpdateTimeout = US2MS(currentTimeUs) - lastXYSensorUpdateMs > 200;  // CR152.1
-    ctx.newEPH = posEstimator.est.eph + ((posEstimator.est.eph <= max_eph_epv && XYSensorUpdateTimeout) ? 100.0f * ctx.dt : 0.0f);  // CR152.1
-    bool ZSensorUpdateTimeout = US2MS(currentTimeUs) - lastZSensorUpdateMs > 200;  // CR152.1
-    ctx.newEPV = posEstimator.est.epv + ((posEstimator.est.epv <= max_eph_epv && ZSensorUpdateTimeout) ? 100.0f * ctx.dt : 0.0f);  // CR152.1
-    // CR152.1
+    /* Calculate new degraded EPH and EPV for the case we didn't update estimation from sensors for > 200ms - linear degradation in max 10s */
+    const bool XYSensorUpdateTimeout = US2MS(currentTimeUs) - lastXYSensorUpdateMs > 200;
+    ctx.newEPH = posEstimator.est.eph + ((posEstimator.est.eph <= max_eph_epv && XYSensorUpdateTimeout) ? 100.0f * ctx.dt : 0.0f);
+    const bool ZSensorUpdateTimeout = US2MS(currentTimeUs) - lastZSensorUpdateMs > 200;
+    ctx.newEPV = posEstimator.est.epv + ((posEstimator.est.epv <= max_eph_epv && ZSensorUpdateTimeout) ? 100.0f * ctx.dt : 0.0f);
 
     ctx.newFlags = calculateCurrentValidityFlags(currentTimeUs);
     vectorZero(&ctx.estPosCorr);
     vectorZero(&ctx.estVelCorr);
     vectorZero(&ctx.accBiasCorr);
-    ctx.applyCorrectionsXY = false;  // CR152.1
-    ctx.applyCorrectionsZ = false;  // CR152.1
-
+    ctx.applyCorrectionsXY = false;
+    ctx.applyCorrectionsZ = false;
     // fpVector3_t tempPos = posEstimator.est.pos;  // CR142
 
     /* AGL estimation - separate process, decouples from Z coordinate */
@@ -861,7 +857,7 @@ static void updateEstimatedTopic(timeUs_t currentTimeUs)
         posEstimator.est.vel.z -= posEstimator.est.vel.z * positionEstimationConfig()->w_z_res_v * ctx.dt;
     }
 
-    // CR152.1
+    // Only apply corrections if new sensor update available
     if (ctx.applyCorrectionsXY || ctx.applyCorrectionsZ) {
         float maxUpdateDt = MAX(posEstimator.gps.updateDt, posEstimator.baro.updateDt);
         maxUpdateDt = MAX(maxUpdateDt, posEstimator.flow.updateDt);
@@ -869,7 +865,6 @@ static void updateEstimatedTopic(timeUs_t currentTimeUs)
 
         uint8_t axisStart = 0;
         uint8_t axisEnd = 2;
-
         if (!ctx.applyCorrectionsXY) {
             axisStart = 2;
         } else if (!ctx.applyCorrectionsZ) {
@@ -901,9 +896,10 @@ static void updateEstimatedTopic(timeUs_t currentTimeUs)
         DEBUG_SET(DEBUG_ALWAYS, 1, ctx.estVelCorr.y);
         DEBUG_SET(DEBUG_ALWAYS, 5, ctx.newEPH);
 
+        // Reset sensor update time deltas once sensor corrections applied after sensor update
         posEstimator.gps.updateDt = 0.0f;
-        posEstimator.flow.updateDt = 0.0f;
         posEstimator.baro.updateDt = 0.0f;
+        posEstimator.flow.updateDt = 0.0f;
 
         if (ctx.applyCorrectionsXY) {
             lastXYSensorUpdateMs = US2MS(currentTimeUs);
@@ -912,7 +908,6 @@ static void updateEstimatedTopic(timeUs_t currentTimeUs)
             lastZSensorUpdateMs = US2MS(currentTimeUs);
         }
     }
-    // CR152.1
 
     // CR142
     // if (ctx.newFlags & EST_XY_VALID && ctx.newFlags & EST_GPS_XY_VALID && ctx.newFlags & EST_Z_VALID && ctx.newFlags & EST_GPS_Z_VALID) {
@@ -959,18 +954,14 @@ static void publishEstimatedTopic(timeUs_t currentTimeUs)
 
         /* Publish position update */
         if (posEstimator.est.eph < positionEstimationConfig()->max_eph_epv) {
-            // CR152.1
             static pt1Filter_t estVelFilterState_X;
             static pt1Filter_t estVelFilterState_Y;
-            float filteredVelX = pt1FilterApply4(&estVelFilterState_X, posEstimator.est.vel.x, 3.0f, HZ2S(INAV_POSITION_PUBLISH_RATE_HZ));
-            float filteredVelY = pt1FilterApply4(&estVelFilterState_Y, posEstimator.est.vel.y, 3.0f, HZ2S(INAV_POSITION_PUBLISH_RATE_HZ));
-
+            float filteredVelX = pt1FilterApply4(&estVelFilterState_X, posEstimator.est.vel.x, INAV_EST_VEL_F_CUT_HZ, HZ2S(INAV_POSITION_PUBLISH_RATE_HZ));
+            float filteredVelY = pt1FilterApply4(&estVelFilterState_Y, posEstimator.est.vel.y, INAV_EST_VEL_F_CUT_HZ, HZ2S(INAV_POSITION_PUBLISH_RATE_HZ));
             DEBUG_SET(DEBUG_ALWAYS, 2, posEstimator.est.vel.x);
             DEBUG_SET(DEBUG_ALWAYS, 3, filteredVelX);
             // FIXME!!!!!
-            // updateActualHorizontalPositionAndVelocity(true, true, posEstimator.est.pos.x, posEstimator.est.pos.y, posEstimator.est.vel.x, posEstimator.est.vel.y);
             updateActualHorizontalPositionAndVelocity(true, true, posEstimator.est.pos.x, posEstimator.est.pos.y, filteredVelX, filteredVelY);
-            // CR152.1
         }
         else {
             updateActualHorizontalPositionAndVelocity(false, false, posEstimator.est.pos.x, posEstimator.est.pos.y, 0, 0);
@@ -978,15 +969,12 @@ static void publishEstimatedTopic(timeUs_t currentTimeUs)
 
         /* Publish altitude update and set altitude validity */
         if (posEstimator.est.epv < positionEstimationConfig()->max_eph_epv) {
-            // CR152.1
             static pt1Filter_t estVelFilterState_Z;
-            float filteredVelZ = pt1FilterApply4(&estVelFilterState_Z, posEstimator.est.vel.z, 3.0f, HZ2S(INAV_POSITION_PUBLISH_RATE_HZ));
+            float filteredVelZ = pt1FilterApply4(&estVelFilterState_Z, posEstimator.est.vel.z, INAV_EST_VEL_F_CUT_HZ, HZ2S(INAV_POSITION_PUBLISH_RATE_HZ));
 
             const float gpsCfEstimatedAltitudeError = STATE(GPS_FIX) ? posEstimator.gps.pos.z - posEstimator.est.pos.z : 0;
             navigationEstimateStatus_e aglStatus = (posEstimator.est.aglQual == SURFACE_QUAL_LOW) ? EST_USABLE : EST_TRUSTED;
-            // updateActualAltitudeAndClimbRate(true, posEstimator.est.pos.z, posEstimator.est.vel.z, posEstimator.est.aglAlt, posEstimator.est.aglVel, aglStatus, gpsCfEstimatedAltitudeError);
             updateActualAltitudeAndClimbRate(true, posEstimator.est.pos.z, filteredVelZ, posEstimator.est.aglAlt, posEstimator.est.aglVel, aglStatus, gpsCfEstimatedAltitudeError);
-            // CR152.1
         }
         else {
             updateActualAltitudeAndClimbRate(false, posEstimator.est.pos.z, 0, posEstimator.est.aglAlt, 0, EST_NONE, 0);

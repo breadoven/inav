@@ -328,32 +328,32 @@ static void updateBatteryVoltage(timeUs_t timeDelta, bool justConnected)
 batteryState_e checkBatteryVoltageState(void)
 {
     uint16_t stateVoltage = getBatteryVoltage();
-    static batteryState_e currentBatteryVoltageState = BATTERY_OK;  // CR151
+    static batteryState_e currentBatteryVoltageState = BATTERY_OK;
 
-    switch (currentBatteryVoltageState)  // CR151
+    switch (currentBatteryVoltageState)
     {
         case BATTERY_OK:
             if (stateVoltage <= (batteryWarningVoltage - VBATT_HYSTERESIS)) {
-                currentBatteryVoltageState = BATTERY_WARNING;   // CR151
+                currentBatteryVoltageState = BATTERY_WARNING;
             }
             break;
         case BATTERY_WARNING:
             if (stateVoltage <= (batteryCriticalVoltage - VBATT_HYSTERESIS)) {
-                currentBatteryVoltageState = BATTERY_CRITICAL;   // CR151
+                currentBatteryVoltageState = BATTERY_CRITICAL;
             } else if (stateVoltage > (batteryWarningVoltage + VBATT_HYSTERESIS)){
-                currentBatteryVoltageState = BATTERY_OK;   // CR151
+                currentBatteryVoltageState = BATTERY_OK;
             }
             break;
         case BATTERY_CRITICAL:
             if (stateVoltage > (batteryCriticalVoltage + VBATT_HYSTERESIS)) {
-                currentBatteryVoltageState = BATTERY_WARNING;   // CR151
+                currentBatteryVoltageState = BATTERY_WARNING;
             }
             break;
         default:
             break;
     }
 
-    return currentBatteryVoltageState;  // CR151
+    return currentBatteryVoltageState;
 }
 
 static void checkBatteryCapacityState(void)
