@@ -2415,7 +2415,7 @@ static bool osdDrawSingleElement(uint8_t item)
             }
             displayWriteWithAttr(osdDisplayPort, elemPosX, elemPosY, buff, elemAttr);
 
-            if (STATE(MULTIROTOR) && posControl.flags.isAdjustingAltitude) {
+            if (STATE(MULTIROTOR) && posControl.flags.mcAltholdDeadbandCentered) { ///posControl.flags.isAdjustingAltitude) { // CR155
                 /* Indicate MR altitude adjustment active with constant symbol at first blank position.
                  * Alternate symbol on/off with 600ms cycle if first position not blank (to maintain visibility of -ve sign) */
                 int8_t blankPos;

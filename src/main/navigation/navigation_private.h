@@ -99,6 +99,8 @@ typedef struct navigationFlags_s {
     bool isAdjustingAltitude;
     bool isAdjustingHeading;
 
+    bool mcAltholdDeadbandCentered;         // CR155
+
     // Behaviour modifiers
     bool isGCSAssistedNavigationEnabled;    // Does INAV accept WP#255 - follow-me etc.
     bool isGCSAssistedNavigationReset;      // GCS control was disabled - indicate that so code could take action accordingly

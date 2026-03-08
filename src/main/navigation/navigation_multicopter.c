@@ -141,6 +141,7 @@ bool adjustMulticopterAltitudeFromRCInput(void)
     else {
         const uint8_t deadband = rcControlsConfig()->alt_hold_deadband;
         const int16_t rcThrottleAdjustment = applyDeadband(rcCommand[THROTTLE] - altHoldThrottleRCZero, deadband);
+        posControl.flags.mcAltholdDeadbandCentered = applyDeadband(rcCommand[THROTTLE] - altHoldThrottleRCZero, 0.9f * deadband) == 0;  // CR155
 
         if (rcThrottleAdjustment) {
             /* Set velocity proportional to stick movement
