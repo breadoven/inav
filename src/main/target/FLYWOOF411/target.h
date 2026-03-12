@@ -16,6 +16,9 @@
  */
 
 #pragma once
+#ifdef FLYWOOF411_HITL
+#define USE_SIMULATOR
+#endif
 
 #ifdef FLYWOOF411_V2
 #define TARGET_BOARD_IDENTIFIER "FW42"

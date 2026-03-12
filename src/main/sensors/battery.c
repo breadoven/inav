@@ -324,7 +324,7 @@ static void updateBatteryVoltage(timeUs_t timeDelta, bool justConnected)
         vbat = pt1FilterApply4(&vbatFilterState, vbat, VBATT_LPF_FREQ, US2S(timeDelta));
     }
 }
-// CR151
+
 batteryState_e checkBatteryVoltageState(void)
 {
     uint16_t stateVoltage = getBatteryVoltage();

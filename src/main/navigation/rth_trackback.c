@@ -28,6 +28,8 @@
 
 #include "platform.h"
 
+#include "build/debug.h"
+
 #include "fc/multifunction.h"
 #include "fc/rc_controls.h"
 
