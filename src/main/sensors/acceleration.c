@@ -586,8 +586,8 @@ void accUpdate(void)
         // calc difference from this sample and 5hz filtered value, square and filter at 2hz
         const float accDiff = acc.accADCf[axis] - accFloorFilt;
         acc.accVibeSq[axis] = pt1FilterApply(&accVibeFilter[axis], accDiff * accDiff);
-        acc.accVibe = fast_fsqrtf(acc.accVibeSq[X] + acc.accVibeSq[Y] + acc.accVibeSq[Z]);
     }
+    acc.accVibe = fast_fsqrtf(acc.accVibeSq[X] + acc.accVibeSq[Y] + acc.accVibeSq[Z]);  // CR157
 
     // Filter acceleration
     for (int axis = 0; axis < XYZ_AXIS_COUNT; axis++) {
@@ -599,7 +599,6 @@ void accUpdate(void)
             acc.accADCf[axis] = accNotchFilterApplyFn(accNotchFilter[axis], acc.accADCf[axis]);
         }
     }
-
 }
 
 // Record extremes: min/max for each axis and acceleration vector modulus

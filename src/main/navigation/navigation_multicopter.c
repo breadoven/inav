@@ -902,9 +902,15 @@ bool isMulticopterLandingDetected(void)
      * Detection active during Failsafe only if throttle below mid hover throttle
      * and WP mission not active (except landing states).
      * Also active in non autonomous flight modes but only when thottle low */
-    bool startCondition = (navGetCurrentStateFlags() & (NAV_CTL_LAND | NAV_CTL_EMERG))
-                          || (FLIGHT_MODE(FAILSAFE_MODE) && !FLIGHT_MODE(NAV_WP_MODE) && !isMulticopterThrottleAboveMidHover())
-                          || (!navigationIsFlyingAutonomousMode() && throttleStickIsLow());
+    // CR156
+    bool throttleLowCheckAllowed = !navigationIsFlyingAutonomousMode();
+    if (posControl.flags.isTerrainFollowEnabled) {
+        throttleLowCheckAllowed = throttleLowCheckAllowed && posControl.flags.estAglStatus == EST_TRUSTED && posControl.actualState.agl.pos.z < 10.0f;
+    }
+    // CR156
+    bool startCondition = (navGetCurrentStateFlags() & (NAV_CTL_LAND | NAV_CTL_EMERG)) ||
+                          (FLIGHT_MODE(FAILSAFE_MODE) && !FLIGHT_MODE(NAV_WP_MODE) && !isMulticopterThrottleAboveMidHover()) ||
+                          (throttleLowCheckAllowed && throttleStickIsLow());  // CR156
     // CR137
     if (FLIGHT_MODE(NAV_RTH_MODE)) {
         startCondition = startCondition && posControl.actualState.abs.pos.z < 3000;

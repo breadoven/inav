@@ -134,17 +134,30 @@ bool pitotDetect(pitotDev_t *dev, uint8_t pitotHardwareToUse)
             FALLTHROUGH;
 
         case PITOT_VIRTUAL:
-#if defined(USE_WIND_ESTIMATOR) && defined(USE_PITOT_VIRTUAL) 
-            if ((pitotHardwareToUse != PITOT_AUTODETECT) && virtualPitotDetect(dev)) {
-                pitotHardware = PITOT_VIRTUAL;
-                break;
-            }
-#endif
-            /* If we are asked for a specific sensor - break out, otherwise - fall through and continue */
             if (pitotHardwareToUse != PITOT_AUTODETECT) {
+#if defined(USE_WIND_ESTIMATOR) && defined(USE_PITOT_VIRTUAL)
+                if (virtualPitotDetect(dev)) {
+                    pitotHardware = PITOT_VIRTUAL;
+                    break;
+                }
+#endif
+                requestedSensors[SENSOR_INDEX_PITOT] = PITOT_NONE;
                 break;
             }
+
             FALLTHROUGH;
+        // case PITOT_VIRTUAL:
+// #if defined(USE_WIND_ESTIMATOR) && defined(USE_PITOT_VIRTUAL)
+            // if ((pitotHardwareToUse != PITOT_AUTODETECT) && virtualPitotDetect(dev)) {
+                // pitotHardware = PITOT_VIRTUAL;
+                // break;
+            // }
+// #endif
+            // /* If we are asked for a specific sensor - break out, otherwise - fall through and continue */
+            // if (pitotHardwareToUse != PITOT_AUTODETECT) {
+                // break;
+            // }
+            // FALLTHROUGH;
 
         case PITOT_MSP:
 #ifdef USE_PITOT_MSP
@@ -240,7 +253,7 @@ STATIC_PROTOTHREAD(pitotThread)
         if ( pitot.lastSeenHealthyMs == 0 ) {
             if (pitot.dev.start(&pitot.dev)) {
                 pitot.lastSeenHealthyMs = millis();
-            }        
+            }
         }
 
         if ( (millis() - pitot.lastSeenHealthyMs) >= US2MS(pitot.dev.delay)) {
@@ -248,7 +261,7 @@ STATIC_PROTOTHREAD(pitotThread)
                 pitot.lastSeenHealthyMs = millis();
 
             if (pitot.dev.start(&pitot.dev))        // init for next read
-                pitot.lastSeenHealthyMs = millis();        
+                pitot.lastSeenHealthyMs = millis();
         }
 
 
@@ -256,13 +269,13 @@ STATIC_PROTOTHREAD(pitotThread)
 
 #ifdef USE_SIMULATOR
         if (SIMULATOR_HAS_OPTION(HITL_AIRSPEED)) {
-            pitotPressureTmp = sq(simulatorData.airSpeed) * SSL_AIR_DENSITY / 20000.0f + SSL_AIR_PRESSURE;     
+            pitotPressureTmp = sq(simulatorData.airSpeed) * SSL_AIR_DENSITY / 20000.0f + SSL_AIR_PRESSURE;
         }
 #endif
 #if defined(USE_PITOT_FAKE)
-        if (pitotmeterConfig()->pitot_hardware == PITOT_FAKE) { 
-            pitotPressureTmp = sq(fakePitotGetAirspeed()) * SSL_AIR_DENSITY / 20000.0f + SSL_AIR_PRESSURE;     
-        } 
+        if (pitotmeterConfig()->pitot_hardware == PITOT_FAKE) {
+            pitotPressureTmp = sq(fakePitotGetAirspeed()) * SSL_AIR_DENSITY / 20000.0f + SSL_AIR_PRESSURE;
+        }
 #endif
         ptYield();
 
@@ -297,7 +310,7 @@ STATIC_PROTOTHREAD(pitotThread)
         }
 
 #if defined(USE_PITOT_FAKE)
-        if (pitotmeterConfig()->pitot_hardware == PITOT_FAKE) { 
+        if (pitotmeterConfig()->pitot_hardware == PITOT_FAKE) {
             pitot.airSpeed = fakePitotGetAirspeed();
         }
 #endif

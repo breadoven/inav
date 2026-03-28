@@ -6163,7 +6163,7 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
         char messageBuf[MAX(SETTING_MAX_NAME_LENGTH, OSD_MESSAGE_LENGTH + 1)];
 
         /* WARNING: ensure number of messages returned does not exceed messages array size
-         * Messages array set 1 larger than maximum expected message count of 6 */
+         * Messages array set 1 larger than maximum expected message count of 7 */
         const char *messages[8];
         unsigned messageCount = 0;
 
@@ -6347,12 +6347,21 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
                     } else if (FLIGHT_MODE(HEADFREE_MODE)) {
                         messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_HEADFREE);
                     }
-                    if (FLIGHT_MODE(NAV_ALTHOLD_MODE) && !navigationRequiresAngleMode()) {
-                        /* If ALTHOLD is separately enabled for multirotor together with ANGL/HORIZON/ACRO modes
-                         * then ANGL/HORIZON/ACRO are indicated by the OSD_FLYMODE field.
-                         * In this case indicate ALTHOLD is active via a system message */
+                    if (FLIGHT_MODE(NAV_ALTHOLD_MODE)) {  // CR156
+                        if (posControl.flags.isTerrainFollowEnabled) {
+                            if (posControl.flags.estAglStatus == EST_TRUSTED) {
+                                messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_SURFACE_OK);
+                            } else {
+                                messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_SURFACE_BAD);
+                            }
+                        } else if (!navigationRequiresAngleMode()) {
+                            /* If ALTHOLD is separately enabled for multirotor together with ANGL/HORIZON/ACRO modes
+                             * then ANGL/HORIZON/ACRO are indicated by the OSD_FLYMODE field.
+                             * In this case indicate ALTHOLD is active via a system message */
 
-                        messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_ALTITUDE_HOLD);
+                            messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_ALTITUDE_HOLD);
+                        }
+                        // CR156
                     }
                 }
             }
