@@ -244,11 +244,13 @@ bool osdDisplayIsPAL(void)
 
 bool osdDisplayIsHD(void)
 {
-    if (displayScreenSize(osdDisplayPort) >= VIDEO_BUFFER_CHARS_HDZERO)
-    {
-        return true;
-    }
-    return false;
+    return displayScreenSize(osdDisplayPort) >= VIDEO_BUFFER_CHARS_HDZERO;  // CR158
+
+    // if (displayScreenSize(osdDisplayPort) >= VIDEO_BUFFER_CHARS_HDZERO)
+    // {
+        // return true;
+    // }
+    // return false;
 }
 
 bool osdIsNotMetric(void) {
@@ -5271,14 +5273,13 @@ uint8_t drawStat_AverageEfficiency(uint8_t col, uint8_t row, uint8_t statValX, b
 uint8_t drawStat_RXStats(uint8_t col, uint8_t row, uint8_t statValX)
 {
     char buff[20];
-    uint8_t multiValueXOffset = 0;
+    // uint8_t multiValueXOffset = 0;  // CR158
 
     tfp_sprintf(buff, "MIN RSSI");
     if (rxConfig()->serialrx_provider == SERIALRX_CRSF) {
         strcat(buff, "/LQ");
 
-        if (osdDisplayIsHD())
-            strcat(buff, "/DBM");
+        if (osdDisplayIsHD()) strcat(buff, "/DBM");  // CR158
     }
     displayWrite(osdDisplayPort, col, row, buff);
 
@@ -5286,21 +5287,36 @@ uint8_t drawStat_RXStats(uint8_t col, uint8_t row, uint8_t statValX)
     tfp_sprintf(buff, ": ");
     itoa(stats.min_rssi, buff + 2, 10);
     strcat(osdFormatTrimWhiteSpace(buff), "%");
-
+// CR158
     if (rxConfig()->serialrx_provider == SERIALRX_CRSF) {
         strcat(osdFormatTrimWhiteSpace(buff), "/");
-        multiValueXOffset = strlen(buff);
-        itoa(stats.min_lq, buff + multiValueXOffset, 10);
+        // multiValueXOffset = strlen(buff);
+        itoa(stats.min_lq, buff + strlen(buff), 10);
         strcat(osdFormatTrimWhiteSpace(buff), "%");
 
         if (osdDisplayIsHD()) {
             strcat(osdFormatTrimWhiteSpace(buff), "/");
-            itoa(stats.min_rssi_dbm, buff + 2, 10);
+            // multiValueXOffset = strlen(buff);
+            itoa(stats.min_rssi_dbm, buff + strlen(buff), 10);
             tfp_sprintf(buff + strlen(buff), "%c", SYM_DBM);
-            displayWrite(osdDisplayPort, statValX, row++, buff);
+            // displayWrite(osdDisplayPort, statValX, row++, buff);
         }
     }
 
+    // if (rxConfig()->serialrx_provider == SERIALRX_CRSF) {
+        // strcat(osdFormatTrimWhiteSpace(buff), "/");
+        // multiValueXOffset = strlen(buff);
+        // itoa(stats.min_lq, buff + multiValueXOffset, 10);
+        // strcat(osdFormatTrimWhiteSpace(buff), "%");
+
+        // if (osdDisplayIsHD()) {
+            // strcat(osdFormatTrimWhiteSpace(buff), "/");
+            // itoa(stats.min_rssi_dbm, buff + 2, 10);
+            // tfp_sprintf(buff + strlen(buff), "%c", SYM_DBM);
+            // displayWrite(osdDisplayPort, statValX, row++, buff);
+        // }
+    // }
+// CR158
     displayWrite(osdDisplayPort, statValX, row++, buff);
 
     if (!osdDisplayIsHD() && rxConfig()->serialrx_provider == SERIALRX_CRSF) {
@@ -5392,44 +5408,49 @@ uint8_t drawStat_DisarmMethod(uint8_t col, uint8_t row, uint8_t statValX)
 
 static void osdShowStats(bool isSinglePageStatsCompatible, uint8_t page)
 {
-    char * statsHeader[2] = {"*** STATS   1/2 -> ***", "*** STATS   <- 2/2 ***"};
+    // char * statsHeader[2] = {"*** STATS   1/2 -> ***", "*** STATS   <- 2/2 ***"};   // CR158
 
-    uint8_t row = 1;  // Start one line down leaving space at the top of the screen.
+    uint8_t row = 1;  // Start one line down leaving space at the top of the screen (Top line row index = 0)
 
     const uint8_t statNameX = (osdDisplayPort->cols - (osdDisplayIsHD() ? 41 : 28)) / 2;
     const uint8_t statValuesX = osdDisplayPort->cols - statNameX - (osdDisplayIsHD() ? 15 : 11);
-
-    if (page > 1)
-        page = 0;
 
     displayBeginTransaction(osdDisplayPort, DISPLAY_TRANSACTION_OPT_RESET_DRAWING);
     displayClearScreen(osdDisplayPort);
 
     if (isSinglePageStatsCompatible) {
-        char buff[25];
-        tfp_sprintf(buff, "*** STATS ");
-#ifdef USE_BLACKBOX
-#ifdef USE_SDCARD
+        char buff[35];   // CR158
+        dateTime_t dt;
+        if (rtcGetDateTimeLocal(&dt)) {
+            tfp_sprintf(buff, "*** STATS (%04u-%02u-%02u) ", dt.year, dt.month, dt.day);
+        } else {
+            tfp_sprintf(buff, "*** STATS ");
+        }
+#if defined(USE_BLACKBOX) && defined(USE_SDCARD)
         if (feature(FEATURE_BLACKBOX)) {
             int32_t logNumber = blackboxGetLogNumber();
-            if (logNumber >= 0)
+            if (logNumber >= 0) {   // CR158
                 tfp_sprintf(buff + strlen(buff), " %c%05" PRId32 " ", SYM_BLACKBOX, logNumber);
-            else
+            } else {
                 tfp_sprintf(buff + strlen(buff), " %c ", SYM_BLACKBOX);
+            }
         }
-#endif
 #endif
         strcat(buff, "***");
 
         displayWrite(osdDisplayPort, (osdDisplayPort->cols - strlen(buff)) / 2, row++, buff);
     } else {
+        char * statsHeader[2] = {"*** STATS   1/2 -> ***", "*** STATS   <- 2/2 ***"};
+
+        if (page > 1) page = 0;   // CR158
+
         dateTime_t dt;
         if (rtcGetDateTimeLocal(&dt)) {
             char buffTemp[25];
-            tfp_sprintf(buffTemp, "*STATS (%02u%02u%04u) 1/2 ->*", dt.day, dt.month, dt.year);
+            tfp_sprintf(buffTemp, "*STATS (%04u%02u%02u) 1/2 ->*", dt.year, dt.month, dt.day);
             statsHeader[0] = buffTemp;
         }
-        // displayWrite(osdDisplayPort, (osdDisplayPort->cols - strlen(statsHeader[page + 1])) / 2, row++, statsHeader[page]);
+        // displayWrite(osdDisplayPort, (osdDisplayPort->cols - strlen(statsHeader[page + 1])) / 2, row++, statsHeader[page]);   // CR158
         displayWrite(osdDisplayPort, (osdDisplayPort->cols - strlen(statsHeader[page])) / 2, row++, statsHeader[page]);
     }
 
@@ -5445,18 +5466,21 @@ static void osdShowStats(bool isSinglePageStatsCompatible, uint8_t page)
         if (feature(FEATURE_CURRENT_METER)) row = drawStat_UsedEnergy(statNameX, row, statValuesX); // 1 row
         if (feature(FEATURE_CURRENT_METER) && feature(FEATURE_GPS)) row = drawStat_AverageEfficiency(statNameX, row, statValuesX, false); // 1 row
         if (osdConfig()->stats_show_metric_efficiency && osdIsNotMetric() && feature(FEATURE_CURRENT_METER) && feature(FEATURE_GPS)) row = drawStat_AverageEfficiency(statNameX, row, statValuesX, true); // 1 row
-        row = drawStat_RXStats(statNameX, row, statValuesX); // 1 row if non-CRSF else 2 rows
+        row = drawStat_RXStats(statNameX, row, statValuesX); // 1 row
         if (feature(FEATURE_GPS)) row = drawStat_GPS(statNameX, row, statValuesX); // 1 row
         if (STATE(ESC_SENSOR_ENABLED)) row = drawStat_ESCTemperature(statNameX, row, statValuesX); // 1 row
 
-        // Draw these if there is space space
-        if (row < (osdDisplayPort->cols-3)) row = drawStat_GForce(statNameX, row, statValuesX); // 1 row HD or 2 rows SD
+        // Draw these if there is space  // CR158
+        if (row < (osdDisplayPort->rows - 3)) row = drawStat_GForce(statNameX, row, statValuesX); // 1 row
 #ifdef USE_STATS
-        if (row < (osdDisplayPort->cols-7) && statsConfig()->stats_enabled) row = drawStat_Stats(statNameX, row, statValuesX, false); // 4 rows
+        if (row < (osdDisplayPort->rows - 6) && statsConfig()->stats_enabled) row = drawStat_Stats(statNameX, row, statValuesX, false); // 4 rows
 #endif
+        // if (row < (osdDisplayPort->cols-3)) row = drawStat_GForce(statNameX, row, statValuesX); // 1 row HD or 2 rows SD
+// #ifdef USE_STATS
+        // if (row < (osdDisplayPort->cols-7) && statsConfig()->stats_enabled) row = drawStat_Stats(statNameX, row, statValuesX, false); // 4 rows
+// #endif
     } else {
-        switch (page) {
-            case 0:
+        if (page == 0) {
                 // Max 10 rows
                 row = drawStat_FlightTime(statNameX, row, statValuesX); // 1 row
                 row = drawStat_FlightDistance(statNameX, row, statValuesX); // 1 row
@@ -5468,36 +5492,32 @@ static void osdShowStats(bool isSinglePageStatsCompatible, uint8_t page)
                 if (feature(FEATURE_CURRENT_METER))row = drawStat_UsedEnergy(statNameX, row, statValuesX); // 1 row
                 if (feature(FEATURE_CURRENT_METER) && feature(FEATURE_GPS)) row = drawStat_AverageEfficiency(statNameX, row, statValuesX, false); // 1 row
                 if (feature(FEATURE_GPS))row = drawStat_GPS(statNameX, row, statValuesX); // 1 row
-                break;
-            case 1:
-                // Max 10 rows
-                row = drawStat_RXStats(statNameX, row, statValuesX); // 1 row if non-CRSF else 2 rows
-                if (STATE(ESC_SENSOR_ENABLED)) row = drawStat_ESCTemperature(statNameX, row, statValuesX); // 1 row
-                row = drawStat_GForce(statNameX, row, statValuesX); // 1 row HD or 2 rows SD
-                if (osdConfig()->stats_show_metric_efficiency && osdIsNotMetric() && feature(FEATURE_CURRENT_METER) && feature(FEATURE_GPS)) row = drawStat_AverageEfficiency(statNameX, row, statValuesX, true); // 1 row
-#ifdef USE_BLACKBOX
-#ifdef USE_SDCARD
-                if (feature(FEATURE_BLACKBOX)) {
-                    char buff[12];
-                    displayWrite(osdDisplayPort, statNameX, row, "BLACKBOX FILE");
+        } else {
+            // Max 10 rows
+            row = drawStat_RXStats(statNameX, row, statValuesX); // 1 row if non-CRSF else 2 rows
+            if (STATE(ESC_SENSOR_ENABLED)) row = drawStat_ESCTemperature(statNameX, row, statValuesX); // 1 row
+            row = drawStat_GForce(statNameX, row, statValuesX); // 1 row HD or 2 rows SD
+            if (osdConfig()->stats_show_metric_efficiency && osdIsNotMetric() && feature(FEATURE_CURRENT_METER) && feature(FEATURE_GPS)) row = drawStat_AverageEfficiency(statNameX, row, statValuesX, true); // 1 row
+#if defined(USE_BLACKBOX) && defined(USE_SDCARD)
+            if (feature(FEATURE_BLACKBOX)) {
+                char buff[12];
+                displayWrite(osdDisplayPort, statNameX, row, "BLACKBOX FILE");
 
-                    tfp_sprintf(buff, ": %u/%u", stats.min_sats, stats.max_sats);
+                tfp_sprintf(buff, ": %u/%u", stats.min_sats, stats.max_sats);
 
-                    int32_t logNumber = blackboxGetLogNumber();
-                    if (logNumber >= 0)
-                        tfp_sprintf(buff, ": %05ld ", logNumber);
-                    else
-                        strcat(buff, ": INVALID");
-
-                    displayWrite(osdDisplayPort, statValuesX, row++, buff); // 1 row
+                int32_t logNumber = blackboxGetLogNumber();
+                if (logNumber >= 0) {
+                    tfp_sprintf(buff, ": %05ld ", logNumber);
+                } else {
+                    strcat(buff, ": INVALID");
                 }
-#endif
+
+                displayWrite(osdDisplayPort, statValuesX, row++, buff); // 1 row
+            }
 #endif
 #ifdef USE_STATS
-                if (row < (osdDisplayPort->cols-7) && statsConfig()->stats_enabled) row = drawStat_Stats(statNameX, row, statValuesX, false); // 4 rows
+            if (row < (osdDisplayPort->rows - 6) && statsConfig()->stats_enabled) row = drawStat_Stats(statNameX, row, statValuesX, false); // 4 rows
 #endif
-
-                break;
         }
     }
 
@@ -5506,7 +5526,7 @@ static void osdShowStats(bool isSinglePageStatsCompatible, uint8_t page)
     // The following has been commented out as it will be added in #9688
     // uint16_t rearmMs = (emergInflightRearmEnabled()) ? emergencyInFlightRearmTimeMS() : 0;
 
-    if (savingSettings == true) {
+    if (savingSettings) {
         displayWrite(osdDisplayPort, (osdDisplayPort->cols - strlen(OSD_MESSAGE_STR(OSD_MSG_SAVING_SETTNGS))) / 2, row++, OSD_MESSAGE_STR(OSD_MSG_SAVING_SETTNGS));
     /*} else if (rearmMs > 0) { // Show rearming time if settings not actively being saved. Ignore the settings saved message if rearm available.
         char emReArmMsg[23];
@@ -5514,12 +5534,12 @@ static void osdShowStats(bool isSinglePageStatsCompatible, uint8_t page)
         tfp_sprintf(emReArmMsg + strlen(emReArmMsg), "%02d", (uint8_t)MS2S(rearmMs));
         strcat(emReArmMsg, " **\0");
         displayWrite(osdDisplayPort, statNameX, top++, OSD_MESSAGE_STR(emReArmMsg));*/
-    } else if (notify_settings_saved > 0) {
-        if (millis() > notify_settings_saved) {
-            notify_settings_saved = 0;
-        } else {
+    } else if (notify_settings_saved) {
+        // if (millis() > notify_settings_saved) {
+            // notify_settings_saved = 0;
+        // } else {
             displayWrite(osdDisplayPort, (osdDisplayPort->cols - strlen(OSD_MESSAGE_STR(OSD_MSG_SETTINGS_SAVED))) / 2, row++, OSD_MESSAGE_STR(OSD_MSG_SETTINGS_SAVED));
-        }
+        // }
     }
 
     displayCommitTransaction(osdDisplayPort);
@@ -5881,11 +5901,12 @@ static void osdRefresh(timeUs_t currentTimeUs)
       return;
     }
 
-    bool statsSinglePageCompatible = (osdDisplayPort->rows >= OSD_STATS_SINGLE_PAGE_MIN_ROWS);
     static uint8_t statsCurrentPage = 0;
     static bool statsDisplayed = false;
     static bool statsAutoPagingEnabled = true;
     static bool isThrottleHigh = false;
+    bool statsSinglePageCompatible = (osdDisplayPort->rows >= OSD_STATS_SINGLE_PAGE_MIN_ROWS);
+    bool updateShowStats = false;   // CR158
 
     // Detect arm/disarm
     if (armState != ARMING_FLAG(ARMED)) {
@@ -5909,8 +5930,9 @@ static void osdRefresh(timeUs_t currentTimeUs)
 
             statsDisplayed = true;
             statsCurrentPage = 0;
-            statsAutoPagingEnabled = osdConfig()->stats_page_auto_swap_time > 0 ? true : false;
-            osdShowStats(statsSinglePageCompatible, statsCurrentPage);
+            statsAutoPagingEnabled = !statsSinglePageCompatible && osdConfig()->stats_page_auto_swap_time > 0 ? true : false;  // CR158
+            updateShowStats = true;
+            // osdShowStats(statsSinglePageCompatible, statsCurrentPage);  // CR158
             osdSetNextRefreshIn(STATS_SCREEN_DISPLAY_TIME);
             isThrottleHigh = checkStickPosition(THR_HI);
         }
@@ -5922,59 +5944,67 @@ static void osdRefresh(timeUs_t currentTimeUs)
     if (resumeRefreshAt) {
 
         // Handle events only when the "Stats" screen is being displayed.
-        if (statsDisplayed) {
-
-             // Manual paging stick commands are only applicable to multi-page stats.
-             // ******************************
-             // For single-page stats, this effectively disables the ability to cancel the
-             // automatic paging/updates with the stick commands. So unless stats_page_auto_swap_time
-             // is set to 0 or greater than 4 (saved settings display interval is 5 seconds), then
-             // "Saved Settings" should display if it is active within the refresh interval.
-             // ******************************
-             // With multi-page stats, "Saved Settings" could also be missed if the user
-             // has canceled automatic paging using the stick commands, because that is only
-             // updated when osdShowStats() is called. So, in that case, they would only see
-             // the "Saved Settings" message if they happen to manually change pages using the
-             // stick commands within the interval the message is displayed.
-            bool manualPageUpRequested = false;
-            bool manualPageDownRequested = false;
+        if (statsDisplayed) {  // CR158
             if (!statsSinglePageCompatible) {
-                // These methods ensure the paging stick commands are held for a brief period
-                // Otherwise it can result in a race condition where the stats are
-                // updated too quickly and can result in partial blanks, etc.
-                if (osdIsPageUpStickCommandHeld()) {
-                    manualPageUpRequested = true;
-                    statsAutoPagingEnabled = false;
-                } else if (osdIsPageDownStickCommandHeld()) {
-                    manualPageDownRequested = true;
-                    statsAutoPagingEnabled = false;
-                }
-            }
+                bool manualPageUpRequested = false;
+                bool manualPageDownRequested = false;
+                // if (!statsSinglePageCompatible) {  // CR158
+                    // These methods ensure the paging stick commands are held for a brief period
+                    // Otherwise it can result in a race condition where the stats are
+                    // updated too quickly and can result in partial blanks, etc.
+                    if (osdIsPageUpStickCommandHeld()) {
+                        manualPageUpRequested = true;
+                        statsAutoPagingEnabled = false;
+                    } else if (osdIsPageDownStickCommandHeld()) {
+                        manualPageDownRequested = true;
+                        statsAutoPagingEnabled = false;
+                    }
+                // }  // CR158
 
-            if (statsAutoPagingEnabled) {
-                // Alternate screens for multi-page stats.
-                // Also, refreshes screen at swap interval for single-page stats.
-                if (OSD_ALTERNATING_CHOICES((osdConfig()->stats_page_auto_swap_time * 1000), 2)) {
-                    if (statsCurrentPage == 0) {
-                        osdShowStats(statsSinglePageCompatible, statsCurrentPage);
-                        statsCurrentPage = 1;
+                if (statsAutoPagingEnabled) {
+                    // Alternate screens for multi-page stats.
+                    // Also, refreshes screen at swap interval for single-page stats.
+                    if (OSD_ALTERNATING_CHOICES((osdConfig()->stats_page_auto_swap_time * 1000), 2)) {
+                        if (statsCurrentPage == 0) {
+                            osdShowStats(statsSinglePageCompatible, statsCurrentPage);
+                            statsCurrentPage = 1;
+                        }
+                    } else {
+                        if (statsCurrentPage == 1) {
+                            osdShowStats(statsSinglePageCompatible, statsCurrentPage);
+                            statsCurrentPage = 0;
+                        }
                     }
                 } else {
-                    if (statsCurrentPage == 1) {
-                        osdShowStats(statsSinglePageCompatible, statsCurrentPage);
+                    // Process manual page change events for multi-page stats.
+                    if (manualPageUpRequested) {
+                        updateShowStats = true;
+                        // osdShowStats(statsSinglePageCompatible, 1);
+                        statsCurrentPage = 1;
+                    } else if (manualPageDownRequested) {
+                        updateShowStats = true;
+                        // osdShowStats(statsSinglePageCompatible, 0);
                         statsCurrentPage = 0;
                     }
                 }
-            } else {
-                // Process manual page change events for multi-page stats.
-                if (manualPageUpRequested) {
-                    osdShowStats(statsSinglePageCompatible, 1);
-                    statsCurrentPage = 1;
-                } else if (manualPageDownRequested) {
-                    osdShowStats(statsSinglePageCompatible, 0);
-                    statsCurrentPage = 0;
-                }
             }
+            // CR158
+            static bool saveSettingsToggle = false;
+            if (notify_settings_saved) {
+                if (!saveSettingsToggle) {
+                    updateShowStats = true;
+                    saveSettingsToggle = true;
+                }
+                if (millis() > notify_settings_saved) notify_settings_saved = 0;
+            } else if (saveSettingsToggle) {
+                updateShowStats = true;
+                saveSettingsToggle = false;
+            }
+
+            if (!statsAutoPagingEnabled && updateShowStats) {
+                osdShowStats(statsSinglePageCompatible, statsCurrentPage);
+            }
+            // CR158
         }
 
         // Handle events when either "Splash", "Armed" or "Stats" screens are displayed.

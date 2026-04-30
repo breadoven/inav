@@ -743,7 +743,7 @@ static bool estimationCalculateCorrection_XY_GPS(estimationContext_t * ctx)
             /* Adjust EPH */
             ctx->newEPH = updateEPE(posEstimator.est.eph, dT, MAX(posEstimator.gps.eph, gpsPosResidualMag), w_xy_gps_p);
 
-            DEBUG_SET(DEBUG_ALWAYS, 4, gpsPosResidualMag);
+            // DEBUG_SET(DEBUG_ALWAYS, 4, gpsPosResidualMag);
         }
 
         return true;
@@ -892,9 +892,9 @@ static void updateEstimatedTopic(timeUs_t currentTimeUs)
                 posEstimator.imu.accelBias.v[axis] = constrainf(posEstimator.imu.accelBias.v[axis], -INAV_ACC_BIAS_ACCEPTANCE_VALUE, INAV_ACC_BIAS_ACCEPTANCE_VALUE);
             }
         }
-        DEBUG_SET(DEBUG_ALWAYS, 0, ctx.estVelCorr.x);
-        DEBUG_SET(DEBUG_ALWAYS, 1, ctx.estVelCorr.y);
-        DEBUG_SET(DEBUG_ALWAYS, 5, ctx.newEPH);
+        // DEBUG_SET(DEBUG_ALWAYS, 0, ctx.estVelCorr.x);
+        // DEBUG_SET(DEBUG_ALWAYS, 1, ctx.estVelCorr.y);
+        // DEBUG_SET(DEBUG_ALWAYS, 5, ctx.newEPH);
 
         // Reset sensor update time deltas once sensor corrections applied after sensor update
         posEstimator.gps.updateDt = 0.0f;
@@ -958,8 +958,8 @@ static void publishEstimatedTopic(timeUs_t currentTimeUs)
             static pt1Filter_t estVelFilterState_Y;
             float filteredVelX = pt1FilterApply4(&estVelFilterState_X, posEstimator.est.vel.x, INAV_EST_VEL_F_CUT_HZ, HZ2S(INAV_POSITION_PUBLISH_RATE_HZ));
             float filteredVelY = pt1FilterApply4(&estVelFilterState_Y, posEstimator.est.vel.y, INAV_EST_VEL_F_CUT_HZ, HZ2S(INAV_POSITION_PUBLISH_RATE_HZ));
-            DEBUG_SET(DEBUG_ALWAYS, 2, posEstimator.est.vel.x);
-            DEBUG_SET(DEBUG_ALWAYS, 3, filteredVelX);
+            // DEBUG_SET(DEBUG_ALWAYS, 2, posEstimator.est.vel.x);
+            // DEBUG_SET(DEBUG_ALWAYS, 3, filteredVelX);
             // FIXME!!!!!
             updateActualHorizontalPositionAndVelocity(true, true, posEstimator.est.pos.x, posEstimator.est.pos.y, filteredVelX, filteredVelY);
         }
