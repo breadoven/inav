@@ -22,6 +22,8 @@ See the other documentation sections for details of the cli commands and setting
 
 ## Backup via CLI
 
+> **Note:** The INAV Configurator now performs automatic backups before flashing and can restore settings afterwards, including migration across major versions. See [Backup and Restore](Backup%20and%20Restore.md) for details. The CLI method below remains available for manual backup.
+
 Disconnect main power, connect to cli via USB/FTDI.
 
 dump using cli
@@ -71,6 +73,7 @@ While connected to the CLI, all Logical Switches are temporarily disabled (5.1.0
 | `batch` | Start or end a batch of commands |
 | `battery_profile` | Change battery profile |
 | `beeper` | Show/set beeper (buzzer) [usage](Buzzer.md) |
+| `bind_msp_rx` | Initiate binding for MSP receivers (mLRS) |
 | `bind_rx` | Initiate binding for SRXL2 or CRSF receivers |
 | `blackbox` | Configure blackbox fields |
 | `bootlog` | Show init logs from [serial_printf_debugging](./development/serial_printf_debugging.md) |
