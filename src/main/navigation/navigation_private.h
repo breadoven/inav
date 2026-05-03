@@ -135,6 +135,7 @@ typedef struct {
     navEstimatedPosVel_t    agl;
     int32_t                 yaw;
     int32_t                 cog;
+    int16_t                 headingCorrection;  // CR159
 
     // Service values
     float                   sinYaw;

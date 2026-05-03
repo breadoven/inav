@@ -57,6 +57,7 @@
 #endif
 
 #include "io/gps.h"
+#include "io/beeper.h"  // CR160
 
 #include "sensors/acceleration.h"
 #include "sensors/barometer.h"
@@ -264,6 +265,12 @@ STATIC_UNIT_TESTED void imuComputeQuaternionFromRPY(int16_t initialRoll, int16_t
 
     imuComputeRotationMatrix();
 }
+// CR159
+void resetQuaternionFromRPY(int16_t roll, int16_t pitch, int16_t yaw)
+{
+    imuComputeQuaternionFromRPY(roll, pitch, yaw);
+}
+// CR159
 #endif
 
 static bool imuUseFastGains(void)
@@ -418,6 +425,7 @@ static void imuMahonyAHRSupdate(float dt, const fpVector3_t * gyroBF, const fpVe
                 quaternionRotateVector(&vMagErr, &vMagErr, &orientation);
             }
         }
+        
         if (vCOG || vCOGAcc) {
             fpVector3_t vCoGlocal = { .v = { 0.0f, 0.0f, 0.0f } };
             fpVector3_t vForward = { .v = { 0.0f, 0.0f, 0.0f } };
@@ -783,6 +791,7 @@ static void imuCalculateEstimatedAttitude(float dT)
         useMag = true;
         gpsHeadingInitialized = true;   // GPS heading initialised from MAG, continue on GPS if compass fails
     }
+
     // Use GPS (if available)
     if (canUseCOG) {
         if (gpsHeadingInitialized) {
@@ -806,7 +815,17 @@ static void imuCalculateEstimatedAttitude(float dT)
             resetHeadingHoldTarget(DECIDEGREES_TO_DEGREES(attitude.values.yaw));
         }
     } else if (!ARMING_FLAG(ARMED)) {
-        gpsHeadingInitialized = false;
+        // CR160
+        if (STATE(AIRPLANE)) {
+            gpsHeadingInitialized = false;
+        } else if (!sensors(SENSOR_MAG) && STATE(CALIBRATE_MAG)) {
+            DISABLE_STATE(CALIBRATE_MAG);
+            beeper(BEEPER_ACTION_SUCCESS);
+
+            imuComputeQuaternionFromRPY(attitude.values.roll, attitude.values.pitch, 0);
+            gpsHeadingInitialized = true;
+        }
+        // CR160
     }
 
     imuCalculateFilters(dT);
