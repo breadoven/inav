@@ -221,13 +221,6 @@ void onNewGPSData(void)
         else if (shouldResetReferenceAltitude()) {
             /* If we were never armed - keep altitude at zero */
             geoSetOrigin(&posControl.gpsOrigin, &newLLH, GEO_ORIGIN_RESET_ALTITUDE);
-        } // CR153
-        else if (ARMING_FLAG(ARMED) && originAltitudeCorrectionIsActive) {
-            if (posEstimator.gps.epv >= positionEstimationConfig()->max_eph_epv) {
-                posControl.gpsOrigin.alt = newLLH.alt - posEstimator.est.pos.z;
-            } else {
-                originAltitudeCorrectionIsActive = false;
-            }
         }
         else if (ARMING_FLAG(ARMED) && originAltitudeCorrectionIsActive) {
             /* Continue updating gps origin altitude after arming if gps epv exceeds max limit
@@ -238,11 +231,6 @@ void onNewGPSData(void)
                 originAltitudeCorrectionIsActive = false;
             }
         }
-
-        // DEBUG_SET(DEBUG_ALWAYS, 0, originAltitudeCorrectionIsActive);
-        // DEBUG_SET(DEBUG_ALWAYS, 1, posControl.gpsOrigin.alt);
-        // DEBUG_SET(DEBUG_ALWAYS, 2, posEstimator.gps.epv);
-        // CR153
 
         if (posControl.gpsOrigin.valid) {
             /* Convert LLH position to local coordinates */

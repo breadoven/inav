@@ -5400,7 +5400,7 @@ static void osdShowStats(bool isSinglePageStatsCompatible, uint8_t page)
 #if defined(USE_BLACKBOX) && defined(USE_SDCARD)
         if (feature(FEATURE_BLACKBOX)) {
             int32_t logNumber = blackboxGetLogNumber();
-            if (logNumber >= 0) {   // CR158
+            if (logNumber >= 0) {
                 tfp_sprintf(buff + strlen(buff), " %c%05" PRId32 " ", SYM_BLACKBOX, logNumber);
             } else {
                 tfp_sprintf(buff + strlen(buff), " %c ", SYM_BLACKBOX);
