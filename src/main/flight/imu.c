@@ -990,14 +990,14 @@ float calculateCosTiltAngle(void)
 {
     return 1.0f - 2.0f * sq(orientation.q1) - 2.0f * sq(orientation.q2);
 }
-// CR161
+// CR160
 #if defined(USE_GPS)
 bool isYawZeroResetAllowed(void)
 {
     return !ARMING_FLAG(ARMED) && !STATE(AIRPLANE) && !gpsHeadingInitialized && sensors(SENSOR_GPS) && !sensors(SENSOR_MAG);
 }
 #endif
-// CR161
+// CR160
 #if defined(SITL_BUILD) || defined (USE_SIMULATOR)
 
 void imuSetAttitudeRPY(int16_t roll, int16_t pitch, int16_t yaw)

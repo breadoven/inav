@@ -89,7 +89,7 @@ float calculateCosTiltAngle(void);
 bool isImuReady(void);
 bool isImuHeadingValid(void);
 void resetQuaternionFromRPY(int16_t roll, int16_t pitch, int16_t yaw);  // CR159
-bool isYawZeroResetAllowed(void);  // CR161
+bool isYawZeroResetAllowed(void);  // CR160
 // void imuNavCompassSanity(bool navCompassAStatus);  // CR141
 
 void imuTransformVectorBodyToEarth(fpVector3_t * v);

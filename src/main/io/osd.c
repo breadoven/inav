@@ -6523,7 +6523,7 @@ static textAttributes_t osdGetMultiFunctionMessage(char *buff)
             }
             activeFunction++;
             FALLTHROUGH;
-        case MULTI_FUNC_6:  // CR161
+        case MULTI_FUNC_6:  // CR160
             if (!ARMING_FLAG(ARMED)) {
 #if defined(USE_MAG)
                 if (sensors(SENSOR_MAG)) {
@@ -6539,7 +6539,7 @@ static textAttributes_t osdGetMultiFunctionMessage(char *buff)
 #endif
             }
             activeFunction++;
-            break;        // CR161
+            break;        // CR160
         case MULTI_FUNC_END:
             message = "*FUNC SET*";
             break;

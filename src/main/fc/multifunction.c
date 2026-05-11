@@ -71,7 +71,7 @@ static void multiFunctionApply(multi_function_e selectedItem)
             emergencyArmingUpdate(true, true);
         }
         break;
-    case MULTI_FUNC_6:  // Calibrate compass/Zero yaw heading  // // CR161
+    case MULTI_FUNC_6:  // Calibrate compass/Zero yaw heading  // // CR160
 #if defined(USE_GPS) || defined(USE_MAG)
         ENABLE_STATE(CALIBRATE_MAG);
 #endif
