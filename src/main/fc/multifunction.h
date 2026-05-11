@@ -59,6 +59,5 @@ typedef enum {
 } multi_function_e;
 
 multi_function_e multiFunctionSelection(void);
-// bool isNextMultifunctionItemAvailable(void);  // CR161
 void setMultifunctionSelection(multi_function_e item);
 #endif

@@ -6485,11 +6485,11 @@ static textAttributes_t osdGetMultiFunctionMessage(char *buff)
         switch (selectedFunction) {
         case MULTI_FUNC_NONE:
         case MULTI_FUNC_1:
-            if (ARMING_FLAG(ARMED)) {  // CR161
+            if (ARMING_FLAG(ARMED)) {
                 message = posControl.flags.manualEmergLandActive ? "ABORT LAND" : "EMERG LAND";
                 break;
             }
-            activeFunction++;  // CR161
+            activeFunction++;
             FALLTHROUGH;
         case MULTI_FUNC_2:
 #if defined(USE_SAFE_HOME)
@@ -6509,7 +6509,7 @@ static textAttributes_t osdGetMultiFunctionMessage(char *buff)
             FALLTHROUGH;
         case MULTI_FUNC_4:
 #ifdef USE_DSHOT
-            if (!ARMING_FLAG(ARMED) && STATE(MULTIROTOR)) {  // CR161
+            if (!ARMING_FLAG(ARMED) && STATE(MULTIROTOR)) {
                 message = MULTI_FUNC_FLAG(MF_TURTLE_MODE) ? "END TURTLE" : "USE TURTLE";
                 break;
             }
@@ -6539,24 +6539,24 @@ static textAttributes_t osdGetMultiFunctionMessage(char *buff)
 #endif
             }
             activeFunction++;
-            break;
+            break;        // CR161
         case MULTI_FUNC_END:
-            message = "*FUNC SET*";  // CR161
+            message = "*FUNC SET*";
             break;
         }
 
-        if (activeFunction != selectedFunction) {        // CR161
-            if (selectedFunction == MULTI_FUNC_1 && activeFunction == MULTI_FUNC_END) {
+        if (activeFunction != selectedFunction) {
+            if (selectedFunction == MULTI_FUNC_1 && activeFunction == MULTI_FUNC_END) {  // no functions available so end process
                 message = "*NO FUNCS*";
                 setMultifunctionSelection(MULTI_FUNC_NONE);
             } else {
                 setMultifunctionSelection(activeFunction);
-                if (activeFunction == MULTI_FUNC_END) {
+                if (activeFunction == MULTI_FUNC_END) {   // no messages to display so return
                     return elemAttr;
                 }
             }
         }
-        // CR161
+
         strcpy(buff, message);
 
         return elemAttr;

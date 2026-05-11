@@ -80,33 +80,25 @@ static void multiFunctionApply(multi_function_e selectedItem)
         break;
     }
 }
-// CR161
-// bool isNextMultifunctionItemAvailable(void)
-// {
-    // return nextItemIsAvailable;
-// }
-// CR161
+
 void setMultifunctionSelection(multi_function_e item)
 {
     selectedItem = item == MULTI_FUNC_END ? MULTI_FUNC_1 : item;
-    // nextItemIsAvailable = false;  // CR161
 }
 
 multi_function_e multiFunctionSelection(void)
 {
-    // CR161
-    // static timeMs_t startTimer;
     static timeMs_t functionTimer;
     const timeMs_t currentTime = millis();
-    static uint8_t functionTracker = 0;  // CR161
+    static uint8_t functionTracker = 0;
 
     if (IS_RC_MODE_ACTIVE(BOXMULTIFUNCTION)) {
-        if (!functionTimer) {
+        if (!functionTimer) {    // initiate function on first BOXMULTIFUNCTION activation
             functionTimer = currentTime;
             selectedItem = MULTI_FUNC_1;
         } else if (functionTracker && selectedItem != MULTI_FUNC_END) {
             functionTracker = 2;
-            if (currentTime - functionTimer > 3000) {     // 3s selection duration to activate selected function
+            if (currentTime - functionTimer > 3000) {    // 3s BOXMULTIFUNCTION activation to trigger selected function
                 multiFunctionApply(selectedItem);
                 selectedItem = MULTI_FUNC_END;
             }
@@ -114,13 +106,14 @@ multi_function_e multiFunctionSelection(void)
     } else if (functionTimer) {
         if (!functionTracker) {
             functionTimer = currentTime;
-        } else if (functionTracker == 2 || selectedItem == MULTI_FUNC_NONE) {    // cancel and reset function after second BOXMULTIFUNCTION deactivation
+        } else if (functionTracker == 2 || selectedItem == MULTI_FUNC_NONE) {
+            // cancel and reset function after second BOXMULTIFUNCTION deactivation or if no functions available
             functionTimer = 0;
             functionTracker = 0;
             return selectedItem = MULTI_FUNC_NONE;
         }
 
-        if (currentTime - functionTimer > 1500) {
+        if (currentTime - functionTimer > 1500) {    // display available functions on 1.5s rolling cycle
             setMultifunctionSelection(++selectedItem);
             functionTimer = currentTime;
         }
@@ -129,36 +122,5 @@ multi_function_e multiFunctionSelection(void)
     }
 
     return selectedItem;
-
-    // if (IS_RC_MODE_ACTIVE(BOXMULTIFUNCTION)) {
-        // if (selectTimer) {
-            // if (currentTime - selectTimer > 3000) {     // 3s selection duration to activate selected function
-                // multiFunctionApply(selectedItem);
-                // selectTimer = 0;
-                // selectedItem = MULTI_FUNC_NONE;
-                // nextItemIsAvailable = false;
-            // }
-        // } else if (toggle) {
-            // if (selectedItem == MULTI_FUNC_NONE) {
-                // selectedItem++;
-            // } else {
-                // selectTimer = currentTime;
-                // nextItemIsAvailable = true;
-            // }
-        // }
-        // startTimer = currentTime;
-        // toggle = false;
-    // } else if (startTimer) {
-        // if (!toggle && selectTimer) {
-            // setMultifunctionSelection(++selectedItem);
-        // }
-        // if (currentTime - startTimer > 4000) {      // 4s reset delay after mode deselected
-            // startTimer = 0;
-            // selectedItem = MULTI_FUNC_NONE;
-        // }
-        // selectTimer = 0;
-        // toggle = true;
-    // }
-    // CR161
 }
 #endif
