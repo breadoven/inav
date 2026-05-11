@@ -38,7 +38,6 @@
 
 multi_function_e selectedItem = MULTI_FUNC_NONE;
 uint8_t multiFunctionFlags;
-bool nextItemIsAvailable = false;
 
 static void multiFunctionApply(multi_function_e selectedItem)
 {
@@ -62,7 +61,7 @@ static void multiFunctionApply(multi_function_e selectedItem)
         break;
     case MULTI_FUNC_4:
 #ifdef USE_DSHOT
-        if (STATE(MULTIROTOR)) {    // toggle Turtle mode
+        if (!ARMING_FLAG(ARMED) && STATE(MULTIROTOR)) {    // toggle Turtle mode
             MULTI_FUNC_FLAG(MF_TURTLE_MODE) ? MULTI_FUNC_FLAG_DISABLE(MF_TURTLE_MODE) : MULTI_FUNC_FLAG_ENABLE(MF_TURTLE_MODE);
         }
 #endif
@@ -71,59 +70,95 @@ static void multiFunctionApply(multi_function_e selectedItem)
         if (!ARMING_FLAG(ARMED)) {
             emergencyArmingUpdate(true, true);
         }
+        break;
+    case MULTI_FUNC_6:  // Calibrate compass/Zero yaw heading  // // CR161
+#if defined(USE_GPS) || defined(USE_MAG)
+        ENABLE_STATE(CALIBRATE_MAG);
+#endif
+        break;
     case MULTI_FUNC_END:
         break;
     }
 }
-
-bool isNextMultifunctionItemAvailable(void)
-{
-    return nextItemIsAvailable;
-}
-
+// CR161
+// bool isNextMultifunctionItemAvailable(void)
+// {
+    // return nextItemIsAvailable;
+// }
+// CR161
 void setMultifunctionSelection(multi_function_e item)
 {
     selectedItem = item == MULTI_FUNC_END ? MULTI_FUNC_1 : item;
-    nextItemIsAvailable = false;
+    // nextItemIsAvailable = false;  // CR161
 }
 
 multi_function_e multiFunctionSelection(void)
 {
-    static timeMs_t startTimer;
-    static timeMs_t selectTimer;
-    static bool toggle = true;
+    // CR161
+    // static timeMs_t startTimer;
+    static timeMs_t functionTimer;
     const timeMs_t currentTime = millis();
+    static uint8_t functionTracker = 0;  // CR161
 
     if (IS_RC_MODE_ACTIVE(BOXMULTIFUNCTION)) {
-        if (selectTimer) {
-            if (currentTime - selectTimer > 3000) {     // 3s selection duration to activate selected function
+        if (!functionTimer) {
+            functionTimer = currentTime;
+            selectedItem = MULTI_FUNC_1;
+        } else if (functionTracker && selectedItem != MULTI_FUNC_END) {
+            functionTracker = 2;
+            if (currentTime - functionTimer > 3000) {     // 3s selection duration to activate selected function
                 multiFunctionApply(selectedItem);
-                selectTimer = 0;
-                selectedItem = MULTI_FUNC_NONE;
-                nextItemIsAvailable = false;
-            }
-        } else if (toggle) {
-            if (selectedItem == MULTI_FUNC_NONE) {
-                selectedItem++;
-            } else {
-                selectTimer = currentTime;
-                nextItemIsAvailable = true;
+                selectedItem = MULTI_FUNC_END;
             }
         }
-        startTimer = currentTime;
-        toggle = false;
-    } else if (startTimer) {
-        if (!toggle && selectTimer) {
+    } else if (functionTimer) {
+        if (!functionTracker) {
+            functionTimer = currentTime;
+        } else if (functionTracker == 2 || selectedItem == MULTI_FUNC_NONE) {    // cancel and reset function after second BOXMULTIFUNCTION deactivation
+            functionTimer = 0;
+            functionTracker = 0;
+            return selectedItem = MULTI_FUNC_NONE;
+        }
+
+        if (currentTime - functionTimer > 1500) {
             setMultifunctionSelection(++selectedItem);
+            functionTimer = currentTime;
         }
-        if (currentTime - startTimer > 4000) {      // 4s reset delay after mode deselected
-            startTimer = 0;
-            selectedItem = MULTI_FUNC_NONE;
-        }
-        selectTimer = 0;
-        toggle = true;
+
+        functionTracker = 1;
     }
 
     return selectedItem;
+
+    // if (IS_RC_MODE_ACTIVE(BOXMULTIFUNCTION)) {
+        // if (selectTimer) {
+            // if (currentTime - selectTimer > 3000) {     // 3s selection duration to activate selected function
+                // multiFunctionApply(selectedItem);
+                // selectTimer = 0;
+                // selectedItem = MULTI_FUNC_NONE;
+                // nextItemIsAvailable = false;
+            // }
+        // } else if (toggle) {
+            // if (selectedItem == MULTI_FUNC_NONE) {
+                // selectedItem++;
+            // } else {
+                // selectTimer = currentTime;
+                // nextItemIsAvailable = true;
+            // }
+        // }
+        // startTimer = currentTime;
+        // toggle = false;
+    // } else if (startTimer) {
+        // if (!toggle && selectTimer) {
+            // setMultifunctionSelection(++selectedItem);
+        // }
+        // if (currentTime - startTimer > 4000) {      // 4s reset delay after mode deselected
+            // startTimer = 0;
+            // selectedItem = MULTI_FUNC_NONE;
+        // }
+        // selectTimer = 0;
+        // toggle = true;
+    // }
+    // CR161
 }
 #endif

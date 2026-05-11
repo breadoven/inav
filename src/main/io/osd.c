@@ -6360,32 +6360,33 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
                 messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_TOILET_BOWL);
             }
             // CR141
-        } else if (ARMING_FLAG(ARMING_DISABLED_ALL_FLAGS)) {    /* ADDS MAXIMUM OF 2 MESSAGES TO TOTAL */
-            unsigned invalidIndex;
+        } else {  // messages only shown when disarmed CR160
+            if (ARMING_FLAG(ARMING_DISABLED_ALL_FLAGS)) {    /* ADDS MAXIMUM OF 2 MESSAGES TO TOTAL */
+                unsigned invalidIndex;
 
-            // Check if we're unable to arm for some reason
-            if (ARMING_FLAG(ARMING_DISABLED_INVALID_SETTING) && !settingsValidate(&invalidIndex)) {
-                const setting_t *setting = settingGet(invalidIndex);
-                settingGetName(setting, messageBuf);
-                for (int ii = 0; messageBuf[ii]; ii++) {
-                    messageBuf[ii] = sl_toupper(messageBuf[ii]);
+                // Check if we're unable to arm for some reason
+                if (ARMING_FLAG(ARMING_DISABLED_INVALID_SETTING) && !settingsValidate(&invalidIndex)) {
+                    const setting_t *setting = settingGet(invalidIndex);
+                    settingGetName(setting, messageBuf);
+                    for (int ii = 0; messageBuf[ii]; ii++) {
+                        messageBuf[ii] = sl_toupper(messageBuf[ii]);
+                    }
+                    invertedInfoMessage = messageBuf;
+                    messages[messageCount++] = invertedInfoMessage;
+
+                    invertedInfoMessage = OSD_MESSAGE_STR(OSD_MSG_INVALID_SETTING);
+                    messages[messageCount++] = invertedInfoMessage;
+                } else {
+                    invertedInfoMessage = OSD_MESSAGE_STR(OSD_MSG_UNABLE_ARM);
+                    messages[messageCount++] = invertedInfoMessage;
+                    // Show the reason for not arming
+                    messages[messageCount++] = osdArmingDisabledReasonMessage();
                 }
-                invertedInfoMessage = messageBuf;
-                messages[messageCount++] = invertedInfoMessage;
-
-                invertedInfoMessage = OSD_MESSAGE_STR(OSD_MSG_INVALID_SETTING);
-                messages[messageCount++] = invertedInfoMessage;
-            } else {
-                invertedInfoMessage = OSD_MESSAGE_STR(OSD_MSG_UNABLE_ARM);
-                messages[messageCount++] = invertedInfoMessage;
-                // Show the reason for not arming
-                messages[messageCount++] = osdArmingDisabledReasonMessage();
-            }
-        } else if (!ARMING_FLAG(ARMED)) {
-            if (isWaypointListValid()) {
+            } else if (isWaypointListValid()) {
                 messages[messageCount++] = OSD_MESSAGE_STR(OSD_MSG_WP_MISSION_LOADED);
             }
         }
+
         /* Messages that are shown regardless of Arming state */
         /* ADDS MAXIMUM OF 2 MESSAGES TO TOTAL NORMALLY, 1 MESSAGE DURING FAILSAFE */
         if (posControl.flags.wpMissionPlannerActive && !FLIGHT_MODE(FAILSAFE_MODE)) {
@@ -6484,8 +6485,12 @@ static textAttributes_t osdGetMultiFunctionMessage(char *buff)
         switch (selectedFunction) {
         case MULTI_FUNC_NONE:
         case MULTI_FUNC_1:
-            message = posControl.flags.manualEmergLandActive ? "ABORT LAND" : "EMERG LAND";
-            break;
+            if (ARMING_FLAG(ARMED)) {  // CR161
+                message = posControl.flags.manualEmergLandActive ? "ABORT LAND" : "EMERG LAND";
+                break;
+            }
+            activeFunction++;  // CR161
+            FALLTHROUGH;
         case MULTI_FUNC_2:
 #if defined(USE_SAFE_HOME)
             if (navConfig()->general.flags.safehome_usage_mode != SAFEHOME_USAGE_OFF) {
@@ -6504,7 +6509,7 @@ static textAttributes_t osdGetMultiFunctionMessage(char *buff)
             FALLTHROUGH;
         case MULTI_FUNC_4:
 #ifdef USE_DSHOT
-            if (STATE(MULTIROTOR)) {
+            if (!ARMING_FLAG(ARMED) && STATE(MULTIROTOR)) {  // CR161
                 message = MULTI_FUNC_FLAG(MF_TURTLE_MODE) ? "END TURTLE" : "USE TURTLE";
                 break;
             }
@@ -6512,22 +6517,47 @@ static textAttributes_t osdGetMultiFunctionMessage(char *buff)
             activeFunction++;
             FALLTHROUGH;
         case MULTI_FUNC_5:
-            message = ARMING_FLAG(ARMED) ? "NOW ARMED " : "EMERG ARM ";
+            if (!ARMING_FLAG(ARMED)) {
+                message = "EMERG ARM ";
+                break;
+            }
+            activeFunction++;
+            FALLTHROUGH;
+        case MULTI_FUNC_6:  // CR161
+            if (!ARMING_FLAG(ARMED)) {
+#if defined(USE_MAG)
+                if (sensors(SENSOR_MAG)) {
+                    message = "CAL COMPAS";
+                    break;
+                }
+#endif
+#if defined(USE_GPS)
+                if (isYawZeroResetAllowed()) {
+                    message = "SET HEADIN";
+                    break;
+                }
+#endif
+            }
+            activeFunction++;
             break;
         case MULTI_FUNC_END:
+            message = "*FUNC SET*";  // CR161
             break;
         }
 
-        if (activeFunction != selectedFunction) {
-            setMultifunctionSelection(activeFunction);
+        if (activeFunction != selectedFunction) {        // CR161
+            if (selectedFunction == MULTI_FUNC_1 && activeFunction == MULTI_FUNC_END) {
+                message = "*NO FUNCS*";
+                setMultifunctionSelection(MULTI_FUNC_NONE);
+            } else {
+                setMultifunctionSelection(activeFunction);
+                if (activeFunction == MULTI_FUNC_END) {
+                    return elemAttr;
+                }
+            }
         }
-
+        // CR161
         strcpy(buff, message);
-
-        if (isNextMultifunctionItemAvailable()) {
-            // provides feedback indicating when a new selection command has been received by flight controller
-            buff[9] = '>';
-        }
 
         return elemAttr;
     }
