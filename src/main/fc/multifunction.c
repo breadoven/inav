@@ -36,7 +36,7 @@
 #include "io/beeper.h"
 #include "io/osd.h"
 
-#include "navigation/navigation.h"// CR162
+#include "navigation/navigation.h"
 #include "navigation/navigation_private.h"
 
 #include "sensors/acceleration.h"
@@ -49,7 +49,7 @@
 textAttributes_t osdGetMultiFunctionMessage(char *buff);
 multiFunctionWarning_t multiFunctionWarning;
 
-#ifdef USE_MULTI_FUNCTIONS// CR162
+#ifdef USE_MULTI_FUNCTIONS
 multi_function_e selectedItem = MULTI_FUNC_NONE;
 uint8_t multiFunctionFlags;
 
@@ -77,7 +77,7 @@ static void multiFunctionApply(multi_function_e selectedItem)
     case MULTI_FUNC_5:  // emergency ARM
         emergencyArmingUpdate(true, true);
         break;
-    case MULTI_FUNC_6:  // Calibrate compass/Zero yaw heading  // // CR160
+    case MULTI_FUNC_6:  // Calibrate compass/Zero yaw heading
 #if defined(USE_GPS) || defined(USE_MAG)
         ENABLE_STATE(CALIBRATE_MAG);
 #endif
@@ -131,11 +131,12 @@ multi_function_e multiFunctionSelection(void)
 
     return selectedItem;
 }
-#endif // multifunction// CR162
+#endif  // multifunction
+
 static bool osdCheckWarning(bool condition, uint8_t warningFlag)
 {
     static timeMs_t newWarningEndTime = 0;
-    static uint16_t newWarningFlags = 0;  // bitfield
+    static uint8_t newWarningFlags = 0;  // bitfield
     const timeMs_t currentTimeMs = millis();
 
     /* New warnings dislayed individually for 10s with blinking after which
@@ -221,7 +222,7 @@ textAttributes_t osdGetMultiFunctionMessage(char *buff)
             }
             activeFunction++;
             FALLTHROUGH;
-        case MULTI_FUNC_6:  // CR160
+        case MULTI_FUNC_6:
             if (!ARMING_FLAG(ARMED)) {
 #if defined(USE_MAG)
                 if (sensors(SENSOR_MAG)) {
@@ -237,7 +238,7 @@ textAttributes_t osdGetMultiFunctionMessage(char *buff)
 #endif
             }
             activeFunction++;
-            break;        // CR160
+            break;
         case MULTI_FUNC_END:
             message = "*FUNC SET*";
             break;
