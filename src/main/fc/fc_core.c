@@ -113,7 +113,7 @@ timeDelta_t cycleTime = 0;         // this is the number in micro second to achi
 static timeUs_t flightTime = 0;
 static timeUs_t armTime = 0;
 
-EXTENDED_FASTRAM float dT;
+EXTENDED_FASTRAM float dT;  // seconds
 
 int16_t headFreeModeHold;
 
@@ -922,7 +922,7 @@ static void processBlackbox(void)
 void taskMainPidLoop(timeUs_t currentTimeUs)
 {
     cycleTime = getTaskDeltaTime(TASK_SELF);
-    dT = (float)cycleTime * 0.000001f;
+    dT = (float)cycleTime * 0.000001f;  // seconds
 
     bool fwLaunchIsActive = STATE(AIRPLANE) && isNavLaunchEnabled() && armTime == 0;
 

@@ -125,7 +125,8 @@
 #define VIDEO_BUFFER_CHARS_HDZERO 900
 #define VIDEO_BUFFER_CHARS_DJIWTF 1320
 
-#define GFORCE_FILTER_TC 0.2
+// #define GFORCE_FILTER_TC 0.2  // CR163
+#define GFORCE_FILTER_T_CUT_HZ 0.8
 
 #define OSD_STATS_SINGLE_PAGE_MIN_ROWS 18
 #define IS_HI(X)  (rxGetChannelValue(X) > 1750)
@@ -3560,8 +3561,7 @@ static bool osdDrawSingleElement(uint8_t item)
 #endif
                 ) && gpsSol.groundSpeed > 0) {
                 if (efficiencyTimeDelta >= EFFICIENCY_UPDATE_INTERVAL) {
-                    value = pt1FilterApply4(&eFilterState, ((float)getAmperage() / gpsSol.groundSpeed) / 0.0036f,
-                        1, US2S(efficiencyTimeDelta));
+                    value = pt1FilterApply4(&eFilterState, ((float)getAmperage() / gpsSol.groundSpeed) / 0.0036f, 1, US2S(efficiencyTimeDelta));
 
                     efficiencyUpdated = currentTimeUs;
                 } else {
@@ -3635,8 +3635,7 @@ static bool osdDrawSingleElement(uint8_t item)
 #endif
                 ) && gpsSol.groundSpeed > 0) {
                 if (efficiencyTimeDelta >= EFFICIENCY_UPDATE_INTERVAL) {
-                    value = pt1FilterApply4(&eFilterState, ((float)getPower() / gpsSol.groundSpeed) / 0.0036f,
-                        1, US2S(efficiencyTimeDelta));
+                    value = pt1FilterApply4(&eFilterState, ((float)getPower() / gpsSol.groundSpeed) / 0.0036f, 1, US2S(efficiencyTimeDelta));
 
                     efficiencyUpdated = currentTimeUs;
                 } else {
@@ -5768,26 +5767,30 @@ static void osdShowArmed(void)
     }
 }
 
-static void osdFilterData(timeUs_t currentTimeUs) {
+static void osdFilterData(timeUs_t currentTimeUs)
+{
     static timeUs_t lastRefresh = 0;
     float refresh_dT = US2S(cmpTimeUs(currentTimeUs, lastRefresh));
 
     GForce = fast_fsqrtf(vectorNormSquared(&imuMeasuredAccelBF)) / GRAVITY_MSS;
-    for (uint8_t axis = 0; axis < XYZ_AXIS_COUNT; ++axis) GForceAxis[axis] = imuMeasuredAccelBF.v[axis] / GRAVITY_MSS;
-
-    if (lastRefresh) {
-        GForce = pt1FilterApply3(&GForceFilter, GForce, refresh_dT);
-        for (uint8_t axis = 0; axis < XYZ_AXIS_COUNT; ++axis) pt1FilterApply3(GForceFilterAxis + axis, GForceAxis[axis], refresh_dT);
-    } else {
-        pt1FilterInitRC(&GForceFilter, GFORCE_FILTER_TC, 0);
-        pt1FilterReset(&GForceFilter, GForce);
-
-        for (uint8_t axis = 0; axis < XYZ_AXIS_COUNT; ++axis) {
-            pt1FilterInitRC(GForceFilterAxis + axis, GFORCE_FILTER_TC, 0);
-            pt1FilterReset(GForceFilterAxis + axis, GForceAxis[axis]);
-        }
+    for (uint8_t axis = 0; axis < XYZ_AXIS_COUNT; ++axis) {
+        GForceAxis[axis] = imuMeasuredAccelBF.v[axis] / GRAVITY_MSS;  // CR163
     }
 
+    if (lastRefresh) {
+        GForce = pt1FilterApply4(&GForceFilter, GForce, GFORCE_FILTER_T_CUT_HZ, refresh_dT); // CR163
+        for (uint8_t axis = 0; axis < XYZ_AXIS_COUNT; ++axis) {
+            GForceAxis[axis] = pt1FilterApply4(&GForceFilterAxis[axis], GForceAxis[axis], GFORCE_FILTER_T_CUT_HZ, refresh_dT);  // CR163
+        }
+    // } else {
+        // pt1FilterInitRC(&GForceFilter, GFORCE_FILTER_TC, 0);
+        // pt1FilterReset(&GForceFilter, GForce);
+
+        // for (uint8_t axis = 0; axis < XYZ_AXIS_COUNT; ++axis) {
+            // pt1FilterInitRC(GForceFilterAxis + axis, GFORCE_FILTER_TC, 0);
+            // pt1FilterReset(&GForceFilterAxis[axis], GForceAxis[axis]);
+        // }
+    }   // CR163
     lastRefresh = currentTimeUs;
 }
 
@@ -6232,7 +6235,7 @@ textAttributes_t osdGetSystemMessage(char *buff, size_t buff_size, bool isCenter
                         messages[messageCount++] = OSD_MSG_OUTSIDE_FZ;
                         break;
                     case GEOZONE_MESSAGE_STATE_ENTERING_NFZ:
-                    osdFormatDistanceSymbol(buf, geozone.distanceToZoneBorder3d, 0, 3);
+                        osdFormatDistanceSymbol(buf, geozone.distanceToZoneBorder3d, 0, 3);
                         if (geozone.zoneInfo == INT32_MAX) {
                             tfp_sprintf(buf1, "%s%c", "INF", SYM_ALT_M);
                         } else {

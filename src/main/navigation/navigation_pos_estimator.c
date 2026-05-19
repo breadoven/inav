@@ -314,7 +314,7 @@ void updatePositionEstimator_BaroTopic(timeUs_t currentTimeUs)
             const float baroDtSec = US2S(baroDtUs);
             posEstimator.baro.updateDt = baroDtSec;
 
-            posEstimator.baro.alt = pt1FilterApply3(&posEstimator.baro.avgFilter, posEstimator.baro.alt, baroDtSec);
+            posEstimator.baro.alt = pt1FilterApply4(&posEstimator.baro.avgFilter, posEstimator.baro.alt, INAV_BARO_AVERAGE_HZ, baroDtSec);  // CR163
 
             // baro altitude rate
             static float baroAltPrevious = 0;
@@ -1038,8 +1038,8 @@ void initializePositionEstimator(void)
         posEstimator.est.vel.v[axis] = 0;
     }
 
-    pt1FilterInit(&posEstimator.baro.avgFilter, INAV_BARO_AVERAGE_HZ, 0.0f);
-    pt1FilterInit(&posEstimator.surface.avgFilter, INAV_SURFACE_AVERAGE_HZ, 0.0f);
+    // pt1FilterInit(&posEstimator.baro.avgFilter, INAV_BARO_AVERAGE_HZ, 0.0f);   // CR163
+    // pt1FilterInit(&posEstimator.surface.avgFilter, INAV_SURFACE_AVERAGE_HZ, 0.0f);
 }
 
 /**

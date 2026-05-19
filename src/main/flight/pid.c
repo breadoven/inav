@@ -384,7 +384,10 @@ bool pidInitFilters(void)
 void pidResetTPAFilter(void)
 {
     if (usedPidControllerType == PID_TYPE_PIFF && currentControlProfile->throttle.fixedWingTauMs > 0) {
-        pt1FilterInitRC(&fixedWingTpaFilter, MS2S(currentControlProfile->throttle.fixedWingTauMs), US2S(TASK_PERIOD_HZ(TASK_AUX_RATE_HZ)));
+        // pt1FilterInitRC(&fixedWingTpaFilter, MS2S(currentControlProfile->throttle.fixedWingTauMs), US2S(TASK_PERIOD_HZ(TASK_AUX_RATE_HZ)));  // CR163
+        pt1FilterInit(&fixedWingTpaFilter, 1.0f, HZ2S(TASK_AUX_RATE_HZ));
+        pt1FilterSetTimeConstant(&fixedWingTpaFilter, MS2S(currentControlProfile->throttle.fixedWingTauMs));
+        // CR163
         pt1FilterReset(&fixedWingTpaFilter, getThrottleIdleValue());
     }
 }
@@ -1379,12 +1382,8 @@ void pidInit(void)
 
         pidState[axis].axis = axis;
         pidState[axis].pidSumLimit = getPidSumLimit(axis);
-        if (axis == FD_YAW) {
-            if (yawLpfHz) {
-                pidState[axis].ptermFilterApplyFn = (filterApply4FnPtr) pt1FilterApply4;
-            } else {
-                pidState[axis].ptermFilterApplyFn = (filterApply4FnPtr) nullFilterApply4;
-            }
+        if (axis == FD_YAW && yawLpfHz) {  // CR163
+            pidState[axis].ptermFilterApplyFn = (filterApply4FnPtr) pt1FilterApply4;
         } else {
             pidState[axis].ptermFilterApplyFn = (filterApply4FnPtr) nullFilterApply4;
         }

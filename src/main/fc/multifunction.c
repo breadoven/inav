@@ -136,7 +136,7 @@ multi_function_e multiFunctionSelection(void)
 static bool osdCheckWarning(bool condition, uint8_t warningFlag)
 {
     static timeMs_t newWarningEndTime = 0;
-    static uint8_t newWarningFlags = 0;  // bitfield
+    static uint16_t newWarningFlags = 0;  // bitfield
     const timeMs_t currentTimeMs = millis();
 
     /* New warnings dislayed individually for 10s with blinking after which
