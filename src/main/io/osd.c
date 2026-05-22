@@ -1267,7 +1267,9 @@ uint16_t osdGetRemainingGlideTime(void) {
     const  timeMs_t curTimeMs = millis();
     static timeMs_t glideTimeUpdatedMs;
 
-    value = pt1FilterApply4(&glideTimeFilterState, isnormal(value) ? value : 0, 0.5, MS2S(curTimeMs - glideTimeUpdatedMs));
+    if (!glideTimeFilterState.RC) pt1FilterSetCutoff(&glideTimeFilterState, 0.5f);
+    // value = pt1FilterApply4(&glideTimeFilterState, isnormal(value) ? value : 0, 0.5, MS2S(curTimeMs - glideTimeUpdatedMs));
+    value = pt1FilterApply3(&glideTimeFilterState, isnormal(value) ? value : 0, MS2S(curTimeMs - glideTimeUpdatedMs));
     glideTimeUpdatedMs = curTimeMs;
 
     if (value < 0) {
@@ -2025,7 +2027,10 @@ static bool osdDrawSingleElement(uint8_t item)
             const timeMs_t currentTimeMs = millis();
             static timeMs_t gsUpdatedTimeMs;
             float glideSlope = horizontalSpeed / sinkRate;
-            glideSlope = pt1FilterApply4(&gsFilterState, isnormal(glideSlope) ? glideSlope : 200, 0.5, MS2S(currentTimeMs - gsUpdatedTimeMs));
+
+            if (!gsFilterState.RC) pt1FilterSetCutoff(&gsFilterState, 0.5f);
+            // glideSlope = pt1FilterApply4(&gsFilterState, isnormal(glideSlope) ? glideSlope : 200, 0.5, MS2S(currentTimeMs - gsUpdatedTimeMs));
+            glideSlope = pt1FilterApply3(&gsFilterState, isnormal(glideSlope) ? glideSlope : 200, MS2S(currentTimeMs - gsUpdatedTimeMs));
             gsUpdatedTimeMs = currentTimeMs;
 
             buff[0] = SYM_GLIDESLOPE;
@@ -2405,7 +2410,7 @@ static bool osdDrawSingleElement(uint8_t item)
             }
             displayWriteWithAttr(osdDisplayPort, elemPosX, elemPosY, buff, elemAttr);
 
-            if (STATE(MULTIROTOR) && posControl.flags.mcAltholdDeadbandCentered) { ///posControl.flags.isAdjustingAltitude) { // CR155
+            if (STATE(MULTIROTOR) && !posControl.flags.mcAltholdDeadbandCentered) { ///posControl.flags.isAdjustingAltitude) { // CR155
                 /* Indicate MR altitude adjustment active with constant symbol at first blank position.
                  * Alternate symbol on/off with 600ms cycle if first position not blank (to maintain visibility of -ve sign) */
                 int8_t blankPos;
@@ -3082,7 +3087,9 @@ static bool osdDrawSingleElement(uint8_t item)
             if (getEstimatedActualVelocity(Z) > 0) {
                 if (vEfficiencyTimeDelta >= EFFICIENCY_UPDATE_INTERVAL) {
                                                             // Centiamps (kept for osdFormatCentiNumber) / m/s - Will appear as A / m/s in OSD
-                    value = pt1FilterApply4(&veFilterState, (float)getAmperage() / (getEstimatedActualVelocity(Z) / 100.0f), 1, US2S(vEfficiencyTimeDelta));
+                    if (!veFilterState.RC) pt1FilterSetCutoff(&veFilterState, 1.0f);
+                    // value = pt1FilterApply4(&veFilterState, (float)getAmperage() / (getEstimatedActualVelocity(Z) / 100.0f), 1, US2S(vEfficiencyTimeDelta));
+                    value = pt1FilterApply3(&veFilterState, (float)getAmperage() / (getEstimatedActualVelocity(Z) / 100.0f), US2S(vEfficiencyTimeDelta));
 
                     vEfficiencyUpdated = currentTimeUs;
                 } else {
@@ -3561,7 +3568,9 @@ static bool osdDrawSingleElement(uint8_t item)
 #endif
                 ) && gpsSol.groundSpeed > 0) {
                 if (efficiencyTimeDelta >= EFFICIENCY_UPDATE_INTERVAL) {
-                    value = pt1FilterApply4(&eFilterState, ((float)getAmperage() / gpsSol.groundSpeed) / 0.0036f, 1, US2S(efficiencyTimeDelta));
+                    if (!eFilterState.RC) pt1FilterSetCutoff(&eFilterState, 1.0f);
+                    // value = pt1FilterApply4(&eFilterState, ((float)getAmperage() / gpsSol.groundSpeed) / 0.0036f, 1, US2S(efficiencyTimeDelta));
+                    value = pt1FilterApply3(&eFilterState, ((float)getAmperage() / gpsSol.groundSpeed) / 0.0036f, US2S(efficiencyTimeDelta));
 
                     efficiencyUpdated = currentTimeUs;
                 } else {
@@ -3635,7 +3644,9 @@ static bool osdDrawSingleElement(uint8_t item)
 #endif
                 ) && gpsSol.groundSpeed > 0) {
                 if (efficiencyTimeDelta >= EFFICIENCY_UPDATE_INTERVAL) {
-                    value = pt1FilterApply4(&eFilterState, ((float)getPower() / gpsSol.groundSpeed) / 0.0036f, 1, US2S(efficiencyTimeDelta));
+                    if (!eFilterState.RC) pt1FilterSetCutoff(&eFilterState, 1.0f);
+                    // value = pt1FilterApply4(&eFilterState, ((float)getPower() / gpsSol.groundSpeed) / 0.0036f, 1, US2S(efficiencyTimeDelta));
+                    value = pt1FilterApply3(&eFilterState, ((float)getPower() / gpsSol.groundSpeed) / 0.0036f, US2S(efficiencyTimeDelta));
 
                     efficiencyUpdated = currentTimeUs;
                 } else {
@@ -5778,18 +5789,22 @@ static void osdFilterData(timeUs_t currentTimeUs)
     }
 
     if (lastRefresh) {
-        GForce = pt1FilterApply4(&GForceFilter, GForce, GFORCE_FILTER_T_CUT_HZ, refresh_dT); // CR163
+        // GForce = pt1FilterApply4(&GForceFilter, GForce, GFORCE_FILTER_T_CUT_HZ, refresh_dT); // CR163
+        GForce = pt1FilterApply3(&GForceFilter, GForce, refresh_dT); // CR163
         for (uint8_t axis = 0; axis < XYZ_AXIS_COUNT; ++axis) {
-            GForceAxis[axis] = pt1FilterApply4(&GForceFilterAxis[axis], GForceAxis[axis], GFORCE_FILTER_T_CUT_HZ, refresh_dT);  // CR163
+            // GForceAxis[axis] = pt1FilterApply4(&GForceFilterAxis[axis], GForceAxis[axis], GFORCE_FILTER_T_CUT_HZ, refresh_dT);  // CR163
+            GForceAxis[axis] = pt1FilterApply3(&GForceFilterAxis[axis], GForceAxis[axis], refresh_dT);  // CR163
         }
-    // } else {
+    } else {
+        pt1FilterSetCutoff(&GForceFilter, GFORCE_FILTER_T_CUT_HZ);
         // pt1FilterInitRC(&GForceFilter, GFORCE_FILTER_TC, 0);
         // pt1FilterReset(&GForceFilter, GForce);
 
-        // for (uint8_t axis = 0; axis < XYZ_AXIS_COUNT; ++axis) {
+        for (uint8_t axis = 0; axis < XYZ_AXIS_COUNT; ++axis) {
+            pt1FilterSetCutoff(&GForceFilterAxis[axis], GFORCE_FILTER_T_CUT_HZ);
             // pt1FilterInitRC(GForceFilterAxis + axis, GFORCE_FILTER_TC, 0);
             // pt1FilterReset(&GForceFilterAxis[axis], GForceAxis[axis]);
-        // }
+        }
     }   // CR163
     lastRefresh = currentTimeUs;
 }

@@ -49,24 +49,15 @@ extern navigationPosEstimator_t posEstimator;
 void updatePositionEstimator_SurfaceTopic(timeUs_t currentTimeUs, float newSurfaceAlt)
 {
     const float surfaceDtUs = currentTimeUs - posEstimator.surface.lastUpdateTime;
-    float newReliabilityMeasurement = 0;
+    uint8_t newReliabilityMeasurement = 0;  // 0 by default for negative values, out of range or failed hardware
     bool surfaceMeasurementWithinRange = false;
 
     posEstimator.surface.lastUpdateTime = currentTimeUs;
 
-    if (newSurfaceAlt >= 0) {
-        if (newSurfaceAlt <= positionEstimationConfig()->max_surface_altitude) {
-            newReliabilityMeasurement = 1.0f;
-            surfaceMeasurementWithinRange = true;
-            posEstimator.surface.alt = newSurfaceAlt;
-        }
-        else {
-            newReliabilityMeasurement = 0.0f;
-        }
-    }
-    else {
-        // Negative values - out of range or failed hardware
-        newReliabilityMeasurement = 0.0f;
+    if (newSurfaceAlt >= 0 && newSurfaceAlt <= positionEstimationConfig()->max_surface_altitude) {
+        newReliabilityMeasurement = 1;
+        surfaceMeasurementWithinRange = true;
+        posEstimator.surface.alt = newSurfaceAlt;
     }
 
     /* Reliability is a measure of confidence of rangefinder measurement. It's increased with each valid sample and decreased with each invalid sample */
@@ -80,7 +71,8 @@ void updatePositionEstimator_SurfaceTopic(timeUs_t currentTimeUs, float newSurfa
 
         // Update average sonar altitude if range is good
         if (surfaceMeasurementWithinRange) {
-            pt1FilterApply4(&posEstimator.surface.avgFilter, newSurfaceAlt, INAV_SURFACE_AVERAGE_HZ, surfaceDt);  // CR163
+            // pt1FilterApply4(&posEstimator.surface.avgFilter, newSurfaceAlt, INAV_SURFACE_AVERAGE_HZ, surfaceDt);  // CR163
+            pt1FilterApply3(&posEstimator.surface.avgFilter, newSurfaceAlt, surfaceDt);  // CR163
         }
     }
 }
