@@ -5784,14 +5784,14 @@ static void osdFilterData(timeUs_t currentTimeUs)
     float refresh_dT = US2S(cmpTimeUs(currentTimeUs, lastRefresh));
 
     GForce = fast_fsqrtf(vectorNormSquared(&imuMeasuredAccelBF)) / GRAVITY_MSS;
-    for (uint8_t axis = 0; axis < XYZ_AXIS_COUNT; ++axis) {
+    for (uint8_t axis = 0; axis < XYZ_AXIS_COUNT; axis++) {
         GForceAxis[axis] = imuMeasuredAccelBF.v[axis] / GRAVITY_MSS;  // CR163
     }
 
     if (lastRefresh) {
         // GForce = pt1FilterApply4(&GForceFilter, GForce, GFORCE_FILTER_T_CUT_HZ, refresh_dT); // CR163
         GForce = pt1FilterApply3(&GForceFilter, GForce, refresh_dT); // CR163
-        for (uint8_t axis = 0; axis < XYZ_AXIS_COUNT; ++axis) {
+        for (uint8_t axis = 0; axis < XYZ_AXIS_COUNT; axis++) {
             // GForceAxis[axis] = pt1FilterApply4(&GForceFilterAxis[axis], GForceAxis[axis], GFORCE_FILTER_T_CUT_HZ, refresh_dT);  // CR163
             GForceAxis[axis] = pt1FilterApply3(&GForceFilterAxis[axis], GForceAxis[axis], refresh_dT);  // CR163
         }
@@ -5800,7 +5800,7 @@ static void osdFilterData(timeUs_t currentTimeUs)
         // pt1FilterInitRC(&GForceFilter, GFORCE_FILTER_TC, 0);
         // pt1FilterReset(&GForceFilter, GForce);
 
-        for (uint8_t axis = 0; axis < XYZ_AXIS_COUNT; ++axis) {
+        for (uint8_t axis = 0; axis < XYZ_AXIS_COUNT; axis++) {
             pt1FilterSetCutoff(&GForceFilterAxis[axis], GFORCE_FILTER_T_CUT_HZ);
             // pt1FilterInitRC(GForceFilterAxis + axis, GFORCE_FILTER_TC, 0);
             // pt1FilterReset(&GForceFilterAxis[axis], GForceAxis[axis]);
