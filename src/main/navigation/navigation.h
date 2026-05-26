@@ -474,6 +474,8 @@ typedef struct navConfig_s {
         uint8_t  max_climb_angle;            // Fixed wing max banking angle (deg)
         uint8_t  max_dive_angle;             // Fixed wing max banking angle (deg)
         uint16_t cruise_speed;               // Speed at cruise throttle (cm/s), used for time/distance left before RTH
+        uint16_t auto_speed_min_speed;       // CR164
+        uint16_t auto_speed_max_speed;       // CR164
         uint8_t  control_smoothness;         // The amount of smoothing to apply to controls for navigation
         uint16_t pitch_to_throttle_smooth;   // How smoothly the autopilot makes pitch to throttle correction inside a deadband defined by pitch_to_throttle_thresh.
         uint8_t  pitch_to_throttle_thresh;   // Threshold from average pitch where momentary pitch_to_throttle correction kicks in. [decidegrees]
@@ -602,6 +604,7 @@ typedef struct navigationPIDControllers_s {
     pidController_t fw_alt;
     pidController_t fw_nav;
     pidController_t fw_heading;
+    pidController_t fw_autoSpeed;  // CR164
 } navigationPIDControllers_t;
 
 /* MultiWii-compatible params for telemetry */
@@ -825,7 +828,11 @@ bool rthAltControlStickOverrideCheck(uint8_t axis);
 int8_t navCheckActiveAngleHoldAxis(void);
 uint8_t getActiveWpNumber(void);
 uint16_t getFlownLoiterRadius(void);
-
+// CR164
+uint16_t getSetAutoSpeed(void);
+bool isFixedwingAutoSpeedActive(void);
+void getAutoSpeedThrottleDemand(int16_t *throttleCommand);
+// CR164
 /* Returns the heading recorded when home position was acquired.
  * Note that the navigation system uses deg*100 as unit and angles
  * are in the [0, 360 * 100) interval.

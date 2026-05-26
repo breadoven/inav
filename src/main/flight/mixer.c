@@ -682,7 +682,7 @@ motorStatus_e getMotorStatus(void)
             return MOTOR_STOPPED_USER;
 
 // CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-        } else if (!failsafeIsActive() && !launchAllowedWithThrottleLow()) {
+        } else if (!failsafeIsActive() && !launchAllowedWithThrottleLow() && !isFixedwingAutoSpeedActive()) {// CR164
 // CR6 xxxxxxxxxxxxxxxxxxxxxxxxxxxxx
             // If user is holding stick low, we are not in failsafe and either on a plane or on a quad with inactive
             // airmode - we need to check if we are allowing navigation to override MOTOR_STOP

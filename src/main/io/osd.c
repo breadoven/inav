@@ -1175,7 +1175,7 @@ static void osdFormatThrottlePosition(char *buff, bool useScaled, textAttributes
 {
     buff[0] = SYM_BLANK;
     buff[1] = SYM_THR;
-    if (navigationIsControllingThrottle()) {
+    if (navigationIsControllingThrottle() || isFixedwingAutoSpeedActive()) {    // CR164
         buff[0] = SYM_AUTO_THR0;
         buff[1] = SYM_AUTO_THR1;
         if (isFixedWingAutoThrottleManuallyIncreased()) {
@@ -1190,7 +1190,8 @@ static void osdFormatThrottlePosition(char *buff, bool useScaled, textAttributes
 #endif
     int8_t throttlePercent = getThrottlePercent(useScaled);
     if ((useScaled && throttlePercent <= 0) || !ARMING_FLAG(ARMED)) {
-        const char* message = ARMING_FLAG(ARMED) ? (throttlePercent == 0 && !ifMotorstopFeatureEnabled()) ? "IDLE" : "STOP" : "DARM";
+        bool motorStopIsActive = ifMotorstopFeatureEnabled() && getMotorStatus() != MOTOR_RUNNING;  // CR164
+        const char* message = ARMING_FLAG(ARMED) ? motorStopIsActive ? "STOP" : "IDLE" : "DARM";
         buff[0] = SYM_THR;
         strcpy(buff + 1, message);
         return;
@@ -2018,7 +2019,19 @@ static bool osdDrawSingleElement(uint8_t item)
     case OSD_3D_MAX_SPEED:
         osdFormatVelocityStr(buff, stats.max_3D_speed, OSD_SPEED_TYPE_3D, true);
         break;
-
+        // CR164
+     case OSD_AUTO_SPEED:
+        if (isFixedwingAutoSpeedActive()) {
+            buff[0] = '(';
+            osdFormatVelocityStr(buff + 1, getSetAutoSpeed(), OSD_SPEED_TYPE_3D, false);
+            buff[5] = ')';
+            buff[6] = '\0';
+            break;
+        } else {
+            displayWrite(osdDisplayPort, elemPosX, elemPosY, "      ");
+            return true;
+        }
+        // CR164
     case OSD_GLIDESLOPE:
         {
             float horizontalSpeed = gpsSol.groundSpeed;
@@ -4408,6 +4421,7 @@ void pgResetFn_osdLayoutsConfig(osdLayoutsConfig_t *osdLayoutsConfig)
     osdLayoutsConfig->item_pos[0][OSD_MAIN_BATT_CELL_VOLTAGE] = OSD_POS(12, 1);
     osdLayoutsConfig->item_pos[0][OSD_MAIN_BATT_SAG_COMPENSATED_CELL_VOLTAGE] = OSD_POS(12, 1);
     osdLayoutsConfig->item_pos[0][OSD_GPS_SPEED] = OSD_POS(23, 1);
+    osdLayoutsConfig->item_pos[0][OSD_AUTO_SPEED] = OSD_POS(23, 0);  // CR164
     osdLayoutsConfig->item_pos[0][OSD_3D_SPEED] = OSD_POS(23, 1);
     osdLayoutsConfig->item_pos[0][OSD_GLIDESLOPE] = OSD_POS(23, 2);
 
