@@ -49,7 +49,7 @@ extern navigationPosEstimator_t posEstimator;
 void updatePositionEstimator_SurfaceTopic(timeUs_t currentTimeUs, float newSurfaceAlt)
 {
     const float surfaceDtUs = currentTimeUs - posEstimator.surface.lastUpdateTime;
-    uint8_t newReliabilityMeasurement = 0;  // 0 by default for negative values, out of range or failed hardware
+    uint8_t newReliabilityMeasurement = 0;  // default to 0 for negative values, out of range or failed hardware
     bool surfaceMeasurementWithinRange = false;
 
     posEstimator.surface.lastUpdateTime = currentTimeUs;

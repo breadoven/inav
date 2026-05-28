@@ -133,9 +133,9 @@ bool adjustMulticopterAltitudeFromRCInput(void)
             updateClimbRateToAltitudeController(0, altTarget, ROC_TO_ALT_TARGET);
         }
         else {
-            // CR156
             int16_t climbRate = -50;
 
+            // Increase descent rate when throttle stick below mid from min rate of 0.5m/s up to max 2 m/s
             if (posControl.flags.estAglStatus != EST_TRUSTED) {
                 const int16_t throttleIdle = getThrottleIdleValue();
                 const int16_t throttleMid = rcLookupThrottleMid();
@@ -143,8 +143,6 @@ bool adjustMulticopterAltitudeFromRCInput(void)
             }
 
             updateClimbRateToAltitudeController(climbRate, 0, ROC_TO_ALT_CONSTANT);
-            // updateClimbRateToAltitudeController(-50.0f, 0, ROC_TO_ALT_CONSTANT);
-            // CR156
         }
 
         // In surface tracking we always indicate that we're adjusting altitude
@@ -948,16 +946,18 @@ bool isMulticopterLandingDetected(void)
     /* Basic condition to start looking for landing
      * Detection active during Failsafe only if throttle below mid hover throttle
      * and WP mission not active (except landing states).
-     * Also active in non autonomous flight modes but only when thottle low */
-    // CR156
+     * Also active in non autonomous flight modes but only when throttle low.
+     * Throttle low detection only allowed during Surface if AGL trusted and below 50cm */
+
     bool throttleLowCheckAllowed = !navigationIsFlyingAutonomousMode();
+
     if (posControl.flags.isTerrainFollowEnabled) {
         throttleLowCheckAllowed = throttleLowCheckAllowed && posControl.flags.estAglStatus == EST_TRUSTED && posControl.actualState.agl.pos.z < 50.0f;
     }
-    // CR156
+
     bool startCondition = (navGetCurrentStateFlags() & (NAV_CTL_LAND | NAV_CTL_EMERG)) ||
                           (FLIGHT_MODE(FAILSAFE_MODE) && !FLIGHT_MODE(NAV_WP_MODE) && !isMulticopterThrottleAboveMidHover()) ||
-                          (throttleLowCheckAllowed && throttleStickIsLow());  // CR156
+                          (throttleLowCheckAllowed && throttleStickIsLow());
     // CR137
     if (FLIGHT_MODE(NAV_RTH_MODE)) {
         startCondition = startCondition && posControl.actualState.abs.pos.z < 3000;
