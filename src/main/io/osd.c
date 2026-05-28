@@ -1175,7 +1175,7 @@ static void osdFormatThrottlePosition(char *buff, bool useScaled, textAttributes
 {
     buff[0] = SYM_BLANK;
     buff[1] = SYM_THR;
-    if (navigationIsControllingThrottle() || isFixedwingAutoSpeedActive()) {    // CR164
+    if (navigationIsControllingThrottle()) {
         buff[0] = SYM_AUTO_THR0;
         buff[1] = SYM_AUTO_THR1;
         if (isFixedWingAutoThrottleManuallyIncreased()) {
@@ -1190,8 +1190,7 @@ static void osdFormatThrottlePosition(char *buff, bool useScaled, textAttributes
 #endif
     int8_t throttlePercent = getThrottlePercent(useScaled);
     if ((useScaled && throttlePercent <= 0) || !ARMING_FLAG(ARMED)) {
-        bool motorStopIsActive = ifMotorstopFeatureEnabled() && getMotorStatus() != MOTOR_RUNNING;  // CR164
-        const char* message = ARMING_FLAG(ARMED) ? motorStopIsActive ? "STOP" : "IDLE" : "DARM";
+        const char* message = ARMING_FLAG(ARMED) ? areMotorsStopped() ? "STOP" : "IDLE" : "DARM";// CR164
         buff[0] = SYM_THR;
         strcpy(buff + 1, message);
         return;
@@ -2023,7 +2022,7 @@ static bool osdDrawSingleElement(uint8_t item)
      case OSD_AUTO_SPEED:
         if (isFixedwingAutoSpeedActive()) {
             buff[0] = '(';
-            osdFormatVelocityStr(buff + 1, getSetAutoSpeed(), OSD_SPEED_TYPE_3D, false);
+            osdFormatVelocityStr(buff + 1, getDesiredAutoSpeed(), OSD_SPEED_TYPE_3D, false);
             buff[5] = ')';
             buff[6] = '\0';
             break;

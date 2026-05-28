@@ -829,7 +829,7 @@ int8_t navCheckActiveAngleHoldAxis(void);
 uint8_t getActiveWpNumber(void);
 uint16_t getFlownLoiterRadius(void);
 // CR164
-uint16_t getSetAutoSpeed(void);
+uint16_t getDesiredAutoSpeed(void);
 bool isFixedwingAutoSpeedActive(void);
 void getAutoSpeedThrottleDemand(int16_t *throttleCommand);
 // CR164

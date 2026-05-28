@@ -304,6 +304,7 @@ bool adjustMulticopterHeadingFromRCInput(void)
  * XY-position controller for multicopter aircraft
  *-----------------------------------------------------------*/
 static float lastAccelTargetX = 0.0f, lastAccelTargetY = 0.0f;
+int16_t mcToiletBowlingHeadingCorrection;    // Indicates toilet bowling detected multirotor // CR141
 
 void resetMulticopterBrakingMode(void)
 {

@@ -74,7 +74,6 @@ static bool isAutoThrottleManuallyIncreased = false;
 static float navCrossTrackError;
 static int8_t loiterDirYaw = 1;
 bool needToCalculateCircularLoiter;
-static uint16_t desiredAutoSpeed;   // CR164
 
 // Calculates the cutoff frequency for smoothing out roll/pitch commands
 // control_smoothness valid range from 0 to 9
@@ -707,9 +706,11 @@ void applyFixedWingPitchRollThrottleController(navigationFSMStateFlags_t navStat
         int16_t pitchCorrection = constrain(posControl.rcAdjustment[PITCH], -DEGREES_TO_DECIDEGREES(navConfig()->fw.max_dive_angle), DEGREES_TO_DECIDEGREES(navConfig()->fw.max_climb_angle));
         rcCommand[PITCH] = -pidAngleToRcCommand(pitchCorrection, pidProfile()->max_angle_inclination[FD_PITCH]);
 
-        int16_t throttleCorrection = fixedWingPitchToThrottleCorrection(pitchCorrection, currentTimeUs);
+        if (isFixedwingAutoSpeedActive()) {  // CR164
+            isAutoThrottleManuallyIncreased = false;
+        } else {
+            int16_t throttleCorrection = fixedWingPitchToThrottleCorrection(pitchCorrection, currentTimeUs);
 
-        if (!isFixedwingAutoSpeedActive()) {  // CR164
             if (navStateFlags & NAV_CTL_LAND) {
             // During LAND we do not allow to raise THROTTLE when nose is up to reduce speed
                 throttleCorrection = constrain(throttleCorrection, minThrottleCorrection, 0);
@@ -738,9 +739,7 @@ void applyFixedWingPitchRollThrottleController(navigationFSMStateFlags_t navStat
             }
 
             rcCommand[THROTTLE] = setDesiredThrottle(correctedThrottleValue, false);
-        } else {    // CR164
-            isAutoThrottleManuallyIncreased = false;
-        } // CR164
+        }   // CR164
     }
 
 #ifdef USE_FW_AUTOLAND
@@ -961,36 +960,30 @@ float navigationGetCrossTrackError(void)
     return navCrossTrackError;
 }
 // CR164
-uint16_t getSetAutoSpeed(void)
+uint16_t getDesiredAutoSpeed(void)
 {
-    return desiredAutoSpeed;
+    return posControl.desiredState.autoSpeedDemand;
 }
 
 bool isFixedwingAutoSpeedActive(void)
 {
-    return ARMING_FLAG(ARMED) && IS_RC_MODE_ACTIVE(BOXAUTOSPEED) && posControl.flags.estVelStatus == EST_TRUSTED &&
+    return STATE(AIRPLANE) && ARMING_FLAG(ARMED) && IS_RC_MODE_ACTIVE(BOXAUTOSPEED) && posControl.flags.estVelStatus == EST_TRUSTED && !areMotorsStopped() &&
             !FLIGHT_MODE(NAV_LAUNCH_MODE) && !FLIGHT_MODE(FAILSAFE_MODE) && !FLIGHT_MODE(NAV_FW_AUTOLAND) && !navigationIsExecutingAnEmergencyLanding();
 }
 
 void getAutoSpeedThrottleDemand(int16_t *throttleCommand)
 {
-    if (!isFixedwingAutoSpeedActive()) {
-        *throttleCommand = rcCommand[THROTTLE];
-        return;
-    }
+    if (!isFixedwingAutoSpeedActive()) return;
 
     static uint16_t autoSpeedThrottleCommand = PWM_RANGE_MIDDLE;
-    static timeUs_t lastUpdateTimeMs = 0;
+    static timeUs_t lastUpdateTimeUs = 0;
     timeUs_t currentTime = micros();
-    timeUs_t dT = currentTime - lastUpdateTimeMs;
+    timeUs_t dT = currentTime - lastUpdateTimeUs;
 
     if (dT > 20000) {
-        lastUpdateTimeMs = currentTime;
+        lastUpdateTimeUs = currentTime;
 
-        if (dT > 50000) {
-            *throttleCommand = rcCommand[THROTTLE];
-            return;
-        }
+        if (dT > 50000) return;
 
         static pt1Filter_t speedToThrFilterState;
         if (!speedToThrFilterState.RC) pt1FilterSetCutoff(&speedToThrFilterState, 0.5f);
@@ -998,13 +991,17 @@ void getAutoSpeedThrottleDemand(int16_t *throttleCommand)
         uint16_t minSpeed = 100 * navConfig()->fw.auto_speed_min_speed;
         uint16_t maxSpeed = 100 * navConfig()->fw.auto_speed_max_speed;
 
-        desiredAutoSpeed = scaleRange(rxGetChannelValue(THROTTLE), PWM_RANGE_MIN, PWM_RANGE_MAX, minSpeed, maxSpeed);
-        DEBUG_SET(DEBUG_ALWAYS, 0, desiredAutoSpeed);
+        posControl.desiredState.autoSpeedDemand = scaleRange(rxGetChannelValue(THROTTLE), PWM_RANGE_MIN, PWM_RANGE_MAX, minSpeed, maxSpeed);
+        DEBUG_SET(DEBUG_ALWAYS, 0, posControl.desiredState.autoSpeedDemand);
+// #ifdef USE_PITOT
+        // if (sensors(SENSOR_PITOT) && pitotIsHealthy()) {
+            // airspeed = getAirspeedEstimate();
+        // }
+// #endif
+        uint16_t actual3DSpeed = calc_length_pythagorean_2D(posControl.actualState.velXY, posControl.actualState.abs.vel.z);
+        DEBUG_SET(DEBUG_ALWAYS, 1, actual3DSpeed);
 
-        uint16_t measuredSpeed = calc_length_pythagorean_2D(posControl.actualState.velXY, posControl.actualState.abs.vel.z);
-        DEBUG_SET(DEBUG_ALWAYS, 1, measuredSpeed);
-
-        int16_t throttleCorr = navPidApply2(&posControl.pids.fw_autoSpeed, desiredAutoSpeed, measuredSpeed, US2S(dT), -PWM_RANGE_HALF, PWM_RANGE_HALF, 0);
+        int16_t throttleCorr = navPidApply2(&posControl.pids.fw_autoSpeed, posControl.desiredState.autoSpeedDemand, actual3DSpeed, US2S(dT), -PWM_RANGE_HALF, PWM_RANGE_HALF, 0);
         throttleCorr = pt1FilterApply3(&speedToThrFilterState, throttleCorr, US2S(dT));
         DEBUG_SET(DEBUG_ALWAYS, 2, throttleCorr);
 
