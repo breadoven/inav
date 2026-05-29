@@ -262,12 +262,6 @@ STATIC_UNIT_TESTED void imuComputeQuaternionFromRPY(int16_t initialRoll, int16_t
 
     imuComputeRotationMatrix();
 }
-// CR159
-void resetQuaternionFromRPY(int16_t roll, int16_t pitch, int16_t yaw)
-{
-    imuComputeQuaternionFromRPY(roll, pitch, yaw);
-}
-// CR159
 #endif
 
 static bool imuUseFastGains(void)

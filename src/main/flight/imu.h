@@ -85,7 +85,6 @@ void imuUpdateAccelerometer(void);
 float calculateCosTiltAngle(void);
 bool isImuReady(void);
 bool isImuHeadingValid(void);
-void resetQuaternionFromRPY(int16_t roll, int16_t pitch, int16_t yaw);  // CR159
 bool isYawZeroResetAllowed(void);
 // void imuNavCompassSanity(bool navCompassAStatus);  // CR141
 

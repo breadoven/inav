@@ -576,29 +576,6 @@ static float computeVelocityScale(
     // return constrainf(scale, 0, attenuationFactor);
     // CR47
 }
-// CR159
-static void headingCalibration(timeDelta_t deltaMicros)
-{
-    UNUSED(deltaMicros);
-    if (posControl.actualState.velXY > 100) {   //navGetStateFlags(posControl.navState) & NAV_CTL_POS) {
-        int16_t courseError = wrap_18000(calculateBearingToDestination(&posControl.desiredState.pos) - 10 * gpsSol.groundCourse);
-
-        // static pt1Filter_t headingErrorFilterState;
-        // int16_t headingCorrection = pt1FilterApply4(&headingErrorFilterState, courseError, 0.5f, US2S(deltaMicros));
-        int16_t headingCorrection = courseError;
-
-        // if (ABS(headingCorrection) > 2000) {
-            posControl.actualState.headingCorrection = headingCorrection;
-        // } else {
-            // posControl.actualState.headingCorrection = 0;
-        // }
-
-        // uint32_t correctedYaw = wrap_36000(attitude.values.yaw * 10 - headingCorrection);
-        // resetQuaternionFromRPY(attitude.values.roll, attitude.values.pitch, correctedYaw / 10);
-    }
-    DEBUG_SET(DEBUG_ALWAYS, 5, posControl.actualState.headingCorrection);
-}
-// CR159
 // CR141
 static void checkForToiletBowling(void)
 {
@@ -833,7 +810,6 @@ static void applyMulticopterPositionController(timeUs_t currentTimeUs)
             float maxSpeed = getActiveSpeed();
             updatePositionVelocityController_MC(maxSpeed);
             updatePositionAccelController_MC(deltaMicrosPositionUpdate, NAV_ACCELERATION_XY_MAX);   // , maxSpeed);  CR47
-            headingCalibration(deltaMicrosPositionUpdate);  // CR159
 
             navDesiredVelocity[X] = constrain(lrintf(posControl.desiredState.vel.x), -32678, 32767);
             navDesiredVelocity[Y] = constrain(lrintf(posControl.desiredState.vel.y), -32678, 32767);
