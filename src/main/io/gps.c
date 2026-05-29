@@ -657,7 +657,7 @@ bool isGPSHeadingValid(void)
 #ifdef USE_GPS_FIX_ESTIMATION
         || STATE(GPS_ESTIMATED_FIX)
 #endif
-        ) && gpsSol.groundSpeed >= 300;  // CR160 make 300 a setting
+        ) && gpsSol.groundSpeed >= 300;
 }
 
 #endif
