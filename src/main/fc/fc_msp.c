@@ -4210,9 +4210,6 @@ void mspWriteSimulatorOSD(sbuf_t *dst)
 
 bool mspFCProcessInOutCommand(uint16_t cmdMSP, sbuf_t *dst, sbuf_t *src, mspResult_e *ret)
 {
-#ifdef USE_SIMULATOR
-    uint8_t tmp_u8;
-#endif
     const unsigned int dataSize = sbufBytesRemaining(src);
 
     switch (cmdMSP) {

@@ -982,8 +982,6 @@ void taskMainPidLoop(timeUs_t currentTimeUs)
     // Apply throttle tilt compensation
     applyThrottleTiltCompensation();
 
-    getAutoSpeedThrottleDemand(&rcCommand[THROTTLE]);   // CR164
-
 #ifdef USE_POWER_LIMITS
     powerLimiterApply(&rcCommand[THROTTLE]);
 #endif
