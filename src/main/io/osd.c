@@ -2067,13 +2067,15 @@ static bool osdDrawSingleElement(uint8_t item)
     case OSD_3D_MAX_SPEED:
         osdFormatVelocityStr(buff, stats.max_3D_speed, OSD_SPEED_TYPE_3D, true);
         break;
-        // CR164
+        // CR164.1
      case OSD_AUTO_SPEED:
-        if (isFixedwingAutoSpeedActive()) {
-            buff[0] = '(';
-            osdFormatVelocityStr(buff + 1, getDesiredAutoSpeed(), OSD_SPEED_TYPE_3D, false);
-            buff[5] = ')';
-            buff[6] = '\0';
+        if (IS_RC_MODE_ACTIVE(BOXAUTOSPEED)) {
+            strcpy(buff, "(ASPD)");
+            if (isFixedwingAutoSpeedActive()) {
+                osdFormatVelocityStr(buff + 1, getDesiredAutoSpeed(), OSD_SPEED_TYPE_3D, false);
+                buff[5] = ')';
+                buff[6] = '\0';
+            }
             break;
         } else {
             displayWrite(osdDisplayPort, elemPosX, elemPosY, "      ");

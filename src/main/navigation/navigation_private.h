@@ -135,13 +135,13 @@ typedef struct {
     navEstimatedPosVel_t    agl;
     int32_t                 yaw;
     int32_t                 cog;
-    int16_t                 headingCorrection;  // CR159
 
     // Service values
     float                   sinYaw;
     float                   cosYaw;
     float                   surfaceMin;
     float                   velXY;
+    float                   vel3D;  // CR165
 } navigationEstimatedState_t;
 
 typedef struct {
@@ -149,6 +149,7 @@ typedef struct {
     fpVector3_t vel;
     int32_t     yaw;
     int16_t     climbRateDemand;
+    uint16_t    autoSpeedDemand;    // CR164
 } navigationDesiredState_t;
 
 typedef enum {
@@ -358,6 +359,8 @@ typedef enum {
 
     NAV_CTL_HOLD            = (1 << 17),    // Nav loiter active at position
     NAV_CTL_COURSE          = (1 << 18),    // course hold active  // CR117
+
+    NAV_CTL_SPEED           = (1 << 19),    // auto speed active  // CR164.1
 } navigationFSMStateFlags_t;
 
 typedef struct {

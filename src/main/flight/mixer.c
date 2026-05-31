@@ -689,7 +689,7 @@ motorStatus_e getMotorStatus(void)
             // Launch with throttle low overrides MOTOR STOP always
             switch (navConfig()->general.flags.nav_overrides_motor_stop) {
                 case NOMS_ALL_NAV:
-                    return navigationInAutomaticThrottleMode() ? MOTOR_RUNNING : MOTOR_STOPPED_USER;
+                    return navigationRequiresAutoThrottleMode() ? MOTOR_RUNNING : MOTOR_STOPPED_USER;
 
                 case NOMS_AUTO_ONLY:
                     return navigationIsFlyingAutonomousMode() ? MOTOR_RUNNING : MOTOR_STOPPED_USER;
