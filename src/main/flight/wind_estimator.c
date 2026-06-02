@@ -45,6 +45,7 @@
 
 #define WINDESTIMATOR_TIMEOUT       60*15 // 15min with out altitude change
 #define WINDESTIMATOR_ALTITUDE_SCALE WINDESTIMATOR_TIMEOUT/500.0f //or 500m altitude change
+#define WINDESTIMATOR_VALIDITY_THRESHOLD    60
 // Based on WindEstimation.pdf paper
 
 static bool hasValidWindEstimate = false;
@@ -54,7 +55,7 @@ static float lastFuselageDirection[XYZ_AXIS_COUNT];
 
 bool isEstimatedWindSpeedValid(void)
 {
-    return hasValidWindEstimate 
+    return hasValidWindEstimate
 #ifdef USE_GPS_FIX_ESTIMATION
         || STATE(GPS_ESTIMATED_FIX)  //use any wind estimate with GPS fix estimation.
 #endif
@@ -88,19 +89,32 @@ void updateWindEstimator(timeUs_t currentTimeUs)
     static timeUs_t lastValidWindEstimate = 0;
     static float lastValidEstimateAltitude = 0.0f;
     float currentAltitude = gpsSol.llh.alt / 100.0f; // altitude in m
+    static uint8_t validityScore = 0;  // CR166
+    bool updateTimedout = false;
 
     if ((US2S(currentTimeUs - lastValidWindEstimate) + WINDESTIMATOR_ALTITUDE_SCALE * fabsf(currentAltitude - lastValidEstimateAltitude)) > WINDESTIMATOR_TIMEOUT) {
         hasValidWindEstimate = false;
     }
+    // CR166
+    if (cmpTimeUs(currentTimeUs, lastUpdateUs) > 10 * USECS_PER_SEC || lastUpdateUs == 0) {
+        lastUpdateUs = currentTimeUs;
+        updateTimedout = true;
+        if (validityScore > 0) validityScore--;
+        if (validityScore < WINDESTIMATOR_VALIDITY_THRESHOLD - 15) hasValidWindEstimate = false;
+    }
 
-    if (!STATE(FIXED_WING_LEGACY) ||
-        !isGPSHeadingValid() ||
-        !gpsSol.flags.validVelNE ||
-        !gpsSol.flags.validVelD 
+    if (!hasValidWindEstimate && validityScore > WINDESTIMATOR_VALIDITY_THRESHOLD) {
+        hasValidWindEstimate = true;
+    }
+    DEBUG_SET(DEBUG_ALWAYS, 6, validityScore);
+    DEBUG_SET(DEBUG_ALWAYS, 7, hasValidWindEstimate);
+    // CR166
+    // if (!STATE(FIXED_WING_LEGACY) || !isGPSHeadingValid() || !gpsSol.flags.validVelNE || !gpsSol.flags.validVelD
+    if (!isGPSHeadingValid() || !gpsSol.flags.validVelNE || !gpsSol.flags.validVelD
 #ifdef USE_GPS_FIX_ESTIMATION
-            || STATE(GPS_ESTIMATED_FIX)
+        || STATE(GPS_ESTIMATED_FIX)
 #endif
-            ) {
+        ) {
         return;
     }
 
@@ -122,13 +136,14 @@ void updateWindEstimator(timeUs_t currentTimeUs)
     fuselageDirection[X] = HeadVecEFFiltered.x;
     fuselageDirection[Y] = -HeadVecEFFiltered.y;
     fuselageDirection[Z] = -HeadVecEFFiltered.z;
+    // CR166
+    // timeDelta_t timeDelta = cmpTimeUs(currentTimeUs, lastUpdateUs);
+    // scrap our data and start over if we're taking too long (> 10s) to get a direction change
+    // if (lastUpdateUs == 0 || timeDelta > 10 * USECS_PER_SEC) {
+    if (updateTimedout) {
 
-    timeDelta_t timeDelta = cmpTimeUs(currentTimeUs, lastUpdateUs);
-    // scrap our data and start over if we're taking too long to get a direction change
-    if (lastUpdateUs == 0 || timeDelta > 10 * USECS_PER_SEC) {
-
-        lastUpdateUs = currentTimeUs;
-
+        // lastUpdateUs = currentTimeUs;
+    // CR166
         memcpy(lastFuselageDirection, fuselageDirection, sizeof(lastFuselageDirection));
         memcpy(lastGroundVelocity, groundVelocity, sizeof(lastGroundVelocity));
         return;
@@ -139,7 +154,7 @@ void updateWindEstimator(timeUs_t currentTimeUs)
     fuselageDirectionDiff[Z] = fuselageDirection[Z] - lastFuselageDirection[Z];
 
     float diffLengthSq = sq(fuselageDirectionDiff[X]) + sq(fuselageDirectionDiff[Y]) + sq(fuselageDirectionDiff[Z]);
-    
+
     // Very small changes in attitude will result in a denominator
     // very close to zero which will introduce too much error in the
     // estimation.
@@ -180,15 +195,17 @@ void updateWindEstimator(timeUs_t currentTimeUs)
         //is this really needed? The reason it is here might be above equation was wrong in early implementations
         if (windLength < prevWindLength + 4000) {
             // TODO: Better filtering
-            estimatedWind[X] = estimatedWind[X] * 0.98f + wind[X] * 0.02f;
-            estimatedWind[Y] = estimatedWind[Y] * 0.98f + wind[Y] * 0.02f;
-            estimatedWind[Z] = estimatedWind[Z] * 0.98f + wind[Z] * 0.02f;
+            float filter = 0.95;
+            estimatedWind[X] = estimatedWind[X] * filter + wind[X] * (1 - filter);
+            estimatedWind[Y] = estimatedWind[Y] * filter + wind[Y] * (1 - filter);
+            estimatedWind[Z] = estimatedWind[Z] * filter + wind[Z] * (1 - filter);
         }
 
         lastUpdateUs = currentTimeUs;
         lastValidWindEstimate = currentTimeUs;
-        hasValidWindEstimate = true;
+        // hasValidWindEstimate = true;
         lastValidEstimateAltitude = currentAltitude;
+        if (validityScore < WINDESTIMATOR_VALIDITY_THRESHOLD + 15) validityScore++;   // CR166
     }
 }
 
