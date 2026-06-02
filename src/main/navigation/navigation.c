@@ -213,6 +213,7 @@ PG_RESET_TEMPLATE(navConfig_t, navConfig,
         .cruise_speed = SETTING_NAV_FW_CRUISE_SPEED_DEFAULT,                                // cm/s
         .auto_speed_min_speed = SETTING_FW_AUTO_SPEED_MIN_SPEED_DEFAULT,     // CR164
         .auto_speed_max_speed = SETTING_FW_AUTO_SPEED_MAX_SPEED_DEFAULT,     // CR164
+        .auto_speed_channel = SETTING_FW_AUTO_SPEED_CHANNEL_DEFAULT,        // CR164.2
         .control_smoothness = SETTING_NAV_FW_CONTROL_SMOOTHNESS_DEFAULT,
         .pitch_to_throttle_smooth = SETTING_NAV_FW_PITCH2THR_SMOOTHING_DEFAULT,
         .pitch_to_throttle_thresh = SETTING_NAV_FW_PITCH2THR_THRESHOLD_DEFAULT,
@@ -4807,7 +4808,8 @@ bool navigationPositionEstimateIsHealthy(void)
 navArmingBlocker_e navigationIsBlockingArming(bool *usedBypass)
 {
     const bool navBoxModesEnabled = IS_RC_MODE_ACTIVE(BOXNAVRTH) || IS_RC_MODE_ACTIVE(BOXNAVWP) || IS_RC_MODE_ACTIVE(BOXNAVCOURSEHOLD) ||
-    IS_RC_MODE_ACTIVE(BOXNAVCRUISE) || IS_RC_MODE_ACTIVE(BOXNAVPOSHOLD) || (STATE(FIXED_WING_LEGACY) && IS_RC_MODE_ACTIVE(BOXNAVALTHOLD));
+                                    IS_RC_MODE_ACTIVE(BOXNAVCRUISE) || IS_RC_MODE_ACTIVE(BOXNAVPOSHOLD) ||
+                                    (STATE(FIXED_WING_LEGACY) && (IS_RC_MODE_ACTIVE(BOXNAVALTHOLD) || IS_RC_MODE_ACTIVE(BOXAUTOSPEED)));  // CR164.1
 
     if (usedBypass) {
         *usedBypass = false;
@@ -5318,8 +5320,10 @@ bool launchAllowedWithThrottleLow(void)
 
 bool navigationIsControllingThrottle(void)
 {
+    if (isFixedwingAutoSpeedActive()) return true;
     // Note that this makes a detour into mixer code to evaluate actual motor status
-    return (navigationRequiresAutoThrottleMode() || isFixedwingAutoSpeedActive()) && getMotorStatus() != MOTOR_STOPPED_USER && !FLIGHT_MODE(SOARING_MODE);  // CR164.1
+    // return (navigationRequiresAutoThrottleMode() || isFixedwingAutoSpeedActive()) && getMotorStatus() != MOTOR_STOPPED_USER && !FLIGHT_MODE(SOARING_MODE);  // CR164.1
+    return navigationRequiresAutoThrottleMode() && getMotorStatus() != MOTOR_STOPPED_USER && !FLIGHT_MODE(SOARING_MODE);  // CR164.1
 }
 
 bool navigationIsControllingAltitude(void) {

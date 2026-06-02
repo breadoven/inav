@@ -890,7 +890,8 @@ uint16_t getDesiredAutoSpeed(void)
 
 bool isFixedwingAutoSpeedActive(void)
 {
-    return STATE(AIRPLANE) && ARMING_FLAG(ARMED) && IS_RC_MODE_ACTIVE(BOXAUTOSPEED) && !FLIGHT_MODE(FAILSAFE_MODE) &&
+    return STATE(AIRPLANE) && ARMING_FLAG(ARMED) && IS_RC_MODE_ACTIVE(BOXAUTOSPEED) && isProbablyStillFlying() &&
+            !FLIGHT_MODE(FAILSAFE_MODE) && !FLIGHT_MODE(SOARING_MODE) &&
             posControl.flags.estVelStatus == EST_TRUSTED && posControl.flags.estAltStatus == EST_TRUSTED &&
             !(navigationRequiresAutoThrottleMode() && !(navGetCurrentStateFlags() & NAV_CTL_SPEED));
 }
@@ -901,7 +902,6 @@ void getAutoSpeedThrottleDemand(int16_t *throttleCommand)
 
     static uint16_t autoSpeedThrottleCommand = PWM_RANGE_MIDDLE;
 
-    // if (dT > 20000) {
     if (posControl.flags.horizontalPositionDataNew && posControl.flags.verticalPositionDataNew) {
         static timeUs_t lastUpdateTimeUs = 0;
         timeUs_t currentTime = micros();
@@ -917,7 +917,7 @@ void getAutoSpeedThrottleDemand(int16_t *throttleCommand)
         uint16_t maxSpeed = 100 * navConfig()->fw.auto_speed_max_speed;
         uint16_t minThrottle = getThrottleIdleValue();
 
-        posControl.desiredState.autoSpeedDemand = scaleRange(rxGetChannelValue(THROTTLE), PWM_RANGE_MIN, PWM_RANGE_MAX, minSpeed, maxSpeed);
+        posControl.desiredState.autoSpeedDemand = scaleRange(rxGetChannelValue(navConfig()->fw.auto_speed_channel - 1), PWM_RANGE_MIN, PWM_RANGE_MAX, minSpeed, maxSpeed); // CR164.2
         uint16_t actualSpeed = posControl.actualState.vel3D;
 
 #ifdef USE_PITOT  // CR164.1
@@ -950,7 +950,7 @@ void getAutoSpeedThrottleDemand(int16_t *throttleCommand)
         DEBUG_SET(DEBUG_ALWAYS, 3, autoSpeedThrottleCommand);
         DEBUG_SET(DEBUG_ALWAYS, 4, posControl.pids.fw_autoSpeed.proportional);
         DEBUG_SET(DEBUG_ALWAYS, 5, posControl.pids.fw_autoSpeed.integral);
-        DEBUG_SET(DEBUG_ALWAYS, 6, throttleSpeedAdjustment);
+        // DEBUG_SET(DEBUG_ALWAYS, 6, throttleSpeedAdjustment);
     }
 
     *throttleCommand = autoSpeedThrottleCommand;
@@ -981,7 +981,7 @@ void applyFixedWingNavigationController(navigationFSMStateFlags_t navStateFlags,
     else {
 #ifdef NAV_FW_LIMIT_MIN_FLY_VELOCITY
         // Don't apply anything if ground speed is too low (<3m/s)
-        if (posControl.actualState.velXY > 300) {
+        if (posControl.actualState.velXY > 300) {   // CR164
 #else
         if (true) {
 #endif

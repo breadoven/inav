@@ -2067,13 +2067,13 @@ static bool osdDrawSingleElement(uint8_t item)
     case OSD_3D_MAX_SPEED:
         osdFormatVelocityStr(buff, stats.max_3D_speed, OSD_SPEED_TYPE_3D, true);
         break;
-        // CR164.1
+        // CR164
      case OSD_AUTO_SPEED:
         if (IS_RC_MODE_ACTIVE(BOXAUTOSPEED)) {
-            strcpy(buff, "(ASPD)");
+            buff[0] = pitotValidForAirspeed() ? 'A' : 'G';// CR164.2
+            strcpy(buff + 1, ": OFF");
             if (isFixedwingAutoSpeedActive()) {
-                osdFormatVelocityStr(buff + 1, getDesiredAutoSpeed(), OSD_SPEED_TYPE_3D, false);
-                buff[5] = ')';
+                osdFormatVelocityStr(buff + 2, getDesiredAutoSpeed(), OSD_SPEED_TYPE_3D, false);
                 buff[6] = '\0';
             }
             break;

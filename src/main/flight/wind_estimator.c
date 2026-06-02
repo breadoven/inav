@@ -103,9 +103,7 @@ void updateWindEstimator(timeUs_t currentTimeUs)
         if (validityScore < WINDESTIMATOR_VALIDITY_THRESHOLD - 15) hasValidWindEstimate = false;
     }
 
-    if (!hasValidWindEstimate && validityScore > WINDESTIMATOR_VALIDITY_THRESHOLD) {
-        hasValidWindEstimate = true;
-    }
+    if (!hasValidWindEstimate && validityScore > WINDESTIMATOR_VALIDITY_THRESHOLD) hasValidWindEstimate = true;
     DEBUG_SET(DEBUG_ALWAYS, 6, validityScore);
     DEBUG_SET(DEBUG_ALWAYS, 7, hasValidWindEstimate);
     // CR166
