@@ -299,7 +299,6 @@ STATIC_PROTOTHREAD(pitotThread)
             // NOTE ::filter pressure - apply filter when NOT calibrating for zero !!!
             currentTimeUs = micros();
             if (pitotmeterConfig()->pitot_lpf_milli_hz) {
-                // pitot.pressure = pt1FilterApply4(&pitot.lpfState, pitotPressureTmp, pitot_lpf_milli_hz, US2S(currentTimeUs - pitot.lastMeasurementUs));
                 pitot.pressure = pt1FilterApply3(&pitot.lpfState, pitotPressureTmp, US2S(currentTimeUs - pitot.lastMeasurementUs));
             } else {
                 pitot.pressure = pitotPressureTmp;

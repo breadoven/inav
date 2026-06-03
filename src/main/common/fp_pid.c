@@ -173,7 +173,7 @@ void navPidInit(pidController_t *pid, float _kP, float _kI, float _kD, float _kF
     pid->dTermLpfHz = _dTermLpfHz;
     pid->errorLpfHz = _errorLpfHz;
 
-    pt1FilterSetCutoff(&pid->error_filter_state, pid->errorLpfHz);
+    pt1FilterSetCutoff(&pid->error_filter_state, pid->errorLpfHz);   // CR163
     pt1FilterSetCutoff(&pid->dterm_filter_state, pid->dTermLpfHz);
 
     navPidReset(pid);
