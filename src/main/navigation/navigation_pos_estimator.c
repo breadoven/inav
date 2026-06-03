@@ -320,8 +320,7 @@ void updatePositionEstimator_BaroTopic(timeUs_t currentTimeUs)
             const float baroDtSec = US2S(baroDtUs);
             posEstimator.baro.updateDt = baroDtSec;
 
-            // posEstimator.baro.alt = pt1FilterApply4(&posEstimator.baro.avgFilter, posEstimator.baro.alt, INAV_BARO_AVERAGE_HZ, baroDtSec);  // CR163
-            posEstimator.baro.alt = pt1FilterApply3(&posEstimator.baro.avgFilter, posEstimator.baro.alt, baroDtSec);  // CR163
+            posEstimator.baro.alt = pt1FilterApply3(&posEstimator.baro.avgFilter, posEstimator.baro.alt, baroDtSec);
 
             // baro altitude rate
             static float baroAltPrevious = 0;
