@@ -2876,7 +2876,7 @@ void updateActualAltitudeAndClimbRate(bool estimateValid, float newAltitude, flo
     posControl.actualState.agl.pos.z = surfaceDistance;
     posControl.actualState.agl.vel.z = surfaceVelocity;
 
-    posControl.actualState.vel3D = calc_length_pythagorean_2D(posControl.actualState.velXY, posControl.actualState.abs.vel.z);  // CR165
+    posControl.actualState.vel3D = calc_length_pythagorean_2D(posControl.actualState.velXY, posControl.actualState.abs.vel.z);    // CR165
 
     // Update altitude that would be used when executing RTH
     if (estimateValid) {

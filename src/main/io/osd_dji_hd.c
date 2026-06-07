@@ -681,7 +681,8 @@ void osdDJIFormatVelocityStr(char* buff)
             break;
         case OSD_SPEED_SOURCE_3D:
             strcpy(sourceBuf, "3D");
-            vel = osdGet3DSpeed();
+            // vel = osdGet3DSpeed();
+            vel = posControl.actualState.vel3D; // CR165
             break;
         case OSD_SPEED_SOURCE_AIR:
             strcpy(sourceBuf, "AIR");
