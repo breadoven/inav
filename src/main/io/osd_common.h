@@ -106,6 +106,6 @@ void osdDrawArtificialHorizon(displayPort_t *display, displayCanvas_t *canvas, c
 void osdDrawHeadingGraph(displayPort_t *display, displayCanvas_t *canvas, const osdDrawPoint_t *p, int heading);
 void osdDrawSidebars(displayPort_t *display, displayCanvas_t *canvas);
 
-#ifdef USE_GPS
-int16_t osdGet3DSpeed(void);
-#endif
+// #ifdef USE_GPS   // CR165
+// int16_t osdGet3DSpeed(void);
+// #endif
