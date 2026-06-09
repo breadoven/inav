@@ -883,9 +883,12 @@ void applyFixedWingEmergencyLandingController(timeUs_t currentTimeUs)
     }
 }
 // CR164
-uint16_t getDesiredAutoSpeed(void)
+/*-----------------------------------------------------------
+ * Auto Speed mode control
+ *-----------------------------------------------------------*/
+bool navIsAutoSpeedAirspeedUsed(void)
 {
-    return posControl.desiredState.autoSpeedDemand;
+    return !LOGIC_CONDITION_GLOBAL_FLAG(LOGIC_CONDITION_GLOBAL_FLAG_OVERRIDE_AIRSPEED_CONTROL) && pitotValidForAirspeed();
 }
 
 bool isFixedwingAutoSpeedActive(void)
@@ -921,7 +924,7 @@ void getAutoSpeedThrottleDemand(int16_t *throttleCommand)
         uint16_t actualSpeed = posControl.actualState.vel3D;
 
 #ifdef USE_PITOT  // CR164.1
-        if (pitotValidForAirspeed()) {
+        if (navIsAutoSpeedAirspeedUsed()) {
             actualSpeed = getAirspeedEstimate();
         } else
 #endif
@@ -947,9 +950,9 @@ void getAutoSpeedThrottleDemand(int16_t *throttleCommand)
         DEBUG_SET(DEBUG_ALWAYS, 0, posControl.desiredState.autoSpeedDemand);
         DEBUG_SET(DEBUG_ALWAYS, 1, actualSpeed);
         DEBUG_SET(DEBUG_ALWAYS, 2, throttleCorr);
-        DEBUG_SET(DEBUG_ALWAYS, 3, autoSpeedThrottleCommand);
-        DEBUG_SET(DEBUG_ALWAYS, 4, posControl.pids.fw_autoSpeed.proportional);
-        DEBUG_SET(DEBUG_ALWAYS, 5, posControl.pids.fw_autoSpeed.integral);
+        // DEBUG_SET(DEBUG_ALWAYS, 3, autoSpeedThrottleCommand);
+        // DEBUG_SET(DEBUG_ALWAYS, 4, posControl.pids.fw_autoSpeed.proportional);
+        DEBUG_SET(DEBUG_ALWAYS, 3, posControl.pids.fw_autoSpeed.integral);
         // DEBUG_SET(DEBUG_ALWAYS, 6, throttleSpeedAdjustment);
     }
 

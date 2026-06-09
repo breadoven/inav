@@ -90,6 +90,7 @@ typedef enum {
     LOGIC_CONDITION_ACOS                        = 58,
     LOGIC_CONDITION_ASIN                        = 59,
     LOGIC_CONDITION_ATAN2                       = 60,
+    LOGIC_CONDITION_AIRSPEED_CONTROL_OVERRIDE   = 61,   // CR164
     LOGIC_CONDITION_LAST
 } logicOperation_e;
 
@@ -211,6 +212,7 @@ typedef enum {
     LOGIC_CONDITION_GLOBAL_FLAG_DISABLE_GPS_FIX = (1 << 11),
 #endif
     LOGIC_CONDITION_GLOBAL_FLAG_OVERRIDE_MIN_GROUND_SPEED = (1 << 12),
+    LOGIC_CONDITION_GLOBAL_FLAG_OVERRIDE_AIRSPEED_CONTROL = (1 << 13),  // CR164
 } logicConditionsGlobalFlags_t;
 
 typedef enum {

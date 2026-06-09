@@ -540,8 +540,16 @@ static int logicConditionCompute(
             }
                 return true;
             break;
-#endif
-
+#endif  // CR164
+        case LOGIC_CONDITION_AIRSPEED_CONTROL_OVERRIDE:
+            if (operandA > 0) {
+                LOGIC_CONDITION_GLOBAL_FLAG_ENABLE(LOGIC_CONDITION_GLOBAL_FLAG_OVERRIDE_AIRSPEED_CONTROL);
+            } else {
+                LOGIC_CONDITION_GLOBAL_FLAG_DISABLE(LOGIC_CONDITION_GLOBAL_FLAG_OVERRIDE_AIRSPEED_CONTROL);
+            }
+            return true;
+            break;
+// CR164
         default:
             return false;
             break;

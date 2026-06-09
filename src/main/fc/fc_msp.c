@@ -162,7 +162,9 @@ static const char pidnames[] =
     "NavR;"
     "LEVEL;"
     "MAG;"
-    "VEL;";
+    "VEL;"
+    "HEADING;" // CR164
+    "SPEED;";
 
 typedef enum {
     MSP_SDCARD_STATE_NOT_PRESENT = 0,
