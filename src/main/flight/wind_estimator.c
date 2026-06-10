@@ -45,7 +45,7 @@
 
 #define WINDESTIMATOR_TIMEOUT       60*15 // 15min with out altitude change
 #define WINDESTIMATOR_ALTITUDE_SCALE WINDESTIMATOR_TIMEOUT/500.0f //or 500m altitude change
-#define WINDESTIMATOR_VALIDITY_THRESHOLD    60
+#define WINDESTIMATOR_VALIDITY_THRESHOLD    15      // CR166
 // Based on WindEstimation.pdf paper
 
 static bool hasValidWindEstimate = false;
@@ -90,6 +90,7 @@ void updateWindEstimator(timeUs_t currentTimeUs)
     static float lastValidEstimateAltitude = 0.0f;
     float currentAltitude = gpsSol.llh.alt / 100.0f; // altitude in m
     static uint8_t validityScore = 0;  // CR166
+    static bool forcedUpdate = false;   // CR166
     bool updateTimedout = false;
 
     if ((US2S(currentTimeUs - lastValidWindEstimate) + WINDESTIMATOR_ALTITUDE_SCALE * fabsf(currentAltitude - lastValidEstimateAltitude)) > WINDESTIMATOR_TIMEOUT) {
@@ -99,13 +100,14 @@ void updateWindEstimator(timeUs_t currentTimeUs)
     if (cmpTimeUs(currentTimeUs, lastUpdateUs) > 10 * USECS_PER_SEC || lastUpdateUs == 0) {
         lastUpdateUs = currentTimeUs;
         updateTimedout = true;
+        forcedUpdate = true;
         if (validityScore > 0) validityScore--;
-        if (validityScore < WINDESTIMATOR_VALIDITY_THRESHOLD - 15) hasValidWindEstimate = false;
+        if (!validityScore) hasValidWindEstimate = false;
     }
 
     if (!hasValidWindEstimate && validityScore > WINDESTIMATOR_VALIDITY_THRESHOLD) hasValidWindEstimate = true;
-    DEBUG_SET(DEBUG_ALWAYS, 6, validityScore);
-    DEBUG_SET(DEBUG_ALWAYS, 7, hasValidWindEstimate);
+    // DEBUG_SET(DEBUG_ALWAYS, 6, validityScore);
+    // DEBUG_SET(DEBUG_ALWAYS, 7, hasValidWindEstimate);
     // CR166
     // if (!STATE(FIXED_WING_LEGACY) || !isGPSHeadingValid() || !gpsSol.flags.validVelNE || !gpsSol.flags.validVelD
     if (!isGPSHeadingValid() || !gpsSol.flags.validVelNE || !gpsSol.flags.validVelD
@@ -187,23 +189,29 @@ void updateWindEstimator(timeUs_t currentTimeUs)
         wind[Y] = (groundVelocitySum[Y] - V * (sintheta * fuselageDirectionSum[X] + costheta * fuselageDirectionSum[Y])) * 0.5f;// equation 11
         wind[Z] = (groundVelocitySum[Z] - V * fuselageDirectionSum[Z]) * 0.5f;// equation 12
 
-        float prevWindLength = calc_length_pythagorean_3D(estimatedWind[X], estimatedWind[Y], estimatedWind[Z]);
+        float prevEstWindLength = calc_length_pythagorean_3D(estimatedWind[X], estimatedWind[Y], estimatedWind[Z]);
         float windLength = calc_length_pythagorean_3D(wind[X], wind[Y], wind[Z]);
-
+        // CR166
         //is this really needed? The reason it is here might be above equation was wrong in early implementations
-        if (windLength < prevWindLength + 4000) {
-            // TODO: Better filtering
-            float filter = 0.95;
-            estimatedWind[X] = estimatedWind[X] * filter + wind[X] * (1 - filter);
-            estimatedWind[Y] = estimatedWind[Y] * filter + wind[Y] * (1 - filter);
-            estimatedWind[Z] = estimatedWind[Z] * filter + wind[Z] * (1 - filter);
-        }
+        // DEBUG_SET(DEBUG_ALWAYS, 4, prevEstWindLength);
+        // DEBUG_SET(DEBUG_ALWAYS, 5, windLength);
+        // if (windLength < prevWindLength + 4000) {
+        if ((ABS(windLength - prevEstWindLength) < 300) || validityScore < WINDESTIMATOR_VALIDITY_THRESHOLD || forcedUpdate) {
+            float filterAlpha = 0.1f;
 
-        lastUpdateUs = currentTimeUs;
-        lastValidWindEstimate = currentTimeUs;
-        // hasValidWindEstimate = true;
-        lastValidEstimateAltitude = currentAltitude;
-        if (validityScore < WINDESTIMATOR_VALIDITY_THRESHOLD + 15) validityScore++;   // CR166
+            estimatedWind[X] = estimatedWind[X] + filterAlpha * (wind[X] - estimatedWind[X]);
+            estimatedWind[Y] = estimatedWind[Y] + filterAlpha * (wind[Y] - estimatedWind[Y]);
+            estimatedWind[Z] = estimatedWind[Z] + filterAlpha * (wind[Z] - estimatedWind[Z]);
+
+            if (validityScore < WINDESTIMATOR_VALIDITY_THRESHOLD + 15) validityScore++;
+            // }
+
+            lastUpdateUs = currentTimeUs;
+            lastValidWindEstimate = currentTimeUs;
+            // hasValidWindEstimate = true;
+            lastValidEstimateAltitude = currentAltitude;
+            forcedUpdate = false;
+        } // CR166
     }
 }
 
