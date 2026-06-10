@@ -476,6 +476,8 @@ typedef struct navConfig_s {
         uint16_t cruise_speed;               // Speed at cruise throttle (cm/s), used for time/distance left before RTH
         uint16_t auto_speed_min_speed;       // CR164
         uint16_t auto_speed_max_speed;       // CR164
+        uint16_t auto_speed_min_throttle;    // CR164
+        uint16_t auto_speed_max_throttle;    // CR164
         uint8_t  auto_speed_channel;         // CR164.2
         uint8_t  control_smoothness;         // The amount of smoothing to apply to controls for navigation
         uint16_t pitch_to_throttle_smooth;   // How smoothly the autopilot makes pitch to throttle correction inside a deadband defined by pitch_to_throttle_thresh.
