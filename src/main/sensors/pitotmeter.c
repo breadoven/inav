@@ -45,8 +45,9 @@
 
 #include "scheduler/protothreads.h"
 
-#include "sensors/pitotmeter.h"
 #include "sensors/barometer.h"
+#include "flight/imu.h"  // CR167
+#include "sensors/pitotmeter.h"
 #include "sensors/sensors.h"
 
 #include "io/gps.h"
@@ -364,6 +365,18 @@ bool pitotIsHealthy(void)
  *
  * @return virtual airspeed in cm/s, or 0 if GPS unavailable
  */
+// CR167
+float getWindEstimatedVirtualAirspeed(void)
+{
+    fpVector3_t windCorrectedVel;
+    for (uint8_t axis = 0; axis < XYZ_AXIS_COUNT; axis++) {
+        windCorrectedVel.v[axis] = posControl.actualState.abs.vel.v[axis] - getEstimatedWindSpeed(axis);
+    }
+    imuTransformVectorEarthToBody(&windCorrectedVel);
+
+    return windCorrectedVel.x;
+}
+// CR167
 static float getVirtualAirspeedEstimate(void)
 {
 #if defined(USE_GPS) && defined(USE_WIND_ESTIMATOR)
@@ -375,11 +388,12 @@ static float getVirtualAirspeedEstimate(void)
 
     // Use wind estimator if available (matches virtual pitot logic)
     if (isEstimatedWindSpeedValid()) {
-        uint16_t windHeading;  // centidegrees
-        float windSpeed = getEstimatedHorizontalWindSpeed(&windHeading);  // cm/s
-        float horizontalWindSpeed = windSpeed * cos_approx(CENTIDEGREES_TO_RADIANS(windHeading - posControl.actualState.yaw));
-        airSpeed = posControl.actualState.velXY - horizontalWindSpeed;
-        airSpeed = calc_length_pythagorean_2D(airSpeed, getEstimatedActualVelocity(Z) + getEstimatedWindSpeed(Z));
+        airSpeed = getWindEstimatedVirtualAirspeed();    // CR167
+        // uint16_t windHeading;  // centidegrees
+        // float windSpeed = getEstimatedHorizontalWindSpeed(&windHeading);  // cm/s
+        // float horizontalWindSpeed = windSpeed * cos_approx(CENTIDEGREES_TO_RADIANS(windHeading - posControl.actualState.yaw));
+        // airSpeed = posControl.actualState.velXY - horizontalWindSpeed;
+        // airSpeed = calc_length_pythagorean_2D(airSpeed, getEstimatedActualVelocity(Z) + getEstimatedWindSpeed(Z));
     } else {
         // Fall back to raw GPS velocity if no wind estimator
         airSpeed = calc_length_pythagorean_3D(gpsSol.velNED[X], gpsSol.velNED[Y], gpsSol.velNED[Z]);
