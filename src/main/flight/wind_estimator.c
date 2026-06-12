@@ -86,28 +86,32 @@ float getEstimatedHorizontalWindSpeed(uint16_t *angle)
 void updateWindEstimator(timeUs_t currentTimeUs)
 {
     static timeUs_t lastUpdateUs = 0;
-    static timeUs_t lastValidWindEstimate = 0;
+    static timeUs_t lastValidWindEstimateUs = 0;
     static float lastValidEstimateAltitude = 0.0f;
     float currentAltitude = gpsSol.llh.alt / 100.0f; // altitude in m
     static uint8_t validityScore = 0;  // CR166
-    static bool forcedUpdate = false;   // CR166
     bool updateTimedout = false;
+    static uint8_t spikeFilterAdjustment = 40;
+    static bool initialEstimate = true;
 
-    if ((US2S(currentTimeUs - lastValidWindEstimate) + WINDESTIMATOR_ALTITUDE_SCALE * fabsf(currentAltitude - lastValidEstimateAltitude)) > WINDESTIMATOR_TIMEOUT) {
+    if ((US2S(currentTimeUs - lastValidWindEstimateUs) + WINDESTIMATOR_ALTITUDE_SCALE * fabsf(currentAltitude - lastValidEstimateAltitude)) > WINDESTIMATOR_TIMEOUT) {
         hasValidWindEstimate = false;
     }
     // CR166
-    if (cmpTimeUs(currentTimeUs, lastUpdateUs) > 10 * USECS_PER_SEC || lastUpdateUs == 0) {
-        lastUpdateUs = currentTimeUs;
-        updateTimedout = true;
-        forcedUpdate = true;
+    if (US2S(cmpTimeUs(currentTimeUs, lastUpdateUs)) > 10 || lastUpdateUs == 0) {
         if (validityScore > 0) validityScore--;
         if (!validityScore) hasValidWindEstimate = false;
+
+        lastUpdateUs = currentTimeUs;
+        updateTimedout = true;
+
+        if (!initialEstimate && spikeFilterAdjustment > 5) {
+            spikeFilterAdjustment -= 5;
+        }
     }
 
     if (!hasValidWindEstimate && validityScore > WINDESTIMATOR_VALIDITY_THRESHOLD) hasValidWindEstimate = true;
-    // DEBUG_SET(DEBUG_ALWAYS, 6, validityScore);
-    // DEBUG_SET(DEBUG_ALWAYS, 7, hasValidWindEstimate);
+
     // CR166
     // if (!STATE(FIXED_WING_LEGACY) || !isGPSHeadingValid() || !gpsSol.flags.validVelNE || !gpsSol.flags.validVelD
     if (!isGPSHeadingValid() || !gpsSol.flags.validVelNE || !gpsSol.flags.validVelD
@@ -189,29 +193,50 @@ void updateWindEstimator(timeUs_t currentTimeUs)
         wind[Y] = (groundVelocitySum[Y] - V * (sintheta * fuselageDirectionSum[X] + costheta * fuselageDirectionSum[Y])) * 0.5f;// equation 11
         wind[Z] = (groundVelocitySum[Z] - V * fuselageDirectionSum[Z]) * 0.5f;// equation 12
 
-        float prevEstWindLength = calc_length_pythagorean_3D(estimatedWind[X], estimatedWind[Y], estimatedWind[Z]);
+        // float prevEstWindLength = calc_length_pythagorean_3D(estimatedWind[X], estimatedWind[Y], estimatedWind[Z]);
         float windLength = calc_length_pythagorean_3D(wind[X], wind[Y], wind[Z]);
         // CR166
         //is this really needed? The reason it is here might be above equation was wrong in early implementations
-        // DEBUG_SET(DEBUG_ALWAYS, 4, prevEstWindLength);
-        // DEBUG_SET(DEBUG_ALWAYS, 5, windLength);
+
+        DEBUG_SET(DEBUG_ALWAYS, 1, wind[X]);
+        DEBUG_SET(DEBUG_ALWAYS, 2, wind[Y]);
+        DEBUG_SET(DEBUG_ALWAYS, 3, wind[Z]);
+        DEBUG_SET(DEBUG_ALWAYS, 5, windLength);
+        DEBUG_SET(DEBUG_ALWAYS, 6, initialEstimate);
+
         // if (windLength < prevWindLength + 4000) {
-        if ((ABS(windLength - prevEstWindLength) < 300) || validityScore < WINDESTIMATOR_VALIDITY_THRESHOLD || forcedUpdate) {
-            float filterAlpha = 0.1f;
+        lastUpdateUs = currentTimeUs;
 
-            estimatedWind[X] = estimatedWind[X] + filterAlpha * (wind[X] - estimatedWind[X]);
-            estimatedWind[Y] = estimatedWind[Y] + filterAlpha * (wind[Y] - estimatedWind[Y]);
-            estimatedWind[Z] = estimatedWind[Z] + filterAlpha * (wind[Z] - estimatedWind[Z]);
+        if (initialEstimate) {
+            if (validityScore == WINDESTIMATOR_VALIDITY_THRESHOLD + 15) {
+                initialEstimate = false;
+                spikeFilterAdjustment = 0;
+            }
+        } else if (spikeFilterAdjustment || US2S(cmpTimeUs(currentTimeUs, lastValidWindEstimateUs)) > 30) {
+            if (spikeFilterAdjustment < 40) spikeFilterAdjustment++;
+        }
+        DEBUG_SET(DEBUG_ALWAYS, 4, spikeFilterAdjustment);
+        for (uint8_t axis = 0; axis < XYZ_AXIS_COUNT; axis++) {
+            if (ABS(wind[axis] - estimatedWind[axis]) > (300 + spikeFilterAdjustment * 50)) {
+                return;
+            }
+        }
 
-            if (validityScore < WINDESTIMATOR_VALIDITY_THRESHOLD + 15) validityScore++;
-            // }
+        float filterAlpha = 0.1f;
+        estimatedWind[X] = estimatedWind[X] + filterAlpha * (wind[X] - estimatedWind[X]);
+        estimatedWind[Y] = estimatedWind[Y] + filterAlpha * (wind[Y] - estimatedWind[Y]);
+        estimatedWind[Z] = estimatedWind[Z] + filterAlpha * (wind[Z] - estimatedWind[Z]);
 
-            lastUpdateUs = currentTimeUs;
-            lastValidWindEstimate = currentTimeUs;
-            // hasValidWindEstimate = true;
-            lastValidEstimateAltitude = currentAltitude;
-            forcedUpdate = false;
-        } // CR166
+        if (validityScore < WINDESTIMATOR_VALIDITY_THRESHOLD + 15) validityScore++;
+
+        if (spikeFilterAdjustment) {
+            spikeFilterAdjustment -= spikeFilterAdjustment == 1 ? 1 : 2;
+        }
+        // lastUpdateUs = currentTimeUs;
+        lastValidWindEstimateUs = currentTimeUs;
+        // hasValidWindEstimate = true;
+        lastValidEstimateAltitude = currentAltitude;
+        // } // CR166
     }
 }
 
