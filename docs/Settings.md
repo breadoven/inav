@@ -1224,7 +1224,7 @@ S.Port telemetry: If `ON`, send the legacy telemetry IDs for modes (Tmp1) and GN
 
 ### fw_auto_speed_channel
 
-Channel number used to set desired Auto speed input value. Defaults to throttle channel 4. Currently only for fixed wing.
+Channel number used to set desired Auto speed demand value. Defaults to throttle channel 4.
 
 | Default | Min | Max |
 | --- | --- | --- |
@@ -1232,9 +1232,19 @@ Channel number used to set desired Auto speed input value. Defaults to throttle 
 
 ---
 
+### fw_auto_speed_level_min_thr
+
+Minimum throttle for LEVEL flight in auto speed mode when using ground speed as speed reference [us]. This should be set with just enough margin to avoid stalling. Throttle can go lower than this setting when pitching down to a minimum of nav_fw_min_thr.
+
+| Default | Min | Max |
+| --- | --- | --- |
+| 1300 | PWM_RANGE_MIN | PWM_RANGE_MAX |
+
+---
+
 ### fw_auto_speed_max_speed
 
-Maximum ground speed for auto speed mode [m/s]. Currently only for fixed wing.
+Maximum allowed speed demand for auto speed mode [m/s].
 
 | Default | Min | Max |
 | --- | --- | --- |
@@ -1242,33 +1252,13 @@ Maximum ground speed for auto speed mode [m/s]. Currently only for fixed wing.
 
 ---
 
-### fw_auto_speed_max_throttle
-
-Maximum throttle for auto speed mode [us]. Currently only for fixed wing.
-
-| Default | Min | Max |
-| --- | --- | --- |
-| 1800 | PWM_RANGE_MIN | PWM_RANGE_MAX |
-
----
-
 ### fw_auto_speed_min_speed
 
-Minimum ground speed for auto speed mode [m/s]. Currently only for fixed wing.
+Minimum allowed speed demand for auto speed mode [m/s].
 
 | Default | Min | Max |
 | --- | --- | --- |
 | 11 | 5 | 50 |
-
----
-
-### fw_auto_speed_min_throttle
-
-Minimum throttle for auto speed mode [us]. Currently only for fixed wing.
-
-| Default | Min | Max |
-| --- | --- | --- |
-| 1200 | PWM_RANGE_MIN | PWM_RANGE_MAX |
 
 ---
 
@@ -3261,6 +3251,37 @@ Maximum climb/descent rate that UAV is allowed to reach during navigation modes.
 | 500 | 10 | 2000 |
 
 ---
+
+### nav_fw_auto_speed_d
+
+D gain of auto speed PID controller.
+
+| Default | Min | Max |
+| --- | --- | --- |
+| 10 | 0 | 255 |
+
+---
+
+### nav_fw_auto_speed_i
+
+I gain of auto speed PID controller.
+
+| Default | Min | Max |
+| --- | --- | --- |
+| 5 | 0 | 255 |
+
+---
+
+### nav_fw_auto_speed_p
+
+P gain of auto speed PID controller.
+
+| Default | Min | Max |
+| --- | --- | --- |
+| 30 | 0 | 255 |
+
+---
+
 
 ### nav_fw_bank_angle
 
