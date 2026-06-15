@@ -430,7 +430,13 @@ typedef enum {
     RTH_HOME_FINAL_LOITER,          // Final loiter altitude (if rth_home_altitude is set)
     RTH_HOME_FINAL_LAND,            // Home position and altitude
 } rthTargetMode_e;
-
+// CR164
+typedef enum {
+    FW_AUTO_SPD_GROUND,
+    FW_AUTO_SPD_AIR,
+    FW_AUTO_SPD_GROUND_OVERRIDE,
+} fwAutoSpeedSpdSource_e;
+// CR164
 #ifdef USE_GEOZONE
 typedef struct navSendTo_s {
     fpVector3_t targetPos;
@@ -517,6 +523,8 @@ typedef struct {
 #ifdef USE_GEOZONE
     navSendTo_t                  sendTo; // Used for Geozones
 #endif
+
+    uint8_t autoSpeedSpdSource;             // CR164
 
     /* Internals & statistics */
     int16_t                     rcAdjustment[4];
