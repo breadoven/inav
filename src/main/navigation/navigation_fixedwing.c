@@ -891,11 +891,6 @@ void applyFixedWingEmergencyLandingController(timeUs_t currentTimeUs)
 /*-----------------------------------------------------------
  * Auto Speed mode control
  *-----------------------------------------------------------*/
-bool navIsAutoSpeedAirspeedUsed(void)
-{
-    return !LOGIC_CONDITION_GLOBAL_FLAG(LOGIC_CONDITION_GLOBAL_FLAG_OVERRIDE_AIRSPEED_CONTROL) && pitotValidForAirspeed();
-}
-
 bool isFixedwingAutoSpeedActive(void)
 {
     return STATE(AIRPLANE) && ARMING_FLAG(ARMED) && IS_RC_MODE_ACTIVE(BOXAUTOSPEED) && isProbablyStillFlying() &&
@@ -915,11 +910,12 @@ void getAutoSpeedThrottleDemand(int16_t *throttleCommand)
         timeUs_t currentTime = micros();
         timeUs_t dT = currentTime - lastUpdateTimeUs;
         lastUpdateTimeUs = currentTime;
-
-        if (dT > MAX_POSITION_UPDATE_INTERVAL_US) return;
-
         static pt1Filter_t speedToThrFilterState;
-        if (!speedToThrFilterState.RC) pt1FilterSetCutoff(&speedToThrFilterState, 0.5f);
+
+        if (dT > MAX_POSITION_UPDATE_INTERVAL_US) {
+            if (!speedToThrFilterState.RC) pt1FilterSetCutoff(&speedToThrFilterState, 0.25f);
+            return;
+        }
 
         uint16_t minSpeed = 100 * navConfig()->fw.auto_speed_min_speed;
         uint16_t maxSpeed = 100 * navConfig()->fw.auto_speed_max_speed;
@@ -928,10 +924,34 @@ void getAutoSpeedThrottleDemand(int16_t *throttleCommand)
 
         posControl.desiredState.autoSpeedDemand = scaleRange(rxGetChannelValue(navConfig()->fw.auto_speed_channel - 1), PWM_RANGE_MIN, PWM_RANGE_MAX, minSpeed, maxSpeed); // CR164.2
         uint16_t actualSpeed = posControl.actualState.vel3D;
+        posControl.autoSpeedSpdSource = FW_AUTO_SPD_GROUND;
+        uint16_t groundSpeedBoost = 0;
 
 #ifdef USE_PITOT  // CR164.1
-        if (navIsAutoSpeedAirspeedUsed()) {
-            actualSpeed = getAirspeedEstimate();
+        if (pitotValidForAirspeed()) {
+            static bool airspeedBoost = false;
+            // Pitot available and airspeed source selected or low airspeed boost applied when using ground speed source
+            if (!LOGIC_CONDITION_GLOBAL_FLAG(LOGIC_CONDITION_GLOBAL_FLAG_DISABLE_AUTOSPEED_AIRSPEED) || airspeedBoost) {
+                actualSpeed = getAirspeedEstimate();
+                if (airspeedBoost && actualSpeed > minSpeed) {
+                    airspeedBoost = false;
+                }
+                posControl.autoSpeedSpdSource = FW_AUTO_SPD_AIR;
+            } else {    // Ground speed source selected
+                // groundSpeedBoost used to increase ground speed demand when flying downwind using airspeed for correction
+                const uint16_t airSpeed = getAirspeedEstimate();
+                const int16_t tailWind = actualSpeed - airSpeed;
+                if (tailWind > 0) {
+                    groundSpeedBoost = MAX(tailWind - posControl.desiredState.autoSpeedDemand + minSpeed, 0);
+                }
+
+                if (airSpeed < 0.95 * minSpeed) {
+                    airspeedBoost = true;
+                }
+            }
+            if (airspeedBoost || groundSpeedBoost > 300) {
+                posControl.autoSpeedSpdSource = FW_AUTO_SPD_GROUND_OVERRIDE;
+            }
         } else
 #endif
         {
@@ -939,7 +959,8 @@ void getAutoSpeedThrottleDemand(int16_t *throttleCommand)
                           minThrottle, maxThrottle);
         }
 // CR164.1
-        int16_t throttleCorr = navPidApply2(&posControl.pids.fw_autoSpeed, posControl.desiredState.autoSpeedDemand, actualSpeed, US2S(dT), -PWM_RANGE_HALF, PWM_RANGE_HALF, 0);
+        const uint16_t desiredSpeed = posControl.desiredState.autoSpeedDemand + groundSpeedBoost;
+        int16_t throttleCorr = navPidApply2(&posControl.pids.fw_autoSpeed, desiredSpeed, actualSpeed, US2S(dT), -PWM_RANGE_HALF, PWM_RANGE_HALF, 0);
         throttleCorr = pt1FilterApply3(&speedToThrFilterState, throttleCorr, US2S(dT));
 
         autoSpeedThrottleCommand = PWM_RANGE_MIDDLE + throttleCorr;
