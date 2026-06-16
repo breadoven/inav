@@ -3075,6 +3075,12 @@ groups:
         field: fw.auto_speed_channel
         min: 4
         max: MAX_SUPPORTED_RC_CHANNEL_COUNT
+      - name: fw_auto_speed_thr_smoothing
+        description: "Changes how smoothly the throttle responds in Auto speed mode. Increasing the setting makes throttle changes smoother but also reduces throttle response."
+        default_value: 4
+        field: fw.auto_speed_thr_smoothing
+        min: 1
+        max: 10
         # CR164
       - name: nav_fw_control_smoothness
         description: "How smoothly the autopilot controls the airplane to correct the navigation error"

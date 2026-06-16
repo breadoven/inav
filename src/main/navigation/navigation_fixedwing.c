@@ -893,8 +893,10 @@ void applyFixedWingEmergencyLandingController(timeUs_t currentTimeUs)
  *-----------------------------------------------------------*/
 bool isFixedwingAutoSpeedActive(void)
 {
-    return STATE(AIRPLANE) && ARMING_FLAG(ARMED) && IS_RC_MODE_ACTIVE(BOXAUTOSPEED) && isProbablyStillFlying() &&
-            !FLIGHT_MODE(FAILSAFE_MODE) && !FLIGHT_MODE(SOARING_MODE) &&
+    bool thrStickEmergStop = navConfig()->fw.auto_speed_channel != (THROTTLE + 1) && throttleStickIsLow();
+
+    return STATE(AIRPLANE) && ARMING_FLAG(ARMED) && IS_RC_MODE_ACTIVE(BOXAUTOSPEED) && isProbablyStillFlying() && !thrStickEmergStop &&
+            !FLIGHT_MODE(FAILSAFE_MODE) && !FLIGHT_MODE(SOARING_MODE) && !FLIGHT_MODE(MANUAL_MODE) &&
             posControl.flags.estVelStatus == EST_TRUSTED && posControl.flags.estAltStatus == EST_TRUSTED &&
             !(navigationRequiresAutoThrottleMode() && !(navGetCurrentStateFlags() & NAV_CTL_SPEED));
 }
@@ -913,7 +915,7 @@ void getAutoSpeedThrottleDemand(int16_t *throttleCommand)
         static pt1Filter_t speedToThrFilterState;
 
         if (dT > MAX_POSITION_UPDATE_INTERVAL_US) {
-            if (!speedToThrFilterState.RC) pt1FilterSetCutoff(&speedToThrFilterState, 0.25f);
+            if (!speedToThrFilterState.RC) pt1FilterSetCutoff(&speedToThrFilterState, 1.0f / navConfig()->fw.auto_speed_thr_smoothing);
             return;
         }
 
@@ -922,12 +924,12 @@ void getAutoSpeedThrottleDemand(int16_t *throttleCommand)
         uint16_t minThrottle = MAX(getThrottleIdleValue(), currentBatteryProfile->nav.fw.min_throttle);
         uint16_t maxThrottle = currentBatteryProfile->nav.fw.max_throttle;
 
-        posControl.desiredState.autoSpeedDemand = scaleRange(rxGetChannelValue(navConfig()->fw.auto_speed_channel - 1), PWM_RANGE_MIN, PWM_RANGE_MAX, minSpeed, maxSpeed); // CR164.2
+        posControl.desiredState.autoSpeedDemand = scaleRange(rxGetChannelValue(navConfig()->fw.auto_speed_channel - 1), PWM_RANGE_MIN, PWM_RANGE_MAX, minSpeed, maxSpeed);
         uint16_t actualSpeed = posControl.actualState.vel3D;
         posControl.autoSpeedSpdSource = FW_AUTO_SPD_GROUND;
         uint16_t groundSpeedBoost = 0;
 
-#ifdef USE_PITOT  // CR164.1
+#ifdef USE_PITOT
         if (pitotValidForAirspeed()) {
             static bool airspeedBoost = false;
             // Pitot available and airspeed source selected or low airspeed boost applied when using ground speed source
@@ -958,7 +960,7 @@ void getAutoSpeedThrottleDemand(int16_t *throttleCommand)
             minThrottle = constrain(currentBatteryProfile->nav.fw.auto_speed_level_min_thr + fixedWingPitchToThrottleCorrection(-attitude.values.pitch, currentTime),
                           minThrottle, maxThrottle);
         }
-// CR164.1
+
         const uint16_t desiredSpeed = posControl.desiredState.autoSpeedDemand + groundSpeedBoost;
         int16_t throttleCorr = navPidApply2(&posControl.pids.fw_autoSpeed, desiredSpeed, actualSpeed, US2S(dT), -PWM_RANGE_HALF, PWM_RANGE_HALF, 0);
         throttleCorr = pt1FilterApply3(&speedToThrFilterState, throttleCorr, US2S(dT));
