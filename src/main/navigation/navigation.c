@@ -213,7 +213,8 @@ PG_RESET_TEMPLATE(navConfig_t, navConfig,
         .cruise_speed = SETTING_NAV_FW_CRUISE_SPEED_DEFAULT,                                // cm/s
         .auto_speed_min_speed = SETTING_FW_AUTO_SPEED_MIN_SPEED_DEFAULT,     // CR164
         .auto_speed_max_speed = SETTING_FW_AUTO_SPEED_MAX_SPEED_DEFAULT,
-        .auto_speed_channel = SETTING_FW_AUTO_SPEED_CHANNEL_DEFAULT,        // CR164.2
+        .auto_speed_channel = SETTING_FW_AUTO_SPEED_CHANNEL_DEFAULT,
+        .auto_speed_thr_smoothing = SETTING_FW_AUTO_SPEED_THR_SMOOTHING_DEFAULT,    // CR164.2
         .control_smoothness = SETTING_NAV_FW_CONTROL_SMOOTHNESS_DEFAULT,
         .pitch_to_throttle_smooth = SETTING_NAV_FW_PITCH2THR_SMOOTHING_DEFAULT,
         .pitch_to_throttle_thresh = SETTING_NAV_FW_PITCH2THR_THRESHOLD_DEFAULT,
