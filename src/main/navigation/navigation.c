@@ -4442,7 +4442,7 @@ void applyWaypointNavigationAndAltitudeHold(void)
         applyRoverBoatNavigationController(navStateFlags, currentTimeUs);
     } else if (STATE(FIXED_WING_LEGACY)) {
         applyFixedWingNavigationController(navStateFlags, currentTimeUs);
-        getAutoSpeedThrottleDemand(&rcCommand[THROTTLE]);   // CR164.2
+        applyAutoSpeedThrottleDemand(&rcCommand[THROTTLE], currentTimeUs);   // CR164.2
     }
     else {
         applyMulticopterNavigationController(navStateFlags, currentTimeUs);

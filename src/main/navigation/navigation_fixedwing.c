@@ -901,7 +901,7 @@ bool isFixedwingAutoSpeedActive(void)
             !(navigationRequiresAutoThrottleMode() && !(navGetCurrentStateFlags() & NAV_CTL_SPEED));
 }
 
-void getAutoSpeedThrottleDemand(int16_t *throttleCommand)
+void applyAutoSpeedThrottleDemand(int16_t *throttleCommand, timeUs_t currentTimeUs)
 {
     if (!isFixedwingAutoSpeedActive()) return;
 
@@ -909,9 +909,8 @@ void getAutoSpeedThrottleDemand(int16_t *throttleCommand)
 
     if (posControl.flags.horizontalPositionDataNew && posControl.flags.verticalPositionDataNew) {
         static timeUs_t lastUpdateTimeUs = 0;
-        timeUs_t currentTime = micros();
-        timeUs_t dT = currentTime - lastUpdateTimeUs;
-        lastUpdateTimeUs = currentTime;
+        timeUs_t dT = currentTimeUs - lastUpdateTimeUs;
+        lastUpdateTimeUs = currentTimeUs;
         static pt1Filter_t speedToThrFilterState;
 
         if (dT > MAX_POSITION_UPDATE_INTERVAL_US) {
@@ -957,7 +956,7 @@ void getAutoSpeedThrottleDemand(int16_t *throttleCommand)
         } else
 #endif
         {
-            minThrottle = constrain(currentBatteryProfile->nav.fw.auto_speed_level_min_thr + fixedWingPitchToThrottleCorrection(-attitude.values.pitch, currentTime),
+            minThrottle = constrain(currentBatteryProfile->nav.fw.auto_speed_level_min_thr + fixedWingPitchToThrottleCorrection(-attitude.values.pitch, currentTimeUs),
                           minThrottle, maxThrottle);
         }
 
@@ -969,7 +968,7 @@ void getAutoSpeedThrottleDemand(int16_t *throttleCommand)
 
         bool speedBoostReq = (getMinGroundSpeed(navConfig()->general.min_ground_speed) * 100.0f - posControl.actualState.velXY > 0) && !throttleSpeedAdjustment;
         if (speedBoostReq || throttleSpeedAdjustment) {
-            autoSpeedThrottleCommand += applyFixedWingMinSpeedController(currentTime);
+            autoSpeedThrottleCommand += applyFixedWingMinSpeedController(currentTimeUs);
         }
 
         autoSpeedThrottleCommand = constrain(autoSpeedThrottleCommand, minThrottle, maxThrottle);
