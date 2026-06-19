@@ -95,17 +95,14 @@ typedef float (*filterApply3FnPtr)(void *filter, float input, float dt);
 #define BIQUAD_Q 1.0f / sqrtf(2.0f)     /* quality factor - butterworth*/
 
 float nullFilterApply(void *filter, float input);
-// float nullFilterApply4(void *filter, float input, float f_cut, float dt);
 float nullFilterApply3(void *filter, float input, float dt);
-// CR163
+
 void pt1FilterInit(pt1Filter_t *filter, float f_cut, float dT);
 float pt1FilterApply(pt1Filter_t *filter, float input);
 float pt1FilterApply3(pt1Filter_t *filter, float input, float dT);
-// float pt1FilterApply4(pt1Filter_t *filter, float input, float f_cut, float dT);
 void pt1FilterSetTimeConstant(pt1Filter_t *filter, float tau);
 void pt1FilterSetCutoff(pt1Filter_t *filter, float f_cut);
 float pt1FilterGetLastOutput(pt1Filter_t *filter);
-// CR163
 void pt1FilterReset(pt1Filter_t *filter, float input);
 
 /*

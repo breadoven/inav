@@ -114,8 +114,6 @@ static void updateAltitudeThrottleController_MC(timeDelta_t deltaMicros)
     const int16_t thrCorrectionMax = getMaxThrottle() - currentBatteryProfile->nav.mc.hover_throttle;
 
     float velocity_controller = navPidApply2(&posControl.pids.vel[Z], posControl.desiredState.vel.z, navGetCurrentActualPositionAndVelocity()->vel.z, US2S(deltaMicros), thrCorrectionMin, thrCorrectionMax, 0);
-    // CR163
-    // int16_t rcThrottleCorrection = pt1FilterApply4(&altholdThrottleFilterState, velocity_controller, NAV_THROTTLE_CUTOFF_FREQENCY_HZ, US2S(deltaMicros));
     int16_t rcThrottleCorrection = pt1FilterApply3(&altholdThrottleFilterState, velocity_controller, US2S(deltaMicros));
     rcThrottleCorrection = constrain(rcThrottleCorrection, thrCorrectionMin, thrCorrectionMax);
 

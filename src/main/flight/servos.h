@@ -148,7 +148,7 @@ typedef struct servoMixerSwitch_s {
     uint8_t targetChannel;                  // servo that receives the output of the rule
     int16_t rate;                           // range [-1000;+1000] ; can be used to adjust a rate 0-1000% and a direction
     uint8_t speed;                          // reduces the speed of the rule, 0=unlimited speed
-    float speedLimitFilterState;     // rate limit filter for this rule
+    float speedLimitFilterState;            // rate limit filter for this rule
 } servoMixerSwitch_t;
 #define MAX_SERVO_RULES_SWITCH_CARRY (MAX_SERVO_RULES / 2)
 
@@ -160,7 +160,7 @@ typedef struct servoParam_s {
 } servoParam_t;
 
 PG_DECLARE_ARRAY(servoParam_t, MAX_SUPPORTED_SERVOS, servoParams);
-  // CR163
+
 #define SERVO_AUTOTRIM_FILTER_CUTOFF    1.0f     // LPF cutoff frequency
 #define SERVO_AUTOTRIM_CENTER_MIN       1300
 #define SERVO_AUTOTRIM_CENTER_MAX       1700

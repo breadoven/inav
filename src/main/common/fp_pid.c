@@ -48,7 +48,6 @@ float navPidApply3(
     float error = 0.0f;
 
     if (pid->errorLpfHz > 0.0f) {
-        // error = pt1FilterApply4(&pid->error_filter_state, setpoint - measurement, pid->errorLpfHz, dt);  // CR163
         error = pt1FilterApply3(&pid->error_filter_state, setpoint - measurement, dt);
     } else {
         error = setpoint - measurement;
@@ -74,7 +73,6 @@ float navPidApply3(
     }
 
     if (pid->dTermLpfHz > 0.0f) {
-        // newDerivative = pid->param.kD * pt1FilterApply4(&pid->dterm_filter_state, newDerivative, pid->dTermLpfHz, dt);
         newDerivative = pid->param.kD * pt1FilterApply3(&pid->dterm_filter_state, newDerivative, dt);
     } else {
         newDerivative = pid->param.kD * newDerivative;
@@ -173,7 +171,7 @@ void navPidInit(pidController_t *pid, float _kP, float _kI, float _kD, float _kF
     pid->dTermLpfHz = _dTermLpfHz;
     pid->errorLpfHz = _errorLpfHz;
 
-    pt1FilterSetCutoff(&pid->error_filter_state, pid->errorLpfHz);   // CR163
+    pt1FilterSetCutoff(&pid->error_filter_state, pid->errorLpfHz);
     pt1FilterSetCutoff(&pid->dterm_filter_state, pid->dTermLpfHz);
 
     navPidReset(pid);
