@@ -74,7 +74,7 @@ static bool isAutoThrottleManuallyIncreased = false;
 static float navCrossTrackError;
 static int8_t loiterDirYaw = 1;
 bool needToCalculateCircularLoiter;
-
+//
 // Calculates the cutoff frequency for smoothing out roll/pitch commands
 // control_smoothness valid range from 0 to 9
 // resulting cutoff_freq ranging from baseFreq downwards to ~0.11Hz
@@ -96,7 +96,7 @@ static float getPitchToThrottleSmoothnessCutoffFreq(float baseFreq)
 /*-----------------------------------------------------------
  * Altitude controller
  *-----------------------------------------------------------*/
-static pt1Filter_t pitchFilterState;  // CR163
+static pt1Filter_t pitchFilterState;
 static pt1Filter_t pitchToThrFilterState;
 
 void setupFixedWingAltitudeController(void)
@@ -139,8 +139,6 @@ bool adjustFixedWingAltitudeFromRCInput(void)
 // Position to velocity controller for Z axis
 static void updateAltitudeVelocityAndPitchController_FW(timeDelta_t deltaMicros)
 {
-    // static pt1Filter_t pitchFilterState;
-
     float desiredClimbRate = getDesiredClimbRate(posControl.desiredState.pos.z, deltaMicros);
 
     // Reduce max allowed climb rate by 2/3 if performing loiter (stall prevention)
@@ -206,7 +204,6 @@ static void updateAltitudeVelocityAndPitchController_FW(timeDelta_t deltaMicros)
     float targetPitchAngle = navPidApply2(&posControl.pids.fw_alt, targetValue, measuredValue, US2S(deltaMicros), minDiveDeciDeg, maxClimbDeciDeg, 0);
 
     // Apply low-pass filter to prevent rapid correction
-    // targetPitchAngle = pt1FilterApply4(&pitchFilterState, targetPitchAngle, getSmoothnessCutoffFreq(NAV_FW_BASE_PITCH_CUTOFF_FREQUENCY_HZ), US2S(deltaMicros));
     targetPitchAngle = pt1FilterApply3(&pitchFilterState, targetPitchAngle, US2S(deltaMicros));
 
     // Reconstrain pitch angle (> 0 - climb, < 0 - dive)
@@ -487,14 +484,12 @@ static void updatePositionHeadingController_FW(timeUs_t currentTimeUs, timeDelta
             static float crossTrackErrorRate;
             static timeUs_t previousCrossTrackErrorUpdateTime;
             static float previousCrossTrackError = 0.0f;
-            // static pt1Filter_t fwCrossTrackErrorRateFilterState;
 
             if ((currentTimeUs - previousCrossTrackErrorUpdateTime) >= HZ2US(20) && fabsf(previousCrossTrackError - navCrossTrackError) > 10.0f) {
                 const float crossTrackErrorDtSec =  US2S(currentTimeUs - previousCrossTrackErrorUpdateTime);
                 if (fabsf(previousCrossTrackError - navCrossTrackError) < 500.0f) {
                     crossTrackErrorRate = (previousCrossTrackError - navCrossTrackError) / crossTrackErrorDtSec;
                 }
-                // crossTrackErrorRate = pt1FilterApply4(&fwCrossTrackErrorRateFilterState, crossTrackErrorRate, 3.0f, crossTrackErrorDtSec);
                 crossTrackErrorRate = pt1FilterApply3(&fwCrossTrackErrorRateFilterState, crossTrackErrorRate, crossTrackErrorDtSec);
                 previousCrossTrackErrorUpdateTime = currentTimeUs;
                 previousCrossTrackError = navCrossTrackError;
@@ -560,7 +555,6 @@ static void updatePositionHeadingController_FW(timeUs_t currentTimeUs, timeDelta
                                         pidFlags);
 
     // Apply low-pass filter to prevent rapid correction
-    // rollAdjustment = pt1FilterApply4(&fwPosControllerCorrectionFilterState, rollAdjustment, getSmoothnessCutoffFreq(NAV_FW_BASE_ROLL_CUTOFF_FREQUENCY_HZ), US2S(deltaMicros));
     rollAdjustment = pt1FilterApply3(&fwPosControllerCorrectionFilterState, rollAdjustment, US2S(deltaMicros));
 
     // Convert rollAdjustment to decidegrees (rcAdjustment holds decidegrees)
@@ -651,10 +645,7 @@ int16_t fixedWingPitchToThrottleCorrection(int16_t pitch, timeUs_t currentTimeUs
     const timeDeltaLarge_t deltaMicrosPitchToThrCorr = currentTimeUs -  previousTimePitchToThrCorr;
     previousTimePitchToThrCorr = currentTimeUs;
 
-    // static pt1Filter_t pitchToThrFilterState;
-
     // Apply low-pass filter to pitch angle to smooth throttle correction
-    // int16_t filteredPitch = (int16_t)pt1FilterApply4(&pitchToThrFilterState, pitch, getPitchToThrottleSmoothnessCutoffFreq(NAV_FW_BASE_PITCH_CUTOFF_FREQUENCY_HZ), US2S(deltaMicrosPitchToThrCorr));
     int16_t filteredPitch = pt1FilterApply3(&pitchToThrFilterState, pitch, US2S(deltaMicrosPitchToThrCorr));
 
     int16_t pitchToThrottle = currentBatteryProfile->nav.fw.pitch_to_throttle;

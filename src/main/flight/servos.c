@@ -193,7 +193,7 @@ void servosInit(void)
         servoComputeScalingFactors(i);
     }
 
-    pt1FilterSetCutoff(&rotRateFilter, SERVO_AUTOTRIM_FILTER_CUTOFF);  // CR163
+    pt1FilterSetCutoff(&rotRateFilter, SERVO_AUTOTRIM_FILTER_CUTOFF); 
     pt1FilterSetCutoff(&targetRateFilter, SERVO_AUTOTRIM_FILTER_CUTOFF);
 }
 
@@ -619,9 +619,7 @@ void processContinuousServoAutotrim(const float dT)
     static uint32_t servoMiddleUpdateCount;
     static float prevAxisIterm[2] = {0};  // Track previous I-term for rate-of-change calculation
 
-    // const float rotRateMagnitudeFiltered = pt1FilterApply4(&rotRateFilter, fast_fsqrtf(vectorNormSquared(&imuMeasuredRotationBF)), SERVO_AUTOTRIM_FILTER_CUTOFF, dT);
     const float rotRateMagnitudeFiltered = pt1FilterApply3(&rotRateFilter, fast_fsqrtf(vectorNormSquared(&imuMeasuredRotationBF)), dT);
-    // const float targetRateMagnitudeFiltered = pt1FilterApply4(&targetRateFilter, getTotalRateTarget(), SERVO_AUTOTRIM_FILTER_CUTOFF, dT);
     const float targetRateMagnitudeFiltered = pt1FilterApply3(&targetRateFilter, getTotalRateTarget(), dT);
 
     if (ARMING_FLAG(ARMED)) {

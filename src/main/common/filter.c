@@ -49,7 +49,7 @@ static float pt1ComputeRC(const float f_cut)
 {
     return 1.0f / (2.0f * M_PIf * f_cut);
 }
-// CR163
+
 void pt1FilterInit(pt1Filter_t *filter, float f_cut, float dT)
 {
     filter->RC = pt1ComputeRC(f_cut);
@@ -71,18 +71,6 @@ float FAST_CODE NOINLINE pt1FilterApply3(pt1Filter_t *filter, float input, float
     return filter->state = filter->state + filter->alpha * (input - filter->state);
 }
 
-// float FAST_CODE NOINLINE pt1FilterApply4(pt1Filter_t *filter, float input, float f_cut, float dT)
-// {
-    // if (f_cut && !filter->RC) {    // Pre calculate and store RC
-        // filter->RC = pt1ComputeRC(f_cut);
-    // }
-
-    // filter->dT = dT;    // cache latest dT for possible use in pt1FilterApply
-    // filter->alpha = filter->dT / (filter->RC + filter->dT);
-
-    // return filter->state = filter->state + filter->alpha * (input - filter->state);
-// }
-
 void pt1FilterSetTimeConstant(pt1Filter_t *filter, float tau) {
     filter->RC = tau;
 }
@@ -96,7 +84,7 @@ void pt1FilterSetCutoff(pt1Filter_t *filter, float f_cut)
 float pt1FilterGetLastOutput(pt1Filter_t *filter) {
     return filter->state;
 }
-// CR163
+
 void pt1FilterReset(pt1Filter_t *filter, float input)
 {
     filter->state = input;

@@ -682,7 +682,6 @@ static float imuCalculateAccelerometerWeightRateIgnore(const float acc_ignore_sl
 
 static void imuCalculateFilters(float dT)
 {
- // CR163
     for (uint8_t axis = 0; axis < XYZ_AXIS_COUNT; axis++) {
         imuMeasuredRotationBFFiltered.v[axis] = pt1FilterApply3(&rotRateFilter[axis], imuMeasuredRotationBF.v[axis], dT);
         imuMeasuredAccelBFFiltered.v[axis] = pt1FilterApply3(&accelFilter[axis], imuMeasuredAccelBF.v[axis], dT);
@@ -723,12 +722,10 @@ static void imuCalculateTurnRateacceleration(fpVector3_t *vEstcentrifugalAccelBF
     if (isGPSTrustworthy()) {
         //first speed choice is gps
         static bool lastGPSHeartbeat;
-        // static pt1Filter_t GPS3DspeedFilter;
         static float GPS3DspeedFiltered = 0.0f;
         if (gpsSol.flags.gpsHeartbeat != lastGPSHeartbeat) {
             lastGPSHeartbeat = gpsSol.flags.gpsHeartbeat;
             float GPS3Dspeed = calc_length_pythagorean_3D(gpsSol.velNED[X], gpsSol.velNED[Y], gpsSol.velNED[Z]);
-            // GPS3DspeedFiltered = pt1FilterApply4(&GPS3DspeedFilter, GPS3Dspeed, IMU_ROTATION_LPF, dT);
             GPS3DspeedFiltered = pt1FilterApply3(&GPS3DspeedFilter, GPS3Dspeed, dT);
         }
         currentspeed = GPS3DspeedFiltered;

@@ -127,7 +127,6 @@
 #define VIDEO_BUFFER_CHARS_HDZERO 900
 #define VIDEO_BUFFER_CHARS_DJIWTF 1320
 
-// #define GFORCE_FILTER_TC 0.2  // CR163
 #define GFORCE_FILTER_T_CUT_HZ 0.8
 
 #define OSD_STATS_SINGLE_PAGE_MIN_ROWS 18
@@ -1316,12 +1315,10 @@ static inline int32_t osdGetAltitudeMsl(void)
 
 uint16_t osdGetRemainingGlideTime(void) {
     float value = getEstimatedActualVelocity(Z);
-    // static pt1Filter_t glideTimeFilterState;
     const  timeMs_t curTimeMs = millis();
     static timeMs_t glideTimeUpdatedMs;
 
-    // value = pt1FilterApply4(&glideTimeFilterState, isnormal(value) ? value : 0, 0.5, MS2S(curTimeMs - glideTimeUpdatedMs));
-    value = pt1FilterApply3(&glideTimeFilterState, isnormal(value) ? value : 0, MS2S(curTimeMs - glideTimeUpdatedMs));  // CR163
+    value = pt1FilterApply3(&glideTimeFilterState, isnormal(value) ? value : 0, MS2S(curTimeMs - glideTimeUpdatedMs));  
     glideTimeUpdatedMs = curTimeMs;
 
     if (value < 0) {
@@ -2093,13 +2090,11 @@ static bool osdDrawSingleElement(uint8_t item)
         {
             float horizontalSpeed = gpsSol.groundSpeed;
             float sinkRate = -getEstimatedActualVelocity(Z);
-            // static pt1Filter_t gsFilterState;
             const timeMs_t currentTimeMs = millis();
             static timeMs_t gsUpdatedTimeMs;
             float glideSlope = horizontalSpeed / sinkRate;
 
-            // glideSlope = pt1FilterApply4(&gsFilterState, isnormal(glideSlope) ? glideSlope : 200, 0.5, MS2S(currentTimeMs - gsUpdatedTimeMs));
-            glideSlope = pt1FilterApply3(&gsFilterState, isnormal(glideSlope) ? glideSlope : 200, MS2S(currentTimeMs - gsUpdatedTimeMs));   // CR163
+            glideSlope = pt1FilterApply3(&gsFilterState, isnormal(glideSlope) ? glideSlope : 200, MS2S(currentTimeMs - gsUpdatedTimeMs));  
             gsUpdatedTimeMs = currentTimeMs;
 
             buff[0] = SYM_GLIDESLOPE;
@@ -3211,7 +3206,6 @@ static bool osdDrawSingleElement(uint8_t item)
         {
             // amperage is in centi amps (10mA), vertical speed is in cms/s. We want
             // Ah/dist only to show when vertical speed > 1m/s.
-            // static pt1Filter_t velZFilterState;
             static timeUs_t vEfficiencyUpdated = 0;
             int32_t value = 0;
             timeUs_t currentTimeUs = micros();
@@ -3219,8 +3213,7 @@ static bool osdDrawSingleElement(uint8_t item)
             if (getEstimatedActualVelocity(Z) > 0) {
                 if (vEfficiencyTimeDelta >= EFFICIENCY_UPDATE_INTERVAL) {
                                                             // Centiamps (kept for osdFormatCentiNumber) / m/s - Will appear as A / m/s in OSD
-                    // value = pt1FilterApply4(&veFilterState, (float)getAmperage() / (getEstimatedActualVelocity(Z) / 100.0f), 1, US2S(vEfficiencyTimeDelta));
-                    value = pt1FilterApply3(&climbEffFilterState, (float)getAmperage() / (getEstimatedActualVelocity(Z) / 100.0f), US2S(vEfficiencyTimeDelta));   // CR163
+                    value = pt1FilterApply3(&climbEffFilterState, (float)getAmperage() / (getEstimatedActualVelocity(Z) / 100.0f), US2S(vEfficiencyTimeDelta));   
 
                     vEfficiencyUpdated = currentTimeUs;
                 } else {
@@ -3680,7 +3673,6 @@ static bool osdDrawSingleElement(uint8_t item)
         {
             // amperage is in centi amps, speed is in cms/s. We want
             // mah/km. Only show when ground speed > 1m/s.
-            // static pt1Filter_t mahEffFilterState;
             static timeUs_t efficiencyUpdated = 0;
             int32_t value = 0;
             bool moreThanAh = false;
@@ -3699,8 +3691,7 @@ static bool osdDrawSingleElement(uint8_t item)
 #endif
                 ) && gpsSol.groundSpeed > 0) {
                 if (efficiencyTimeDelta >= EFFICIENCY_UPDATE_INTERVAL) {
-                    // value = pt1FilterApply4(&eFilterState, ((float)getAmperage() / gpsSol.groundSpeed) / 0.0036f, 1, US2S(efficiencyTimeDelta));
-                    value = pt1FilterApply3(&mahEffFilterState, ((float)getAmperage() / gpsSol.groundSpeed) / 0.0036f, US2S(efficiencyTimeDelta));   // CR163
+                    value = pt1FilterApply3(&mahEffFilterState, ((float)getAmperage() / gpsSol.groundSpeed) / 0.0036f, US2S(efficiencyTimeDelta));
 
                     efficiencyUpdated = currentTimeUs;
                 } else {
@@ -3763,7 +3754,6 @@ static bool osdDrawSingleElement(uint8_t item)
         {
             // amperage is in centi amps, speed is in cms/s. We want
             // mWh/km. Only show when ground speed > 1m/s.
-            // static pt1Filter_t whEffFilterState;
             static timeUs_t efficiencyUpdated = 0;
             int32_t value = 0;
             timeUs_t currentTimeUs = micros();
@@ -3774,8 +3764,7 @@ static bool osdDrawSingleElement(uint8_t item)
 #endif
                 ) && gpsSol.groundSpeed > 0) {
                 if (efficiencyTimeDelta >= EFFICIENCY_UPDATE_INTERVAL) {
-                    // value = pt1FilterApply4(&eFilterState, ((float)getPower() / gpsSol.groundSpeed) / 0.0036f, 1, US2S(efficiencyTimeDelta));
-                    value = pt1FilterApply3(&whEffFilterState, ((float)getPower() / gpsSol.groundSpeed) / 0.0036f, US2S(efficiencyTimeDelta));  // CR163
+                    value = pt1FilterApply3(&whEffFilterState, ((float)getPower() / gpsSol.groundSpeed) / 0.0036f, US2S(efficiencyTimeDelta));  
 
                     efficiencyUpdated = currentTimeUs;
                 } else {
@@ -5953,15 +5942,13 @@ static void osdFilterData(timeUs_t currentTimeUs)
 
     GForce = fast_fsqrtf(vectorNormSquared(&imuMeasuredAccelBF)) / GRAVITY_MSS;
     for (uint8_t axis = 0; axis < XYZ_AXIS_COUNT; axis++) {
-        GForceAxis[axis] = imuMeasuredAccelBF.v[axis] / GRAVITY_MSS;  // CR163
+        GForceAxis[axis] = imuMeasuredAccelBF.v[axis] / GRAVITY_MSS; 
     }
 
     if (lastRefresh) {
-        // GForce = pt1FilterApply4(&GForceFilter, GForce, GFORCE_FILTER_T_CUT_HZ, refresh_dT); // CR163
-        GForce = pt1FilterApply3(&GForceFilter, GForce, refresh_dT); // CR163
+        GForce = pt1FilterApply3(&GForceFilter, GForce, refresh_dT); 
         for (uint8_t axis = 0; axis < XYZ_AXIS_COUNT; axis++) {
-            // GForceAxis[axis] = pt1FilterApply4(&GForceFilterAxis[axis], GForceAxis[axis], GFORCE_FILTER_T_CUT_HZ, refresh_dT);  // CR163
-            GForceAxis[axis] = pt1FilterApply3(&GForceFilterAxis[axis], GForceAxis[axis], refresh_dT);  // CR163
+            GForceAxis[axis] = pt1FilterApply3(&GForceFilterAxis[axis], GForceAxis[axis], refresh_dT); 
         }
     } else {
         pt1FilterSetCutoff(&GForceFilter, GFORCE_FILTER_T_CUT_HZ);
@@ -5970,15 +5957,11 @@ static void osdFilterData(timeUs_t currentTimeUs)
         pt1FilterSetCutoff(&climbEffFilterState, 1.0f);
         pt1FilterSetCutoff(&mahEffFilterState, 1.0f);
         pt1FilterSetCutoff(&whEffFilterState, 1.0f);
-        // pt1FilterInitRC(&GForceFilter, GFORCE_FILTER_TC, 0);
-        // pt1FilterReset(&GForceFilter, GForce);
 
         for (uint8_t axis = 0; axis < XYZ_AXIS_COUNT; axis++) {
             pt1FilterSetCutoff(&GForceFilterAxis[axis], GFORCE_FILTER_T_CUT_HZ);
-            // pt1FilterInitRC(GForceFilterAxis + axis, GFORCE_FILTER_TC, 0);
-            // pt1FilterReset(&GForceFilterAxis[axis], GForceAxis[axis]);
         }
-    }   // CR163
+    }  
     lastRefresh = currentTimeUs;
 }
 

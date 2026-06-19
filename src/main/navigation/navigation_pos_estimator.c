@@ -957,14 +957,8 @@ static void publishEstimatedTopic(timeUs_t currentTimeUs)
 
         /* Publish position update */
         if (posEstimator.est.eph < positionEstimationConfig()->max_eph_epv) {
-            // static pt1Filter_t estVelFilterState_X;
-            // static pt1Filter_t estVelFilterState_Y;
-            // float filteredVelX = pt1FilterApply4(&estVelFilterState_X, posEstimator.est.vel.x, INAV_EST_VEL_F_CUT_HZ, HZ2S(INAV_POSITION_PUBLISH_RATE_HZ));
             float filteredVelX = pt1FilterApply3(&estVelFilterState_X, posEstimator.est.vel.x, HZ2S(INAV_POSITION_PUBLISH_RATE_HZ));
-            // float filteredVelY = pt1FilterApply4(&estVelFilterState_Y, posEstimator.est.vel.y, INAV_EST_VEL_F_CUT_HZ, HZ2S(INAV_POSITION_PUBLISH_RATE_HZ));
             float filteredVelY = pt1FilterApply3(&estVelFilterState_Y, posEstimator.est.vel.y, HZ2S(INAV_POSITION_PUBLISH_RATE_HZ));
-            // DEBUG_SET(DEBUG_ALWAYS, 2, posEstimator.est.vel.x);
-            // DEBUG_SET(DEBUG_ALWAYS, 3, filteredVelX);
             // FIXME!!!!!
             updateActualHorizontalPositionAndVelocity(true, true, posEstimator.est.pos.x, posEstimator.est.pos.y, filteredVelX, filteredVelY);
         }
@@ -974,8 +968,6 @@ static void publishEstimatedTopic(timeUs_t currentTimeUs)
 
         /* Publish altitude update and set altitude validity */
         if (posEstimator.est.epv < positionEstimationConfig()->max_eph_epv) {
-            // static pt1Filter_t estVelFilterState_Z;
-            // float filteredVelZ = pt1FilterApply4(&estVelFilterState_Z, posEstimator.est.vel.z, INAV_EST_VEL_F_CUT_HZ, HZ2S(INAV_POSITION_PUBLISH_RATE_HZ));
             float filteredVelZ = pt1FilterApply3(&estVelFilterState_Z, posEstimator.est.vel.z, HZ2S(INAV_POSITION_PUBLISH_RATE_HZ));
 
             const float gpsCfEstimatedAltitudeError = STATE(GPS_FIX) ? posEstimator.gps.pos.z - posEstimator.est.pos.z : 0;
@@ -1047,10 +1039,10 @@ void initializePositionEstimator(void)
         posEstimator.est.vel.v[axis] = 0;
     }
 
-    pt1FilterSetCutoff(&posEstimator.baro.avgFilter, INAV_BARO_AVERAGE_HZ);   // CR163
+    pt1FilterSetCutoff(&posEstimator.baro.avgFilter, INAV_BARO_AVERAGE_HZ); 
     pt1FilterSetCutoff(&posEstimator.surface.avgFilter, INAV_SURFACE_AVERAGE_HZ);
 
-    pt1FilterSetCutoff(&estVelFilterState_X, INAV_EST_VEL_F_CUT_HZ);   // CR163
+    pt1FilterSetCutoff(&estVelFilterState_X, INAV_EST_VEL_F_CUT_HZ);  
     pt1FilterSetCutoff(&estVelFilterState_Y, INAV_EST_VEL_F_CUT_HZ);
     pt1FilterSetCutoff(&estVelFilterState_Z, INAV_EST_VEL_F_CUT_HZ);
 }
