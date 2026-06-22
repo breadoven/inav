@@ -1185,6 +1185,14 @@ groups:
         min: PWM_RANGE_MIN
         max: PWM_RANGE_MAX
         # CR164
+        # CR168
+      - name: fw_throttle_rate_limiter
+        description: "Minimum time allowed for throttle to increase from minimum to maximum throttle (1000 to 2000) in milliseconds. Set to 0 to disable. Fixed wing only."
+        default_value: 0
+        field: motor.throttle_rate_limiter
+        min: 0
+        max: 5000
+        # CR168
       - name: limit_cont_current
         description: "Continous current limit (dA), set to 0 to disable"
         condition: USE_POWER_LIMITS

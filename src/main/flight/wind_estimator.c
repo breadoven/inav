@@ -101,7 +101,6 @@ void updateWindEstimator(timeUs_t currentTimeUs)
     // CR166
     if (US2S(cmpTimeUs(currentTimeUs, lastUpdateUs)) > 10 || lastUpdateUs == 0) {
         if (validityScore > 0) validityScore--;
-        if (!validityScore) hasValidWindEstimate = false;
 
         lastUpdateUs = currentTimeUs;
         updateTimedout = true;
@@ -111,7 +110,11 @@ void updateWindEstimator(timeUs_t currentTimeUs)
         }
     }
 
-    if (!hasValidWindEstimate && validityScore > WINDESTIMATOR_VALIDITY_THRESHOLD) hasValidWindEstimate = true;
+    if (!validityScore) {
+        hasValidWindEstimate = false;
+    } else if (!hasValidWindEstimate && validityScore > WINDESTIMATOR_VALIDITY_THRESHOLD && !spikeFilterDynAdjustment) {
+        hasValidWindEstimate = true;
+    }
 
     // CR166
     // if (!STATE(FIXED_WING_LEGACY) || !isGPSHeadingValid() || !gpsSol.flags.validVelNE || !gpsSol.flags.validVelD
@@ -195,14 +198,14 @@ void updateWindEstimator(timeUs_t currentTimeUs)
         wind[Z] = (groundVelocitySum[Z] - V * fuselageDirectionSum[Z]) * 0.5f;// equation 12
 
         // float prevEstWindLength = calc_length_pythagorean_3D(estimatedWind[X], estimatedWind[Y], estimatedWind[Z]);
-        float windLength = calc_length_pythagorean_3D(wind[X], wind[Y], wind[Z]);
+        // float windLength = calc_length_pythagorean_3D(wind[X], wind[Y], wind[Z]);
         // CR166
         //is this really needed? The reason it is here might be above equation was wrong in early implementations
 
-        DEBUG_SET(DEBUG_ALWAYS, 1, wind[X]);
-        DEBUG_SET(DEBUG_ALWAYS, 2, wind[Y]);
-        DEBUG_SET(DEBUG_ALWAYS, 3, wind[Z]);
-        DEBUG_SET(DEBUG_ALWAYS, 5, windLength);
+        // DEBUG_SET(DEBUG_ALWAYS, 1, wind[X]);
+        // DEBUG_SET(DEBUG_ALWAYS, 2, wind[Y]);
+        // DEBUG_SET(DEBUG_ALWAYS, 3, wind[Z]);
+        DEBUG_SET(DEBUG_ALWAYS, 5, validityScore);
         DEBUG_SET(DEBUG_ALWAYS, 6, initialEstimate);
 
         // if (windLength < prevWindLength + 4000) {
@@ -214,7 +217,10 @@ void updateWindEstimator(timeUs_t currentTimeUs)
                 spikeFilterDynAdjustment = 0;
             }
         } else if (spikeFilterDynAdjustment || US2S(cmpTimeUs(currentTimeUs, lastValidWindEstimateUs)) > 30) {
-            if (spikeFilterDynAdjustment < WINDESTIMATOR_SPIKE_FILTER_ADJ_FACTOR) spikeFilterDynAdjustment++;
+            if (spikeFilterDynAdjustment < WINDESTIMATOR_SPIKE_FILTER_ADJ_FACTOR) {
+                spikeFilterDynAdjustment++;
+                if (hasValidWindEstimate && validityScore) validityScore -= validityScore == 1 ? 1 : 2;
+            }
         }
         DEBUG_SET(DEBUG_ALWAYS, 4, spikeFilterDynAdjustment);
         for (uint8_t axis = 0; axis < XYZ_AXIS_COUNT; axis++) {

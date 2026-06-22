@@ -922,7 +922,7 @@ static void processBlackbox(void)
 void taskMainPidLoop(timeUs_t currentTimeUs)
 {
     cycleTime = getTaskDeltaTime(TASK_SELF);
-    dT = (float)cycleTime * 0.000001f;  // seconds
+    dT = US2S(cycleTime);
 
     bool fwLaunchIsActive = STATE(AIRPLANE) && isNavLaunchEnabled() && armTime == 0;
 
@@ -989,7 +989,7 @@ void taskMainPidLoop(timeUs_t currentTimeUs)
     // Calculate stabilisation
     pidController(dT);
 
-    mixTable();
+    mixTable(dT);   // CR168
 
     if (isMixerUsingServos()) {
         servoMixer(dT);
