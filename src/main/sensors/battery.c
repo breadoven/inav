@@ -108,7 +108,7 @@ static pt1Filter_t amperageFilterState;
 batteryState_e batteryState;
 const batteryProfile_t *currentBatteryProfile;
 
-PG_REGISTER_ARRAY_WITH_RESET_FN(batteryProfile_t, MAX_BATTERY_PROFILE_COUNT, batteryProfiles, PG_BATTERY_PROFILES, 3);
+PG_REGISTER_ARRAY_WITH_RESET_FN(batteryProfile_t, MAX_BATTERY_PROFILE_COUNT, batteryProfiles, PG_BATTERY_PROFILES, 4);
 
 void pgResetFn_batteryProfiles(batteryProfile_t *instance)
 {
@@ -136,6 +136,7 @@ void pgResetFn_batteryProfiles(batteryProfile_t *instance)
             .motor = {
                 .throttleIdle = SETTING_THROTTLE_IDLE_DEFAULT,
                 .throttleScale = SETTING_THROTTLE_SCALE_DEFAULT,
+                .throttle_rate_limiter = SETTING_FW_THROTTLE_RATE_LIMITER_DEFAULT,                 // CR168
 #ifdef USE_DSHOT
                 .turtleModePowerFactor = SETTING_TURTLE_MODE_POWER_FACTOR_DEFAULT,
 #endif
@@ -155,7 +156,7 @@ void pgResetFn_batteryProfiles(batteryProfile_t *instance)
                     .pitch_to_throttle = SETTING_NAV_FW_PITCH2THR_DEFAULT,                          // pwm units per degree of pitch (10pwm units ~ 1% throttle)
                     .launch_throttle = SETTING_NAV_FW_LAUNCH_THR_DEFAULT,
                     .launch_idle_throttle = SETTING_NAV_FW_LAUNCH_IDLE_THR_DEFAULT,                 // Motor idle or MOTOR_STOP
-                    .auto_speed_level_min_thr = SETTING_FW_AUTO_SPEED_LEVEL_MIN_THR_DEFAULT,
+                    .auto_speed_level_min_thr = SETTING_FW_AUTO_SPEED_LEVEL_MIN_THR_DEFAULT,        // CR164
                 }
             },
 
@@ -352,7 +353,6 @@ static void updateBatteryVoltage(timeUs_t timeDelta, bool justConnected)
         pt1FilterSetCutoff(&vbatFilterState, VBATT_LPF_FREQ);
         pt1FilterReset(&vbatFilterState, vbat);
     } else {
-        // vbat = pt1FilterApply4(&vbatFilterState, vbat, VBATT_LPF_FREQ, US2S(timeDelta));
         vbat = pt1FilterApply3(&vbatFilterState, vbat, US2S(timeDelta));
     }
 }
@@ -613,7 +613,6 @@ void currentMeterUpdate(timeUs_t timeDelta)
     switch (batteryMetersConfig()->current.type) {
         case CURRENT_SENSOR_ADC:
             {
-                // amperage = pt1FilterApply4(&amperageFilterState, getAmperageSample(), AMPERAGE_LPF_FREQ, US2S(timeDelta));
                 amperage = pt1FilterApply3(&amperageFilterState, getAmperageSample(), US2S(timeDelta));
                 break;
             }
@@ -639,7 +638,6 @@ void currentMeterUpdate(timeUs_t timeDelta)
             {
                 escSensorData_t * escSensor = escSensorGetData();
                 if (escSensor && escSensor->dataAge <= ESC_DATA_MAX_AGE) {
-                    // amperage = pt1FilterApply4(&amperageFilterState, escSensor->current, AMPERAGE_LPF_FREQ, US2S(timeDelta));
                     amperage = pt1FilterApply3(&amperageFilterState, escSensor->current, US2S(timeDelta));
                 }
                 else {
@@ -765,8 +763,7 @@ void sagCompensatedVBatUpdate(timeUs_t currentTime, timeUs_t timeDelta)
 
             if (impedanceFilterState.state) {
                 pt1FilterSetTimeConstant(&impedanceFilterState, impedanceSampleCount > IMPEDANCE_STABLE_SAMPLE_COUNT_THRESH ? 1.2 : 0.5);
-                // pt1FilterApply4(&impedanceFilterState, impedanceSample, 0.0f, US2S(timeDelta));  // CR163
-                pt1FilterApply3(&impedanceFilterState, impedanceSample, US2S(timeDelta));  // CR163
+                pt1FilterApply3(&impedanceFilterState, impedanceSample, US2S(timeDelta));
             } else {
                 pt1FilterReset(&impedanceFilterState, impedanceSample);
             }
@@ -779,8 +776,7 @@ void sagCompensatedVBatUpdate(timeUs_t currentTime, timeUs_t timeDelta)
 
         uint16_t sagCompensatedVBatSample = MIN(batteryFullVoltage, vbat + (int32_t)powerSupplyImpedance * amperage / 1000);
         pt1FilterSetTimeConstant(&sagCompVBatFilterState, sagCompensatedVBatSample < pt1FilterGetLastOutput(&sagCompVBatFilterState) ? 40 : 500);
-        // sagCompensatedVBat = lrintf(pt1FilterApply4(&sagCompVBatFilterState, sagCompensatedVBatSample, 0.0f, US2S(timeDelta)));  // CR163
-        sagCompensatedVBat = lrintf(pt1FilterApply3(&sagCompVBatFilterState, sagCompensatedVBatSample, US2S(timeDelta)));  // CR163
+        sagCompensatedVBat = lrintf(pt1FilterApply3(&sagCompVBatFilterState, sagCompensatedVBatSample, US2S(timeDelta)));
     }
 
     DEBUG_SET(DEBUG_SAG_COMP_VOLTAGE, 0, powerSupplyImpedance);

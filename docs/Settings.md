@@ -1396,6 +1396,16 @@ Minimum allowed speed demand for auto speed mode [m/s].
 
 ---
 
+### fw_auto_speed_thr_smoothing
+
+Changes how smoothly the throttle responds in Auto speed mode. Increasing the setting makes throttle changes smoother but also reduces throttle response.
+
+| Default | Min | Max |
+| --- | --- | --- |
+| 4 | 1 | 10 |
+
+---
+
 ### fw_autotune_max_rate_deflection
 
 The target percentage of maximum mixer output used for determining the rates in `AUTO` and `LIMIT`.
@@ -1657,6 +1667,16 @@ Reference airspeed. Set this to airspeed at which PIDs were tuned. Usually shoul
 | Default | Min | Max |
 | --- | --- | --- |
 | 1500 | 300 | 6000 |
+
+---
+
+### fw_throttle_rate_limiter
+
+Minimum time allowed for throttle to increase from minimum to maximum throttle (1000 to 2000) in milliseconds. Set to 0 to disable. Fixed wing only.
+
+| Default | Min | Max |
+| --- | --- | --- |
+| 0 | 0 | 5000 |
 
 ---
 
