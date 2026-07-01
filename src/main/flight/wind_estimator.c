@@ -94,7 +94,7 @@ void updateWindEstimator(timeUs_t currentTimeUs)
     bool updateTimedout = false;
     static uint8_t spikeFilterDynAdjustment = WINDESTIMATOR_SPIKE_FILTER_ADJ_FACTOR;
     static bool initialEstimate = true;
-
+DEBUG_SET(DEBUG_ALWAYS, 4, 0);
     if ((US2S(currentTimeUs - lastValidWindEstimateUs) + WINDESTIMATOR_ALTITUDE_SCALE * fabsf(currentAltitude - lastValidEstimateAltitude)) > WINDESTIMATOR_TIMEOUT) {
         hasValidWindEstimate = false;
     }
@@ -105,17 +105,19 @@ void updateWindEstimator(timeUs_t currentTimeUs)
         lastUpdateUs = currentTimeUs;
         updateTimedout = true;
 
-        if (!initialEstimate && spikeFilterDynAdjustment > 5) {
-            spikeFilterDynAdjustment -= 5;
+        if (!initialEstimate && spikeFilterDynAdjustment) {
+            spikeFilterDynAdjustment = MAX(0, spikeFilterDynAdjustment - 5);
         }
+        DEBUG_SET(DEBUG_ALWAYS, 4, 1);
     }
 
     if (!validityScore) {
         hasValidWindEstimate = false;
-    } else if (!hasValidWindEstimate && validityScore > WINDESTIMATOR_VALIDITY_THRESHOLD && !spikeFilterDynAdjustment) {
+    } else if (!hasValidWindEstimate && validityScore > WINDESTIMATOR_VALIDITY_THRESHOLD) {  // && !spikeFilterDynAdjustment) {
         hasValidWindEstimate = true;
     }
-
+    DEBUG_SET(DEBUG_ALWAYS, 6, spikeFilterDynAdjustment);
+    DEBUG_SET(DEBUG_ALWAYS, 5, validityScore);
     // CR166
     // if (!STATE(FIXED_WING_LEGACY) || !isGPSHeadingValid() || !gpsSol.flags.validVelNE || !gpsSol.flags.validVelD
     if (!isGPSHeadingValid() || !gpsSol.flags.validVelNE || !gpsSol.flags.validVelD
@@ -205,39 +207,40 @@ void updateWindEstimator(timeUs_t currentTimeUs)
         // DEBUG_SET(DEBUG_ALWAYS, 1, wind[X]);
         // DEBUG_SET(DEBUG_ALWAYS, 2, wind[Y]);
         // DEBUG_SET(DEBUG_ALWAYS, 3, wind[Z]);
-        DEBUG_SET(DEBUG_ALWAYS, 5, validityScore);
-        DEBUG_SET(DEBUG_ALWAYS, 6, initialEstimate);
+
+        // DEBUG_SET(DEBUG_ALWAYS, 6, initialEstimate);
 
         // if (windLength < prevWindLength + 4000) {
         lastUpdateUs = currentTimeUs;
 
         if (initialEstimate) {
-            if (validityScore == WINDESTIMATOR_VALIDITY_THRESHOLD + 15) {
+            if (validityScore == 2 * WINDESTIMATOR_VALIDITY_THRESHOLD) {
                 initialEstimate = false;
                 spikeFilterDynAdjustment = 0;
             }
         } else if (spikeFilterDynAdjustment || US2S(cmpTimeUs(currentTimeUs, lastValidWindEstimateUs)) > 30) {
             if (spikeFilterDynAdjustment < WINDESTIMATOR_SPIKE_FILTER_ADJ_FACTOR) {
                 spikeFilterDynAdjustment++;
-                if (hasValidWindEstimate && validityScore) validityScore -= validityScore == 1 ? 1 : 2;
+                if (hasValidWindEstimate && validityScore) validityScore = MAX(0, validityScore - 2);
             }
         }
-        DEBUG_SET(DEBUG_ALWAYS, 4, spikeFilterDynAdjustment);
+
+        DEBUG_SET(DEBUG_ALWAYS, 4, 2);
         for (uint8_t axis = 0; axis < XYZ_AXIS_COUNT; axis++) {
             if (ABS(wind[axis] - estimatedWind[axis]) > (300 + spikeFilterDynAdjustment * WINDESTIMATOR_SPIKE_FILTER_ADJ_FACTOR)) {
                 return;
             }
         }
-
+        DEBUG_SET(DEBUG_ALWAYS, 4, 3);
         float filterAlpha = 0.1f;
         estimatedWind[X] = estimatedWind[X] + filterAlpha * (wind[X] - estimatedWind[X]);
         estimatedWind[Y] = estimatedWind[Y] + filterAlpha * (wind[Y] - estimatedWind[Y]);
         estimatedWind[Z] = estimatedWind[Z] + filterAlpha * (wind[Z] - estimatedWind[Z]);
 
-        if (validityScore < WINDESTIMATOR_VALIDITY_THRESHOLD + 15) validityScore++;
+        if (validityScore < 2 * WINDESTIMATOR_VALIDITY_THRESHOLD) validityScore++;
 
         if (spikeFilterDynAdjustment) {
-            spikeFilterDynAdjustment -= (spikeFilterDynAdjustment == 1 || initialEstimate) ? 1 : 2;
+            spikeFilterDynAdjustment = MAX(0, spikeFilterDynAdjustment - (initialEstimate ? 1 : 2));
         }
         // lastUpdateUs = currentTimeUs;
         lastValidWindEstimateUs = currentTimeUs;

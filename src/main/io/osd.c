@@ -1318,7 +1318,7 @@ uint16_t osdGetRemainingGlideTime(void) {
     const  timeMs_t curTimeMs = millis();
     static timeMs_t glideTimeUpdatedMs;
 
-    value = pt1FilterApply3(&glideTimeFilterState, isnormal(value) ? value : 0, MS2S(curTimeMs - glideTimeUpdatedMs));  
+    value = pt1FilterApply3(&glideTimeFilterState, isnormal(value) ? value : 0, MS2S(curTimeMs - glideTimeUpdatedMs));
     glideTimeUpdatedMs = curTimeMs;
 
     if (value < 0) {
@@ -2094,7 +2094,7 @@ static bool osdDrawSingleElement(uint8_t item)
             static timeMs_t gsUpdatedTimeMs;
             float glideSlope = horizontalSpeed / sinkRate;
 
-            glideSlope = pt1FilterApply3(&gsFilterState, isnormal(glideSlope) ? glideSlope : 200, MS2S(currentTimeMs - gsUpdatedTimeMs));  
+            glideSlope = pt1FilterApply3(&gsFilterState, isnormal(glideSlope) ? glideSlope : 200, MS2S(currentTimeMs - gsUpdatedTimeMs));
             gsUpdatedTimeMs = currentTimeMs;
 
             buff[0] = SYM_GLIDESLOPE;
@@ -3113,6 +3113,7 @@ static bool osdDrawSingleElement(uint8_t item)
         break;
 
     case OSD_ATTITUDE_PITCH:
+        {
         // CR42
         int16_t levelDatumPitch = attitude.values.pitch + DEGREES_TO_DECIDEGREES(getFixedWingLevelTrim());
         // if (ABS(attitude.values.pitch) < 1)
@@ -3131,7 +3132,7 @@ static bool osdDrawSingleElement(uint8_t item)
         osdFormatCentiNumber(buff + 1, DECIDEGREES_TO_CENTIDEGREES(ABS(levelDatumPitch)), 0, 1, 0, 3, false);
         // CR42
         break;
-
+        }
     case OSD_ARTIFICIAL_HORIZON:
         {
             float rollAngle = DECIDEGREES_TO_RADIANS(attitude.values.roll);
@@ -3213,7 +3214,7 @@ static bool osdDrawSingleElement(uint8_t item)
             if (getEstimatedActualVelocity(Z) > 0) {
                 if (vEfficiencyTimeDelta >= EFFICIENCY_UPDATE_INTERVAL) {
                                                             // Centiamps (kept for osdFormatCentiNumber) / m/s - Will appear as A / m/s in OSD
-                    value = pt1FilterApply3(&climbEffFilterState, (float)getAmperage() / (getEstimatedActualVelocity(Z) / 100.0f), US2S(vEfficiencyTimeDelta));   
+                    value = pt1FilterApply3(&climbEffFilterState, (float)getAmperage() / (getEstimatedActualVelocity(Z) / 100.0f), US2S(vEfficiencyTimeDelta));
 
                     vEfficiencyUpdated = currentTimeUs;
                 } else {
@@ -3764,7 +3765,7 @@ static bool osdDrawSingleElement(uint8_t item)
 #endif
                 ) && gpsSol.groundSpeed > 0) {
                 if (efficiencyTimeDelta >= EFFICIENCY_UPDATE_INTERVAL) {
-                    value = pt1FilterApply3(&whEffFilterState, ((float)getPower() / gpsSol.groundSpeed) / 0.0036f, US2S(efficiencyTimeDelta));  
+                    value = pt1FilterApply3(&whEffFilterState, ((float)getPower() / gpsSol.groundSpeed) / 0.0036f, US2S(efficiencyTimeDelta));
 
                     efficiencyUpdated = currentTimeUs;
                 } else {
@@ -5942,13 +5943,13 @@ static void osdFilterData(timeUs_t currentTimeUs)
 
     GForce = fast_fsqrtf(vectorNormSquared(&imuMeasuredAccelBF)) / GRAVITY_MSS;
     for (uint8_t axis = 0; axis < XYZ_AXIS_COUNT; axis++) {
-        GForceAxis[axis] = imuMeasuredAccelBF.v[axis] / GRAVITY_MSS; 
+        GForceAxis[axis] = imuMeasuredAccelBF.v[axis] / GRAVITY_MSS;
     }
 
     if (lastRefresh) {
-        GForce = pt1FilterApply3(&GForceFilter, GForce, refresh_dT); 
+        GForce = pt1FilterApply3(&GForceFilter, GForce, refresh_dT);
         for (uint8_t axis = 0; axis < XYZ_AXIS_COUNT; axis++) {
-            GForceAxis[axis] = pt1FilterApply3(&GForceFilterAxis[axis], GForceAxis[axis], refresh_dT); 
+            GForceAxis[axis] = pt1FilterApply3(&GForceFilterAxis[axis], GForceAxis[axis], refresh_dT);
         }
     } else {
         pt1FilterSetCutoff(&GForceFilter, GFORCE_FILTER_T_CUT_HZ);
@@ -5961,7 +5962,7 @@ static void osdFilterData(timeUs_t currentTimeUs)
         for (uint8_t axis = 0; axis < XYZ_AXIS_COUNT; axis++) {
             pt1FilterSetCutoff(&GForceFilterAxis[axis], GFORCE_FILTER_T_CUT_HZ);
         }
-    }  
+    }
     lastRefresh = currentTimeUs;
 }
 
