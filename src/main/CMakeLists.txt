@@ -165,6 +165,12 @@ main_sources(COMMON_SRC
     drivers/compass/compass_msp.c
     drivers/compass/compass_msp.h
 
+    drivers/dronecan/libcanard/canard.c
+    drivers/dronecan/libcanard/canard.h
+    drivers/dronecan/libcanard/canard_stm32_driver.h
+    drivers/dronecan/dronecan.c
+    drivers/dronecan/dronecan.h
+
     drivers/display.c
     drivers/display.h
     drivers/display_canvas.c
@@ -225,8 +231,8 @@ main_sources(COMMON_SRC
     drivers/pitotmeter/pitotmeter_dlvr_l10d.h
     drivers/pitotmeter/pitotmeter_msp.c
     drivers/pitotmeter/pitotmeter_msp.h
-    drivers/pitotmeter/pitotmeter_virtual.c
-    drivers/pitotmeter/pitotmeter_virtual.h
+    # drivers/pitotmeter/pitotmeter_virtual.c  CR169
+    # drivers/pitotmeter/pitotmeter_virtual.h
     drivers/pitotmeter/pitotmeter_fake.h
     drivers/pitotmeter/pitotmeter_fake.c
     drivers/pwm_esc_detect.c

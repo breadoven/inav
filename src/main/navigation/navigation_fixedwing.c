@@ -967,13 +967,20 @@ void applyAutoSpeedThrottleDemand(int16_t *throttleCommand, timeUs_t currentTime
         // Indicate that information is no longer usable
         posControl.flags.horizontalPositionDataConsumed = true;
 
+        // Blackbox: X used for airspeed, Y for ground speed
+        if (posControl.autoSpeedSpdSource == FW_AUTO_SPD_AIR) {
+            navDesiredVelocity[X] = constrain(posControl.desiredState.autoSpeedDemand, 0, 32767);
+            navDesiredVelocity[Y] = 0;
+        } else {
+            navDesiredVelocity[X] = posControl.autoSpeedSpdSource == FW_AUTO_SPD_GROUND_OVERRIDE ? 1 : 0;
+            navDesiredVelocity[Y] = constrain(posControl.desiredState.autoSpeedDemand, 0, 32767);
+        }
+
         DEBUG_SET(DEBUG_ALWAYS, 0, autoSpeedThrottleCommand);
-        // DEBUG_SET(DEBUG_ALWAYS, 1, actualSpeed);
-        // DEBUG_SET(DEBUG_ALWAYS, 2, throttleCorr);
-        // DEBUG_SET(DEBUG_ALWAYS, 3, autoSpeedThrottleCommand);
-        // DEBUG_SET(DEBUG_ALWAYS, 4, posControl.pids.fw_autoSpeed.proportional);
-        // DEBUG_SET(DEBUG_ALWAYS, 3, posControl.pids.fw_autoSpeed.integral);
-        // DEBUG_SET(DEBUG_ALWAYS, 6, throttleSpeedAdjustment);
+        DEBUG_SET(DEBUG_ALWAYS, 1, posControl.pids.fw_autoSpeed.proportional);
+        DEBUG_SET(DEBUG_ALWAYS, 2, posControl.pids.fw_autoSpeed.integral);
+        DEBUG_SET(DEBUG_ALWAYS, 3, posControl.pids.fw_autoSpeed.derivative);
+        // DEBUG_SET(DEBUG_ALWAYS, 4, posControl.autoSpeedSpdSource);
     }
 
     *throttleCommand = autoSpeedThrottleCommand;
