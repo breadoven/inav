@@ -237,8 +237,8 @@ void mixerInit(void)
         motorYawMultiplier = 1;
     }
 
-    if (currentBatteryProfile->motor.throttle_rate_limiter > 0.0f) {  // CR168
-        throttleRateLimit = (PWM_RANGE_MAX - PWM_RANGE_MIN) / MS2S(currentBatteryProfile->motor.throttle_rate_limiter);
+    if (currentBatteryProfile->motor.throttleRateLimiter) {  // CR168
+        throttleRateLimit = (PWM_RANGE_MAX - PWM_RANGE_MIN) / MS2S(currentBatteryProfile->motor.throttleRateLimiter);
     }
 }
 
@@ -493,8 +493,8 @@ static int getReversibleMotorsThrottleDeadband(void)
 
 void FAST_CODE mixTable(float dT)   // CR168
 {
-    static float lastThrottleCommand = 1000.0f;     // CR168
-    DEBUG_SET(DEBUG_ALWAYS, 3, lastThrottleCommand);
+    static float lastMixerThrottleCommand = 1000.0f;     // CR168
+    // DEBUG_SET(DEBUG_ALWAYS, 3, lastMixerThrottleCommand);
 #ifdef USE_DSHOT
     if (FLIGHT_MODE(TURTLE_MODE)) {
         applyTurtleModeToMotors();
@@ -512,7 +512,7 @@ void FAST_CODE mixTable(float dT)   // CR168
             motor[i] = isDisarmed ? motor_disarmed[i] : motorValueWhenStopped;
         }
         mixerThrottleCommand = motor[0];
-        lastThrottleCommand = mixerThrottleCommand;     // CR168
+        lastMixerThrottleCommand = mixerThrottleCommand;     // CR168
         return;
     }
 
@@ -617,12 +617,21 @@ void FAST_CODE mixTable(float dT)   // CR168
 DEBUG_SET(DEBUG_ALWAYS, 1, mixerThrottleCommand);
     // CR168
     if (STATE(AIRPLANE) && throttleRateLimit) {
-        const float deltaThrottle = mixerThrottleCommand - lastThrottleCommand;
+        const float deltaThrottle = mixerThrottleCommand - lastMixerThrottleCommand;
         const float throttleRate = deltaThrottle / dT;
+        bool limitOutput = false;
 
-        if (fabsf(throttleRate) > throttleRateLimit) {
-            lastThrottleCommand = lastThrottleCommand + SIGN(throttleRate) * throttleRateLimit * dT;
-            mixerThrottleCommand = lastThrottleCommand;
+        if (throttleRateLimit < 0.0f) {
+            limitOutput = fabsf(throttleRate) > -throttleRateLimit;
+        } else if (throttleRate > throttleRateLimit) {
+            limitOutput = true;
+        }
+
+        if (limitOutput) {
+            lastMixerThrottleCommand += SIGN(throttleRate) * fabsf(throttleRateLimit) * dT;
+            mixerThrottleCommand = lastMixerThrottleCommand;
+        } else {
+            lastMixerThrottleCommand = mixerThrottleCommand;
         }
     }
     // CR168
