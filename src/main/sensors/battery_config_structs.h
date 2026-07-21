@@ -105,7 +105,7 @@ typedef struct batteryProfile_s {
     struct {
         float throttleIdle;                 // Throttle IDLE value based on min_command, max_throttle, in percent
         float throttleScale;                // Scaling factor for throttle.
-        uint16_t throttle_rate_limiter;     // CR168
+        int16_t throttleRateLimiter;        // CR168
 #ifdef USE_DSHOT
         uint8_t turtleModePowerFactor;      // Power factor from 0 to 100% of flip over after crash
 #endif

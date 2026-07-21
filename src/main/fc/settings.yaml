@@ -1187,10 +1187,10 @@ groups:
         # CR164
         # CR168
       - name: fw_throttle_rate_limiter
-        description: "Minimum time allowed for throttle to increase from minimum to maximum throttle (1000 to 2000) in milliseconds. Set to 0 to disable. Fixed wing only."
+        description: "Minimum time allowed for throttle to increase from minimum to maximum throttle (1000 to 2000) in milliseconds. Negative values limit decreasing as well as increasing throttle. Positive values only limit increasing throttle. Set to 0 to disable. Fixed wing only."
         default_value: 0
-        field: motor.throttle_rate_limiter
-        min: 0
+        field: motor.throttleRateLimiter
+        min: -5000
         max: 5000
         # CR168
       - name: limit_cont_current
@@ -2307,7 +2307,7 @@ groups:
         max: 255
       - name: nav_fw_auto_speed_i
         description: "I gain of auto speed PID controller."
-        default_value: 5
+        default_value: 10
         field: bank_fw.pid[PID_AUTO_SPEED].I
         min: 0
         max: 255

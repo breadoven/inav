@@ -221,7 +221,7 @@ DEBUG_SET(DEBUG_ALWAYS, 4, 0);
         } else if (spikeFilterDynAdjustment || US2S(cmpTimeUs(currentTimeUs, lastValidWindEstimateUs)) > 30) {
             if (spikeFilterDynAdjustment < WINDESTIMATOR_SPIKE_FILTER_ADJ_FACTOR) {
                 spikeFilterDynAdjustment++;
-                if (hasValidWindEstimate && validityScore) validityScore = MAX(0, validityScore - 2);
+                if (hasValidWindEstimate && validityScore > 0) validityScore--;
             }
         }
 

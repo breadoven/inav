@@ -976,10 +976,10 @@ void applyAutoSpeedThrottleDemand(int16_t *throttleCommand, timeUs_t currentTime
             navDesiredVelocity[Y] = constrain(posControl.desiredState.autoSpeedDemand, 0, 32767);
         }
 
-        DEBUG_SET(DEBUG_ALWAYS, 0, autoSpeedThrottleCommand);
-        DEBUG_SET(DEBUG_ALWAYS, 1, posControl.pids.fw_autoSpeed.proportional);
-        DEBUG_SET(DEBUG_ALWAYS, 2, posControl.pids.fw_autoSpeed.integral);
-        DEBUG_SET(DEBUG_ALWAYS, 3, posControl.pids.fw_autoSpeed.derivative);
+        // DEBUG_SET(DEBUG_ALWAYS, 0, autoSpeedThrottleCommand);
+        // DEBUG_SET(DEBUG_ALWAYS, 1, posControl.pids.fw_autoSpeed.proportional);
+        // DEBUG_SET(DEBUG_ALWAYS, 2, posControl.pids.fw_autoSpeed.integral);
+        // DEBUG_SET(DEBUG_ALWAYS, 3, posControl.pids.fw_autoSpeed.derivative);
         // DEBUG_SET(DEBUG_ALWAYS, 4, posControl.autoSpeedSpdSource);
     }
 
