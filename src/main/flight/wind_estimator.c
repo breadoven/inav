@@ -94,7 +94,7 @@ void updateWindEstimator(timeUs_t currentTimeUs)
     bool updateTimedout = false;
     static uint8_t spikeFilterDynAdjustment = WINDESTIMATOR_SPIKE_FILTER_ADJ_FACTOR;
     static bool initialEstimate = true;
-DEBUG_SET(DEBUG_ALWAYS, 4, 0);
+
     if ((US2S(currentTimeUs - lastValidWindEstimateUs) + WINDESTIMATOR_ALTITUDE_SCALE * fabsf(currentAltitude - lastValidEstimateAltitude)) > WINDESTIMATOR_TIMEOUT) {
         hasValidWindEstimate = false;
     }
@@ -108,7 +108,6 @@ DEBUG_SET(DEBUG_ALWAYS, 4, 0);
         if (!initialEstimate && spikeFilterDynAdjustment) {
             spikeFilterDynAdjustment = MAX(0, spikeFilterDynAdjustment - 5);
         }
-        DEBUG_SET(DEBUG_ALWAYS, 4, 1);
     }
 
     if (!validityScore) {
@@ -225,13 +224,12 @@ DEBUG_SET(DEBUG_ALWAYS, 4, 0);
             }
         }
 
-        DEBUG_SET(DEBUG_ALWAYS, 4, 2);
         for (uint8_t axis = 0; axis < XYZ_AXIS_COUNT; axis++) {
             if (ABS(wind[axis] - estimatedWind[axis]) > (300 + spikeFilterDynAdjustment * WINDESTIMATOR_SPIKE_FILTER_ADJ_FACTOR)) {
                 return;
             }
         }
-        DEBUG_SET(DEBUG_ALWAYS, 4, 3);
+
         float filterAlpha = 0.1f;
         estimatedWind[X] = estimatedWind[X] + filterAlpha * (wind[X] - estimatedWind[X]);
         estimatedWind[Y] = estimatedWind[Y] + filterAlpha * (wind[Y] - estimatedWind[Y]);

@@ -5297,7 +5297,7 @@ uint8_t drawStat_RXStats(uint8_t col, uint8_t row, uint8_t statValX)
         if (osdDisplayIsHD()) {
             strcat(osdFormatTrimWhiteSpace(buff), "/");
             itoa(stats.min_rssi_dbm, buff + strlen(buff), 10);
-            tfp_sprintf(buff + strlen(buff), "%c", SYM_DBM);
+            osdWriteChar(buff + strlen(buff), SYM_DBM);
         }
     }
 

@@ -494,7 +494,6 @@ static int getReversibleMotorsThrottleDeadband(void)
 void FAST_CODE mixTable(float dT)   // CR168
 {
     static float lastMixerThrottleCommand = 1000.0f;     // CR168
-    // DEBUG_SET(DEBUG_ALWAYS, 3, lastMixerThrottleCommand);
 #ifdef USE_DSHOT
     if (FLIGHT_MODE(TURTLE_MODE)) {
         applyTurtleModeToMotors();
@@ -613,8 +612,6 @@ void FAST_CODE mixTable(float dT)   // CR168
     throttleMin = throttleRangeMin;
     throttleMax = throttleRangeMax;
     throttleRange = throttleMax - throttleMin;
-
-DEBUG_SET(DEBUG_ALWAYS, 1, mixerThrottleCommand);
     // CR168
     if (STATE(AIRPLANE) && throttleRateLimit) {
         const float deltaThrottle = mixerThrottleCommand - lastMixerThrottleCommand;
@@ -635,8 +632,6 @@ DEBUG_SET(DEBUG_ALWAYS, 1, mixerThrottleCommand);
         }
     }
     // CR168
-DEBUG_SET(DEBUG_ALWAYS, 2, mixerThrottleCommand);
-
     #define THROTTLE_CLIPPING_FACTOR    0.33f
     motorMixRange = (float)rpyMixRange / (float)throttleRange;
     if (motorMixRange > 1.0f) {
