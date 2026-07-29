@@ -3067,7 +3067,7 @@ groups:
         # CR164
       - name: fw_auto_speed_min_speed
         description: "Minimum allowed speed demand for auto speed mode [m/s]."
-        default_value: 11
+        default_value: 14
         field: fw.auto_speed_min_speed
         min: 5
         max: 50
