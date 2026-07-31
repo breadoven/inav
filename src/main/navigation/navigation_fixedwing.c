@@ -74,6 +74,7 @@ static bool isAutoThrottleManuallyIncreased = false;
 static float navCrossTrackError;
 static int8_t loiterDirYaw = 1;
 bool needToCalculateCircularLoiter;
+bool autoSpeedIsActive = false;  // CR170
 //
 // Calculates the cutoff frequency for smoothing out roll/pitch commands
 // control_smoothness valid range from 0 to 9
@@ -545,14 +546,20 @@ static void updatePositionHeadingController_FW(timeUs_t currentTimeUs, timeDelta
     }
 
     // Only allow PID integrator to shrink if error is decreasing over time
-    const pidControllerFlags_e pidFlags = PID_DTERM_FROM_ERROR | (errorIsDecreasing ? PID_SHRINK_INTEGRATOR : 0);
+    // const pidControllerFlags_e pidFlags = PID_DTERM_FROM_ERROR | (errorIsDecreasing ? PID_SHRINK_INTEGRATOR : 0);
+    const pidControllerFlags_e pidFlags = errorIsDecreasing ? PID_SHRINK_INTEGRATOR : 0;
 
     // Input error in (deg*100), output roll angle (deg*100)
-    float rollAdjustment = navPidApply2(&posControl.pids.fw_nav, posControl.actualState.cog + navHeadingError, posControl.actualState.cog,
+    float rollAdjustment = -navPidApply2(&posControl.pids.fw_nav, 0, navHeadingError,
                                         US2S(deltaMicros),
                                        -DEGREES_TO_CENTIDEGREES(navConfig()->fw.max_bank_angle),
                                         DEGREES_TO_CENTIDEGREES(navConfig()->fw.max_bank_angle),
                                         pidFlags);
+    // float rollAdjustment = navPidApply2(&posControl.pids.fw_nav, posControl.actualState.cog + navHeadingError, posControl.actualState.cog,
+                                        // US2S(deltaMicros),
+                                       // -DEGREES_TO_CENTIDEGREES(navConfig()->fw.max_bank_angle),
+                                        // DEGREES_TO_CENTIDEGREES(navConfig()->fw.max_bank_angle),
+                                        // pidFlags);
 
     // Apply low-pass filter to prevent rapid correction
     rollAdjustment = pt1FilterApply3(&fwPosControllerCorrectionFilterState, rollAdjustment, US2S(deltaMicros));
@@ -882,19 +889,42 @@ void applyFixedWingEmergencyLandingController(timeUs_t currentTimeUs)
 /*-----------------------------------------------------------
  * Auto Speed mode control
  *-----------------------------------------------------------*/
+// CR170
 bool isFixedwingAutoSpeedActive(void)
 {
-    bool thrStickEmergStop = navConfig()->fw.auto_speed_channel != (THROTTLE + 1) && throttleStickIsLow();
+    return autoSpeedIsActive;
+}
 
-    return STATE(AIRPLANE) && ARMING_FLAG(ARMED) && IS_RC_MODE_ACTIVE(BOXAUTOSPEED) && isProbablyStillFlying() && !thrStickEmergStop &&
-            !FLIGHT_MODE(FAILSAFE_MODE) && !FLIGHT_MODE(SOARING_MODE) && !FLIGHT_MODE(MANUAL_MODE) &&
-            posControl.flags.estVelStatus == EST_TRUSTED && posControl.flags.estAltStatus == EST_TRUSTED &&
-            !(navigationRequiresAutoThrottleMode() && !(navGetCurrentStateFlags() & NAV_CTL_SPEED));
+static int8_t isAutoSpeedRequiredByNav(void)
+{
+    int8_t retState = -1;
+    if (FLIGHT_MODE(NAV_WP_MODE) && getActiveSpeed() > 0) {
+        retState = FW_AUTO_SPD_GROUND;
+    }
+        DEBUG_SET(DEBUG_ALWAYS, 0, getActiveSpeed());
+        DEBUG_SET(DEBUG_ALWAYS, 1, retState);
+
+    return retState;
+}
+// CR170
+static bool isAutoSpeedEnabled(void)
+{
+    bool thrStickEmergStop = navConfig()->fw.auto_speed_channel != (THROTTLE + 1) && throttleStickIsLow();
+    bool autoSpeedIsDemanded = IS_RC_MODE_ACTIVE(BOXAUTOSPEED) || isAutoSpeedRequiredByNav() >= 0;  // CR170
+
+    return ARMING_FLAG(ARMED) && autoSpeedIsDemanded && isProbablyStillFlying() && !thrStickEmergStop &&   // CR170
+           !FLIGHT_MODE(FAILSAFE_MODE) && !FLIGHT_MODE(SOARING_MODE) && !FLIGHT_MODE(MANUAL_MODE) &&
+           posControl.flags.estVelStatus == EST_TRUSTED && posControl.flags.estAltStatus == EST_TRUSTED &&
+           !(navigationRequiresAutoThrottleMode() && !(navGetCurrentStateFlags() & NAV_CTL_SPEED));
 }
 
 void applyAutoSpeedThrottleDemand(int16_t *throttleCommand, timeUs_t currentTimeUs)
 {
-    if (!isFixedwingAutoSpeedActive()) return;
+    if (!STATE(AIRPLANE) || !isAutoSpeedEnabled()) {  // CR170
+        autoSpeedIsActive = false;
+        return;
+    }
+    autoSpeedIsActive = true;
 
     static uint16_t autoSpeedThrottleCommand = PWM_RANGE_MIDDLE;
 
@@ -913,8 +943,15 @@ void applyAutoSpeedThrottleDemand(int16_t *throttleCommand, timeUs_t currentTime
         uint16_t maxSpeed = 100 * navConfig()->fw.auto_speed_max_speed;
         uint16_t minThrottle = MAX(getThrottleIdleValue(), currentBatteryProfile->nav.fw.min_throttle);
         uint16_t maxThrottle = currentBatteryProfile->nav.fw.max_throttle;
-
-        posControl.desiredState.autoSpeedDemand = scaleRange(rxGetChannelValue(navConfig()->fw.auto_speed_channel - 1), PWM_RANGE_MIN, PWM_RANGE_MAX, minSpeed, maxSpeed);
+        // CR170
+        bool useAirSpeed = !LOGIC_CONDITION_GLOBAL_FLAG(LOGIC_CONDITION_GLOBAL_FLAG_DISABLE_AUTOSPEED_AIRSPEED);
+        if (IS_RC_MODE_ACTIVE(BOXAUTOSPEED)) {
+            posControl.desiredState.autoSpeedDemand = scaleRange(rxGetChannelValue(navConfig()->fw.auto_speed_channel - 1), PWM_RANGE_MIN, PWM_RANGE_MAX, minSpeed, maxSpeed);
+        } else {
+            posControl.desiredState.autoSpeedDemand = constrain(getActiveSpeed(), minSpeed, maxSpeed);
+            useAirSpeed = isAutoSpeedRequiredByNav() == FW_AUTO_SPD_AIR;
+        }
+        // CR170
         uint16_t actualSpeed = posControl.actualState.vel3D;
         posControl.autoSpeedSpdSource = FW_AUTO_SPD_GROUND;
         uint16_t groundSpeedBoost = 0;
@@ -922,8 +959,9 @@ void applyAutoSpeedThrottleDemand(int16_t *throttleCommand, timeUs_t currentTime
 #ifdef USE_PITOT
         if (pitotValidForAirspeed()) {
             static bool airspeedBoost = false;
+
             // Pitot available and airspeed source selected or low airspeed boost applied when using ground speed source
-            if (!LOGIC_CONDITION_GLOBAL_FLAG(LOGIC_CONDITION_GLOBAL_FLAG_DISABLE_AUTOSPEED_AIRSPEED) || airspeedBoost) {
+            if (useAirSpeed || airspeedBoost) { // CR170
                 actualSpeed = getAirspeedEstimate();
                 if (airspeedBoost && actualSpeed > minSpeed) {
                     airspeedBoost = false;

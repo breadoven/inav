@@ -4317,30 +4317,38 @@ bool isNavHoldPositionActive(void)
 float getActiveSpeed(void)
 {
     /* Currently only applicable for multicopter */
+    // CR170
+    uint16_t waypointSpeed = 0;
 
-    // Speed limit for modes where speed manually controlled
-    if (posControl.flags.isAdjustingPosition || FLIGHT_MODE(NAV_COURSE_HOLD_MODE)) {
-        return navConfig()->general.max_manual_speed;
+    if (STATE(MULTIROTOR)) {
+        // Speed limit for modes where speed manually controlled
+        if (posControl.flags.isAdjustingPosition || FLIGHT_MODE(NAV_COURSE_HOLD_MODE)) {
+            return navConfig()->general.max_manual_speed;
+        }
+        waypointSpeed = navConfig()->general.auto_speed;
     }
 
-    uint16_t waypointSpeed = navConfig()->general.auto_speed;
+    // uint16_t waypointSpeed = navConfig()->general.auto_speed;
+    // CR170
+    if (navGetStateFlags(posControl.navState) & NAV_AUTO_WP && posControl.waypointCount > 0 &&
+        (posControl.waypointList[posControl.activeWaypointIndex].action == NAV_WP_ACTION_WAYPOINT ||
+         posControl.waypointList[posControl.activeWaypointIndex].action == NAV_WP_ACTION_HOLD_TIME ||
+         posControl.waypointList[posControl.activeWaypointIndex].action == NAV_WP_ACTION_LAND)) {
 
-    if (navGetStateFlags(posControl.navState) & NAV_AUTO_WP) {
-        if (posControl.waypointCount > 0 && (posControl.waypointList[posControl.activeWaypointIndex].action == NAV_WP_ACTION_WAYPOINT || posControl.waypointList[posControl.activeWaypointIndex].action == NAV_WP_ACTION_HOLD_TIME || posControl.waypointList[posControl.activeWaypointIndex].action == NAV_WP_ACTION_LAND)) {
-            float wpSpecificSpeed = 0.0f;
-            if(posControl.waypointList[posControl.activeWaypointIndex].action == NAV_WP_ACTION_HOLD_TIME)
-                wpSpecificSpeed = posControl.waypointList[posControl.activeWaypointIndex].p2; // P1 is hold time
-            else
-                wpSpecificSpeed = posControl.waypointList[posControl.activeWaypointIndex].p1; // default case
+        uint16_t wpSpecificSpeed = 0;
+        if (posControl.waypointList[posControl.activeWaypointIndex].action == NAV_WP_ACTION_HOLD_TIME) {
+            wpSpecificSpeed = posControl.waypointList[posControl.activeWaypointIndex].p2; // P1 is hold time
+        } else {
+            wpSpecificSpeed = posControl.waypointList[posControl.activeWaypointIndex].p1; // default case
+        }
 
-            if (wpSpecificSpeed >= 50.0f && wpSpecificSpeed <= navConfig()->general.max_auto_speed) {
-                waypointSpeed = wpSpecificSpeed;
-            } else if (wpSpecificSpeed > navConfig()->general.max_auto_speed) {
-                waypointSpeed = navConfig()->general.max_auto_speed;
-            }
+        if (STATE(AIRPLANE)) {
+            return wpSpecificSpeed;
+        } else if (wpSpecificSpeed >= 50) {
+            return MIN(wpSpecificSpeed, navConfig()->general.max_auto_speed);
         }
     }
-
+    // CR170
     return waypointSpeed;
 }
 
@@ -4442,11 +4450,11 @@ void applyWaypointNavigationAndAltitudeHold(void)
         applyRoverBoatNavigationController(navStateFlags, currentTimeUs);
     } else if (STATE(FIXED_WING_LEGACY)) {
         applyFixedWingNavigationController(navStateFlags, currentTimeUs);
-        applyAutoSpeedThrottleDemand(&rcCommand[THROTTLE], currentTimeUs);   // CR164.2
     }
     else {
         applyMulticopterNavigationController(navStateFlags, currentTimeUs);
     }
+    applyAutoSpeedThrottleDemand(&rcCommand[THROTTLE], currentTimeUs);   // CR170
 
     /* Consume position data */
     if (posControl.flags.horizontalPositionDataConsumed) posControl.flags.horizontalPositionDataNew = false;
