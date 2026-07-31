@@ -77,6 +77,8 @@ static bool pitotAirspeedValidCached = false;
 #define PITOT_FAILURE_THRESHOLD 10   // 0.2 seconds at 50Hz - fast detection per LOG00002 analysis
 #define PITOT_RECOVERY_THRESHOLD 100 // 2 seconds of consecutive good readings to recover
 
+static bool isPitotAirspeedValid(void);
+
 // Forward declaration for GPS-based airspeed fallback
 // static float getVirtualAirspeedEstimate(void);   // CR169
 
@@ -210,9 +212,7 @@ bool pitotDetect(pitotDev_t *dev, uint8_t pitotHardwareToUse)
 
 bool pitotInit(void)
 {
-    if (!pitotDetect(&pitot.dev, pitotmeterConfig()->pitot_hardware)) {
-        return false;
-    }
+    if (!pitotDetect(&pitot.dev, pitotmeterConfig()->pitot_hardware)) return false;
 
     return true;
 }
@@ -220,9 +220,7 @@ bool pitotInit(void)
 bool pitotIsCalibrationComplete(void)
 {
 #if defined(USE_WIND_ESTIMATOR) && defined(USE_PITOT_VIRTUAL)
-    if (detectedSensors[SENSOR_INDEX_PITOT] == PITOT_VIRTUAL) { // CR169
-        return true;
-    }
+    if (detectedSensors[SENSOR_INDEX_PITOT] == PITOT_VIRTUAL) return true; // CR169
 #endif
     return zeroCalibrationIsCompleteS(&pitot.zeroCalibration) && zeroCalibrationIsSuccessfulS(&pitot.zeroCalibration);
 }
@@ -307,10 +305,6 @@ STATIC_PROTOTHREAD(pitotThread)
         // }
 // #endif
         // ptYield();
-// =======
-        // pitotAirspeedValidCached = pitotValidateAirspeed();
-        // ptYield();
-// >>>>>>> release/9.1
 
         // Calculate IAS
         if (pitotIsCalibrationComplete()) {
@@ -354,6 +348,9 @@ STATIC_PROTOTHREAD(pitotThread)
             // pitot.airSpeed = simulatorData.airSpeed;
         // }
 // #endif
+        // Check pitot airspeed validity and cache result for use by external functions
+        pitotAirspeedValidCached = isPitotAirspeedValid();
+
         ptYield();
     }
 
@@ -414,6 +411,7 @@ void pitotUpdate(void)
 #if defined(USE_WIND_ESTIMATOR) && defined(USE_PITOT_VIRTUAL)
     if (detectedSensors[SENSOR_INDEX_PITOT] == PITOT_VIRTUAL) {
         pitot.airSpeed = getVirtualAirspeedEstimate();
+        pitotAirspeedValidCached = isPitotAirspeedValid();
         return;
     }
 #endif
@@ -522,21 +520,19 @@ bool pitotHasFailed(void)
     return pitotHardwareFailed;
 }
 
-bool pitotValidateAirspeed(void)
+static bool isPitotAirspeedValid(void)
 {
     bool ret = false;
     ret = pitotIsHealthy() && pitotIsCalibrationComplete();
 #if defined(USE_WIND_ESTIMATOR) && defined(USE_PITOT_VIRTUAL)       // CR169
-    // For virtual pitot, we need GPS fix
+    // For virtual pitot, we need GPS fix and valid wind estimate
     if (detectedSensors[SENSOR_INDEX_PITOT] == PITOT_VIRTUAL) {
         return ret && STATE(GPS_FIX) && isEstimatedWindSpeedValid(); // CR164.1
     }
 #endif  // CR169
     // For hardware pitot sensors, validate readings against GPS when armed
     // This detects blocked or failed pitot tubes
-    if (ret && detectedSensors[SENSOR_INDEX_PITOT] != PITOT_VIRTUAL &&
-        detectedSensors[SENSOR_INDEX_PITOT] != PITOT_NONE) {
-
+    if (ret && detectedSensors[SENSOR_INDEX_PITOT] != PITOT_VIRTUAL && detectedSensors[SENSOR_INDEX_PITOT] != PITOT_NONE) {
         if (ARMING_FLAG(ARMED)) {
             // Check if pitot reading is plausible
             if (!isPitotReadingPlausible()) {

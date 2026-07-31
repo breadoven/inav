@@ -89,7 +89,6 @@ typedef struct alphaBetaGammaFilter_s {
 
 typedef float (*filterApplyFnPtr)(void *filter, float input);
 typedef float (*filterApply3FnPtr)(void *filter, float input, float dt);
-// typedef float (*filterApply4FnPtr)(void *filter, float input, float f_cut, float dt);
 
 #define BIQUAD_BANDWIDTH 1.9f     /* bandwidth in octaves */
 #define BIQUAD_Q 1.0f / sqrtf(2.0f)     /* quality factor - butterworth*/

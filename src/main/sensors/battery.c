@@ -582,7 +582,6 @@ int32_t getMWhDrawn(void)
 
 void currentMeterUpdate(timeUs_t timeDelta)
 {
-    // static pt1Filter_t amperageFilterState;
     static int64_t mAhdrawnRaw = 0;
 
     switch (batteryMetersConfig()->current.type) {
