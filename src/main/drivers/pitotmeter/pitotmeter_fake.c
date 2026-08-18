@@ -27,8 +27,8 @@
 #include "drivers/pitotmeter/pitotmeter.h"
 #include "drivers/pitotmeter/pitotmeter_fake.h"
 
-// #include "drivers/time.h"
-// #include "fc/rc_modes.h"
+#include "drivers/time.h"
+#include "fc/rc_modes.h"
 
 #ifdef USE_PITOT_FAKE
 static float fakePressure;
@@ -38,8 +38,9 @@ static float fakeAirspeed;
 static bool fakePitotStart(pitotDev_t *pitot)
 {
     UNUSED(pitot);
-    return true;
     // return false;
+    return true;
+
 }
 
 void fakePitotSet(float pressure, float temperature)
@@ -60,23 +61,24 @@ float fakePitotGetAirspeed(void)
 
 bool fakePitotRead(pitotDev_t *pitot)
 {
-    // if (IS_RC_MODE_ACTIVE(BOXBEEPERON)) return false;
+    if (IS_RC_MODE_ACTIVE(BOXBEEPERON)) return false;  // simulate failure
 
-    // static timeMs_t testtime1 = 0;
-    // static timeMs_t testtime2 = 0;
+    static timeMs_t testtime1 = 0;
+    static timeMs_t testtime2 = 0;
 
-    // if (testtime1) {
-        // fakePressure = (millis() - testtime1) / 1000.0f;
-    // } else if (millis() > 30000) {
-        // testtime1 = millis();
-        // testtime2 = millis();
-    // }
+    if (testtime1) {
+        fakePressure = (millis() - testtime1) / 1000.0f;
+        // fakeAirspeed = (millis() - testtime1);
+    } else if (millis() > 30000) {
+        testtime1 = millis();
+        testtime2 = millis();
+    }
 
-    // if (millis() - testtime2 > 150) {
-        // testtime2 = millis();
-    // } else {
-        // return false;
-    // }
+    if (millis() - testtime2 > 150) {
+        testtime2 = millis();
+    } else {
+        return false;
+    }
 
     pitot->calculate(pitot, &fakePressure, &fakeTemperature);
     return true;

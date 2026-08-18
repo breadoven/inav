@@ -72,6 +72,5 @@ float getAirspeedEstimate(void);
 bool pitotIsHealthy(void);
 bool pitotGetValidForAirspeed(void);
 bool pitotHasFailed(void);
-// float getWindEstimatedVirtualAirspeed(void);    // CR169
 
 #endif

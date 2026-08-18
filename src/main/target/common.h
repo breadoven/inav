@@ -99,6 +99,7 @@
 #define USE_PITOT_MS5525
 #define USE_PITOT_MSP
 #define USE_PITOT_DLVR
+// #define USE_PITOT_FAKE
 
 #define USE_1WIRE
 #define USE_1WIRE_DS2482

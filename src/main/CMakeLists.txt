@@ -225,8 +225,6 @@ main_sources(COMMON_SRC
     drivers/pitotmeter/pitotmeter_dlvr_l10d.h
     drivers/pitotmeter/pitotmeter_msp.c
     drivers/pitotmeter/pitotmeter_msp.h
-    # drivers/pitotmeter/pitotmeter_virtual.c  CR169
-    # drivers/pitotmeter/pitotmeter_virtual.h
     drivers/pitotmeter/pitotmeter_fake.h
     drivers/pitotmeter/pitotmeter_fake.c
     drivers/pwm_esc_detect.c
