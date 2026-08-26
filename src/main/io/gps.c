@@ -654,7 +654,7 @@ bool isGPSHeadingValid(void)
 #ifdef USE_GPS_FIX_ESTIMATION
         || STATE(GPS_ESTIMATED_FIX)
 #endif
-        ) && gpsSol.groundSpeed >= 300;
+        ) && gpsSol.groundSpeed > (STATE(AIRPLANE) ? 300 : 150);
 }
 
 #endif

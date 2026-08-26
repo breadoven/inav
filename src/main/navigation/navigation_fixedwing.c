@@ -475,7 +475,6 @@ static void updatePositionHeadingController_FW(timeUs_t currentTimeUs, timeDelta
         static float crossTrackErrorRate;
         static timeUs_t previousCrossTrackErrorUpdateTime;
         static float previousCrossTrackError = 0.0f;
-        static pt1Filter_t fwCrossTrackErrorRateFilterState;
 
         /* Calculate cross track error */
         posControl.wpDistance = calculateDistanceToDestination(&posControl.activeWaypoint.pos);
@@ -560,16 +559,16 @@ static void updatePositionHeadingController_FW(timeUs_t currentTimeUs, timeDelta
     const pidControllerFlags_e pidFlags = errorIsDecreasing ? PID_SHRINK_INTEGRATOR : 0;
 
     // Input error in (deg*100), output roll angle (deg*100)
-    float rollAdjustment = -navPidApply2(&posControl.pids.fw_nav, 0, navHeadingError,
-                                        US2S(deltaMicros),
-                                       -DEGREES_TO_CENTIDEGREES(navConfig()->fw.max_bank_angle),
-                                        DEGREES_TO_CENTIDEGREES(navConfig()->fw.max_bank_angle),
-                                        pidFlags);
-    // float rollAdjustment = navPidApply2(&posControl.pids.fw_nav, posControl.actualState.cog + navHeadingError, posControl.actualState.cog,
+    // float rollAdjustment = -navPidApply2(&posControl.pids.fw_nav, 0, navHeadingError,
                                         // US2S(deltaMicros),
                                        // -DEGREES_TO_CENTIDEGREES(navConfig()->fw.max_bank_angle),
                                         // DEGREES_TO_CENTIDEGREES(navConfig()->fw.max_bank_angle),
                                         // pidFlags);
+    float rollAdjustment = navPidApply2(&posControl.pids.fw_nav, posControl.actualState.cog + navHeadingError, posControl.actualState.cog,
+                                        US2S(deltaMicros),
+                                       -DEGREES_TO_CENTIDEGREES(navConfig()->fw.max_bank_angle),
+                                        DEGREES_TO_CENTIDEGREES(navConfig()->fw.max_bank_angle),
+                                        pidFlags);
 
     // Apply low-pass filter to prevent rapid correction
     rollAdjustment = pt1FilterApply3(&fwPosControllerCorrectionFilterState, rollAdjustment, US2S(deltaMicros));
@@ -1059,10 +1058,12 @@ void applyFixedWingNavigationController(navigationFSMStateFlags_t navStateFlags,
     else {
 #ifdef NAV_FW_LIMIT_MIN_FLY_VELOCITY
         // Don't apply anything if ground speed is too low (<3m/s)
-        if (posControl.actualState.velXY > 300) {   // CR164
-#else
-        if (true) {
+        if (posControl.actualState.velXY < 300) {
+            posControl.rcAdjustment[PITCH] = 0;
+            posControl.rcAdjustment[ROLL] = 0;
+        } else
 #endif
+        {
             if (navStateFlags & NAV_CTL_ALT) {
                 if (getMotorStatus() == MOTOR_STOPPED_USER || FLIGHT_MODE(SOARING_MODE)) {
                     // Motor has been stopped by user or soaring mode enabled to override altitude control
@@ -1076,10 +1077,6 @@ void applyFixedWingNavigationController(navigationFSMStateFlags_t navStateFlags,
             if (navStateFlags & NAV_CTL_POS) {
                 applyFixedWingPositionController(currentTimeUs);
             }
-
-        } else {
-            posControl.rcAdjustment[PITCH] = 0;
-            posControl.rcAdjustment[ROLL] = 0;
         }
 
         // if (FLIGHT_MODE(NAV_COURSE_HOLD_MODE) && posControl.flags.isAdjustingPosition) {

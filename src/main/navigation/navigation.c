@@ -2233,7 +2233,7 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_EMERGENCY_LANDING_IN_PR
 
     // Reset target position if too far away for some reason, e.g. GPS recovered since start landing.
     if (posControl.flags.estPosStatus >= EST_USABLE) {
-        float targetPosLimit = STATE(MULTIROTOR) ? 2000.0f : navConfig()->fw.loiter_radius * 2.0f;
+        float targetPosLimit = STATE(MULTIROTOR) ? 2000.0f : navConfig()->fw.loiter_radius * 4.0f;
         if (calculateDistanceToDestination(&posControl.desiredState.pos) > targetPosLimit) {
             setDesiredPosition(&navGetCurrentActualPositionAndVelocity()->pos, 0, NAV_POS_UPDATE_XY);
         }
