@@ -554,9 +554,9 @@ static void updatePositionHeadingController_FW(timeUs_t currentTimeUs, timeDelta
         previousTimeMonitoringUpdate = currentTimeUs;
     }
 
-    // Only allow PID integrator to shrink if error is decreasing over time
-    // const pidControllerFlags_e pidFlags = PID_DTERM_FROM_ERROR | (errorIsDecreasing ? PID_SHRINK_INTEGRATOR : 0);
-    const pidControllerFlags_e pidFlags = errorIsDecreasing ? PID_SHRINK_INTEGRATOR : 0;
+    // Only allow PID integrator to shrink if error is decreasing over time.
+    // Freeze the integrator while the arc drives the turn - the carrot error keeps one sign and winds it up
+    const pidControllerFlags_e pidFlags = PID_USING_HEADING | (errorIsDecreasing ? PID_SHRINK_INTEGRATOR : 0) | (fwArcActive ? PID_FREEZE_INTEGRATOR : 0);  // CR171
 
     // Input error in (deg*100), output roll angle (deg*100)
     // float rollAdjustment = -navPidApply2(&posControl.pids.fw_nav, 0, navHeadingError,
@@ -569,6 +569,12 @@ static void updatePositionHeadingController_FW(timeUs_t currentTimeUs, timeDelta
                                        -DEGREES_TO_CENTIDEGREES(navConfig()->fw.max_bank_angle),
                                         DEGREES_TO_CENTIDEGREES(navConfig()->fw.max_bank_angle),
                                         pidFlags);
+    // uint16_t maxBankAngleCentiDeg = DEGREES_TO_CENTIDEGREES(navConfig()->fw.max_bank_angle);  // CR171
+    // float rollAdjustment = navPidApply2(&posControl.pids.fw_nav, posControl.actualState.cog + navHeadingError, posControl.actualState.cog,
+                                        // US2S(deltaMicros),
+                                       // -maxBankAngleCentiDeg,
+                                        // maxBankAngleCentiDeg,
+                                        // pidFlags);
 
     // Apply low-pass filter to prevent rapid correction
     rollAdjustment = pt1FilterApply3(&fwPosControllerCorrectionFilterState, rollAdjustment, US2S(deltaMicros));
@@ -910,8 +916,8 @@ static int8_t isAutoSpeedRequiredByNav(void)
     if (FLIGHT_MODE(NAV_WP_MODE) && getActiveSpeed() > 0) {
         retState = FW_AUTO_SPD_GROUND;
     }
-        DEBUG_SET(DEBUG_ALWAYS, 0, getActiveSpeed());
-        DEBUG_SET(DEBUG_ALWAYS, 1, retState);
+        // DEBUG_SET(DEBUG_ALWAYS, 0, getActiveSpeed());
+        // DEBUG_SET(DEBUG_ALWAYS, 1, retState);
 
     return retState;
 }

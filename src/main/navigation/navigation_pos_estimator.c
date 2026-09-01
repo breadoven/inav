@@ -754,18 +754,6 @@ static bool estimationCalculateCorrection_XY_GPS(estimationContext_t * ctx)
 
     return false;
 }
-
-static void estimationCalculateGroundCourse(void)
-{
-    if ((STATE(GPS_FIX)
-#ifdef USE_GPS_FIX_ESTIMATION
-            || STATE(GPS_ESTIMATED_FIX)
-#endif
-    ) && navIsHeadingUsable()) {
-        uint32_t groundCourse = wrap_36000(RADIANS_TO_CENTIDEGREES(atan2_approx(posEstimator.est.vel.y, posEstimator.est.vel.x)));
-        posEstimator.est.cog = CENTIDEGREES_TO_DECIDEGREES(groundCourse);
-    }
-}
 // CR142
 // static void checkEstimateSanity(timeMs_t currentTimeMs, fpVector3_t previousPos)
 // {
@@ -918,9 +906,6 @@ static void updateEstimatedTopic(timeUs_t currentTimeUs)
     // }
     // CR142
 
-    /* Update ground course */
-    estimationCalculateGroundCourse();
-
     /* Update uncertainty */
     posEstimator.est.eph = constrainf(ctx.newEPH, 0.0f, 2.0f * max_eph_epv);
     posEstimator.est.epv = constrainf(ctx.newEPV, 0.0f, 2.0f * max_eph_epv);
@@ -949,17 +934,18 @@ static void publishEstimatedTopic(timeUs_t currentTimeUs)
 
     /* Position and velocity are published with INAV_POSITION_PUBLISH_RATE_HZ */
     if (updateTimer(&posPublishTimer, HZ2US(INAV_POSITION_PUBLISH_RATE_HZ), currentTimeUs)) {
-        /* Publish heading update */
-        /* IMU operates in decidegrees while INAV operates in deg*100
-        * Use course over ground when GPS heading valid */
-        int16_t cogValue = isGPSHeadingValid() ? posEstimator.est.cog : attitude.values.yaw;
-        updateActualHeading(navIsHeadingUsable(), DECIDEGREES_TO_CENTIDEGREES(attitude.values.yaw), DECIDEGREES_TO_CENTIDEGREES(cogValue));
-
         /* Publish position update */
+        bool isCogValid = false;    // CR171
         if (posEstimator.est.eph < positionEstimationConfig()->max_eph_epv) {
             float filteredVelX = pt1FilterApply3(&estVelFilterState_X, posEstimator.est.vel.x, HZ2S(INAV_POSITION_PUBLISH_RATE_HZ));
             float filteredVelY = pt1FilterApply3(&estVelFilterState_Y, posEstimator.est.vel.y, HZ2S(INAV_POSITION_PUBLISH_RATE_HZ));
-            // FIXME!!!!!
+
+            // /* Update ground course from x, y velocities */  // CR171
+            if (isGPSHeadingValid()) {
+                posEstimator.est.cog = CENTIDEGREES_TO_DECIDEGREES(wrap_36000(RADIANS_TO_CENTIDEGREES(atan2_approx(filteredVelY, filteredVelX))));
+                isCogValid = true;
+            }
+
             updateActualHorizontalPositionAndVelocity(true, true, posEstimator.est.pos.x, posEstimator.est.pos.y, filteredVelX, filteredVelY);
         }
         else {
@@ -977,6 +963,12 @@ static void publishEstimatedTopic(timeUs_t currentTimeUs)
         else {
             updateActualAltitudeAndClimbRate(false, posEstimator.est.pos.z, 0, posEstimator.est.aglAlt, 0, EST_NONE, 0);
         }
+
+        /* Publish heading update */    // CR171
+        /* IMU operates in decidegrees while INAV operates in deg*100
+         * Use course over ground when GPS heading valid */
+        int16_t cogValue = isCogValid ? posEstimator.est.cog : attitude.values.yaw;
+        updateActualHeading(navIsHeadingUsable(), DECIDEGREES_TO_CENTIDEGREES(attitude.values.yaw), DECIDEGREES_TO_CENTIDEGREES(cogValue));
 
         //Update Blackbox states
         navEPH = posEstimator.est.eph;
@@ -1039,10 +1031,10 @@ void initializePositionEstimator(void)
         posEstimator.est.vel.v[axis] = 0;
     }
 
-    pt1FilterSetCutoff(&posEstimator.baro.avgFilter, INAV_BARO_AVERAGE_HZ); 
+    pt1FilterSetCutoff(&posEstimator.baro.avgFilter, INAV_BARO_AVERAGE_HZ);
     pt1FilterSetCutoff(&posEstimator.surface.avgFilter, INAV_SURFACE_AVERAGE_HZ);
 
-    pt1FilterSetCutoff(&estVelFilterState_X, INAV_EST_VEL_F_CUT_HZ);  
+    pt1FilterSetCutoff(&estVelFilterState_X, INAV_EST_VEL_F_CUT_HZ);
     pt1FilterSetCutoff(&estVelFilterState_Y, INAV_EST_VEL_F_CUT_HZ);
     pt1FilterSetCutoff(&estVelFilterState_Z, INAV_EST_VEL_F_CUT_HZ);
 }
