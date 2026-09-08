@@ -863,9 +863,9 @@ static void cmsTraverseGlobalExit(const CMS_Menu *pMenu)
 long cmsMenuExit(displayPort_t *pDisplay, const void *ptr)
 {
 #if defined(SITL_BUILD)
-    unsigned long exitType = (uintptr_t)ptr;   
+    unsigned long exitType = (uintptr_t)ptr;
 #else
-    int exitType = (int)ptr;  
+    int exitType = (int)ptr;
 #endif
     switch (exitType) {
     case CMS_EXIT_SAVE:
@@ -912,6 +912,7 @@ long cmsMenuExit(displayPort_t *pDisplay, const void *ptr)
     }
 
     DISABLE_ARMING_FLAG(ARMING_DISABLED_CMS_MENU);
+    menuStackIdx = 0;
 
     return 0;
 }
