@@ -111,9 +111,7 @@ void updateWindEstimator(timeMs_t currentTimeMs)
     } else if (!hasValidWindEstimate && validityScore > WINDESTIMATOR_VALIDITY_THRESHOLD) {
         hasValidWindEstimate = true;
     }
-    // DEBUG_SET(DEBUG_ALWAYS, 4, spikeFilterDynAdjustment);
-    // DEBUG_SET(DEBUG_ALWAYS, 5, validityScore);
-    DEBUG_SET(DEBUG_ALWAYS, 0, 100);
+
     if (!isGPSHeadingValid() || !gpsSol.flags.validVelNE || !gpsSol.flags.validVelD
 #ifdef USE_GPS_FIX_ESTIMATION
         || STATE(GPS_ESTIMATED_FIX)
@@ -121,7 +119,7 @@ void updateWindEstimator(timeMs_t currentTimeMs)
         ) {
         return;
     }
-    DEBUG_SET(DEBUG_ALWAYS, 0, 200);
+
     float groundVelocity[XYZ_AXIS_COUNT];
     float groundVelocityDiff[XYZ_AXIS_COUNT];
     float groundVelocitySum[XYZ_AXIS_COUNT];
@@ -147,20 +145,19 @@ void updateWindEstimator(timeMs_t currentTimeMs)
         memcpy(lastGroundVelocity, groundVelocity, sizeof(lastGroundVelocity));
         return;
     }
-    DEBUG_SET(DEBUG_ALWAYS, 0, 300);
+
     fuselageDirectionDiff[X] = fuselageDirection[X] - lastFuselageDirection[X];
     fuselageDirectionDiff[Y] = fuselageDirection[Y] - lastFuselageDirection[Y];
     fuselageDirectionDiff[Z] = fuselageDirection[Z] - lastFuselageDirection[Z];
 
     float diffLengthSq = sq(fuselageDirectionDiff[X]) + sq(fuselageDirectionDiff[Y]) + sq(fuselageDirectionDiff[Z]);
-        DEBUG_SET(DEBUG_ALWAYS, 7, 1000 * diffLengthSq);
+
     // Very small changes in attitude will result in a denominator
     // very close to zero which will introduce too much error in the
     // estimation.
 
     // TODO: Is 0.2f an adequate threshold?
     if (diffLengthSq > sq(0.2f)) {
-        DEBUG_SET(DEBUG_ALWAYS, 0, 400);
         lastUseableAttitudeUpdateMs = currentTimeMs;
 
         // when turning, use the attitude response to estimate wind speed
@@ -191,13 +188,7 @@ void updateWindEstimator(timeMs_t currentTimeMs)
         wind[Y] = (groundVelocitySum[Y] - V * (sintheta * fuselageDirectionSum[X] + costheta * fuselageDirectionSum[Y])) * 0.5f;// equation 11
         wind[Z] = (groundVelocitySum[Z] - V * fuselageDirectionSum[Z]) * 0.5f;// equation 12
 
-        DEBUG_SET(DEBUG_ALWAYS, 1, wind[X]);
-        DEBUG_SET(DEBUG_ALWAYS, 2, wind[Y]);
-        DEBUG_SET(DEBUG_ALWAYS, 3, wind[Z]);
-        // DEBUG_SET(DEBUG_ALWAYS, 6, initialEstimate);
-
         static uint8_t spikeFilterResetCounter = 0;     // CR172
-        // DEBUG_SET(DEBUG_ALWAYS, 6, spikeFilterResetCounter);
 
         if (initialEstimate) {
             if (validityScore == 2 * WINDESTIMATOR_VALIDITY_THRESHOLD) {    // CR172
@@ -220,7 +211,7 @@ void updateWindEstimator(timeMs_t currentTimeMs)
                 return;
             }
         }
-DEBUG_SET(DEBUG_ALWAYS, 0, 500);
+
         float filterAlpha = 50.0f / spikeFilterThreshold;  // CR172
         estimatedWind[X] = estimatedWind[X] + filterAlpha * (wind[X] - estimatedWind[X]);
         estimatedWind[Y] = estimatedWind[Y] + filterAlpha * (wind[Y] - estimatedWind[Y]);

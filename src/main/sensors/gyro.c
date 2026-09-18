@@ -510,7 +510,6 @@ void FAST_CODE NOINLINE gyroFilter(void)
          * This happens on the first frequency with the biggest aplitude
          */
         gyroADCf = secondaryDynamicGyroNotchFiltersApply(&secondaryDynamicGyroNotchState, axis, gyroADCf);
-
 #endif
 
 #ifdef USE_GYRO_KALMAN
@@ -518,7 +517,6 @@ void FAST_CODE NOINLINE gyroFilter(void)
             gyroADCf = gyroKalmanUpdate(axis, gyroADCf);
         }
 #endif
-
         gyro.gyroADCf[axis] = gyroADCf;
     }
 
@@ -538,11 +536,9 @@ void FAST_CODE NOINLINE gyroFilter(void)
                 gyroAnalyseState.filterUpdateAxis,
                 gyroAnalyseState.centerFrequency[gyroAnalyseState.filterUpdateAxis]
             );
-
         }
     }
 #endif
-
 }
 
 void FAST_CODE NOINLINE gyroUpdate(void)
