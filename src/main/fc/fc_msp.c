@@ -765,7 +765,7 @@ static bool mspFcProcessOutCommand(uint16_t cmdMSP, sbuf_t *dst, mspPostProcessF
         sbufWriteU8(dst, currentControlProfile->throttle.dynPID);
         sbufWriteU8(dst, currentControlProfile->throttle.rcMid8);
         sbufWriteU8(dst, currentControlProfile->throttle.rcExpo8);
-        sbufWriteU16(dst, currentControlProfile->throttle.pa_breakpoint);
+        sbufWriteU16(dst, currentControlProfile->throttle.tpa_breakpoint);
         sbufWriteU8(dst, currentControlProfile->stabilized.rcYawExpo8);
         break;
 
@@ -774,7 +774,7 @@ static bool mspFcProcessOutCommand(uint16_t cmdMSP, sbuf_t *dst, mspPostProcessF
         sbufWriteU8(dst, currentControlProfile->throttle.rcMid8);
         sbufWriteU8(dst, currentControlProfile->throttle.rcExpo8);
         sbufWriteU8(dst, currentControlProfile->throttle.dynPID);
-        sbufWriteU16(dst, currentControlProfile->throttle.pa_breakpoint);
+        sbufWriteU16(dst, currentControlProfile->throttle.tpa_breakpoint);
 
         // stabilized
         sbufWriteU8(dst, currentControlProfile->stabilized.rcExpo8);
@@ -2080,7 +2080,7 @@ static mspResult_e mspFcProcessInCommand(uint16_t cmdMSP, sbuf_t *src)
             ((controlConfig_t*)currentControlProfile)->throttle.dynPID = MIN(tmp_u8, SETTING_TPA_RATE_MAX);
             ((controlConfig_t*)currentControlProfile)->throttle.rcMid8 = sbufReadU8(src);
             ((controlConfig_t*)currentControlProfile)->throttle.rcExpo8 = sbufReadU8(src);
-            ((controlConfig_t*)currentControlProfile)->throttle.pa_breakpoint = sbufReadU16(src);
+            ((controlConfig_t*)currentControlProfile)->throttle.tpa_breakpoint = sbufReadU16(src);
             if (dataSize > 10) {
                 ((controlConfig_t*)currentControlProfile)->stabilized.rcYawExpo8 = sbufReadU8(src);
             }
@@ -2099,7 +2099,7 @@ static mspResult_e mspFcProcessInCommand(uint16_t cmdMSP, sbuf_t *src)
             currentControlProfile_p->throttle.rcMid8 = sbufReadU8(src);
             currentControlProfile_p->throttle.rcExpo8 = sbufReadU8(src);
             currentControlProfile_p->throttle.dynPID = sbufReadU8(src);
-            currentControlProfile_p->throttle.pa_breakpoint = sbufReadU16(src);
+            currentControlProfile_p->throttle.tpa_breakpoint = sbufReadU16(src);
 
             // stabilized
             currentControlProfile_p->stabilized.rcExpo8 = sbufReadU8(src);
