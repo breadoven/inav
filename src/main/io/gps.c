@@ -343,7 +343,9 @@ void updateEstimatedGPSFix(void)
 
 void gpsProcessNewDriverData(void)
 {
+    const bool gpsHeartbeat = gpsSol.flags.gpsHeartbeat;
     gpsSol = gpsSolDRV;
+    gpsSol.flags.gpsHeartbeat = gpsHeartbeat;
 
 #ifdef USE_GPS_FIX_ESTIMATION
     processDisableGPSFix();
