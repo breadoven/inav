@@ -507,10 +507,10 @@ static int16_t tpaPitchThrottleAdjustment(void)
     const uint8_t tpaPitchCompensationValue = currentControlProfile->throttle.tpa_pitch_compensation;
     int16_t tpaThrottleAdjustment = 0;
 
-    if (currentControlProfile->throttle.fixedWingTauMs && tpaPitchCompensationValue) {
+    if (tpaPitchCompensationValue) {
         tpaThrottleAdjustment = constrain(tpaPitchCompensationValue * RADIANS_TO_DEGREES(-HeadVecEFFiltered.z), -PWM_RANGE_MIN, PWM_RANGE_MIN);
     }
-DEBUG_SET(DEBUG_ALWAYS, 4, tpaThrottleAdjustment);
+
     return tpaThrottleAdjustment;
 }
 
@@ -525,7 +525,11 @@ static float calculateFixedWingTPAFactor(uint16_t throttle)
     // tpa_breakpoint for fixed wing is cruise throttle value (value at which PIDs were tuned)
     if (ARMING_FLAG(ARMED) && !FLIGHT_MODE(AUTO_TUNE) && dynamicPID && tpaBreakpoint > throttleIdleValue) {
         uint16_t pitchThrottleSpeedFactor = constrain(throttle + tpaPitchThrottleAdjustment(), throttleIdleValue + 1, getMaxThrottle());
-        pitchThrottleSpeedFactor = pt1FilterApply(&fixedWingTpaFilter, pitchThrottleSpeedFactor);
+
+        if (currentControlProfile->throttle.fixedWingTauMs) {
+            pitchThrottleSpeedFactor = pt1FilterApply(&fixedWingTpaFilter, pitchThrottleSpeedFactor);
+        }
+        DEBUG_SET(DEBUG_ALWAYS, 4, currentControlProfile->throttle.fixedWingTauMs);
 DEBUG_SET(DEBUG_ALWAYS, 5, pitchThrottleSpeedFactor);
         // Calculate TPA according to throttle with compensation for pitch attitude
         tpaFactor = 0.5f + 0.5f * ((tpaBreakpoint - throttleIdleValue) / (float)(pitchThrottleSpeedFactor - throttleIdleValue));
