@@ -85,6 +85,17 @@ typedef enum {
     INPUT_RC_CH33                   = 58,
     INPUT_RC_CH34                   = 59,
     INPUT_MIXER_SWITCH_HELPER       = 60,
+#ifdef USE_AUTO_TRANSITION
+    INPUT_AUTOTRANSITION_TARGET_STABILIZED_ROLL     = 61,
+    INPUT_AUTOTRANSITION_TARGET_STABILIZED_PITCH    = 62,
+    INPUT_AUTOTRANSITION_TARGET_STABILIZED_YAW      = 63,
+    INPUT_AUTOTRANSITION_TARGET_STABILIZED_ROLL_PLUS = 64,
+    INPUT_AUTOTRANSITION_TARGET_STABILIZED_ROLL_MINUS = 65,
+    INPUT_AUTOTRANSITION_TARGET_STABILIZED_PITCH_PLUS = 66,
+    INPUT_AUTOTRANSITION_TARGET_STABILIZED_PITCH_MINUS = 67,
+    INPUT_AUTOTRANSITION_TARGET_STABILIZED_YAW_PLUS = 68,
+    INPUT_AUTOTRANSITION_TARGET_STABILIZED_YAW_MINUS = 69,
+#endif
     INPUT_SOURCE_COUNT
 } inputSource_e;
 
@@ -177,7 +188,6 @@ typedef struct servoConfig_s {
     uint8_t servo_protocol;                 // See servoProtocolType_e
     uint8_t tri_unarmed_servo;              // send tail servo correction pulses even when unarmed
     uint8_t servo_autotrim_rotation_limit;  // Max rotation for servo midpoints to be updated
-    uint8_t servo_autotrim_iterm_threshold; // How much of the Iterm is carried over to the servo midpoints on each update
 } servoConfig_t;
 
 PG_DECLARE(servoConfig_t, servoConfig);
@@ -195,6 +205,10 @@ void setServoOutputEnabled(bool flag);
 bool isMixerUsingServos(void);
 void writeServos(void);
 void loadCustomServoMixer(void);
+void servoMixerSetCarryoverOnNextLoad(bool enabled);
+#ifdef USE_AUTO_TRANSITION
+int32_t servoMixerGetVtolTransitionDebug(uint8_t slot);
+#endif
 void servoMixer(float dT);
 void servoComputeScalingFactors(uint8_t servoIndex);
 void servosInit(void);

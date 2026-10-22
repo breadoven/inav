@@ -61,7 +61,7 @@ float navPidApply3(
         pid->last_input = (pidFlags & PID_DTERM_FROM_ERROR) ? error : measurement;
         pid->reset = false;
     }
-// CR171
+
     /* Default to Measurement tracking D-term */
     float trackingTerm = measurement;
     int8_t sign = -1;
@@ -79,12 +79,7 @@ float navPidApply3(
     }
 
     newDerivative = sign * trackingDelta / dt;
-    // if (pidFlags & PID_USING_HEADING) {
-        // DEBUG_SET(DEBUG_ALWAYS, 0, trackingTerm);
-        // DEBUG_SET(DEBUG_ALWAYS, 1, trackingDelta);
-        // DEBUG_SET(DEBUG_ALWAYS, 2, newDerivative);
-    // }
-// CR171
+
     if (pid->dTermLpfHz > 0.0f) {
         newDerivative = pid->param.kD * pt1FilterApply3(&pid->dterm_filter_state, newDerivative, dt);
     } else {
@@ -118,10 +113,7 @@ float navPidApply3(
     pid->output_constrained = outValConstrained;
 
     /* Update I-term */
-    if (
-        !(pidFlags & PID_ZERO_INTEGRATOR) &&
-        !(pidFlags & PID_FREEZE_INTEGRATOR)
-    ) {
+    if (!(pidFlags & PID_ZERO_INTEGRATOR) && !(pidFlags & PID_FREEZE_INTEGRATOR)) {
         const float newIntegrator = pid->integrator + (error * pid->param.kI * gainScaler * dt) + (backCalc * pid->param.kT * dt);
 
         if (pidFlags & PID_SHRINK_INTEGRATOR) {
@@ -184,8 +176,8 @@ void navPidInit(pidController_t *pid, float _kP, float _kI, float _kD, float _kF
     pid->dTermLpfHz = _dTermLpfHz;
     pid->errorLpfHz = _errorLpfHz;
 
-    pt1FilterSetCutoff(&pid->error_filter_state, pid->errorLpfHz);
     pt1FilterSetCutoff(&pid->dterm_filter_state, pid->dTermLpfHz);
+    pt1FilterSetCutoff(&pid->error_filter_state, pid->errorLpfHz);
 
     navPidReset(pid);
 }

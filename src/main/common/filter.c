@@ -41,7 +41,9 @@ float nullFilterApply3(void *filter, float input, float dt)
     return input;
 }
 
-// PT1 Low Pass filter
+/* PT1 Low Pass filter
+ * f_cut = cutoff frequency. Use pt1FilterSetTimeConstant to directly set RC time constant tau if required.
+ */
 
 static float pt1ComputeRC(const float f_cut)
 {
@@ -56,7 +58,7 @@ void pt1FilterInit(pt1Filter_t *filter, float f_cut, float dT)
     filter->state = 0.0f;
 }
 
-float FAST_CODE NOINLINE pt1FilterApply(pt1Filter_t *filter, float input)  // use with filter init if dT and F_cut are constants
+float FAST_CODE NOINLINE pt1FilterApply(pt1Filter_t *filter, float input)  // use with pt1FilterInit if dT and f_cut are constants
 {
     return filter->state = filter->state + filter->alpha * (input - filter->state);
 }

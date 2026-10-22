@@ -73,8 +73,8 @@ static bool wasLimitingPower = false;
 #endif
 
 void powerLimiterInit(void) {
-    const float attnFilterCutoff = powerLimitsConfig()->attnFilterCutoff; 
-    
+    const float attnFilterCutoff = powerLimitsConfig()->attnFilterCutoff;
+
     // Only enforce burst >= continuous if burst is enabled (non-zero)
     // A value of 0 means "disabled/unlimited", not "zero amps allowed"
     if (currentBatteryProfile->powerLimits.burstCurrent > 0 &&
@@ -161,7 +161,7 @@ void powerLimiterApply(int16_t *throttleCommand) {
 
     int16_t current = getAmperageSample();
 #ifdef USE_ADC
-    uint16_t voltage = getVBatSample();
+    uint16_t voltage = getBatteryVoltageSample();
     int32_t power = (int32_t)voltage * current / 100;
 #endif
 
@@ -174,8 +174,7 @@ void powerLimiterApply(int16_t *throttleCommand) {
 
     float currentThrAttnProportional = MAX(0, overCurrent) * powerLimitsConfig()->piP * 1e-3f;
 
-    uint16_t currentThrAttn = lrintf(pt1FilterApply3(&currentThrAttnFilter, currentThrAttnProportional + currentThrAttnIntegrator, US2S(callTimeDelta))); 
-
+    uint16_t currentThrAttn = lrintf(pt1FilterApply3(&currentThrAttnFilter, currentThrAttnProportional + currentThrAttnIntegrator, US2S(callTimeDelta)));
     throttleBase = wasLimitingCurrent ? lrintf(pt1FilterApply3(&currentThrLimitingBaseFilter, *throttleCommand, US2S(callTimeDelta))) : *throttleCommand;
     uint16_t currentThrAttned = MAX(PWM_RANGE_MIN, (int16_t)throttleBase - currentThrAttn);
 
@@ -203,9 +202,8 @@ void powerLimiterApply(int16_t *throttleCommand) {
 
     float powerThrAttnProportional = MAX(0, overPower) * powerLimitsConfig()->piP / voltage * 1e-1f;
 
-    uint16_t powerThrAttn = lrintf(pt1FilterApply3(&powerThrAttnFilter, powerThrAttnProportional + powerThrAttnIntegrator, US2S(callTimeDelta)));  
-
-    throttleBase = wasLimitingPower ? lrintf(pt1FilterApply3(&powerThrLimitingBaseFilter, *throttleCommand, US2S(callTimeDelta))) : *throttleCommand;  
+    uint16_t powerThrAttn = lrintf(pt1FilterApply3(&powerThrAttnFilter, powerThrAttnProportional + powerThrAttnIntegrator, US2S(callTimeDelta)));
+    throttleBase = wasLimitingPower ? lrintf(pt1FilterApply3(&powerThrLimitingBaseFilter, *throttleCommand, US2S(callTimeDelta))) : *throttleCommand;
     uint16_t powerThrAttned = MAX(PWM_RANGE_MIN, (int16_t)throttleBase - powerThrAttn);
 
     if (activePowerLimit && powerThrAttned < *throttleCommand) {

@@ -95,7 +95,6 @@ typedef float (*filterApply3FnPtr)(void *filter, float input, float dt);
 
 float nullFilterApply(void *filter, float input);
 float nullFilterApply3(void *filter, float input, float dt);
-
 void pt1FilterInit(pt1Filter_t *filter, float f_cut, float dT);
 float pt1FilterApply(pt1Filter_t *filter, float input);
 float pt1FilterApply3(pt1Filter_t *filter, float input, float dT);

@@ -245,18 +245,13 @@ STATIC_PROTOTHREAD(pitotThread)
 
     // Init filter
     pitot.lastMeasurementUs = micros();
+
     const uint16_t pitot_lpf_milli_hz = pitotmeterConfig()->pitot_lpf_milli_hz;
     if (pitot_lpf_milli_hz > 0) {
         pt1FilterSetCutoff(&pitot.lpfState, pitot_lpf_milli_hz);
     }
 
     while(1) {
-        // if (pitot.lastSeenHealthyMs == 0) {
-            // if (pitot.dev.start(&pitot.dev)) {
-                // pitot.lastSeenHealthyMs = millis();
-            // }
-        // }
-
         if ((millis() - pitot.lastSeenHealthyMs) >= US2MS(pitot.dev.delay)) {
             if (pitot.lastSeenHealthyMs > 0 && pitot.dev.get(&pitot.dev)) {    // read current data
                 pitot.lastSeenHealthyMs = millis();
@@ -326,15 +321,20 @@ static float getWindEstimatedVirtualAirspeed(void)
 {
     static float virtualAirspeed = 0.0f;
     static timeMs_t lastUpdateTimeMs = 0;
-    timeMs_t currentTimeMs = millis();
+    const timeMs_t currentTimeMs = millis();
 
     if (currentTimeMs - lastUpdateTimeMs > 100) {   // 10Hz update rate should be sufficient for virtual airspeed
         lastUpdateTimeMs = currentTimeMs;
 
         fpVector3_t windCorrectedVel;
+
+        // Correct nav velocities with estimated wind velocities in earth frame
+        // Z: posControl.actualState.abs.vel.z and getEstimatedWindSpeed(Z) are both NEU
         for (uint8_t axis = 0; axis < XYZ_AXIS_COUNT; axis++) {
             windCorrectedVel.v[axis] = posControl.actualState.abs.vel.v[axis] - getEstimatedWindSpeed(axis);
         }
+
+        // Transform to body frame to obtain virtual airspeed in the x direction
         imuTransformVectorEarthToBody(&windCorrectedVel);
 
         virtualAirspeed = fabsf(windCorrectedVel.x);
@@ -353,7 +353,7 @@ static float getVirtualAirspeedEstimate(void)
         } else
 #endif
         {
-            return posControl.actualState.vel3D ;
+            return posControl.actualState.vel3D;
         }
     }
 #endif
@@ -380,6 +380,7 @@ void pitotUpdate(void)
         pitotThread();
     }
 
+    // Check pitot airspeed validity and cache result for external use
     pitotAirspeedValidCached = isPitotAirspeedValid();
 }
 
@@ -397,6 +398,7 @@ float getAirspeedEstimate(void)
             return virtualAirspeed;
         }
     }
+
     return pitot.airSpeed;
 }
 
@@ -450,14 +452,19 @@ bool pitotHasFailed(void)
     return pitotHardwareFailed;
 }
 
+static bool isGpsVelocityUsable(void)
+{
+    return STATE(GPS_FIX) && gpsSol.flags.validVelNE && gpsSol.flags.validVelD;
+}
+
 static bool isPitotAirspeedValid(void)
 {
     bool ret = false;
     ret = pitotIsHealthy() && pitotIsCalibrationComplete();
 #if defined(USE_WIND_ESTIMATOR) && defined(USE_PITOT_VIRTUAL)
-    // For virtual pitot, we need GPS fix and valid wind estimate
+    // For virtual pitot, we need GPS fix, current GPS velocity and a valid wind estimate
     if (detectedSensors[SENSOR_INDEX_PITOT] == PITOT_VIRTUAL) {
-        return ret && STATE(GPS_FIX) && isEstimatedWindSpeedValid();
+        return ret && isGpsVelocityUsable() && isEstimatedWindSpeedValid();
     }
 #endif
     // For hardware pitot sensors, validate readings against GPS when armed
@@ -499,9 +506,9 @@ static bool isPitotAirspeedValid(void)
             pitotRecoveryCounter = 0;
         }
 
-        // If pitot has failed sanity checks, require GPS fix (like virtual pitot)
+        // A failed pitot is only usable through the GPS-based virtual airspeed, never its own reading
         if (pitotHardwareFailed) {
-            ret = ret && STATE(GPS_FIX);
+            ret = ret && isGpsVelocityUsable() && getVirtualAirspeedEstimate() > 0.0f;
         }
     }
 

@@ -42,7 +42,7 @@ void impl_timerInitContext(timHardwareContext_t * timCtx)
 {
     (void)timCtx;   // NoOp
 }
-// Configure the interrupt priority 
+// Configure the interrupt priority
 void impl_timerNVICConfigure(TCH_t * tch, int irqPriority)
 {
     if (tch->timCtx->timDef->irq) {
@@ -115,7 +115,7 @@ void impl_timerChConfigIC(TCH_t * tch, bool polarityRising, unsigned inputFilter
 
     tmr_input_default_para_init(&tmr_input_config_struct);
     tmr_input_config_struct.input_channel_select = lookupTIMChannelTable[tch->timHw->channelIndex];
-    tmr_input_config_struct.input_mapped_select = TMR_CC_CHANNEL_MAPPED_DIRECT; 
+    tmr_input_config_struct.input_mapped_select = TMR_CC_CHANNEL_MAPPED_DIRECT;
     tmr_input_config_struct.input_polarity_select = polarityRising ? TMR_INPUT_RISING_EDGE:TMR_INPUT_FALLING_EDGE;
     tmr_input_config_struct.input_filter_value = getFilter(inputFilterTicks);
     tmr_input_channel_init(tch->timHw->tim,&tmr_input_config_struct,TMR_CHANNEL_INPUT_DIV_1);
@@ -132,7 +132,7 @@ void impl_timerCaptureCompareHandler(tmr_type *tim, timHardwareContext_t *timerC
         unsigned mask = ~(0x80000000 >> bit);
         tim->ists = mask;
         tim_status &= mask;
- 
+
         if (timerCtx) {
             switch (bit) {
                 case __builtin_clz(TMR_OVF_INT): {
@@ -197,8 +197,8 @@ void impl_timerPWMConfigChannel(TCH_t * tch, uint16_t value)
     const bool inverted = tch->timHw->output & TIMER_OUTPUT_INVERTED;
     tmr_output_config_type tmr_output_struct;
     tmr_output_default_para_init(&tmr_output_struct);
-    tmr_output_struct.oc_mode = TMR_OUTPUT_CONTROL_PWM_MODE_A; 
-     
+    tmr_output_struct.oc_mode = TMR_OUTPUT_CONTROL_PWM_MODE_A;
+
     if (tch->timHw->output & TIMER_OUTPUT_N_CHANNEL) {
             tmr_output_struct.oc_output_state = FALSE;
             tmr_output_struct.occ_output_state = TRUE;
@@ -215,28 +215,28 @@ void impl_timerPWMConfigChannel(TCH_t * tch, uint16_t value)
         case 0:
             tmr_output_channel_config(tch->timHw->tim,TMR_SELECT_CHANNEL_1, &tmr_output_struct);
             tmr_channel_value_set(tch->timHw->tim, TMR_SELECT_CHANNEL_1, value);
-            tmr_output_channel_buffer_enable(tch->timHw->tim,TMR_SELECT_CHANNEL_1,TRUE); 
+            tmr_output_channel_buffer_enable(tch->timHw->tim,TMR_SELECT_CHANNEL_1,TRUE);
              break;
         case 1:
             tmr_output_channel_config(tch->timHw->tim,TMR_SELECT_CHANNEL_2, &tmr_output_struct);
             tmr_channel_value_set(tch->timHw->tim, TMR_SELECT_CHANNEL_2, value);
-            tmr_output_channel_buffer_enable(tch->timHw->tim,TMR_SELECT_CHANNEL_2,TRUE); 
+            tmr_output_channel_buffer_enable(tch->timHw->tim,TMR_SELECT_CHANNEL_2,TRUE);
 
             break;
         case 2:
             tmr_output_channel_config(tch->timHw->tim,TMR_SELECT_CHANNEL_3, &tmr_output_struct);
             tmr_channel_value_set(tch->timHw->tim, TMR_SELECT_CHANNEL_3, value);
-            tmr_output_channel_buffer_enable(tch->timHw->tim,TMR_SELECT_CHANNEL_3,TRUE); 
- 
+            tmr_output_channel_buffer_enable(tch->timHw->tim,TMR_SELECT_CHANNEL_3,TRUE);
+
             break;
         case 3:
             tmr_output_channel_config(tch->timHw->tim,TMR_SELECT_CHANNEL_4, &tmr_output_struct);
             tmr_channel_value_set(tch->timHw->tim, TMR_SELECT_CHANNEL_4, value);
-            tmr_output_channel_buffer_enable(tch->timHw->tim,TMR_SELECT_CHANNEL_4,TRUE); 
+            tmr_output_channel_buffer_enable(tch->timHw->tim,TMR_SELECT_CHANNEL_4,TRUE);
 
             break;
     }
-  
+
 }
 
 volatile timCCR_t * impl_timerCCR(TCH_t * tch)
@@ -267,15 +267,31 @@ void impl_timerChCaptureCompareEnable(TCH_t * tch, bool enable)
 // lookupDMASourceTable
 static void impl_timerDMA_IRQHandler(DMA_t descriptor)
 {
-    if (DMA_GET_FLAG_STATUS(descriptor, DMA_IT_TCIF)) {
-        TCH_t * tch = (TCH_t *)descriptor->userParam;
+    TCH_t * tch = (TCH_t *)descriptor->userParam;
 
-        // In circular mode, let DMA keep running - don't disable the channel
-        if (tch->dmaState == TCH_DMA_CIRCULAR) {
-            DMA_CLEAR_FLAG(descriptor, DMA_IT_TCIF);
-            return;
+    if (tch->dmaState == TCH_DMA_CIRCULAR) {
+        // Let DMA keep running - don't disable the channel. HT/TC are only
+        // enabled here when a refill callback is registered (see
+        // impl_timerPWMSetDMACircular); non-refilling circular consumers
+        // never reach this branch.
+        if (DMA_GET_FLAG_STATUS(descriptor, DMA_IT_HTIF)) {
+            DMA_CLEAR_FLAG(descriptor, DMA_IT_HTIF);
+            if (tch->dmaRefillCallback) {
+                tch->dmaRefillCallback(tch, false);
+            }
         }
 
+        if (DMA_GET_FLAG_STATUS(descriptor, DMA_IT_TCIF)) {
+            DMA_CLEAR_FLAG(descriptor, DMA_IT_TCIF);
+            if (tch->dmaRefillCallback) {
+                tch->dmaRefillCallback(tch, true);
+            }
+        }
+
+        return;
+    }
+
+    if (DMA_GET_FLAG_STATUS(descriptor, DMA_IT_TCIF)) {
         tch->dmaState = TCH_DMA_IDLE;
         dma_channel_enable(tch->dma->ref,FALSE);
         tmr_dma_request_enable(tch->timHw->tim, lookupDMASourceTable[tch->timHw->channelIndex], FALSE);
@@ -283,14 +299,19 @@ static void impl_timerDMA_IRQHandler(DMA_t descriptor)
     }
 }
 
+void impl_timerPWMSetDMARefillCallback(TCH_t * tch, timerDmaRefillFn * callback)
+{
+    tch->dmaRefillCallback = callback;
+}
+
 bool impl_timerPWMConfigChannelDMA(TCH_t * tch, void * dmaBuffer, uint8_t dmaBufferElementSize, uint32_t dmaBufferElementCount)
 {
     dma_init_type dma_init_struct = {0};
     tmr_type * timer = tch->timHw->tim;
-    
+
     tch->dma = dmaGetByTag(tch->timHw->dmaTag);
     if (tch->dma == NULL) {
-        return false;  
+        return false;
     }
 
     // If DMA is already in use - abort
@@ -308,11 +329,11 @@ bool impl_timerPWMConfigChannelDMA(TCH_t * tch, void * dmaBuffer, uint8_t dmaBuf
 
     tmr_counter_enable(timer, TRUE);
     dmaInit(tch->dma, OWNER_TIMER, 0);
-    
+
     dmaSetHandler(tch->dma, impl_timerDMA_IRQHandler, NVIC_PRIO_TIMER_DMA, (uint32_t)tch);
     dma_reset(tch->dma->ref);
     dma_channel_enable(tch->dma->ref,FALSE);
-    
+
     dma_reset(tch->dma->ref);
     dma_default_para_init(&dma_init_struct);
 
@@ -325,7 +346,7 @@ bool impl_timerPWMConfigChannelDMA(TCH_t * tch, void * dmaBuffer, uint8_t dmaBuf
     switch (dmaBufferElementSize) {
         case 1:
             dma_init_struct.memory_data_width = DMA_MEMORY_DATA_WIDTH_BYTE;
-            dma_init_struct.peripheral_data_width = DMA_PERIPHERAL_DATA_WIDTH_BYTE;  
+            dma_init_struct.peripheral_data_width = DMA_PERIPHERAL_DATA_WIDTH_BYTE;
             break;
         case 2:
             dma_init_struct.memory_data_width = DMA_MEMORY_DATA_WIDTH_HALFWORD;
@@ -354,10 +375,10 @@ bool impl_timerPWMConfigChannelDMA(TCH_t * tch, void * dmaBuffer, uint8_t dmaBuf
 }
 
 void impl_timerPWMPrepareDMA(TCH_t * tch, uint32_t dmaBufferElementCount)
-{ 
+{
     tch->dma = dmaGetByTag(tch->timHw->dmaTag);
     if (tch->dma == NULL) {
-        return ;  
+        return ;
     }
 
     // Make sure we terminate any DMA transaction currently in progress
@@ -368,10 +389,10 @@ void impl_timerPWMPrepareDMA(TCH_t * tch, uint32_t dmaBufferElementCount)
         tmr_dma_request_enable(tch->timHw->tim, lookupDMASourceTable[tch->timHw->channelIndex], FALSE);
         // clear dma flag
         DMA_CLEAR_FLAG(tch->dma, DMA_IT_TCIF);
-        
+
     }
-    dma_data_number_set(tch->dma->ref, dmaBufferElementCount); 
-     
+    dma_data_number_set(tch->dma->ref, dmaBufferElementCount);
+
     dma_channel_enable(tch->dma->ref,TRUE);
     tch->dmaState = TCH_DMA_READY;
 }
@@ -411,6 +432,13 @@ void impl_timerPWMStopDMA(TCH_t * tch)
 {
     tmr_dma_request_enable(tch->timHw->tim, lookupDMASourceTable[tch->timHw->channelIndex], FALSE);
     dma_channel_enable(tch->dma->ref,FALSE);
+
+    // AT32: poll enable bit until channel is actually disabled
+    uint32_t timeout = 10000; // ~40us at 288MHz, well above worst-case disable latency
+    while (tch->dma->ref->ctrl_bit.chen && timeout--) {
+        __NOP();
+    }
+
     tch->dmaState = TCH_DMA_IDLE;
     tmr_counter_enable(tch->timHw->tim, TRUE);
 }
@@ -441,12 +469,20 @@ void impl_timerPWMSetDMACircular(TCH_t * tch, bool circular, void * dmaBuffer, u
 
         if (circular) {
             tch->dma->ref->ctrl_bit.lm = TRUE;
-            // Disable TC interrupt — in circular mode, TC fires every cycle
-            // and the IRQ handler would otherwise disable the channel
-            dma_interrupt_enable(tch->dma->ref, DMA_IT_TCIF, FALSE);
+            if (tch->dmaRefillCallback) {
+                // Refill consumer needs an IRQ every half-cycle to keep the
+                // buffer fed
+                dma_interrupt_enable(tch->dma->ref, DMA_IT_HTIF, TRUE);
+                dma_interrupt_enable(tch->dma->ref, DMA_IT_TCIF, TRUE);
+            } else {
+                // Disable TC interrupt — in circular mode, TC fires every cycle
+                // and the IRQ handler would otherwise disable the channel
+                dma_interrupt_enable(tch->dma->ref, DMA_IT_TCIF, FALSE);
+            }
             tch->dmaState = TCH_DMA_CIRCULAR;
         } else {
             tch->dma->ref->ctrl_bit.lm = FALSE;
+            dma_interrupt_enable(tch->dma->ref, DMA_IT_HTIF, FALSE);
             dma_interrupt_enable(tch->dma->ref, DMA_IT_TCIF, TRUE);
             tch->dmaState = TCH_DMA_IDLE;
         }

@@ -22,7 +22,7 @@
 
 #include "platform.h"
 
-#if !defined(SITL_BUILD)
+#if !defined(SITL_BUILD) && !defined(RP2350)
 
 #include "build/atomic.h"
 #include "build/debug.h"
@@ -37,6 +37,7 @@
 #include "drivers/timer.h"
 #include "drivers/pwm_mapping.h"
 #include "drivers/pwm_output.h"
+#include "io/motor_srxl2.h"
 #include "io/servo_sbus.h"
 #include "sensors/esc_sensor.h"
 
@@ -697,6 +698,20 @@ void pwmMotorPreconfigure(void)
             motorWritePtr = pwmWriteDigital;
             break;
 #endif
+
+#ifdef USE_MOTOR_SRXL2
+        case PWM_TYPE_SRXL2:
+            /* Nothing to fall back on if this fails: the pin is a UART pin, not a
+             * timer output, so there is no PWM to degrade to. Leaving
+             * motorWritePtr null keeps the motor unwritten, which is the honest
+             * outcome of a port that was never assigned. */
+            if (srxl2MotorInitialize()) {
+                srxl2MotorSetReverseChannel(motorConfig()->srxl2ReverseChannel);
+                srxl2MotorSetTelemetryRate(motorConfig()->srxl2TelemetryRate);
+                motorWritePtr = srxl2MotorUpdate;
+            }
+            break;
+#endif
     }
 }
 
@@ -776,6 +791,17 @@ ioTag_t pwmGetMotorPinTag(int motorIndex)
     }
 }
 
+// Helper function for ESC passthrough: hand the pin back to its timer after the 4-way
+// interface drove it as plain GPIO. The alternate function has to be given explicitly:
+// on HAL targets a bare IOConfigGPIO(IOCFG_AF_PP) programs AF0 and the timer loses the pin.
+void pwmRestoreMotorPin(int motorIndex)
+{
+    if (motors[motorIndex].pwmPort) {
+        const timerHardware_t *timHw = motors[motorIndex].pwmPort->tch->timHw;
+        IOConfigGPIOAF(IOGetByTag(timHw->tag), IOCFG_AF_PP, timHw->alternateFunction);
+    }
+}
+
 static void pwmServoWriteStandard(uint8_t index, uint16_t value)
 {
     if (index < MAX_SERVOS && servos[index]) {
@@ -845,7 +871,7 @@ void pwmWriteBeeper(bool onoffBeep)
     }
 }
 
-void beeperPwmInit(ioTag_t tag, uint16_t frequency)
+bool beeperPwmInit(ioTag_t tag, uint16_t frequency)
 {
     beeperPwm = NULL;
 
@@ -855,14 +881,17 @@ void beeperPwmInit(ioTag_t tag, uint16_t frequency)
         // Attempt to allocate TCH
         TCH_t * tch = timerGetTCH(timHw);
         if (tch == NULL) {
-            return;
+            return false;
         }
 
         beeperPwm = &beeperPwmPort;
         beeperFrequency = frequency;
         IOConfigGPIOAF(IOGetByTag(tag), IOCFG_AF_PP, timHw->alternateFunction);
         pwmOutConfigTimer(beeperPwm, tch, PWM_TIMER_HZ, 1000000 / beeperFrequency, (1000000 / beeperFrequency) / 2);
+        return true;
     }
+
+    return false;
 }
 
 #endif

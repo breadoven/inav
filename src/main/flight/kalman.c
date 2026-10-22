@@ -58,7 +58,7 @@ float kalman_process(kalman_t *kalmanState, float input)
     // update last state
     kalmanState->lastX = kalmanState->x;
 
-    if (fabsf(kalmanState->lastX) > 1e-9f) {
+    if (fabsf(kalmanState->lastX) > 1e-9f) {    // small number rather than 0 to prevent float inf/NaN issue as lastX tends toward 0
         kalmanState->e = fabsf(1.0f - (kalmanState->setpoint / kalmanState->lastX));
     }
 

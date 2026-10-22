@@ -36,4 +36,5 @@ extern virtualRangefinderVTable_t rangefinderNanoradarVtable; //NRA15/NRA24
 extern virtualRangefinderVTable_t rangefinderFakeVtable;
 extern void fakeRangefindersSetData(int32_t data);
 
-void mspRangefinderReceiveNewData(uint8_t * bufferPtr);
+void mspRangefinderReceiveNewData(uint8_t * bufferPtr, unsigned int dataSize);
+void fakeRangefindersSetData(int32_t data);
