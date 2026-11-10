@@ -6825,7 +6825,7 @@ bool activateRTHMode(void)
 #ifdef USE_SAFE_HOME
     checkSafeHomeState(true);
 #endif
-    navProcessFSMEvents(selectNavEventFromBoxModeInput());
+    navProcessFSMEvents(selectNavEventFromBoxModeInput(false));   // CR6
 
     if ((navGetStateFlags(posControl.navState) & NAV_AUTO_RTH)
 #ifdef USE_AUTO_TRANSITION
@@ -6838,7 +6838,7 @@ bool activateRTHMode(void)
     rcModeClearActivationOverride(BOXNAVRTH);
     if (previousOverride != BOXID_NONE) {
         rcModeSetActivationOverride(previousOverride);
-        navProcessFSMEvents(selectNavEventFromBoxModeInput());
+        navProcessFSMEvents(selectNavEventFromBoxModeInput(false));   // CR6
     }
     return false;
 }
@@ -6857,7 +6857,7 @@ bool activatePositionHoldMode(void)
     posControl.flags.forcedRTHActivated = false;
     posControl.flags.forcedLandingActivated = false;
     const boxId_e previousOverride = rcModeSetActivationOverride(BOXNAVPOSHOLD);
-    navProcessFSMEvents(selectNavEventFromBoxModeInput());
+    navProcessFSMEvents(selectNavEventFromBoxModeInput(false));   // CR6
 
     if (navGetStateFlags(posControl.navState) & NAV_CTL_HOLD) {
         setDesiredPosition(&navGetCurrentActualPositionAndVelocity()->pos, posControl.actualState.yaw, NAV_POS_UPDATE_XY | NAV_POS_UPDATE_Z | NAV_POS_UPDATE_HEADING);
@@ -6867,7 +6867,7 @@ bool activatePositionHoldMode(void)
     rcModeClearActivationOverride(BOXNAVPOSHOLD);
     if (previousOverride != BOXID_NONE) {
         rcModeSetActivationOverride(previousOverride);
-        navProcessFSMEvents(selectNavEventFromBoxModeInput());
+        navProcessFSMEvents(selectNavEventFromBoxModeInput(false));   // CR6
     }
     return false;
 }
