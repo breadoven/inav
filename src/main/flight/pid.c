@@ -160,6 +160,11 @@ static EXTENDED_FASTRAM int16_t headingHoldTarget;
 static EXTENDED_FASTRAM pt1Filter_t headingHoldRateFilter;
 static EXTENDED_FASTRAM pt1Filter_t fixedWingTpaFilter;
 
+// Time constant of an I-term that opposes a big stick input while the lock holds it (see iTermLockApply)
+#define FW_ITERM_LOCK_FADE_S        0.5f
+// Rate target, as a fraction of the maximum rate, from which the lock counts a stick input as big
+#define FW_ITERM_LOCK_BIG_STICK     0.2f
+
 // Thrust PID Attenuation factor. 0.0f means fully attenuated, 1.0f no attenuation is applied
 STATIC_FASTRAM bool pidGainsUpdateRequired= true;
 FASTRAM int16_t axisPID[FLIGHT_DYNAMICS_INDEX_COUNT];
@@ -713,8 +718,7 @@ static void updateAutoTransitionTargetPIDCoefficients(const controlConfig_t *con
     const pidBank_t *targetPidBank = targetIsFixedWing ? &targetPidProfile->bank_fw : &targetPidProfile->bank_mc;
 
     if (targetIsFixedWing) {
-        if (controlProfile->throttle.apa_pow > 0 &&
-            pitotGetValidForAirspeed()) {
+        if (controlProfile->throttle.apa_pow > 0 && pitotIsValidForAirspeed(false)) {
             tpaFactor = calculateAutoTransitionTargetAirspeedTPAFactor(targetPidProfile, controlProfile);
             iTermFactor = calculateAutoTransitionTargetAirspeedITermFactor(targetPidProfile, controlProfile);
         } else {
@@ -915,7 +919,7 @@ static void pidAutoTransitionTargetTurnAssistant(
         }
 
 #if defined(USE_PITOT)
-        float airspeedForCoordinatedTurn = sensors(SENSOR_PITOT) && pitotIsHealthy() ? getAirspeedEstimate() : targetPidProfile->fixedWingReferenceAirspeed;
+        float airspeedForCoordinatedTurn = pitotIsValidForAirspeed(false) ? getAirspeedEstimate() : targetPidProfile->fixedWingReferenceAirspeed;
 #else
         float airspeedForCoordinatedTurn = targetPidProfile->fixedWingReferenceAirspeed;
 #endif
@@ -1063,7 +1067,7 @@ static void applyAutoTransitionTargetItermLock(autoTransitionTargetPidState_t *p
     const float dampingFactor = attenuation(rateTarget, maxRate * targetPidProfile->fwItermLockRateLimit / 100.0f);
     const bool errorThresholdReached = fabsf(rateError) > maxRate * targetPidProfile->fwItermLockEngageThreshold / 100.0f;
 
-    if (fabsf(rateTarget) > maxRate * 0.2f) {
+    if (fabsf(rateTarget) > maxRate * FW_ITERM_LOCK_BIG_STICK) {
         pidState->attenuation.targetOverThresholdTimeMs = pidLoopNowMs;
     }
 
@@ -1114,6 +1118,11 @@ static int16_t applyAutoTransitionTargetFixedWingRateController(autoTransitionTa
 
     if (!itermFreezeActive) {
         pidState->errorGyroIf += rateError * pidState->kI * dT * pidState->attenuation.aI;
+    }
+
+    if (axis != FD_YAW && pidState->errorGyroIf * rateTarget < 0.0f
+        && fabsf(rateTarget) > controlProfile->stabilized.rates[axis] * 10.0f * FW_ITERM_LOCK_BIG_STICK) {
+        pidState->errorGyroIf *= 1.0f - MIN((1.0f - pidState->attenuation.aI) * dT / FW_ITERM_LOCK_FADE_S, 1.0f);
     }
 
     applyAutoTransitionTargetItermLimiting(pidState, itermLimitActive);
@@ -1337,8 +1346,7 @@ static float calculateFixedWingTPAFactor(uint16_t throttle)
         if (currentControlProfile->throttle.fixedWingTauMs) {
             pitchThrottleSpeedFactor = pt1FilterApply(&fixedWingTpaFilter, pitchThrottleSpeedFactor);
         }
-        DEBUG_SET(DEBUG_ALWAYS, 4, currentControlProfile->throttle.fixedWingTauMs);
-DEBUG_SET(DEBUG_ALWAYS, 5, pitchThrottleSpeedFactor);
+
         // Calculate TPA according to throttle with compensation for pitch attitude
         tpaFactor = 0.5f + 0.5f * ((tpaBreakpoint - throttleIdleValue) / (float)(pitchThrottleSpeedFactor - throttleIdleValue));
 
@@ -1396,7 +1404,7 @@ void updatePIDCoefficients(void)
     float tpaFactor = 1.0f;
     float iTermFactor = 1.0f;  // Separate factor for I-term scaling
     if (usedPidControllerType == PID_TYPE_PIFF) { // Fixed wing TPA calculation
-        if (currentControlProfile->throttle.apa_pow > 0 && pitotGetValidForAirspeed()) {
+        if (currentControlProfile->throttle.apa_pow > 0 && pitotIsValidForAirspeed(false)) {
             tpaFactor = calculateFixedWingAirspeedTPAFactor();
             iTermFactor = calculateFixedWingAirspeedITermFactor();  // Less aggressive I-term scaling
             fixedWingApaActivePrev = true;
@@ -1675,7 +1683,7 @@ static void iTermLockApply(pidState_t *pidState, const float rateTarget, const f
     const bool errorThresholdReached = fabsf(rateError) > maxRate * pidProfile()->fwItermLockEngageThreshold / 100.0f;
 
     //When abs of rate target is above 20% of max rate, we start tracking time
-    if (fabsf(rateTarget) > maxRate * 0.2f) {
+    if (fabsf(rateTarget) > maxRate * FW_ITERM_LOCK_BIG_STICK) {
         pidState->attenuation.targetOverThresholdTimeMs = pidLoopNowMs;
     }
 
@@ -1715,6 +1723,15 @@ static void NOINLINE pidApplyFixedWingRateController(pidState_t *pidState, float
         pidState->errorGyroIf += rateError * pidState->kI * dT * pidState->attenuation.aI;
     }
 
+    // The lock holds the I-term at whatever it had when the stick went out. Built in a motion the pilot did not ask
+    // for, it can stand against the stick and eat the feed-forward that is left: then it fades while the stick is out.
+    // Only for the inputs the lock counts as big, so a small correction keeps the trim, and not on yaw, whose rate
+    // target in a banked turn is the turn's and its I-term the rudder trim
+    if (pidState->axis != FD_YAW && pidState->errorGyroIf * rateTarget < 0.0f
+        && fabsf(rateTarget) > currentControlProfile->stabilized.rates[pidState->axis] * 10.0f * FW_ITERM_LOCK_BIG_STICK) {
+        pidState->errorGyroIf *= 1.0f - MIN((1.0f - pidState->attenuation.aI) * dT / FW_ITERM_LOCK_FADE_S, 1.0f);
+    }
+
     applyItermLimiting(pidState);
 
     const uint16_t limit = pidState->pidSumLimit;
@@ -1725,8 +1742,7 @@ static void NOINLINE pidApplyFixedWingRateController(pidState_t *pidState, float
     }
 
     axisPID[pidState->axis] = constrainf(newPTerm + newFFTerm + pidState->errorGyroIf + newDTerm, -limit, +limit);
-DEBUG_SET(DEBUG_ALWAYS, 0, axisPID[0]);
-DEBUG_SET(DEBUG_ALWAYS, 1, axisPID[1]);
+
     if (FLIGHT_MODE(SOARING_MODE) && pidState->axis == FD_PITCH && calculateRollPitchCenterStatus() == CENTERED) {
         if (!angleFreefloatDeadband(DEGREES_TO_DECIDEGREES(navConfig()->fw.soaring_pitch_deadband), FD_PITCH)) {
             axisPID[FD_PITCH] = 0;  // center pitch servo if pitch attitude within soaring mode deadband
@@ -1934,7 +1950,7 @@ static void NOINLINE pidTurnAssistant(pidState_t *pidState, float bankAngleTarge
             //      yaw_rate = tan(roll_angle) * Gravity / forward_vel
 
 #if defined(USE_PITOT)
-            float airspeedForCoordinatedTurn = sensors(SENSOR_PITOT) && pitotIsHealthy()? getAirspeedEstimate() : pidProfile()->fixedWingReferenceAirspeed;
+            float airspeedForCoordinatedTurn = pitotIsValidForAirspeed(false) ? getAirspeedEstimate() : pidProfile()->fixedWingReferenceAirspeed;
 #else
             float airspeedForCoordinatedTurn = pidProfile()->fixedWingReferenceAirspeed;
 #endif

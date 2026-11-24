@@ -397,17 +397,9 @@ void calculateFarAwayTarget(fpVector3_t * farAwayPos, int32_t bearing, int32_t d
 bool isWaypointReached(const fpVector3_t *waypointPos, const int32_t *waypointBearing);
 bool isWaypointAltitudeReached(void);
 static void mapWaypointToLocalPosition(fpVector3_t * localPos, const navWaypoint_t * waypoint, geoAltitudeConversionMode_e altConv);
-static navigationFSMEvent_t nextForNonGeoStates(void);
-static bool isWaypointMissionValid(void);
 #ifdef USE_AUTO_TRANSITION
 static void clearMissionVTOLTransitionState(void);
-static navMissionVtolTransitionDisposition_e prepareMissionVTOLTransition(const navWaypoint_t *waypoint);
-static void updateMissionTransitionGuidance(void);
 static bool isTransitionRetryToFixedWingRequest(const mixerProfileATRequest_e request);
-static bool hasAirspeedSensorForTransitionRetry(void);
-static bool canRetryTransitionAfterAirspeedTimeout(const mixerProfileATRequest_e request);
-static void beginMissionTransitionRetryScan(const mixerProfileATRequest_e request);
-static navMixerATRetryScanResult_e updateMissionTransitionRetryScan(void);
 #endif
 void missionPlannerSetWaypoint(void);
 
@@ -420,9 +412,11 @@ bool abortLaunchAllowed(void);
 
 #ifdef USE_FW_AUTOLAND
 static float getLandAltitude(void);
+static void setLandWaypoint(const fpVector3_t *pos, const fpVector3_t *nextWpPos);
+#ifdef USE_WIND_ESTIMATOR
 static int32_t calcWindDiff(int32_t heading, int32_t windHeading);
 static int32_t calcFinalApproachHeading(int32_t approachHeading, int32_t windAngle);
-static void setLandWaypoint(const fpVector3_t *pos, const fpVector3_t *nextWpPos);
+#endif
 #endif
 
 /*************************************************************************************************/
@@ -2378,35 +2372,25 @@ static bool missionVTOLTransitionPointReady(const bool transitionToFixedWing, co
     return true;
 }
 
+bool hasUsableTransitionAirspeed(float *airspeedCmS)
+{
 #ifdef USE_PITOT
-static bool hasUsableTransitionAirspeed(float *airspeedCmS)
-{
-    if (!sensors(SENSOR_PITOT) || !pitotGetValidForAirspeed() || pitotHasFailed()) {
-        return false;
+    if (pitotIsValidForAirspeed(true)) {
+        const float measuredAirspeedCmS = getAirspeedEstimate();
+
+        if (isnan(measuredAirspeedCmS) || isinf(measuredAirspeedCmS)) {  // why ??
+            return false;
+        }
+
+        *airspeedCmS = MAX(measuredAirspeedCmS, 0.0f);
+        return true;
     }
-
-    if (detectedSensors[SENSOR_INDEX_PITOT] == PITOT_NONE) {
-        return false;
-    }
-
-    const float measuredAirspeedCmS = detectedSensors[SENSOR_INDEX_PITOT] == PITOT_VIRTUAL ?
-        getAirspeedEstimate() :
-        pitot.airSpeed;
-
-    if (isnan(measuredAirspeedCmS) || isinf(measuredAirspeedCmS)) {
-        return false;
-    }
-
-    *airspeedCmS = MAX(measuredAirspeedCmS, 0.0f);
-    return true;
-}
+    return false;
 #else
-static bool hasUsableTransitionAirspeed(float *airspeedCmS)
-{
     UNUSED(airspeedCmS);
     return false;
-}
 #endif
+}
 
 static bool beginNavigationFwToMcProtectionTransition(void)
 {
@@ -3843,8 +3827,8 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_FW_LANDING_LOITER(navig
     }
 
     if (micros() - posControl.fwLandState.loiterStartTime > FW_LAND_LOITER_MIN_TIME) {
+#ifdef USE_WIND_ESTIMATOR
         if (isEstimatedWindSpeedValid()) {
-
             uint16_t windAngle = 0;
             int32_t approachHeading = -1;
             float windSpeed = getEstimatedHorizontalWindSpeed(&windAngle);
@@ -3913,7 +3897,9 @@ static navigationFSMEvent_t navOnEnteringState_NAV_STATE_FW_LANDING_LOITER(navig
             } else {
                 posControl.fwLandState.loiterStartTime = micros();
             }
-        } else {
+        } else
+#endif  // USE_WIND_ESTIMATOR
+        {
             posControl.fwLandState.loiterStartTime = micros();
         }
     }
@@ -7207,6 +7193,23 @@ static void resetFwAutoland(void)
     posControl.fwLandState.landWp = false;
 }
 
+static float getLandAltitude(void)
+{
+    float altitude = -1;
+#ifdef USE_RANGEFINDER
+    if (rangefinderIsHealthy() && rangefinderGetLatestAltitude() > RANGEFINDER_OUT_OF_RANGE) {
+        altitude = rangefinderGetLatestAltitude();
+    }
+    else
+#endif
+    if (posControl.flags.estAglStatus >= EST_USABLE) {
+        altitude = posControl.actualState.agl.pos.z;
+    } else {
+        altitude = posControl.actualState.abs.pos.z;
+    }
+    return altitude;
+}
+ #ifdef USE_WIND_ESTIMATOR
 static int32_t calcFinalApproachHeading(int32_t approachHeading, int32_t windAngle)
 {
     if (approachHeading == 0) {
@@ -7226,28 +7229,11 @@ static int32_t calcFinalApproachHeading(int32_t approachHeading, int32_t windAng
     return -1;
 }
 
-static float getLandAltitude(void)
-{
-    float altitude = -1;
-#ifdef USE_RANGEFINDER
-    if (rangefinderIsHealthy() && rangefinderGetLatestAltitude() > RANGEFINDER_OUT_OF_RANGE) {
-        altitude = rangefinderGetLatestAltitude();
-    }
-    else
-#endif
-    if (posControl.flags.estAglStatus >= EST_USABLE) {
-        altitude = posControl.actualState.agl.pos.z;
-    } else {
-        altitude = posControl.actualState.abs.pos.z;
-    }
-    return altitude;
-}
-
 static int32_t calcWindDiff(int32_t heading, int32_t windHeading)
 {
     return ABS(wrap_18000(windHeading - heading));
 }
-
+#endif
 static void setLandWaypoint(const fpVector3_t *pos, const fpVector3_t *nextWpPos)
 {
     calculateAndSetActiveWaypointToLocalPosition(pos);
