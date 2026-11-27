@@ -563,7 +563,7 @@ static void updatePositionHeadingController_FW(timeUs_t currentTimeUs, timeDelta
                                        // -DEGREES_TO_CENTIDEGREES(navConfig()->fw.max_bank_angle),
                                         // DEGREES_TO_CENTIDEGREES(navConfig()->fw.max_bank_angle),
                                         // pidFlags);
-                                        
+
     uint16_t maxBankAngleCentiDeg = DEGREES_TO_CENTIDEGREES(navConfig()->fw.max_bank_angle);  // CR171
     float rollAdjustment = navPidApply2(&posControl.pids.fw_nav, posControl.actualState.cog + navHeadingError, posControl.actualState.cog,
                                         US2S(deltaMicros),
@@ -789,7 +789,7 @@ bool isFixedWingFlying(void)
 {
     float airspeed = 0.0f;
 #ifdef USE_PITOT
-    if (sensors(SENSOR_PITOT) && pitotIsHealthy()) {
+    if (pitotIsValidForAirspeed(false)) {
         airspeed = getAirspeedEstimate();
     }
 #endif
@@ -967,7 +967,7 @@ void applyAutoSpeedThrottleDemand(int16_t *throttleCommand, timeUs_t currentTime
         uint16_t groundSpeedBoost = 0;
 
 #ifdef USE_PITOT
-        if (pitotGetValidForAirspeed()) {
+        if (pitotIsValidForAirspeed(true)) {
             static bool airspeedBoost = false;
 
             // Pitot available and airspeed source selected or low airspeed boost applied when using ground speed source
